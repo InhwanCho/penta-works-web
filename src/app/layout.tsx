@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: "PENTA WORKS 서비스",
   applicationName: "PENTA WORKS",
   keywords: ["PENTA WORKS", "Dashboard", "Monitoring"],
-  metadataBase: new URL("https://your-domain.com"), // TODO 도메인 나오면 변경 필요
+  metadataBase: new URL("https://penta-works-web.vercel.app"),
   alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
   icons: {

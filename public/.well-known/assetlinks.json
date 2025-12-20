@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.penta_works_web.twa",
+      "sha256_cert_fingerprints": [
+        "8D:D1:46:48:3E:C1:38:8C:81:75:95:75:F1:22:A0:6C:5F:04:DC:76:7F:09:D7:45:54:2B:73:EC:62:0A:7A:62"
+      ]
+    }
+  }
+]
