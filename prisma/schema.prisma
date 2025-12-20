@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model ctrl {
+  site   String  @id @db.VarChar(3)
+  mrplel String? @db.VarChar(8)
+  mrpleh String? @db.VarChar(8)
+  mrlevl String? @db.VarChar(8)
+  mrlevh String? @db.VarChar(8)
+  actmpl String? @db.VarChar(8)
+  actmph String? @db.VarChar(8)
+  achuml String? @db.VarChar(8)
+  achumh String? @db.VarChar(8)
+  gctmpl String? @db.VarChar(8)
+  gctmph String? @db.VarChar(8)
+  gcflol String? @db.VarChar(8)
+  gcfloh String? @db.VarChar(8)
+  cctmpl String? @db.VarChar(8)
+  cctmph String? @db.VarChar(8)
+  ccflol String? @db.VarChar(8)
+  ccfloh String? @db.VarChar(8)
+}
+
+model mrtb {
+  index  Int       @id @default(autoincrement())
+  date   DateTime? @default(now()) @db.Timestamp(0)
+  recosi String?   @db.VarChar(10)
+  coldtp String?   @db.VarChar(10)
+  recoru String?   @db.VarChar(10)
+  hepres String?   @db.VarChar(10)
+  heleve String?   @db.VarChar(10)
+  actemp String?   @db.VarChar(10)
+  achumi String?   @db.VarChar(10)
+  gctemp String?   @db.VarChar(10)
+  gcflow String?   @db.VarChar(10)
+  cctemp String?   @db.VarChar(10)
+  ccflow String?   @db.VarChar(10)
+  siteid String?   @db.VarChar(3)
+}
+
+model site {
+  site String  @id @db.VarChar(3)
+  name String? @db.VarChar(20)
+}

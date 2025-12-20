@@ -1,0 +1,341 @@
+@import "tailwindcss";
+
+/* darkMode: 'class' 대응 (html에 .dark 붙여서 사용) */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* tailwind-scrollbar 플러그인 + nocompatible 옵션 */
+@plugin "tailwind-scrollbar" {
+  nocompatible: true;
+}
+
+/* 기존 tailwind.config.js 의 theme, extend 내용 변환 */
+@theme {
+  /* animation: ping-slow */
+  --animate-ping-slow: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+  @keyframes ping {
+    75%,
+    100% {
+      transform: scale(2);
+      opacity: 0;
+    }
+  }
+
+  /* colors: brand */
+  --color-brand: #4d566d;
+  --color-brand-primary: #3f4e73;
+  --color-brand-primary-hover: #4f5e83;
+  --color-brand-dark-primary: #5c72a8;
+
+  /* colors: border */
+  --color-border: #d4d4d8;
+  --color-border-secondary: #aaaaaa;
+  --color-border-tertiary: #e5e5ec;
+  --color-border-table: #e5e7eb;
+
+  /* colors: text */
+  --color-text-primary: #767676;
+  --color-text-major: #3d4659;
+  --color-text-secondary: #505050;
+  --color-text-dark-primary: #dfe9fe;
+
+  /* colors: background */
+  --color-background: #e0e2e7;
+  --color-background-primary: #f8f8fa;
+  --color-background-tertiary: #e8ecef;
+  --color-background-dark-primary: #25272c;
+  --color-background-dark-secondary: #373c47;
+  --color-background-dark-card: #2b2e35;
+
+  /* colors: button */
+  --color-button-primary: #6f81ab;
+  --color-button-primary-hover: #5a6f9b;
+
+  /* colors: error */
+  --color-error: #f14e56;
+
+  /* colors: custom-black */
+  --color-custom-black: #111111;
+  --color-custom-black-secondary: #333333;
+  --color-custom-black-tertiary: #444444;
+  --color-custom-black-select: #191c21;
+
+  /* colors: custom-blue */
+  --color-custom-blue: #3d76ee;
+}
+
+/* 선택 사항: 기본 스타일 */
+@layer base {
+  body {
+    @apply bg-background-primary text-text-primary;
+    @apply dark:bg-background-dark-primary dark:text-text-dark-primary;
+  }
+
+  /* 기본 border/outline 톤(다크에서 과한 대비 방지) */
+  * {
+    @apply border-border dark:border-background-dark-secondary;
+  }
+
+  a {
+    @apply text-brand-primary hover:text-brand-primary-hover dark:text-text-dark-primary;
+  }
+}
+
+/* 토글(다크 theme) */
+.toggle-switch {
+  position: relative;
+  width: 70px;
+  height: 34px;
+  --light: #d8dbe0;
+  --dark: #28292c;
+  --link: rgb(27, 129, 112);
+  --link-hover: rgb(24, 94, 82);
+}
+
+.switch-label {
+  position: absolute;
+  width: 100%;
+  height: 34px;
+  background-color: var(--dark);
+  border-radius: 25px;
+  cursor: pointer;
+  border: 3px solid var(--dark);
+}
+
+.checkbox {
+  position: absolute;
+  display: none;
+}
+
+.slider {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 25px;
+  -webkit-transition: 0.3s;
+  transition: 0.3s;
+}
+
+.checkbox:checked ~ .slider {
+  background-color: var(--light);
+}
+
+.slider::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 8px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  -webkit-box-shadow: inset 12px -4px 0px 0px var(--light);
+  box-shadow: inset 12px -4px 0px 0px var(--light);
+  background-color: var(--dark);
+  -webkit-transition: 0.3s;
+  transition: 0.3s;
+}
+
+.checkbox:checked ~ .slider::before {
+  -webkit-transform: translateX(30px);
+  -ms-transform: translateX(30px);
+  transform: translateX(30px);
+  background-color: var(--dark);
+  -webkit-box-shadow: none;
+  box-shadow: none;
+}
+@media (max-width: 1024px) {
+  .toggle-switch {
+    width: 50px;
+    height: 28px;
+  }
+
+  .switch-label {
+    height: 28px;
+    border-radius: 18px;
+    border-width: 2px;
+  }
+
+  .slider {
+    border-radius: 18px;
+  }
+
+  .slider::before {
+    top: 3px;
+    left: 5px;
+    width: 18px;
+    height: 18px;
+    box-shadow: inset 10px -3px 0px 0px var(--light);
+  }
+
+  .checkbox:checked ~ .slider::before {
+    transform: translateX(19px);
+  }
+}
+
+/* three dot loader */
+
+.three-dot-loader-container {
+  --uib-size: 24px;
+  --uib-speed: 0.8s;
+  --uib-color: #5d3fd3;
+  position: relative;
+  display: inline-block;
+  height: var(--uib-size);
+  width: var(--uib-size);
+  -webkit-animation: spin78236 calc(var(--uib-speed) * 2.5) infinite linear;
+  animation: spin78236 calc(var(--uib-speed) * 2.5) infinite linear;
+}
+
+.three-dot-loading {
+  position: absolute;
+  height: 100%;
+  width: 30%;
+}
+
+.three-dot-loading:after {
+  content: "";
+  position: absolute;
+  height: 0%;
+  width: 100%;
+  padding-bottom: 100%;
+  background-color: var(--uib-color);
+  border-radius: 50%;
+}
+
+.three-dot-loading:nth-child(1) {
+  bottom: 5%;
+  left: 0;
+  -webkit-transform: rotate(60deg);
+  -ms-transform: rotate(60deg);
+  transform: rotate(60deg);
+  -webkit-transform-origin: 50% 85%;
+  -ms-transform-origin: 50% 85%;
+  transform-origin: 50% 85%;
+}
+
+.three-dot-loading:nth-child(1)::after {
+  bottom: 0;
+  left: 0;
+  -webkit-animation: floating1 var(--uib-speed) infinite ease-in-out;
+  animation: floating1 var(--uib-speed) infinite ease-in-out;
+  -webkit-animation-delay: calc(var(--uib-speed) * -0.3);
+  animation-delay: calc(var(--uib-speed) * -0.3);
+}
+
+.three-dot-loading:nth-child(2) {
+  bottom: 5%;
+  right: 0;
+  -webkit-transform: rotate(-60deg);
+  -ms-transform: rotate(-60deg);
+  transform: rotate(-60deg);
+  -webkit-transform-origin: 50% 85%;
+  -ms-transform-origin: 50% 85%;
+  transform-origin: 50% 85%;
+}
+
+.three-dot-loading:nth-child(2)::after {
+  bottom: 0;
+  left: 0;
+  -webkit-animation: floating1 var(--uib-speed) infinite
+    calc(var(--uib-speed) * -0.15) ease-in-out;
+  animation: floating1 var(--uib-speed) infinite calc(var(--uib-speed) * -0.15)
+    ease-in-out;
+}
+
+.three-dot-loading:nth-child(3) {
+  bottom: -5%;
+  left: 0;
+  -webkit-transform: translateX(116.666%);
+  -ms-transform: translateX(116.666%);
+  transform: translateX(116.666%);
+}
+
+.three-dot-loading:nth-child(3)::after {
+  top: 0;
+  left: 0;
+  -webkit-animation: floating2 var(--uib-speed) infinite ease-in-out;
+  animation: floating2 var(--uib-speed) infinite ease-in-out;
+}
+
+@-webkit-keyframes spin78236 {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes spin78236 {
+  0% {
+    -webkit-transform: rotate(0deg);
+    transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+    transform: rotate(360deg);
+  }
+}
+
+@-webkit-keyframes floating1 {
+  0%,
+  100% {
+    -webkit-transform: translateY(0%) scale(1);
+    transform: translateY(0%) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    -webkit-transform: translateY(-66%) scale(0.65);
+    transform: translateY(-66%) scale(0.65);
+    opacity: 0.8;
+  }
+}
+
+@keyframes floating1 {
+  0%,
+  100% {
+    -webkit-transform: translateY(0%) scale(1);
+    transform: translateY(0%) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    -webkit-transform: translateY(-66%) scale(0.65);
+    transform: translateY(-66%) scale(0.65);
+    opacity: 0.8;
+  }
+}
+
+@-webkit-keyframes floating2 {
+  0%,
+  100% {
+    -webkit-transform: translateY(0%) scale(1);
+    transform: translateY(0%) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    -webkit-transform: translateY(66%) scale(0.65);
+    transform: translateY(66%) scale(0.65);
+    opacity: 0.8;
+  }
+}
+
+@keyframes floating2 {
+  0%,
+  100% {
+    -webkit-transform: translateY(0%) scale(1);
+    transform: translateY(0%) scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    -webkit-transform: translateY(66%) scale(0.65);
+    transform: translateY(66%) scale(0.65);
+    opacity: 0.8;
+  }
+}
