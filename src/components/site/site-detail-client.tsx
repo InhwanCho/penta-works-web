@@ -29,7 +29,8 @@ type ApiResponse = {
 };
 
 function clampTake(raw: number) {
-  return Math.min(Math.max(Number.isFinite(raw) ? raw : 200, 50), 1000);
+  // ✅ 10, 20, 50, 100 범위로 제한
+  return Math.min(Math.max(Number.isFinite(raw) ? raw : 50, 10), 100);
 }
 
 async function fetchSiteDetail(
@@ -48,9 +49,18 @@ function toPointNumber(v: number | null): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
 }
 
+// ✅ 모바일에서 차트가 터치를 먹지 않게 하는 래퍼
+function NoTouchChart({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="touch-pan-y">
+      <div className="pointer-events-none">{children}</div>
+    </div>
+  );
+}
+
 export default function SiteDetailClient({ slug }: { slug: string }) {
   const sp = useSearchParams();
-  const takeRaw = Number(sp.get("take") ?? 200);
+  const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
 
   const { data, isLoading, isError, error } = useQuery({
@@ -88,8 +98,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         t: d ? fmtTime(d) : "-",
         hepres: toPointNumber(r.hepres),
         heleve: toPointNumber(r.heleve),
-        actemp: toPointNumber(r.actemp),
-        achumi: toPointNumber(r.achumi),
+        // ✅ 온습도 그래프 제거하므로 굳이 포인트에 안 넣어도 됨(남겨도 무방)
       };
     });
 
@@ -105,21 +114,27 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           <ArrowBackIconMini /> 대시보드
         </Link>
 
+        {/* ✅ 10, 20, 50, 100 으로 변경 */}
         <div className="flex items-center gap-2 text-xs">
           <TakeLink
             slug={slug}
-            take={200}
-            active={take === 200}
+            take={10}
+            active={take === 10}
           />
           <TakeLink
             slug={slug}
-            take={500}
-            active={take === 500}
+            take={20}
+            active={take === 20}
           />
           <TakeLink
             slug={slug}
-            take={1000}
-            active={take === 1000}
+            take={50}
+            active={take === 50}
+          />
+          <TakeLink
+            slug={slug}
+            take={100}
+            active={take === 100}
           />
         </div>
       </div>
@@ -140,29 +155,25 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           </div>
         )}
 
-        <TimeSeriesLines
-          title="He Pressure (psi)"
-          points={points}
-          series={[{ key: "hepres", name: "He Pressure (psi)" }]}
-        />
+        {/* ✅ (1) 드래그/확대 등 터치 인터랙션 제거(스크롤 우선) */}
+        <NoTouchChart>
+          <TimeSeriesLines
+            title="He Pressure (psi)"
+            points={points}
+            series={[{ key: "hepres", name: "He Pressure (psi)" }]}
+          />
+        </NoTouchChart>
 
-        <TimeSeriesLines
-          title="He Level (%)"
-          points={points}
-          series={[{ key: "heleve", name: "He Level (%)" }]}
-        />
+        <NoTouchChart>
+          <TimeSeriesLines
+            title="He Level (%)"
+            points={points}
+            series={[{ key: "heleve", name: "He Level (%)" }]}
+          />
+        </NoTouchChart>
 
-        <TimeSeriesLines
-          title="Air Conditioners (Temp / Humi)"
-          points={points}
-          series={[
-            { key: "actemp", name: "AC Temp" },
-            { key: "achumi", name: "AC Humi" },
-          ]}
-        />
+        {/* ✅ (3) 온습도 그래프 제거 */}
       </div>
-
-      {/* 요청사항: '최근 레코드' 섹션(테이블) 제거 */}
     </main>
   );
 }

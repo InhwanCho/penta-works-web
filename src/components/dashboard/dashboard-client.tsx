@@ -2,20 +2,24 @@
 
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
-import { fmtDate } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type React from "react";
 import { useMemo } from "react";
 
+type CtrlRange = {
+  mrprel: number | null; // low psi
+  mrpreh: number | null; // high psi
+  mrlevl: number | null; // low %
+  mrlevh: number | null; // high %
+};
 type SiteRow = {
   siteDb: string;
   siteSlug: string;
   name: string | null;
   lastAt: string | null; // ISO
-  lagMin: number | null;
-  count1h: number;
-  count24h: number;
+  hePsi: number | null;
+  hePct: number | null;
 };
 
 type DashboardResponse = {
@@ -31,6 +35,7 @@ type DashboardResponse = {
     total24hRecords: number;
   };
   rows: SiteRow[];
+  ctrl: Record<string, CtrlRange>;
 };
 
 async function fetchDashboard(): Promise<DashboardResponse> {
@@ -40,7 +45,6 @@ async function fetchDashboard(): Promise<DashboardResponse> {
 }
 
 function compareSite(a: SiteRow, b: SiteRow) {
-  // "1", "2", "003" 같은 형태는 숫자로 정렬
   const aSlug = a.siteSlug ?? "";
   const bSlug = b.siteSlug ?? "";
 
@@ -48,11 +52,49 @@ function compareSite(a: SiteRow, b: SiteRow) {
   const bIsNum = /^\d+$/.test(bSlug);
 
   if (aIsNum && bIsNum) return Number(aSlug) - Number(bSlug);
-  if (aIsNum) return -1; // 숫자 먼저
+  if (aIsNum) return -1;
   if (bIsNum) return 1;
 
-  // 숫자가 아닌 값이 섞일 경우 문자열 정렬
   return aSlug.localeCompare(bSlug);
+}
+
+function parseIso(iso: string | null) {
+  if (!iso) return null;
+  const ms = Date.parse(iso);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms);
+}
+
+function fmtYmd(d: Date | null) {
+  if (!d) return "-";
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function fmtHms(d: Date | null) {
+  if (!d) return "-";
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mi = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
+  return `${hh}:${mi}:${ss}`;
+}
+
+function fmtNum(v: number | null, suffix?: string) {
+  if (v == null || Number.isNaN(v)) return "-";
+  return suffix ? `${v}${suffix}` : String(v);
+}
+
+function isOutOfRange(
+  v: number | null,
+  low: number | null,
+  high: number | null,
+) {
+  if (v == null || Number.isNaN(v)) return false;
+  if (low != null && v < low) return true;
+  if (high != null && v > high) return true;
+  return false;
 }
 
 export default function DashboardClient() {
@@ -61,11 +103,8 @@ export default function DashboardClient() {
     queryFn: fetchDashboard,
   });
 
-  // Hooks는 조건문/early return 전에 항상 동일한 순서로 호출되어야 함
   const rows = data?.rows ?? [];
-  const sortedRows = useMemo(() => {
-    return rows.slice().sort(compareSite);
-  }, [rows]);
+  const sortedRows = useMemo(() => rows.slice().sort(compareSite), [rows]);
 
   if (isLoading) {
     return (
@@ -86,7 +125,7 @@ export default function DashboardClient() {
     );
   }
 
-  const { stats, meta } = data;
+  const { meta, ctrl } = data;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
@@ -100,25 +139,6 @@ export default function DashboardClient() {
           기준: 최근 24시간 (상태는 최근 1시간도 함께 표시)
         </div>
       </div>
-
-      <section className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard
-          title="전체 사이트"
-          value={stats.totalSites}
-        />
-        <StatCard
-          title="최근 1h 수집됨"
-          value={stats.active1h}
-        />
-        <StatCard
-          title="최근 24h 미수집"
-          value={stats.stale24h}
-        />
-        <StatCard
-          title="최근 24h 총 레코드"
-          value={stats.total24hRecords}
-        />
-      </section>
 
       {/* Mobile: cards */}
       <section className="md:hidden">
@@ -136,6 +156,7 @@ export default function DashboardClient() {
                   key={r.siteDb}
                   row={r}
                   status={isActive1h ? "ok" : isActive24h ? "warn" : "stale"}
+                  range={ctrl[r.siteDb] ?? null}
                 />
               );
             })}
@@ -151,16 +172,15 @@ export default function DashboardClient() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] border-collapse text-sm">
+            <table className="w-full min-w-[900px] border-collapse text-sm">
               <thead className="bg-background-tertiary text-text-major dark:bg-background-dark-secondary dark:text-text-dark-primary">
                 <tr>
                   <Th>site</Th>
-                  <Th>name</Th>
+                  <Th>병원명</Th>
                   <Th>status</Th>
                   <Th>lastAt</Th>
-                  <Th>lag</Th>
-                  <Th>count1h</Th>
-                  <Th>count24h</Th>
+                  <Th>hePsi</Th>
+                  <Th>he%</Th>
                   <Th className="text-right">detail</Th>
                 </tr>
               </thead>
@@ -171,15 +191,31 @@ export default function DashboardClient() {
                   const isActive1h = !!lastAtMs && lastAtMs >= meta.since1hMs;
                   const isActive24h = !!lastAtMs && lastAtMs >= meta.since24hMs;
 
+                  const lastAtDate = parseIso(r.lastAt);
+                  const range = ctrl[r.siteDb] ?? null;
+
+                  const hePsiAlert = isOutOfRange(
+                    r.hePsi,
+                    range?.mrprel ?? null,
+                    range?.mrpreh ?? null,
+                  );
+                  const hePctAlert = isOutOfRange(
+                    r.hePct,
+                    range?.mrlevl ?? null,
+                    range?.mrlevh ?? null,
+                  );
+
                   return (
                     <tr
                       key={r.siteDb}
                       id={`site-d-${r.siteSlug}`}
                       className="dark:border-background-dark-secondary scroll-mt-[120px] border-b last:border-b-0"
                     >
-                      <Td className="font-semibold">{r.siteSlug}</Td>
+                      <Td className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
+                        {r.siteSlug}
+                      </Td>
 
-                      <Td className="text-text-secondary dark:text-text-dark-primary/80">
+                      <Td className="text-text-major dark:text-text-dark-primary font-semibold">
                         {r.name ?? "-"}
                       </Td>
 
@@ -197,23 +233,54 @@ export default function DashboardClient() {
                         </StatusPill>
                       </Td>
 
-                      <Td className="text-text-secondary dark:text-text-dark-primary/80">
-                        {r.lastAt ? fmtDate(new Date(r.lastAt)) : "-"}
+                      <Td className="text-text-secondary dark:text-text-dark-primary/80 whitespace-nowrap tabular-nums">
+                        <div className="leading-tight">
+                          <div className="text-[12px] font-semibold whitespace-nowrap">
+                            {fmtYmd(lastAtDate)}
+                          </div>
+                          <div className="mt-0.5 text-[11px] font-medium whitespace-nowrap opacity-80">
+                            {fmtHms(lastAtDate)}
+                          </div>
+                        </div>
                       </Td>
 
-                      <Td className="text-text-secondary dark:text-text-dark-primary/80">
-                        {r.lagMin == null ? "-" : `${r.lagMin}m`}
+                      {/* ✅ 범위 벗어나면 값만 빨간색 */}
+                      <Td
+                        className={[
+                          "whitespace-nowrap tabular-nums",
+                          hePsiAlert
+                            ? "font-extrabold text-red-600"
+                            : "text-text-secondary dark:text-text-dark-primary/80",
+                        ].join(" ")}
+                      >
+                        {fmtNum(r.hePsi)}
                       </Td>
 
-                      <Td>{r.count1h}</Td>
-                      <Td>{r.count24h}</Td>
+                      <Td
+                        className={[
+                          "whitespace-nowrap tabular-nums",
+                          hePctAlert
+                            ? "font-extrabold text-red-600"
+                            : "text-text-secondary dark:text-text-dark-primary/80",
+                        ].join(" ")}
+                      >
+                        {fmtNum(r.hePct, "%")}
+                      </Td>
 
                       <Td className="text-right">
                         <Link
-                          className="hover:bg-background-tertiary dark:border-background-dark-secondary dark:hover:bg-background-dark-secondary inline-flex items-center rounded-lg border px-3 py-1.5 text-xs font-medium"
+                          className={[
+                            "inline-flex items-center rounded-lg px-3 py-2 text-xs font-extrabold",
+                            "dark:border-background-dark-secondary border",
+                            "bg-background-tertiary hover:bg-background-secondary",
+                            "dark:bg-background-dark-secondary dark:hover:bg-background-dark-card",
+                            "text-text-major dark:text-text-dark-primary",
+                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                            "dark:focus-visible:ring-offset-background-dark-card",
+                          ].join(" ")}
                           href={`/sites/${r.siteSlug}`}
                         >
-                          보기
+                          상세
                         </Link>
                       </Td>
                     </tr>
@@ -241,9 +308,11 @@ function EmptyState() {
 function SiteCard({
   row,
   status,
+  range,
 }: {
   row: SiteRow;
   status: "ok" | "warn" | "stale";
+  range: CtrlRange | null;
 }) {
   const statusLabel =
     status === "ok"
@@ -251,6 +320,19 @@ function SiteCard({
       : status === "warn"
         ? "active(24h)"
         : "stale";
+
+  const lastAtDate = parseIso(row.lastAt);
+
+  const hePsiAlert = isOutOfRange(
+    row.hePsi,
+    range?.mrprel ?? null,
+    range?.mrpreh ?? null,
+  );
+  const hePctAlert = isOutOfRange(
+    row.hePct,
+    range?.mrlevl ?? null,
+    range?.mrlevh ?? null,
+  );
 
   return (
     <div
@@ -260,66 +342,106 @@ function SiteCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <div className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
+            <div className="text-text-major dark:text-text-dark-primary text-lg font-extrabold tracking-tight">
               {row.siteSlug}
             </div>
             <StatusPill variant={status}>{statusLabel}</StatusPill>
           </div>
-          <div className="text-text-secondary dark:text-text-dark-primary/70 mt-1 truncate text-xs">
+
+          <div
+            className={[
+              "mt-1",
+              "text-text-major dark:text-text-dark-primary",
+              "text-sm leading-snug font-semibold",
+              "line-clamp-2 break-words",
+            ].join(" ")}
+            title={row.name ?? ""}
+          >
             {row.name ?? "-"}
           </div>
         </div>
 
         <Link
-          className="hover:bg-background-tertiary dark:border-background-dark-secondary dark:hover:bg-background-dark-secondary inline-flex shrink-0 items-center rounded-lg border px-3 py-1.5 text-xs font-medium"
+          className={[
+            "inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-xs font-extrabold",
+            "dark:border-background-dark-secondary border",
+            "bg-background-tertiary hover:bg-background-secondary",
+            "dark:bg-background-dark-secondary dark:hover:bg-background-dark-card",
+            "text-text-major dark:text-text-dark-primary",
+            "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+            "dark:focus-visible:ring-offset-background-dark-card",
+          ].join(" ")}
           href={`/sites/${row.siteSlug}`}
         >
-          보기
+          상세
         </Link>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 grid grid-cols-3 gap-3">
+        <MetricLastAt iso={row.lastAt} />
+
         <Metric
-          label="lastAt"
-          value={row.lastAt ? (fmtDate(new Date(row.lastAt)) ?? "-") : "-"}
+          label="hePsi"
+          value={fmtNum(row.hePsi)}
+          valueTone={hePsiAlert ? "danger" : "normal"}
         />
+
         <Metric
-          label="lag"
-          value={row.lagMin == null ? "-" : `${row.lagMin}m`}
-        />
-        <Metric
-          label="count1h"
-          value={String(row.count1h)}
-        />
-        <Metric
-          label="count24h"
-          value={String(row.count24h)}
+          label="he%"
+          value={fmtNum(row.hePct, "%")}
+          valueTone={hePctAlert ? "danger" : "normal"}
         />
       </div>
     </div>
   );
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function MetricLastAt({ iso }: { iso: string | null }) {
+  const d = parseIso(iso);
+
+  return (
+    <div className="dark:border-background-dark-secondary rounded-xl border px-3 py-2">
+      <div className="text-text-secondary dark:text-text-dark-primary/70 text-[11px]">
+        lastAt
+      </div>
+
+      <div className="text-text-major dark:text-text-dark-primary mt-0.5 leading-tight tabular-nums">
+        <div className="text-[12px] font-semibold whitespace-nowrap">
+          {fmtYmd(d)}
+        </div>
+        <div className="mt-0.5 text-[11px] font-medium whitespace-nowrap opacity-80">
+          {fmtHms(d)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Metric({
+  label,
+  value,
+  valueTone = "normal",
+}: {
+  label: string;
+  value: string;
+  valueTone?: "normal" | "danger";
+}) {
+  const valueCls =
+    valueTone === "danger"
+      ? "text-red-600 font-extrabold"
+      : "text-text-major dark:text-text-dark-primary font-semibold";
+
   return (
     <div className="dark:border-background-dark-secondary rounded-xl border px-3 py-2">
       <div className="text-text-secondary dark:text-text-dark-primary/70 text-[11px]">
         {label}
       </div>
-      <div className="text-text-major dark:text-text-dark-primary mt-0.5 text-sm font-semibold">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value }: { title: string; value: number }) {
-  return (
-    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-2xl border bg-white p-4 shadow-sm">
-      <div className="text-text-secondary dark:text-text-dark-primary/70 mb-1 text-xs">
-        {title}
-      </div>
-      <div className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
+      <div
+        className={[
+          "mt-0.5 text-sm whitespace-nowrap tabular-nums",
+          valueCls,
+        ].join(" ")}
+      >
         {value}
       </div>
     </div>
@@ -333,6 +455,7 @@ function StatusPill({
   children: React.ReactNode;
   variant: "ok" | "warn" | "stale";
 }) {
+  // 색상은 이미 ok/warn/stale로 분기되고 있으니 여기서 더 강하게 바꿔도 됨
   const cls =
     variant === "ok"
       ? "bg-background-primary text-text-major dark:bg-background-dark-secondary dark:text-text-dark-primary"
