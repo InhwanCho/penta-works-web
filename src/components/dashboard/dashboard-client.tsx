@@ -315,11 +315,11 @@ function SiteCard({
   range: CtrlRange | null;
 }) {
   const statusLabel =
-    status === "ok"
-      ? "active(1h)"
-      : status === "warn"
-        ? "active(24h)"
-        : "stale";
+  status === "ok"
+    ? "정상(1시간)"
+    : status === "warn"
+      ? "주의(24시간)"
+      : "비활성";
 
   const lastAtDate = parseIso(row.lastAt);
 
@@ -340,26 +340,30 @@ function SiteCard({
       className="dark:border-background-dark-secondary dark:bg-background-dark-card scroll-mt-[120px] rounded-2xl border bg-white p-4 shadow-sm"
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <div className="text-text-major dark:text-text-dark-primary text-lg font-extrabold tracking-tight">
-              {row.siteSlug}
-            </div>
-            <StatusPill variant={status}>{statusLabel}</StatusPill>
-          </div>
+      <div className="min-w-0">
+  <div className="flex items-center gap-2 min-w-0">
+    
+    <div className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight whitespace-nowrap">
+      {row.siteSlug}
+    </div>
 
-          <div
-            className={[
-              "mt-1",
-              "text-text-major dark:text-text-dark-primary",
-              "text-sm leading-snug font-semibold",
-              "line-clamp-2 break-words",
-            ].join(" ")}
-            title={row.name ?? ""}
-          >
-            {row.name ?? "-"}
-          </div>
-        </div>
+
+    <div
+      className={[
+        "flex-1 min-w-0",
+        "text-text-major dark:text-text-dark-primary",
+        "text-base font-semibold",
+        "truncate",
+      ].join(" ")}
+      title={row.name ?? ""}
+    >
+      {row.name ?? "-"}
+    </div>
+      <StatusPill variant={status}>{statusLabel}</StatusPill>
+
+  </div>
+</div>
+
 
         <Link
           className={[
