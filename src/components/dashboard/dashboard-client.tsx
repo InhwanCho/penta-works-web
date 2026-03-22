@@ -104,7 +104,15 @@ export default function DashboardClient() {
   });
 
   const rows = data?.rows ?? [];
-  const sortedRows = useMemo(() => rows.slice().sort(compareSite), [rows]);
+  // 미사용하는 데이터 제거
+  const filteredRows = useMemo(
+    () => rows.filter((r) => !!r.lastAt),
+    [rows]
+  );
+  const sortedRows = useMemo(
+    () => filteredRows.slice().sort(compareSite),
+    [filteredRows]
+  );  
 
   if (isLoading) {
     return (
