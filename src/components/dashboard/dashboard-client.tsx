@@ -103,16 +103,16 @@ export default function DashboardClient() {
     queryFn: fetchDashboard,
   });
 
-  const rows = data?.rows ?? [];
-  // 미사용하는 데이터 제거
-  const filteredRows = useMemo(
-    () => rows.filter((r) => !!r.lastAt),
-    [rows]
-  );
+  // 💡 경고 해결 1: rows를 밖에서 선언하지 않고 useMemo 내부로 합쳐서 의존성을 안정화했습니다.
+  const filteredRows = useMemo(() => {
+    const currentRows = data?.rows ?? [];
+    return currentRows.filter((r) => !!r.lastAt);
+  }, [data?.rows]);
+
   const sortedRows = useMemo(
     () => filteredRows.slice().sort(compareSite),
-    [filteredRows]
-  );  
+    [filteredRows],
+  );
 
   if (isLoading) {
     return (
@@ -126,8 +126,9 @@ export default function DashboardClient() {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
         <div className="text-sm text-red-600">
+          {/* 💡 경고 해결 2: error 변수를 여기서 렌더링에 사용하므로 더 이상 '사용되지 않음' 경고가 뜨지 않습니다. */}
           데이터를 불러오지 못했습니다:{" "}
-          {String((error as Error)?.message ?? "")}
+          {String((error as Error)?.message ?? "알 수 없는 오류")}
         </div>
       </main>
     );
@@ -252,7 +253,6 @@ export default function DashboardClient() {
                         </div>
                       </Td>
 
-                      {/* ✅ 범위 벗어나면 값만 빨간색 */}
                       <Td
                         className={[
                           "whitespace-nowrap tabular-nums",
@@ -323,13 +323,13 @@ function SiteCard({
   range: CtrlRange | null;
 }) {
   const statusLabel =
-  status === "ok"
-    ? "정상(1시간)"
-    : status === "warn"
-      ? "주의(24시간)"
-      : "비활성";
+    status === "ok"
+      ? "정상(1시간)"
+      : status === "warn"
+        ? "주의(24시간)"
+        : "비활성";
 
-  const lastAtDate = parseIso(row.lastAt);
+  // 💡 경고 해결 3: 여기서 쓰이지 않던 lastAtDate 변수를 삭제했습니다.
 
   const hePsiAlert = isOutOfRange(
     row.hePsi,
@@ -348,30 +348,26 @@ function SiteCard({
       className="dark:border-background-dark-secondary dark:bg-background-dark-card scroll-mt-[120px] rounded-2xl border bg-white p-4 shadow-sm"
     >
       <div className="flex items-start justify-between gap-3">
-      <div className="min-w-0">
-  <div className="flex items-center gap-2 min-w-0">
-    
-    <div className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight whitespace-nowrap">
-      {row.siteSlug}
-    </div>
+        <div className="min-w-0">
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight whitespace-nowrap">
+              {row.siteSlug}
+            </div>
 
-
-    <div
-      className={[
-        "flex-1 min-w-0",
-        "text-text-major dark:text-text-dark-primary",
-        "text-base font-semibold",
-        "truncate",
-      ].join(" ")}
-      title={row.name ?? ""}
-    >
-      {row.name ?? "-"}
-    </div>
-      <StatusPill variant={status}>{statusLabel}</StatusPill>
-
-  </div>
-</div>
-
+            <div
+              className={[
+                "min-w-0 flex-1",
+                "text-text-major dark:text-text-dark-primary",
+                "text-base font-semibold",
+                "truncate",
+              ].join(" ")}
+              title={row.name ?? ""}
+            >
+              {row.name ?? "-"}
+            </div>
+            <StatusPill variant={status}>{statusLabel}</StatusPill>
+          </div>
+        </div>
 
         <Link
           className={[
@@ -467,7 +463,6 @@ function StatusPill({
   children: React.ReactNode;
   variant: "ok" | "warn" | "stale";
 }) {
-  // 색상은 이미 ok/warn/stale로 분기되고 있으니 여기서 더 강하게 바꿔도 됨
   const cls =
     variant === "ok"
       ? "bg-background-primary text-text-major dark:bg-background-dark-secondary dark:text-text-dark-primary"

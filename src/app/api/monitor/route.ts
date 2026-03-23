@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
-// 💡 방금 분리한 함수를 불러옵니다. (경로가 다르면 파일 구조에 맞게 수정해주세요)
-import { getDashboardData } from "../dashboard/route";
+import { getDashboardData } from "../dashboard/service";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    // 🚀 fetch 대신 함수 직접 실행! (Vercel URL, 파싱 에러 원천 차단)
+    // 🚀 fetch 대신 함수 직접 실행!
     const data = await getDashboardData();
 
     const rows = data.rows ?? [];
