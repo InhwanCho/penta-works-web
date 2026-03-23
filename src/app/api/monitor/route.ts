@@ -1,10 +1,13 @@
+import { NextResponse } from "next/server";
+// 💡 방금 분리한 함수를 불러옵니다. (경로가 다르면 파일 구조에 맞게 수정해주세요)
+import { getDashboardData } from "../dashboard/route";
+
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
-    const res = await fetch(`/api/dashboard`, {
-      cache: "no-store",
-    });
-
-    const data = await res.json();
+    // 🚀 fetch 대신 함수 직접 실행! (Vercel URL, 파싱 에러 원천 차단)
+    const data = await getDashboardData();
 
     const rows = data.rows ?? [];
 
@@ -18,7 +21,7 @@ export async function GET() {
     const alerts: string[] = [];
 
     for (const r of rows) {
-      if (!targetNames.includes(r.name)) continue;
+      if (!r.name || !targetNames.includes(r.name)) continue;
 
       const v = r.hePsi;
 
@@ -40,9 +43,9 @@ export async function GET() {
       });
     }
 
-    return Response.json({ ok: true, alerts });
+    return NextResponse.json({ ok: true, alerts });
   } catch (e) {
-    return Response.json(
+    return NextResponse.json(
       { ok: false, error: (e as Error).message },
       { status: 500 },
     );

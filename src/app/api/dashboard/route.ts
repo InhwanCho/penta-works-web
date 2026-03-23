@@ -3,33 +3,27 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-type CtrlRange = {
-  // ctrl.mrplel/mrpleh = He Pressure(psi) 하한/상한으로 사용
+// 💡 외부에서 타입을 참조할 수 있도록 export를 붙여줍니다.
+export type CtrlRange = {
   mrplel: number | null;
   mrpleh: number | null;
-
-  // ctrl.mrlevl/mrlevh = He Level(%) 하한/상한으로 사용
   mrlevl: number | null;
   mrlevh: number | null;
 };
 
-type DashboardRow = {
+export type DashboardRow = {
   siteDb: string;
   siteSlug: string;
   name: string | null;
-  lastAt: string | null; // ISO string
-
-  // 기존 유지(프론트에서 안 쓰면 무시 가능)
+  lastAt: string | null;
   lagMin: number | null;
   count1h: number;
   count24h: number;
-
-  // 대시보드 표시용
   hePsi: number | null;
   hePct: number | null;
 };
 
-type DashboardResponse = {
+export type DashboardResponse = {
   meta: {
     nowMs: number;
     since1hMs: number;
@@ -42,11 +36,7 @@ type DashboardResponse = {
     total24hRecords: number;
   };
   rows: DashboardRow[];
-
-  // ctrl 범위: site별 설정
   ctrl: Record<string, CtrlRange>;
-
-  // ctrl.site="000"을 기본값으로 쓰고 싶을 때
   ctrlDefault: CtrlRange | null;
 };
 
@@ -63,7 +53,8 @@ function parseNumberLoose(v: string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export async function GET() {
+// 🚀 핵심 로직을 별도의 함수로 분리합니다!
+export async function getDashboardData(): Promise<DashboardResponse> {
   const nowMs = Date.now();
   const since24h = new Date(nowMs - 24 * 60 * 60 * 1000);
   const since1h = new Date(nowMs - 1 * 60 * 60 * 1000);
@@ -109,7 +100,6 @@ export async function GET() {
   }
 
   // 3) siteid별 최신 레코드에서 hepres/heleve 추출
-  //    - siteid asc, date desc로 가져오고 siteid별 최초 1건만 사용
   const latestCandidates = await prisma.mrtb.findMany({
     where: { siteid: { not: null }, date: { not: null } },
     select: { siteid: true, date: true, hepres: true, heleve: true },
@@ -131,7 +121,7 @@ export async function GET() {
     });
   }
 
-  // 4) ctrl 범위: prisma.ctrl로 직접 조회 (db pull 결과 기준)
+  // 4) ctrl 범위: prisma.ctrl로 직접 조회
   const ctrlRows = await prisma.ctrl.findMany({
     select: {
       site: true,
@@ -176,14 +166,12 @@ export async function GET() {
     };
   });
 
-  // 기존: lastAt 최신순
   rows.sort((a, b) => {
     const atA = a.lastAt ? Date.parse(a.lastAt) : 0;
     const atB = b.lastAt ? Date.parse(b.lastAt) : 0;
     return atB - atA;
   });
 
-  // stats
   const totalSites = rows.length;
   const active1h = rows.filter(
     (r) => r.lastAt && Date.parse(r.lastAt) >= since1h.getTime(),
@@ -196,7 +184,7 @@ export async function GET() {
   const stale24h = totalSites - active24h;
   const total24hRecords = rows.reduce((acc, r) => acc + r.count24h, 0);
 
-  const body: DashboardResponse = {
+  return {
     meta: {
       nowMs,
       since1hMs: since1h.getTime(),
@@ -212,10 +200,21 @@ export async function GET() {
     ctrl,
     ctrlDefault,
   };
+}
 
-  return NextResponse.json(body, {
-    headers: {
-      "Cache-Control": "no-store",
-    },
-  });
+// 💡 기존 대시보드 화면에서 호출하는 API는 방금 만든 함수를 실행해서 반환만 해줍니다.
+export async function GET() {
+  try {
+    const body = await getDashboardData();
+    return NextResponse.json(body, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "대시보드 데이터를 불러오는데 실패했습니다." },
+      { status: 500 },
+    );
+  }
 }
