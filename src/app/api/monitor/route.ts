@@ -1,11 +1,6 @@
 export async function GET() {
   try {
-    const baseUrl =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000";
-    
-    const res = await fetch(`${baseUrl}/api/dashboard`, {
+    const res = await fetch(`/api/dashboard`, {
       cache: "no-store",
     });
 
@@ -13,10 +8,10 @@ export async function GET() {
 
     const rows = data.rows ?? [];
 
-    // 🎯 타겟 병원
+    // 타겟 병원
     const targetNames = ["순천향병", "일등병원"];
 
-    // 🎯 조건 범위
+    // 조건 범위
     const MIN = 0.95;
     const MAX = 1.05;
 
@@ -30,13 +25,11 @@ export async function GET() {
       if (v == null) continue;
 
       if (v < MIN || v > MAX) {
-        alerts.push(
-          `${r.name} 이상 감지\nhePsi: ${v}\n범위: ${MIN} ~ ${MAX}`
-        );
+        alerts.push(`${r.name} 이상 감지\nhePsi: ${v}\n범위: ${MIN} ~ ${MAX}`);
       }
     }
 
-    // 🔥 알림 전송
+    // 알림 전송
     if (alerts.length > 0) {
       await fetch(process.env.SLACK_WEBHOOK_URL!, {
         method: "POST",
@@ -51,7 +44,7 @@ export async function GET() {
   } catch (e) {
     return Response.json(
       { ok: false, error: (e as Error).message },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
