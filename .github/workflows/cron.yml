@@ -1,0 +1,11 @@
+name: 5분마다 모니터링 실행
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+jobs:
+  cron:
+    runs-on: ubuntu-latest
+    steps:
+      - name: API 호출
+        run: |
+          curl -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://내프로젝트주소.vercel.app/api/monitor
