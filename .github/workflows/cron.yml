@@ -8,4 +8,4 @@ jobs:
     steps:
       - name: API 호출
         run: |
-          curl -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://내프로젝트주소.vercel.app/api/monitor
+          curl -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" https://penta-works-web.vercel.app/api/monitor
