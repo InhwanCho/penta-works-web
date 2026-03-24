@@ -3,8 +3,12 @@ import { getDashboardData } from "../dashboard/service";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
+    const authHeader = request.headers.get("authorization");
+    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+      return new Response("Unauthorized", { status: 401 });
+    }
     // 🚀 fetch 대신 함수 직접 실행!
     const data = await getDashboardData();
 
