@@ -97,13 +97,17 @@ function isOutOfRange(
   return false;
 }
 
+function fmtYmdHms(ms: number) {
+  const d = new Date(ms);
+  return `${fmtYmd(d)} ${fmtHms(d)}`;
+}
+
 export default function DashboardClient() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: fetchDashboard,
   });
 
-  // 💡 경고 해결 1: rows를 밖에서 선언하지 않고 useMemo 내부로 합쳐서 의존성을 안정화했습니다.
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
     return currentRows.filter((r) => !!r.lastAt);
@@ -126,7 +130,6 @@ export default function DashboardClient() {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
         <div className="text-sm text-red-600">
-          {/* 💡 경고 해결 2: error 변수를 여기서 렌더링에 사용하므로 더 이상 '사용되지 않음' 경고가 뜨지 않습니다. */}
           데이터를 불러오지 못했습니다:{" "}
           {String((error as Error)?.message ?? "알 수 없는 오류")}
         </div>
@@ -145,7 +148,7 @@ export default function DashboardClient() {
           대시보드
         </h1>
         <div className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-xs">
-          기준: 최근 24시간 (상태는 최근 1시간도 함께 표시)
+          업데이트 일시: {fmtYmdHms(meta.nowMs)}
         </div>
       </div>
 
