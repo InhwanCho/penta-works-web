@@ -117,6 +117,11 @@ export default function DashboardClient() {
     () => filteredRows.slice().sort(compareSite),
     [filteredRows],
   );
+  console.log(
+    "%c sortedRows:",
+    "color: #4CAF50; font-weight: bold;",
+    sortedRows,
+  );
 
   if (isLoading) {
     return (

@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PENTA WORKS Helium Monitoring Dashboard
 
-## Getting Started
+MRI 장비의 헬륨 가스 압력(He Pressure)과 잔량(He Level)을 모니터링하기 위한 웹 대시보드 애플리케이션입니다. 각 병원(사이트)의 장비 상태를 실시간에 가깝게 확인하고, 문제가 발생한 장비를 빠르게 식별할 수 있습니다.
 
-First, run the development server:
+## 주요 기능
+
+### 1. 전체 장비 대시보드 (`/`)
+
+- **실시간 상태 모니터링**: 등록된 전체 MRI 장비의 현재 상태를 한눈에 파악할 수 있습니다.
+- **최근 업데이트 시간 표시**: API 호출 시점을 기준으로 데이터가 얼마나 최신인지 확인할 수 있습니다.
+- **반응형 UI 지원**:
+  - 데스크탑: 한눈에 보기 편한 테이블(Table) 형태 제공
+  - 모바일: 모바일에 최적화된 카드(Card) 형태 제공
+- **상태 알림 (Status Pill)**:
+  - `정상(1시간)`: 최근 1시간 이내 데이터 수신됨
+  - `주의(24시간)`: 최근 24시간 이내 수신되었으나 1시간은 경과함
+  - `미수집(24h) / 비활성`: 24시간 이상 데이터 수신 없음
+- **이상 수치 하이라이트**: 설정된 허용 범위(Control Range)를 벗어난 압력(psi)이나 잔량(%) 수치는 붉은색(Danger)으로 강조 표시됩니다.
+
+### 2. 사이트 상세 모니터링 (`/sites/[slug]`)
+
+- **시계열 차트 제공**: 선택한 특정 장비의 헬륨 압력과 잔량 변화 추이를 시계열 꺾은선 그래프(Time Series Line Chart)로 제공합니다.
+- **모바일 스크롤 최적화**: 모바일 환경에서 차트를 터치했을 때 화면 스크롤이 막히는 현상을 방지하기 위해 터치 인터랙션을 비활성화(`NoTouchChart` 래퍼 사용)하여 쾌적한 스크롤 경험을 제공합니다.
+- **데이터 조회 건수 조절**: 사용자 편의에 따라 최근 10건, 20건, 50건, 100건 단위로 데이터를 불러와 그래프에 반영할 수 있습니다.
+
+## 기술 스택
+
+- **Framework**: Next.js (App Router, React Server Components)
+- **Styling**: Tailwind CSS
+
+## 주요 컴포넌트 구조
+
+- **`DashboardClient`**: 메인 대시보드 페이지. `/api/dashboard`에서 전체 사이트 목록과 메타데이터, 컨트롤 범위(ctrl)를 가져와 테이블/카드 리스트 렌더링.
+- **`SiteDetailClient`**: 개별 사이트 상세 페이지. `/api/sites/[slug]`에서 특정 사이트의 최근 데이터를 가져와 차트를 렌더링.
+
+## 시작하기
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 의존성 설치
+pnpm install
+
+# 개발 서버 실행
+pnpm run dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
