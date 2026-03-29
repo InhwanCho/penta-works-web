@@ -44,7 +44,8 @@ export async function GET(request: Request) {
       if (baseline === undefined) continue;
 
       const v = r.hePsi;
-      if (v == null) continue;
+      // 수치가 0이거나 null이면 제외
+      if (v == null || v === 0) continue;
 
       // 기준값에서 +/- 20% 계산
       const min = baseline * 0.8;
@@ -53,7 +54,7 @@ export async function GET(request: Request) {
       // 허용 범위를 벗어난 경우 알림 메시지 생성
       if (v < min || v > max) {
         alerts.push(
-          `!! *${r.name} 이상 감지*\n !!` +
+          `!! *${r.name} 이상 감지* !!\n` +
             `• 현재 hePsi: *${v}*\n` +
             `• 기준값: ${baseline}\n` +
             `• 허용범위: ${min.toFixed(2)} ~ ${max.toFixed(2)}`,
