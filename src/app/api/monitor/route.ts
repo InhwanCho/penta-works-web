@@ -15,11 +15,16 @@ type AlertPayload = {
 };
 
 /**
- * 허용 범위를 벗어난 경우 Slack Block Kit 메시지를 생성합니다.
- * 가독성을 위해 header / section(fields) / context 구조로 구성합니다.
+ * 허용 범위를 벗어난 병원을 하나의 섹션에 컴팩트하게 나열합니다.
  */
 function buildSlackBlocks(alerts: AlertPayload[]) {
-  const blocks: unknown[] = [
+  const lines = alerts.map((a) => {
+    const arrow = a.direction === "high" ? "▲" : "▼";
+    const sign = a.direction === "high" ? "+" : "-";
+    return `${arrow} *${a.name}*  \`${a.current}\`  _(기준 ${a.baseline}, ${sign}${a.diffPct.toFixed(1)}%)_`;
+  });
+
+  return [
     {
       type: "header",
       text: {
@@ -29,54 +34,13 @@ function buildSlackBlocks(alerts: AlertPayload[]) {
       },
     },
     {
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: `기준값 대비 ±20% 허용범위를 벗어난 병원 목록입니다. · ${new Date().toLocaleString(
-            "ko-KR",
-            { timeZone: "Asia/Seoul" },
-          )}`,
-        },
-      ],
-    },
-    { type: "divider" },
-  ];
-
-  for (const a of alerts) {
-    const arrow = a.direction === "high" ? "▲" : "▼";
-    const sign = a.direction === "high" ? "+" : "-";
-    blocks.push({
       type: "section",
       text: {
         type: "mrkdwn",
-        text: `*${a.name}*  ${arrow} *${a.current}*  (_기준 ${a.baseline} · ${sign}${a.diffPct.toFixed(1)}%_)`,
+        text: lines.join("\n"),
       },
-      fields: [
-        {
-          type: "mrkdwn",
-          text: `*현재값*\n\`${a.current}\``,
-        },
-        {
-          type: "mrkdwn",
-          text: `*허용범위*\n\`${a.min.toFixed(2)} ~ ${a.max.toFixed(2)}\``,
-        },
-      ],
-    });
-  }
-
-  blocks.push({ type: "divider" });
-  blocks.push({
-    type: "context",
-    elements: [
-      {
-        type: "mrkdwn",
-        text: "문의: 운영팀 · 대시보드에서 상세 값을 확인하세요.",
-      },
-    ],
-  });
-
-  return blocks;
+    },
+  ];
 }
 
 /** Slack 알림이 실패해도 fallback text만 보여줄 수 있도록 요약 문자열 생성 */

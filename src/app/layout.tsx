@@ -2,9 +2,17 @@ import Navbar from "@/components/common/navbar";
 import { ModalProvider } from "@/components/provider/modal-provider";
 import { QueryProviders } from "@/components/provider/query-provider";
 import { ThemeProvider } from "@/components/provider/theme-provider";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+
+// 모바일 상태 표시줄(시간/배터리 영역) 색상을 navbar 배경과 일치
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#3f4e73" },
+    { media: "(prefers-color-scheme: dark)", color: "#373c47" },
+  ],
+};
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
