@@ -1,6 +1,6 @@
+import { BASELINE_MAP, getBaselineRange } from "@/lib/baseline-map";
 import { NextResponse } from "next/server";
 import { getDashboardData } from "../dashboard/service";
-import { BASELINE_MAP, getBaselineRange } from "@/lib/baseline-map";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +19,12 @@ type AlertPayload = {
  */
 function buildSlackBlocks(alerts: AlertPayload[]) {
   const lines = alerts.map((a) => {
-    const arrow = a.direction === "high" ? "▲" : "▼";
-    const sign = a.direction === "high" ? "+" : "-";
-    return `${arrow} *${a.name}*  \`${a.current}\`  _(기준 ${a.baseline}, ${sign}${a.diffPct.toFixed(1)}%)_`;
+    return (
+      `!! *${a.name} 이상 감지* !!\n` +
+      `• 현재 hePsi: *${a.current}*\n` +
+      `• 기준값: ${a.baseline}\n` +
+      `• 허용범위: ${a.min.toFixed(2)} ~ ${a.max.toFixed(2)}`
+    );
   });
 
   return [
@@ -37,7 +40,8 @@ function buildSlackBlocks(alerts: AlertPayload[]) {
       type: "section",
       text: {
         type: "mrkdwn",
-        text: lines.join("\n"),
+        // 각 항목 구분을 위해 줄바꿈 두 번 적용
+        text: lines.join("\n\n"),
       },
     },
   ];
