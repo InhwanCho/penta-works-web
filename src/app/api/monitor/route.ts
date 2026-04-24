@@ -1,28 +1,92 @@
 import { NextResponse } from "next/server";
 import { getDashboardData } from "../dashboard/service";
+import { BASELINE_MAP, getBaselineRange } from "@/lib/baseline-map";
 
 export const dynamic = "force-dynamic";
 
-// 각 병원별 기준값 세팅 (실제 API 데이터의 name 기준)
-const BASELINE_MAP: Record<string, number> = {
-  순천향병: 1.0,
-  일등병원: 1.0,
-  휴내과: 0.5,
-  더퍼스트: 1.0,
-  서울프라: 1.0,
-  연세고든: 3.4,
-  강북우리: 1.0,
-  신당서울: 1.0,
-  으랏차: 1.0,
-  // "수원참": x (제외)
-  새길병원: 1.0,
-  강동참: 1.0,
-  수원SS: 2.2,
-  S신경2: 2.0,
-  S신경1: 1.0,
-  대구동물: 0.5,
-  신사우리: 1.0,
+type AlertPayload = {
+  name: string;
+  current: number;
+  baseline: number;
+  min: number;
+  max: number;
+  diffPct: number; // 기준값 대비 편차(%)
+  direction: "low" | "high";
 };
+
+/**
+ * 허용 범위를 벗어난 경우 Slack Block Kit 메시지를 생성합니다.
+ * 가독성을 위해 header / section(fields) / context 구조로 구성합니다.
+ */
+function buildSlackBlocks(alerts: AlertPayload[]) {
+  const blocks: unknown[] = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: `hePsi 이상 감지 (${alerts.length}건)`,
+        emoji: false,
+      },
+    },
+    {
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `기준값 대비 ±20% 허용범위를 벗어난 병원 목록입니다. · ${new Date().toLocaleString(
+            "ko-KR",
+            { timeZone: "Asia/Seoul" },
+          )}`,
+        },
+      ],
+    },
+    { type: "divider" },
+  ];
+
+  for (const a of alerts) {
+    const arrow = a.direction === "high" ? "▲" : "▼";
+    const sign = a.direction === "high" ? "+" : "-";
+    blocks.push({
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${a.name}*  ${arrow} *${a.current}*  (_기준 ${a.baseline} · ${sign}${a.diffPct.toFixed(1)}%_)`,
+      },
+      fields: [
+        {
+          type: "mrkdwn",
+          text: `*현재값*\n\`${a.current}\``,
+        },
+        {
+          type: "mrkdwn",
+          text: `*허용범위*\n\`${a.min.toFixed(2)} ~ ${a.max.toFixed(2)}\``,
+        },
+      ],
+    });
+  }
+
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: "문의: 운영팀 · 대시보드에서 상세 값을 확인하세요.",
+      },
+    ],
+  });
+
+  return blocks;
+}
+
+/** Slack 알림이 실패해도 fallback text만 보여줄 수 있도록 요약 문자열 생성 */
+function buildFallbackText(alerts: AlertPayload[]) {
+  const lines = alerts.map((a) => {
+    const arrow = a.direction === "high" ? "▲" : "▼";
+    return `${arrow} ${a.name}: ${a.current} (기준 ${a.baseline}, 범위 ${a.min.toFixed(2)}~${a.max.toFixed(2)})`;
+  });
+  return `[hePsi 이상 감지 ${alerts.length}건]\n${lines.join("\n")}`;
+}
 
 export async function GET(request: Request) {
   try {
@@ -34,7 +98,7 @@ export async function GET(request: Request) {
     const data = await getDashboardData();
 
     const rows = data.rows ?? [];
-    const alerts: string[] = [];
+    const alerts: AlertPayload[] = [];
 
     for (const r of rows) {
       if (!r.name) continue;
@@ -47,33 +111,37 @@ export async function GET(request: Request) {
       // 수치가 0이거나 null이면 제외
       if (v == null || v === 0) continue;
 
-      // 기준값에서 +/- 20% 계산
-      const min = baseline * 0.8;
-      const max = baseline * 1.2;
+      const { min, max } = getBaselineRange(baseline);
 
       // 허용 범위를 벗어난 경우 알림 메시지 생성
       if (v < min || v > max) {
-        alerts.push(
-          `!! *${r.name} 이상 감지* !!\n` +
-            `• 현재 hePsi: *${v}*\n` +
-            `• 기준값: ${baseline}\n` +
-            `• 허용범위: ${min.toFixed(2)} ~ ${max.toFixed(2)}`,
-        );
+        const direction: "low" | "high" = v > max ? "high" : "low";
+        const diffPct = ((v - baseline) / baseline) * 100;
+        alerts.push({
+          name: r.name,
+          current: v,
+          baseline,
+          min,
+          max,
+          diffPct: Math.abs(diffPct),
+          direction,
+        });
       }
     }
 
     // 알림 전송
-    if (alerts.length > 0) {
-      await fetch(process.env.SLACK_WEBHOOK_URL!, {
+    if (alerts.length > 0 && process.env.SLACK_WEBHOOK_URL) {
+      await fetch(process.env.SLACK_WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          text: alerts.join("\n\n---\n\n"), // 여러 병원 알림 시 구분선 추가
+          text: buildFallbackText(alerts),
+          blocks: buildSlackBlocks(alerts),
         }),
       });
     }
 
-    return NextResponse.json({ ok: true, alerts });
+    return NextResponse.json({ ok: true, count: alerts.length, alerts });
   } catch (e) {
     return NextResponse.json(
       { ok: false, error: (e as Error).message },

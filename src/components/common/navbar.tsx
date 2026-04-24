@@ -4,6 +4,7 @@ import SiteSearchModal from "@/components/common/site-search-modal";
 import SearchIcon from "@/components/icons/search-icon";
 import { useModal } from "@/components/provider/modal-provider";
 import { useTheme } from "@/components/provider/theme-provider";
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
@@ -31,31 +32,60 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-brand dark:bg-background-dark-secondary sticky top-0 z-10 h-[50px] w-full lg:h-[60px]">
+      <header
+        className={[
+          "sticky top-0 z-10 h-14 w-full lg:h-[60px]",
+          // 브랜드 블루슬레이트 그라디언트(오렌지 로고와 보색 대비)
+          "bg-gradient-to-r from-brand-primary via-brand to-brand-primary",
+          "dark:from-background-dark-secondary dark:via-background-dark-card dark:to-background-dark-secondary",
+          // 하단 보더로 경계 정리
+          "border-b border-black/10 dark:border-white/5",
+          // 깊이감용 미세 섀도우
+          "shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,_0_1px_2px_0_rgba(0,0,0,0.08)]",
+        ].join(" ")}
+      >
         <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-4 lg:px-8">
           <Link
             href="/"
-            className="relative cursor-pointer text-lg font-semibold text-white lg:text-xl"
+            className="relative flex cursor-pointer items-center gap-2.5 text-base font-semibold tracking-tight text-white lg:text-lg"
           >
-            PENTA WORKS
+            <Image
+              src="/favicon/android-chrome-192x192.png"
+              alt="PENTA WORKS"
+              width={28}
+              height={28}
+              priority
+              className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
+            />
+            <span className="tracking-[-0.01em]">PENTA WORKS</span>
             {!process.env.NEXT_PUBLIC_API_URL?.includes("https") && (
-              <span className="text-error absolute ml-2">DEV</span>
+              <span className="ml-1 rounded-md border border-amber-300/40 bg-amber-300/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-200 backdrop-blur-sm">
+                DEV
+              </span>
             )}
           </Link>
 
-          <div className="flex items-center justify-center gap-x-4 lg:gap-x-6">
+          <nav className="flex items-center gap-1">
+            <Link
+              href="/baselines"
+              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+              aria-label="기준값 보기"
+            >
+              기준값
+            </Link>
+
             <button
               type="button"
-              className="mt-0.5 cursor-pointer"
+              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
               onClick={() => {
                 openSearchModal();
               }}
               aria-label="Open site search"
             >
-              <SearchIcon className="text-slate-100" />
+              <SearchIcon className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-3">
+            <div className="ml-1 flex items-center">
               <div className="toggle-switch">
                 <label className="switch-label">
                   <input
@@ -69,7 +99,7 @@ export default function Navbar() {
                 </label>
               </div>
             </div>
-          </div>
+          </nav>
         </div>
       </header>
 

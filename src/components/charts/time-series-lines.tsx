@@ -240,13 +240,15 @@ export function TimeSeriesLines({
   };
 
   return (
-    <section className="dark:bg-background-dark-card dark:border-background-dark-secondary mt-4 overflow-hidden rounded-xl border bg-white">
-      <div className="dark:border-background-dark-secondary border-b px-4 py-3">
-        <strong className="text-text-major dark:text-text-dark-primary text-sm">
-          {title}
-        </strong>
-        <div className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-[11px]">
-          확대/축소: 마우스휠 또는 핀치 / 이동: Shift + 드래그
+    <section className="dark:bg-background-dark-card dark:border-background-dark-secondary overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
+      <div className="dark:border-background-dark-secondary/60 border-b border-border/60 px-4 py-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
+            {title}
+          </strong>
+          <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
+            휠/핀치 확대 · Shift + 드래그 이동
+          </span>
         </div>
       </div>
 

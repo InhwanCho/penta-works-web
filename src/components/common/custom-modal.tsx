@@ -10,12 +10,9 @@ type CustomModalProps = {
   closeBtnStyle?: string;
   closeBtnLocation?: string;
   children: React.ReactNode;
-  /** 모달이 닫힐 때(ESC, 바깥 클릭, 닫기 버튼 모두 포함) 호출되는 콜백 */
   onRequestClose?: () => void;
   showCloseButton?: boolean;
-  /** 바깥 영역 클릭으로 닫기 허용 여부 (기본값: true) */
   closeOnOverlay?: boolean;
-  /** ESC 키로 닫기 허용 여부 (기본값: true) */
   closeOnEsc?: boolean;
   onCloseByX?: () => void;
 };
@@ -34,9 +31,7 @@ export default function CustomModal({
   const { isOpen, close, zIndex } = useModal(id);
 
   const handleClose = useCallback(() => {
-    // 모달 스토어 상태 먼저 닫기
     close();
-    // 외부에서 전달한 후처리 실행(라우팅/로그 등)
     onRequestClose?.();
   }, [close, onRequestClose]);
 
@@ -58,7 +53,7 @@ export default function CustomModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-center justify-center"
+      className="fixed inset-0 flex items-end justify-center p-0 sm:items-start sm:p-6 sm:pt-[10vh]"
       style={{ zIndex }}
       onClick={closeOnOverlay ? handleClose : undefined}
       role="presentation"
@@ -66,17 +61,25 @@ export default function CustomModal({
       <div
         role="dialog"
         aria-modal="true"
-        className="dark:bg-background-dark-card relative rounded-lg bg-white"
+        className={[
+          "dark:bg-background-dark-card relative w-full bg-white",
+          "shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),_0_10px_20px_-15px_rgba(22,23,24,0.15)]",
+          "border border-border/80 dark:border-background-dark-secondary/80",
+          // 모바일: 바텀 시트
+          "max-h-[92vh] overflow-hidden rounded-t-xl",
+          // 데스크탑: 중앙 카드
+          "sm:max-w-[560px] sm:rounded-lg",
+        ].join(" ")}
         onClick={(e) => e.stopPropagation()}
       >
         {showCloseButton && (
           <button
-            className={`absolute top-4 right-4 ${closeBtnLocation}`}
+            className={`text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute top-2.5 right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${closeBtnLocation ?? ""}`}
             onClick={() => (onCloseByX ? onCloseByX() : handleClose())}
             aria-label="닫기"
           >
             <XIcon
-              className={`size-5 cursor-pointer dark:bg-transparent dark:text-white ${closeBtnStyle}`}
+              className={`size-4 ${closeBtnStyle ?? ""}`}
             />
           </button>
         )}

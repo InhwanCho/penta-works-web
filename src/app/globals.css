@@ -61,13 +61,45 @@
 
   /* colors: custom-blue */
   --color-custom-blue: #3d76ee;
+
+  /* === shadcn 스타일 시맨틱 토큰 (Light) === */
+  --color-surface: #ffffff;
+  --color-surface-muted: #f6f7f9;
+  --color-surface-subtle: #fafafa;
+  --color-foreground: #0f172a;
+  --color-foreground-muted: #64748b;
+  --color-foreground-subtle: #94a3b8;
+  --color-border-subtle: #e5e7eb;
+  --color-border-strong: #d4d4d8;
+  --color-ring: #94a3b8;
+
+  --color-accent: #f1f5f9;
+  --color-accent-foreground: #0f172a;
+
+  --color-destructive: #dc2626;
+  --color-destructive-subtle: #fef2f2;
+
+  --color-success: #059669;
+  --color-success-subtle: #ecfdf5;
+
+  --color-warning: #d97706;
+  --color-warning-subtle: #fffbeb;
 }
 
 /* 선택 사항: 기본 스타일 */
 @layer base {
+  html {
+    /* 기본 루트 폰트 크기(모바일 가독성 강화) */
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    @apply bg-background-primary text-text-primary;
+    @apply bg-background-primary text-text-major;
     @apply dark:bg-background-dark-primary dark:text-text-dark-primary;
+    /* 숫자 가독성 및 자간 */
+    font-feature-settings: "tnum" 1;
+    letter-spacing: -0.011em;
   }
 
   /* 기본 border/outline 톤(다크에서 과한 대비 방지) */
@@ -77,6 +109,26 @@
 
   a {
     @apply text-brand-primary hover:text-brand-primary-hover dark:text-text-dark-primary;
+  }
+
+  /* 모바일에서 iOS zoom 방지(input 16px 이상) */
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+  }
+
+  /* 터치 타겟 최소 44px 확보 */
+  button,
+  a[role="button"],
+  [role="button"] {
+    touch-action: manipulation;
+  }
+
+  /* shadcn 느낌 포커스 링 기본값 */
+  :where(button, a, [role="button"], input, select, textarea):focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-ring);
   }
 }
 

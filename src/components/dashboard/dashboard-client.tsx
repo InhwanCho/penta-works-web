@@ -1,6 +1,7 @@
 "use client";
 
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
+import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -117,11 +118,6 @@ export default function DashboardClient() {
     () => filteredRows.slice().sort(compareSite),
     [filteredRows],
   );
-  console.log(
-    "%c sortedRows:",
-    "color: #4CAF50; font-weight: bold;",
-    sortedRows,
-  );
 
   if (isLoading) {
     return (
@@ -134,35 +130,46 @@ export default function DashboardClient() {
   if (isError || !data) {
     return (
       <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
-        <div className="text-sm text-red-600">
-          데이터를 불러오지 못했습니다:{" "}
+        <div className="rounded-lg border border-red-200 bg-red-50/60 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+          데이터를 불러오지 못했습니다.{" "}
           {String((error as Error)?.message ?? "알 수 없는 오류")}
         </div>
       </main>
     );
   }
 
-  const { meta, ctrl } = data;
+  const { meta, ctrl, stats } = data;
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-6 lg:px-8">
+    <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
       <DashboardScrollTo offset={80} />
 
-      <div className="mb-5">
-        <h1 className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight">
+      <header className="mb-5 lg:mb-6">
+        <h1 className="text-text-major dark:text-text-dark-primary text-xl font-semibold tracking-tight lg:text-2xl">
           대시보드
         </h1>
-        <div className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-xs">
-          업데이트 일시: {fmtYmdHms(meta.nowMs)}
-        </div>
-      </div>
+        <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
+          업데이트 <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>
+        </p>
+      </header>
+
+      {/* 요약 카드 */}
+      <section className="mb-5 grid grid-cols-3 gap-2 sm:gap-3 lg:mb-6">
+        <SummaryCard label="전체" value={stats.totalSites} tone="neutral" />
+        <SummaryCard label="정상 (1시간)" value={stats.active1h} tone="ok" />
+        <SummaryCard
+          label="미수집 (24시간)"
+          value={stats.stale24h}
+          tone={stats.stale24h > 0 ? "warn" : "neutral"}
+        />
+      </section>
 
       {/* Mobile: cards */}
       <section className="md:hidden">
         {sortedRows.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {sortedRows.map((r) => {
               const lastAtMs = r.lastAt ? Date.parse(r.lastAt) : null;
               const isActive1h = !!lastAtMs && lastAtMs >= meta.since1hMs;
@@ -182,7 +189,7 @@ export default function DashboardClient() {
       </section>
 
       {/* Desktop: table */}
-      <section className="dark:border-background-dark-secondary dark:bg-background-dark-card hidden overflow-hidden rounded-2xl border bg-white shadow-sm md:block">
+      <section className="dark:border-background-dark-secondary dark:bg-background-dark-card hidden overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.04)] md:block">
         {sortedRows.length === 0 ? (
           <div className="py-12">
             <EmptyState />
@@ -190,15 +197,15 @@ export default function DashboardClient() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] border-collapse text-sm">
-              <thead className="bg-background-tertiary text-text-major dark:bg-background-dark-secondary dark:text-text-dark-primary">
+              <thead className="border-b bg-background-primary/60 text-text-secondary dark:border-background-dark-secondary dark:bg-background-dark-secondary/40 dark:text-text-dark-primary/70">
                 <tr>
-                  <Th>site</Th>
+                  <Th>Site</Th>
                   <Th>병원명</Th>
-                  <Th>status</Th>
-                  <Th>lastAt</Th>
-                  <Th>hePsi</Th>
-                  <Th>he%</Th>
-                  <Th className="text-right">detail</Th>
+                  <Th>상태</Th>
+                  <Th>최신 시각</Th>
+                  <Th className="text-right">hePsi</Th>
+                  <Th className="text-right">he%</Th>
+                  <Th className="text-right" />
                 </tr>
               </thead>
 
@@ -226,36 +233,36 @@ export default function DashboardClient() {
                     <tr
                       key={r.siteDb}
                       id={`site-d-${r.siteSlug}`}
-                      className="dark:border-background-dark-secondary scroll-mt-[120px] border-b last:border-b-0"
+                      className="dark:border-background-dark-secondary scroll-mt-[120px] border-b last:border-b-0 transition-colors hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30"
                     >
-                      <Td className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
+                      <Td className="text-text-major dark:text-text-dark-primary text-sm font-semibold tabular-nums">
                         {r.siteSlug}
                       </Td>
 
-                      <Td className="text-text-major dark:text-text-dark-primary font-semibold">
+                      <Td className="text-text-major dark:text-text-dark-primary font-medium">
                         {r.name ?? "-"}
                       </Td>
 
                       <Td>
-                        <StatusPill
+                        <StatusBadge
                           variant={
                             isActive1h ? "ok" : isActive24h ? "warn" : "stale"
                           }
                         >
                           {isActive1h
-                            ? "active(1h)"
+                            ? "정상"
                             : isActive24h
-                              ? "active(24h)"
-                              : "미수집(24h)"}
-                        </StatusPill>
+                              ? "주의"
+                              : "미수집"}
+                        </StatusBadge>
                       </Td>
 
-                      <Td className="text-text-secondary dark:text-text-dark-primary/80 whitespace-nowrap tabular-nums">
+                      <Td className="text-text-secondary dark:text-text-dark-primary/70 whitespace-nowrap tabular-nums">
                         <div className="leading-tight">
-                          <div className="text-[12px] font-semibold whitespace-nowrap">
+                          <div className="text-xs font-medium">
                             {fmtYmd(lastAtDate)}
                           </div>
-                          <div className="mt-0.5 text-[11px] font-medium whitespace-nowrap opacity-80">
+                          <div className="mt-0.5 text-[11px] opacity-70">
                             {fmtHms(lastAtDate)}
                           </div>
                         </div>
@@ -263,10 +270,10 @@ export default function DashboardClient() {
 
                       <Td
                         className={[
-                          "whitespace-nowrap tabular-nums",
+                          "whitespace-nowrap text-right tabular-nums",
                           hePsiAlert
-                            ? "font-extrabold text-red-600"
-                            : "text-text-secondary dark:text-text-dark-primary/80",
+                            ? "font-semibold text-red-600 dark:text-red-400"
+                            : "text-text-major dark:text-text-dark-primary/90",
                         ].join(" ")}
                       >
                         {fmtNum(r.hePsi)}
@@ -274,10 +281,10 @@ export default function DashboardClient() {
 
                       <Td
                         className={[
-                          "whitespace-nowrap tabular-nums",
+                          "whitespace-nowrap text-right tabular-nums",
                           hePctAlert
-                            ? "font-extrabold text-red-600"
-                            : "text-text-secondary dark:text-text-dark-primary/80",
+                            ? "font-semibold text-red-600 dark:text-red-400"
+                            : "text-text-major dark:text-text-dark-primary/90",
                         ].join(" ")}
                       >
                         {fmtNum(r.hePct, "%")}
@@ -285,18 +292,11 @@ export default function DashboardClient() {
 
                       <Td className="text-right">
                         <Link
-                          className={[
-                            "inline-flex items-center rounded-lg px-3 py-2 text-xs font-extrabold",
-                            "dark:border-background-dark-secondary border",
-                            "bg-background-tertiary hover:bg-background-secondary",
-                            "dark:bg-background-dark-secondary dark:hover:bg-background-dark-card",
-                            "text-text-major dark:text-text-dark-primary",
-                            "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                            "dark:focus-visible:ring-offset-background-dark-card",
-                          ].join(" ")}
+                          className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                           href={`/sites/${r.siteSlug}`}
+                          aria-label={`${r.name ?? r.siteSlug} 상세 보기`}
                         >
-                          상세
+                          <ChevronRightIcon className="h-4 w-4" />
                         </Link>
                       </Td>
                     </tr>
@@ -315,8 +315,40 @@ export default function DashboardClient() {
 
 function EmptyState() {
   return (
-    <div className="text-text-secondary dark:text-text-dark-primary/70 py-12 text-center text-sm">
+    <div className="text-text-secondary dark:text-text-dark-primary/60 py-12 text-center text-sm">
       데이터가 없습니다.
+    </div>
+  );
+}
+
+function SummaryCard({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number | string;
+  tone: "ok" | "warn" | "neutral";
+}) {
+  const toneCls =
+    tone === "ok"
+      ? "text-emerald-600 dark:text-emerald-400"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-text-major dark:text-text-dark-primary";
+  return (
+    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white px-3 py-2.5 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:px-4 sm:py-3">
+      <div className="text-text-secondary dark:text-text-dark-primary/60 text-[11px] font-medium sm:text-xs">
+        {label}
+      </div>
+      <div
+        className={[
+          "mt-1 text-xl font-semibold tabular-nums sm:text-2xl",
+          toneCls,
+        ].join(" ")}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -331,13 +363,7 @@ function SiteCard({
   range: CtrlRange | null;
 }) {
   const statusLabel =
-    status === "ok"
-      ? "정상(1시간)"
-      : status === "warn"
-        ? "주의(24시간)"
-        : "비활성";
-
-  // 💡 경고 해결 3: 여기서 쓰이지 않던 lastAtDate 변수를 삭제했습니다.
+    status === "ok" ? "정상" : status === "warn" ? "주의" : "비활성";
 
   const hePsiAlert = isOutOfRange(
     row.hePsi,
@@ -350,121 +376,111 @@ function SiteCard({
     range?.mrlevh ?? null,
   );
 
+  const anyAlert = hePsiAlert || hePctAlert;
+  const d = parseIso(row.lastAt);
+
   return (
-    <div
+    <Link
+      href={`/sites/${row.siteSlug}`}
       id={`site-m-${row.siteSlug}`}
-      className="dark:border-background-dark-secondary dark:bg-background-dark-card scroll-mt-[120px] rounded-2xl border bg-white p-4 shadow-sm"
+      className={[
+        "group block scroll-mt-[120px] rounded-lg border bg-white p-4 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] transition-all active:scale-[0.997]",
+        "hover:border-border-secondary dark:hover:border-background-dark-secondary/60",
+        "dark:border-background-dark-secondary dark:bg-background-dark-card",
+        anyAlert
+          ? "border-red-300/80 dark:border-red-900/50"
+          : "border-border",
+      ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight whitespace-nowrap">
-              {row.siteSlug}
-            </div>
-
-            <div
-              className={[
-                "min-w-0 flex-1",
-                "text-text-major dark:text-text-dark-primary",
-                "text-base font-semibold",
-                "truncate",
-              ].join(" ")}
-              title={row.name ?? ""}
-            >
-              {row.name ?? "-"}
-            </div>
-            <StatusPill variant={status}>{statusLabel}</StatusPill>
-          </div>
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <span className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-semibold tabular-nums">
+            {row.siteSlug}
+          </span>
+          <span className="text-border-strong dark:text-background-dark-secondary">·</span>
+          <span
+            className="text-text-major dark:text-text-dark-primary truncate text-[15px] font-semibold"
+            title={row.name ?? ""}
+          >
+            {row.name ?? "-"}
+          </span>
         </div>
-
-        <Link
-          className={[
-            "inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-xs font-extrabold",
-            "dark:border-background-dark-secondary border",
-            "bg-background-tertiary hover:bg-background-secondary",
-            "dark:bg-background-dark-secondary dark:hover:bg-background-dark-card",
-            "text-text-major dark:text-text-dark-primary",
-            "focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-            "dark:focus-visible:ring-offset-background-dark-card",
-          ].join(" ")}
-          href={`/sites/${row.siteSlug}`}
-        >
-          상세
-        </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          <StatusBadge variant={status}>{statusLabel}</StatusBadge>
+          <ChevronRightIcon className="text-text-secondary/60 dark:text-text-dark-primary/40 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+        </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        <MetricLastAt iso={row.lastAt} />
+      {/* Divider */}
+      <div className="my-3 h-px bg-border/60 dark:bg-background-dark-secondary/60" />
 
-        <Metric
+      {/* Metrics */}
+      <div className="grid grid-cols-3 gap-4">
+        <MetricCol
+          label="최신 시각"
+          value={
+            <span className="text-text-major dark:text-text-dark-primary text-sm font-semibold tabular-nums leading-tight">
+              <span className="block">{fmtYmd(d)}</span>
+              <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-xs font-medium">
+                {fmtHms(d)}
+              </span>
+            </span>
+          }
+        />
+        <MetricCol
           label="hePsi"
-          value={fmtNum(row.hePsi)}
-          valueTone={hePsiAlert ? "danger" : "normal"}
+          value={
+            <span
+              className={[
+                "text-lg font-semibold tabular-nums",
+                hePsiAlert
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-text-major dark:text-text-dark-primary",
+              ].join(" ")}
+            >
+              {fmtNum(row.hePsi)}
+            </span>
+          }
         />
-
-        <Metric
+        <MetricCol
           label="he%"
-          value={fmtNum(row.hePct, "%")}
-          valueTone={hePctAlert ? "danger" : "normal"}
+          value={
+            <span
+              className={[
+                "text-lg font-semibold tabular-nums",
+                hePctAlert
+                  ? "text-red-600 dark:text-red-400"
+                  : "text-text-major dark:text-text-dark-primary",
+              ].join(" ")}
+            >
+              {fmtNum(row.hePct, "%")}
+            </span>
+          }
         />
       </div>
-    </div>
+    </Link>
   );
 }
 
-function MetricLastAt({ iso }: { iso: string | null }) {
-  const d = parseIso(iso);
-
-  return (
-    <div className="dark:border-background-dark-secondary rounded-xl border px-3 py-2">
-      <div className="text-text-secondary dark:text-text-dark-primary/70 text-[11px]">
-        lastAt
-      </div>
-
-      <div className="text-text-major dark:text-text-dark-primary mt-0.5 leading-tight tabular-nums">
-        <div className="text-[12px] font-semibold whitespace-nowrap">
-          {fmtYmd(d)}
-        </div>
-        <div className="mt-0.5 text-[11px] font-medium whitespace-nowrap opacity-80">
-          {fmtHms(d)}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Metric({
+function MetricCol({
   label,
   value,
-  valueTone = "normal",
 }: {
   label: string;
-  value: string;
-  valueTone?: "normal" | "danger";
+  value: React.ReactNode;
 }) {
-  const valueCls =
-    valueTone === "danger"
-      ? "text-red-600 font-extrabold"
-      : "text-text-major dark:text-text-dark-primary font-semibold";
-
   return (
-    <div className="dark:border-background-dark-secondary rounded-xl border px-3 py-2">
-      <div className="text-text-secondary dark:text-text-dark-primary/70 text-[11px]">
+    <div className="min-w-0">
+      <div className="text-text-secondary dark:text-text-dark-primary/60 text-[11px] font-medium">
         {label}
       </div>
-      <div
-        className={[
-          "mt-0.5 text-sm whitespace-nowrap tabular-nums",
-          valueCls,
-        ].join(" ")}
-      >
-        {value}
-      </div>
+      <div className="mt-1">{value}</div>
     </div>
   );
 }
 
-function StatusPill({
+function StatusBadge({
   children,
   variant,
 }: {
@@ -473,19 +489,26 @@ function StatusPill({
 }) {
   const cls =
     variant === "ok"
-      ? "bg-background-primary text-text-major dark:bg-background-dark-secondary dark:text-text-dark-primary"
+      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
       : variant === "warn"
-        ? "bg-white text-text-secondary dark:bg-background-dark-card dark:text-text-dark-primary/80"
-        : "bg-white text-text-secondary dark:bg-background-dark-card dark:text-text-dark-primary/70";
+        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
+        : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300";
+
+  const dotCls =
+    variant === "ok"
+      ? "bg-emerald-500"
+      : variant === "warn"
+        ? "bg-amber-500"
+        : "bg-slate-400";
 
   return (
     <span
       className={[
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold",
-        "dark:border-background-dark-secondary",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
         cls,
       ].join(" ")}
     >
+      <span className={["h-1.5 w-1.5 rounded-full", dotCls].join(" ")} />
       {children}
     </span>
   );
@@ -495,13 +518,13 @@ function Th({
   children,
   className = "",
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   className?: string;
 }) {
   return (
     <th
       className={[
-        "px-4 py-3 text-left text-xs font-semibold whitespace-nowrap",
+        "px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide whitespace-nowrap",
         className,
       ].join(" ")}
     >

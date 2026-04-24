@@ -1,6 +1,8 @@
 "use client";
 
 import CustomModal from "@/components/common/custom-modal";
+import ChevronRightIcon from "@/components/icons/chevron-right-icon";
+import SearchIcon from "@/components/icons/search-icon";
 import { useModal } from "@/components/provider/modal-provider";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -83,10 +85,6 @@ export default function SiteSearchModal() {
         const name = norm(it.name);
 
         let score = 0;
-        recalls: {
-          /* no-op */
-        }
-
         if (slug === query || db === query) score += 100;
         if (slug.startsWith(query) || db.startsWith(query)) score += 60;
         if (name.startsWith(query)) score += 40;
@@ -104,7 +102,6 @@ export default function SiteSearchModal() {
   }, [q, items, loading]);
 
   const goToDashboardAndScroll = (siteSlug: string) => {
-    // 모달 먼저 닫고 이동(전역 모달이라 라우트 변경에도 상태가 남을 수 있음)
     closeSearchModal();
 
     const qs = new URLSearchParams();
@@ -120,99 +117,72 @@ export default function SiteSearchModal() {
   };
 
   return (
-    <CustomModal
-      id="SearchModal"
-      showCloseButton={false}
-    >
-      <div className="p-6">
-        <div className="text-text-major dark:text-text-dark-primary text-sm font-semibold">
-          사이트 검색
-        </div>
-
-        <form
-          onSubmit={onSubmit}
-          className="mt-3"
-        >
-          <input
-            ref={inputRef}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="site(슬러그/DB) 또는 name으로 검색"
-            className="dark:border-background-dark-secondary dark:bg-background-dark-card w-full rounded-xl border px-3 py-2 text-sm outline-none"
-          />
-
-          <div className="mt-3 flex gap-2">
-            <button
-              type="submit"
-              className="dark:border-background-dark-secondary hover:bg-background-tertiary dark:hover:bg-background-dark-secondary inline-flex items-center rounded-lg border px-3 py-2 text-xs font-medium"
-              disabled={loading}
-            >
-              이동
-            </button>
-
+    <CustomModal id="SearchModal" showCloseButton={false}>
+      <div className="flex flex-col">
+        {/* Command palette 스타일 검색창 */}
+        <form onSubmit={onSubmit} className="border-b border-border dark:border-background-dark-secondary">
+          <div className="relative flex items-center">
+            <SearchIcon className="text-text-secondary/70 dark:text-text-dark-primary/50 absolute left-4 h-4 w-4 pointer-events-none" />
+            <input
+              ref={inputRef}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="사이트 또는 병원명으로 검색..."
+              className="w-full border-0 bg-transparent px-11 py-4 text-sm outline-none placeholder:text-text-secondary/70 dark:placeholder:text-text-dark-primary/40 dark:text-text-dark-primary"
+              inputMode="search"
+              autoComplete="off"
+            />
             <button
               type="button"
-              onClick={() => {
-                setQ("");
-                inputRef.current?.focus();
-              }}
-              className="dark:border-background-dark-secondary hover:bg-background-tertiary dark:hover:bg-background-dark-secondary inline-flex items-center rounded-lg border px-3 py-2 text-xs font-medium"
+              onClick={() => closeSearchModal()}
+              aria-label="닫기"
+              className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute right-3 inline-flex h-7 items-center justify-center rounded border border-border px-1.5 text-[11px] font-semibold dark:border-background-dark-secondary"
             >
-              초기화
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                closeSearchModal();
-              }}
-              className="dark:border-background-dark-secondary hover:bg-background-tertiary dark:hover:bg-background-dark-secondary ml-auto inline-flex items-center rounded-lg border px-3 py-2 text-xs font-medium"
-            >
-              취소
+              ESC
             </button>
           </div>
         </form>
 
-        <div className="dark:border-background-dark-secondary mt-4 max-h-[50vh] overflow-auto rounded-xl border">
+        <div className="max-h-[60vh] overflow-auto p-2">
           {loading && (
-            <div className="text-text-secondary dark:text-text-dark-primary/70 p-4 text-sm">
+            <div className="text-text-secondary dark:text-text-dark-primary/60 p-6 text-center text-sm">
               불러오는 중...
             </div>
           )}
 
           {!loading && errorMsg && (
-            <div className="p-4">
-              <div className="text-error text-sm font-semibold">오류</div>
-              <div className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-sm">
+            <div className="p-6">
+              <div className="text-red-600 dark:text-red-400 text-sm font-semibold">
+                오류
+              </div>
+              <div className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-xs">
                 {errorMsg}
               </div>
             </div>
           )}
 
           {!loading && !errorMsg && results.length === 0 && (
-            <div className="text-text-secondary dark:text-text-dark-primary/70 p-4 text-sm">
+            <div className="text-text-secondary dark:text-text-dark-primary/60 p-6 text-center text-sm">
               검색 결과가 없습니다.
             </div>
           )}
 
           {!loading && !errorMsg && results.length > 0 && (
-            <ul className="dark:divide-background-dark-secondary divide-y">
+            <ul className="space-y-0.5">
               {results.map((it) => (
                 <li key={it.siteDb}>
                   <button
                     type="button"
                     onClick={() => goToDashboardAndScroll(it.siteSlug)}
-                    className="hover:bg-background-tertiary dark:hover:bg-background-dark-secondary w-full px-4 py-3 text-left"
+                    className="group hover:bg-background-tertiary dark:hover:bg-background-dark-secondary flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors"
                   >
-                    <div className="text-text-major dark:text-text-dark-primary text-sm font-semibold">
+                    <span className="text-text-secondary dark:text-text-dark-primary/60 w-10 shrink-0 text-xs font-semibold tabular-nums">
                       {it.siteSlug}
-                      <span className="text-text-secondary dark:text-text-dark-primary/70 ml-2 text-xs">
-                        (DB: {it.siteDb})
-                      </span>
-                    </div>
-                    <div className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 text-xs">
+                    </span>
+                    <span className="text-text-major dark:text-text-dark-primary min-w-0 flex-1 truncate text-sm font-medium">
                       {it.name || "-"}
-                    </div>
+                    </span>
+                    <ChevronRightIcon className="text-text-secondary/40 dark:text-text-dark-primary/30 h-4 w-4 shrink-0 transition-opacity group-hover:opacity-100" />
                   </button>
                 </li>
               ))}
@@ -220,8 +190,20 @@ export default function SiteSearchModal() {
           )}
         </div>
 
-        <div className="text-text-secondary dark:text-text-dark-primary/70 mt-3 text-xs">
-          결과를 선택하면 대시보드로 이동 후 해당 사이트 위치로 스크롤됩니다.
+        <div className="border-t border-border/60 bg-background-primary/50 px-4 py-2.5 text-[11px] text-text-secondary dark:border-background-dark-secondary/60 dark:bg-background-dark-secondary/30 dark:text-text-dark-primary/60">
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-semibold dark:border-background-dark-secondary dark:bg-background-dark-card">
+              ↵
+            </kbd>
+            선택
+          </span>
+          <span className="mx-2">·</span>
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-semibold dark:border-background-dark-secondary dark:bg-background-dark-card">
+              ESC
+            </kbd>
+            닫기
+          </span>
         </div>
       </div>
     </CustomModal>
