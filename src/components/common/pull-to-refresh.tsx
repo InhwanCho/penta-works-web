@@ -11,10 +11,10 @@ type Props = {
 };
 
 // 당김 임계값 / 최대 이동 거리 (px)
-const THRESHOLD = 70;
-const MAX_PULL = 110;
+const THRESHOLD = 80;
+const MAX_PULL = 120;
 // 당김 저항 (1.0 = 손가락 이동 그대로, 작을수록 둔해짐)
-const RESISTANCE = 0.5;
+const RESISTANCE = 0.4;
 // 화면 맨 최상단 판정 허용 오차(px). iOS 바운스 등 미세한 양수값 흡수
 const TOP_TOLERANCE = 0;
 
@@ -175,10 +175,7 @@ export default function PullToRefresh({
 
     return () => {
       window.removeEventListener("touchstart", onTouchStart);
-      window.removeEventListener(
-        "touchmove",
-        onTouchMove as EventListener,
-      );
+      window.removeEventListener("touchmove", onTouchMove as EventListener);
       window.removeEventListener("touchend", finishPull);
       window.removeEventListener("touchcancel", finishPull);
     };
@@ -192,7 +189,7 @@ export default function PullToRefresh({
       <div
         aria-hidden={!isRefreshing && pullDistance === 0}
         className={[
-          "pointer-events-none fixed left-0 right-0 z-20 flex items-start justify-center overflow-hidden",
+          "pointer-events-none fixed right-0 left-0 z-20 flex items-start justify-center overflow-hidden",
           // 당김 중에는 손가락을 따라오도록 transition 없음. 놓았을 때만 부드럽게 줄어듦.
           isRefreshing || pullDistance > 0
             ? ""
@@ -204,7 +201,7 @@ export default function PullToRefresh({
         }}
       >
         <div
-          className="mt-2 flex h-9 w-9 items-center justify-center rounded-full border border-border/60 bg-white/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.06)] backdrop-blur dark:border-background-dark-secondary/60 dark:bg-background-dark-card/95"
+          className="border-border/60 dark:border-background-dark-secondary/60 dark:bg-background-dark-card/95 mt-2 flex h-9 w-9 items-center justify-center rounded-full border bg-white/95 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.06)] backdrop-blur"
           style={{
             opacity: isRefreshing ? 1 : Math.max(0.4, progress),
             transform: `scale(${isRefreshing ? 1 : 0.85 + progress * 0.15})`,
@@ -213,7 +210,7 @@ export default function PullToRefresh({
           <svg
             viewBox="0 0 24 24"
             className={[
-              "h-4 w-4 text-text-secondary dark:text-text-dark-primary/70",
+              "text-text-secondary dark:text-text-dark-primary/70 h-4 w-4",
               isRefreshing ? "animate-spin" : "",
             ].join(" ")}
             style={
