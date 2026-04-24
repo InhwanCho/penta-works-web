@@ -6,43 +6,13 @@ import {
 } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import {
+  clampTake,
+  useSiteDetailQuery,
+} from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
-import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-
-type ApiRow = {
-  index: number;
-  date: string | null; // ISO
-  hepres: number | null;
-  heleve: number | null;
-  actemp: number | null;
-  achumi: number | null;
-};
-
-type ApiResponse = {
-  slug: string;
-  site: { siteDb: string; name: string | null };
-  take: number;
-  lastAt: string | null;
-  rows: ApiRow[];
-};
-
-function clampTake(raw: number) {
-  return Math.min(Math.max(Number.isFinite(raw) ? raw : 50, 10), 100);
-}
-
-async function fetchSiteDetail(
-  slug: string,
-  take: number,
-): Promise<ApiResponse> {
-  const res = await fetch(
-    `/api/sites/${encodeURIComponent(slug)}?take=${take}`,
-    { cache: "no-store" },
-  );
-  if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
-  return res.json();
-}
 
 function toPointNumber(v: number | null): number | null {
   return typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -61,11 +31,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
 
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["siteDetail", slug, take],
-    queryFn: () => fetchSiteDetail(slug, take),
-    staleTime: 10_000,
-  });
+  const { data, isLoading, isError, error } = useSiteDetailQuery(slug, take);
 
   if (isLoading) {
     return (

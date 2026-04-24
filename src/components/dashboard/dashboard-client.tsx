@@ -1,49 +1,17 @@
 "use client";
 
+import PullToRefresh from "@/components/common/pull-to-refresh";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
-import { useQuery } from "@tanstack/react-query";
+import {
+  type CtrlRange,
+  type SiteRow,
+  useDashboardQuery,
+} from "@/hooks/use-dashboard-query";
 import Link from "next/link";
 import type React from "react";
-import { useMemo } from "react";
-
-type CtrlRange = {
-  mrprel: number | null; // low psi
-  mrpreh: number | null; // high psi
-  mrlevl: number | null; // low %
-  mrlevh: number | null; // high %
-};
-type SiteRow = {
-  siteDb: string;
-  siteSlug: string;
-  name: string | null;
-  lastAt: string | null; // ISO
-  hePsi: number | null;
-  hePct: number | null;
-};
-
-type DashboardResponse = {
-  meta: {
-    nowMs: number;
-    since1hMs: number;
-    since24hMs: number;
-  };
-  stats: {
-    totalSites: number;
-    active1h: number;
-    stale24h: number;
-    total24hRecords: number;
-  };
-  rows: SiteRow[];
-  ctrl: Record<string, CtrlRange>;
-};
-
-async function fetchDashboard(): Promise<DashboardResponse> {
-  const res = await fetch("/api/dashboard", { cache: "no-store" });
-  if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`);
-  return res.json();
-}
+import { useCallback, useMemo } from "react";
 
 function compareSite(a: SiteRow, b: SiteRow) {
   const aSlug = a.siteSlug ?? "";
@@ -104,10 +72,11 @@ function fmtYmdHms(ms: number) {
 }
 
 export default function DashboardClient() {
-  const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["dashboard"],
-    queryFn: fetchDashboard,
-  });
+  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
+
+  const handleRefresh = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
@@ -141,6 +110,7 @@ export default function DashboardClient() {
   const { meta, ctrl, stats } = data;
 
   return (
+    <PullToRefresh onRefresh={handleRefresh} topOffset={56}>
     <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
       <DashboardScrollTo offset={80} />
 
@@ -308,6 +278,7 @@ export default function DashboardClient() {
         )}
       </section>
     </main>
+    </PullToRefresh>
   );
 }
 
