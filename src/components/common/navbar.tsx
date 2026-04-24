@@ -36,7 +36,7 @@ export default function Navbar() {
         className={[
           "sticky top-0 z-10 h-14 w-full lg:h-[60px]",
           // 브랜드 블루슬레이트 그라디언트(오렌지 로고와 보색 대비)
-          "bg-gradient-to-r from-brand-primary via-brand to-brand-primary",
+          "from-brand-primary via-brand to-brand-primary bg-gradient-to-r",
           "dark:from-background-dark-secondary dark:via-background-dark-card dark:to-background-dark-secondary",
           // 하단 보더로 경계 정리
           "border-b border-black/10 dark:border-white/5",
@@ -58,11 +58,6 @@ export default function Navbar() {
               className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
             />
             <span className="tracking-[-0.01em]">PENTA WORKS</span>
-            {!process.env.NEXT_PUBLIC_API_URL?.includes("https") && (
-              <span className="ml-1 rounded-md border border-amber-300/40 bg-amber-300/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-200 backdrop-blur-sm">
-                DEV
-              </span>
-            )}
           </Link>
 
           <nav className="flex items-center gap-1">
