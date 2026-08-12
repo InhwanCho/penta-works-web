@@ -2,14 +2,33 @@
 
 import SiteSearchModal from "@/components/common/site-search-modal";
 import SearchIcon from "@/components/icons/search-icon";
+import { useAuth } from "@/components/provider/auth-provider";
 import { useModal } from "@/components/provider/modal-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+
+/**
+ * 네비게이션 링크/버튼 공통 스타일.
+ * 모바일에서 항목이 늘어나도 줄바꿈되지 않도록 whitespace-nowrap + 좁은 패딩을 씁니다.
+ */
+const NAV_ITEM_CLASS =
+  "inline-flex h-9 shrink-0 items-center justify-center rounded-md px-2 text-[13px] font-medium whitespace-nowrap text-white/85 transition-colors hover:bg-white/10 hover:text-white sm:text-sm lg:px-3";
 
 export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
+  const { session, isAdmin, isLoading: isAuthLoading, logout } = useAuth();
+
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const handleLogout = () => {
+    logout();
+    // 관리자 화면에 머문 채 로그아웃하면 접근 제한 화면이 뜨므로 대시보드로 보냅니다.
+    if (pathname?.startsWith("/admin")) router.push("/");
+  };
 
   const [prefersDark, setPrefersDark] = useState(false);
 
@@ -57,17 +76,53 @@ export default function Navbar() {
               priority
               className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
             />
-            <span className="tracking-[-0.01em]">PENTA WORKS</span>
+            <span className="hidden tracking-[-0.01em] whitespace-nowrap sm:inline">
+              PENTA WORKS
+            </span>
           </Link>
 
-          <nav className="flex items-center gap-1">
+          <nav className="flex shrink-0 items-center gap-0.5 lg:gap-1">
             <Link
               href="/baselines"
-              className="inline-flex h-9 items-center justify-center rounded-md px-3 text-sm font-medium text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+              className={NAV_ITEM_CLASS}
               aria-label="기준값 보기"
             >
               기준값
             </Link>
+
+            {/* 인증 상태 확인 전에는 아무것도 그리지 않아 깜빡임을 막습니다. */}
+            {!isAuthLoading && isAdmin && (
+              <Link
+                href="/admin"
+                className={NAV_ITEM_CLASS}
+                aria-label="관리자 페이지"
+              >
+                관리자
+              </Link>
+            )}
+
+            {!isAuthLoading &&
+              (session ? (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className={`${NAV_ITEM_CLASS} cursor-pointer`}
+                  aria-label={`${session.username} 로그아웃`}
+                  title={`${session.username} (${
+                    session.role === "admin" ? "관리자" : "일반"
+                  })`}
+                >
+                  로그아웃
+                </button>
+              ) : (
+                <Link
+                  href="/login"
+                  className={NAV_ITEM_CLASS}
+                  aria-label="로그인"
+                >
+                  로그인
+                </Link>
+              ))}
 
             <button
               type="button"

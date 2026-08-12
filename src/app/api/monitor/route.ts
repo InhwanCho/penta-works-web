@@ -1,18 +1,24 @@
-import { BASELINE_MAP, getBaselineRange } from "@/lib/baseline-map";
+import { getPsiThresholdMap, judgePsi } from "@/lib/alert-settings";
 import { NextResponse } from "next/server";
 import { getDashboardData } from "../dashboard/service";
 
 export const dynamic = "force-dynamic";
 
 type AlertPayload = {
+  siteid: string;
   name: string;
   current: number;
-  baseline: number;
-  min: number;
-  max: number;
-  diffPct: number; // 기준값 대비 편차(%)
+  min: number | null;
+  max: number | null;
   direction: "low" | "high";
 };
+
+/** 임계값 표기. 한쪽만 설정된 경우도 읽히도록 처리합니다. */
+function fmtRange(min: number | null, max: number | null) {
+  if (min != null && max != null) return `${min} ~ ${max}`;
+  if (min != null) return `${min} 이상`;
+  return `${max} 이하`;
+}
 
 /**
  * 허용 범위를 벗어난 병원을 하나의 섹션에 컴팩트하게 나열합니다.
@@ -22,8 +28,7 @@ function buildSlackBlocks(alerts: AlertPayload[]) {
     return (
       `!! *${a.name} 이상 감지* !!\n` +
       `• 현재 hePsi: *${a.current}*\n` +
-      `• 기준값: ${a.baseline}\n` +
-      `• 허용범위: ${a.min.toFixed(2)} ~ ${a.max.toFixed(2)}`
+      `• 허용범위: ${fmtRange(a.min, a.max)}`
     );
   });
 
@@ -51,7 +56,7 @@ function buildSlackBlocks(alerts: AlertPayload[]) {
 function buildFallbackText(alerts: AlertPayload[]) {
   const lines = alerts.map((a) => {
     const arrow = a.direction === "high" ? "▲" : "▼";
-    return `${arrow} ${a.name}: ${a.current} (기준 ${a.baseline}, 범위 ${a.min.toFixed(2)}~${a.max.toFixed(2)})`;
+    return `${arrow} ${a.name}: ${a.current} (범위 ${fmtRange(a.min, a.max)})`;
   });
   return `[hePsi 이상 감지 ${alerts.length}건]\n${lines.join("\n")}`;
 }
@@ -63,7 +68,10 @@ export async function GET(request: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
     // fetch 대신 함수 직접 실행!
-    const data = await getDashboardData();
+    const [data, thresholds] = await Promise.all([
+      getDashboardData(),
+      getPsiThresholdMap(),
+    ]);
 
     const rows = data.rows ?? [];
     const alerts: AlertPayload[] = [];
@@ -71,30 +79,26 @@ export async function GET(request: Request) {
     for (const r of rows) {
       if (!r.name) continue;
 
-      const baseline = BASELINE_MAP[r.name];
-      // 매핑된 기준값이 없는 병원(수원참 등)은 건너뜀
-      if (baseline === undefined) continue;
-
       const v = r.hePsi;
       // 수치가 0이거나 null이면 제외
       if (v == null || v === 0) continue;
 
-      const { min, max } = getBaselineRange(baseline);
+      // 임계값은 병원명이 아니라 siteid 로 찾습니다.
+      // (병원명은 바뀔 수 있고, alert_settings 도 siteid 를 키로 씁니다)
+      const threshold = thresholds.get(r.siteDb);
 
-      // 허용 범위를 벗어난 경우 알림 메시지 생성
-      if (v < min || v > max) {
-        const direction: "low" | "high" = v > max ? "high" : "low";
-        const diffPct = ((v - baseline) / baseline) * 100;
-        alerts.push({
-          name: r.name,
-          current: v,
-          baseline,
-          min,
-          max,
-          diffPct: Math.abs(diffPct),
-          direction,
-        });
-      }
+      // 설정이 없거나 psi_active = 0 이면 감시 대상이 아닙니다.
+      const direction = judgePsi(v, threshold);
+      if (!direction || !threshold) continue;
+
+      alerts.push({
+        siteid: r.siteDb,
+        name: r.name,
+        current: v,
+        min: threshold.min,
+        max: threshold.max,
+        direction,
+      });
     }
 
     // 알림 전송

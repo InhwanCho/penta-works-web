@@ -1,4 +1,5 @@
 import Navbar from "@/components/common/navbar";
+import { AuthProvider } from "@/components/provider/auth-provider";
 import { ModalProvider } from "@/components/provider/modal-provider";
 import { QueryProviders } from "@/components/provider/query-provider";
 import { ThemeProvider } from "@/components/provider/theme-provider";
@@ -90,10 +91,12 @@ export default function RootLayout({
       >
         <QueryProviders>
           <ThemeProvider>
-            <ModalProvider>
-              <Navbar />
-              {children}
-            </ModalProvider>
+            <AuthProvider>
+              <ModalProvider>
+                <Navbar />
+                {children}
+              </ModalProvider>
+            </AuthProvider>
           </ThemeProvider>
         </QueryProviders>
       </body>

@@ -48,3 +48,60 @@ model site {
   site String  @id @db.VarChar(3)
   name String? @db.VarChar(20)
 }
+
+model alert_log {
+  id            Int       @id @default(autoincrement())
+  siteid        String    @db.VarChar(10)
+  alert_type    String?   @db.VarChar(50)
+  message       String?   @db.VarChar(500)
+  trigger_value Float?    @db.Float
+  sent_at       DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model alert_settings {
+  id            Int       @id @default(autoincrement())
+  siteid        String    @unique(map: "siteid") @db.VarChar(10)
+  he_min        Float?    @default(70) @db.Float
+  he_max        Float?    @default(999) @db.Float
+  he_active     Int?      @default(1) @db.TinyInt
+  psi_min       Float?    @default(1) @db.Float
+  psi_max       Float?    @default(999) @db.Float
+  psi_active    Int?      @default(1) @db.TinyInt
+  si410_min     Float?    @default(0) @db.Float
+  si410_max     Float?    @default(999) @db.Float
+  si410_active  Int?      @default(0) @db.TinyInt
+  chtemp_min    Float?    @default(0) @db.Float
+  chtemp_max    Float?    @default(999) @db.Float
+  chtemp_active Int?      @default(0) @db.TinyInt
+  rou_min       Float?    @default(0) @db.Float
+  rou_max       Float?    @default(999) @db.Float
+  rou_active    Int?      @default(0) @db.TinyInt
+  actemp_min    Float?    @default(0) @db.Float
+  actemp_max    Float?    @default(999) @db.Float
+  actemp_active Int?      @default(0) @db.TinyInt
+  achumi_min    Float?    @default(0) @db.Float
+  achumi_max    Float?    @default(999) @db.Float
+  achumi_active Int?      @default(0) @db.TinyInt
+  gctemp_min    Float?    @default(0) @db.Float
+  gctemp_max    Float?    @default(999) @db.Float
+  gctemp_active Int?      @default(0) @db.TinyInt
+  gcflow_min    Float?    @default(0) @db.Float
+  gcflow_max    Float?    @default(999) @db.Float
+  gcflow_active Int?      @default(0) @db.TinyInt
+  cctemp_min    Float?    @default(0) @db.Float
+  cctemp_max    Float?    @default(999) @db.Float
+  cctemp_active Int?      @default(0) @db.TinyInt
+  ccflow_min    Float?    @default(0) @db.Float
+  ccflow_max    Float?    @default(999) @db.Float
+  ccflow_active Int?      @default(0) @db.TinyInt
+  // DB에서 ON UPDATE CURRENT_TIMESTAMP 로 자동 갱신됨
+  updated_at    DateTime? @default(now()) @db.Timestamp(0)
+}
+
+model users {
+  id         Int       @id @default(autoincrement())
+  username   String    @unique(map: "username") @db.VarChar(50)
+  password   String    @db.VarChar(255)
+  role       String?   @default("user") @db.VarChar(10)
+  created_at DateTime? @default(now()) @db.Timestamp(0)
+}

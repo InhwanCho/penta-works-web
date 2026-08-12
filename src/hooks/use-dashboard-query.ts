@@ -3,20 +3,24 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-export type CtrlRange = {
-  mrprel: number | null; // low psi
-  mrpreh: number | null; // high psi
-  mrlevl: number | null; // low %
-  mrlevh: number | null; // high %
-};
+import type { CtrlRange, MetricKey } from "@/lib/metrics";
+
+export type { CtrlRange };
+
+export type MetricValues = Record<MetricKey, number | null>;
 
 export type SiteRow = {
   siteDb: string;
   siteSlug: string;
   name: string | null;
   lastAt: string | null; // ISO
+  lagMin: number | null;
+  count1h: number;
+  count24h: number;
   hePsi: number | null;
   hePct: number | null;
+  /** 관리자 뷰용 전체 지표 (최신 1건) */
+  metrics: MetricValues;
 };
 
 export type DashboardResponse = {

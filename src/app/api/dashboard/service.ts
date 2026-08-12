@@ -1,11 +1,17 @@
+import {
+  CTRL_BOUNDS,
+  type CtrlRange,
+  METRIC_KEYS,
+  type MetricKey,
+} from "@/lib/metrics";
 import { prisma } from "@/lib/prisma";
+import { toSiteSlug } from "@/lib/site";
+import { Prisma } from "@/generated/prisma/client";
 
-export type CtrlRange = {
-  mrplel: number | null;
-  mrpleh: number | null;
-  mrlevl: number | null;
-  mrlevh: number | null;
-};
+export type { CtrlRange };
+
+/** mrtb 최신 1건의 지표값 묶음 */
+export type MetricValues = Record<MetricKey, number | null>;
 
 export type DashboardRow = {
   siteDb: string;
@@ -17,7 +23,19 @@ export type DashboardRow = {
   count24h: number;
   hePsi: number | null;
   hePct: number | null;
+  /** 관리자 뷰(엑셀 뷰)용 전체 지표. 최신 1건 기준. */
+  metrics: MetricValues;
 };
+
+/** $queryRaw 결과 행 (mrtb 컬럼은 전부 varchar 이므로 문자열로 들어옵니다) */
+type LatestMetricRow = { siteid: string | null } & Record<
+  MetricKey,
+  string | null
+>;
+
+function emptyMetrics(): MetricValues {
+  return Object.fromEntries(METRIC_KEYS.map((k) => [k, null])) as MetricValues;
+}
 
 export type DashboardResponse = {
   meta: {
@@ -35,11 +53,6 @@ export type DashboardResponse = {
   ctrl: Record<string, CtrlRange>;
   ctrlDefault: CtrlRange | null;
 };
-
-function siteSlug(siteDb: string): string {
-  if (/^\d+$/.test(siteDb)) return String(Number(siteDb));
-  return siteDb;
-}
 
 function parseNumberLoose(v: string | null | undefined): number | null {
   if (!v) return null;
@@ -94,47 +107,47 @@ export async function getDashboardData(): Promise<DashboardResponse> {
     if (r.siteid) c1Map.set(r.siteid, r._count._all);
   }
 
-  // 3) siteid별 최신 레코드에서 hepres/heleve 추출
-  const latestCandidates = await prisma.mrtb.findMany({
-    where: { siteid: { not: null }, date: { not: null } },
-    select: { siteid: true, date: true, hepres: true, heleve: true },
-    orderBy: [{ siteid: "asc" }, { date: "desc" }],
-  });
+  // 3) siteid별 최신 레코드 1건씩 조회.
+  //    2)에서 이미 구한 (siteid, max(date)) 쌍을 그대로 찍어 가져옵니다.
+  //    mrtb 전체를 받아 JS에서 추리던 이전 방식은 15만 행을 전송했는데,
+  //    이 방식은 사이트 수(=22행)만 받으면서 전 지표를 함께 가져옵니다.
+  const latestPairs = [...lastMap.entries()];
 
-  const heMap = new Map<
-    string,
-    { hePsi: number | null; hePct: number | null }
-  >();
-  for (const r of latestCandidates) {
+  const latestRows = latestPairs.length
+    ? await prisma.$queryRaw<LatestMetricRow[]>`
+        SELECT siteid, recosi, coldtp, recoru, hepres, heleve,
+               actemp, achumi, gctemp, gcflow, cctemp, ccflow
+        FROM mrtb
+        WHERE (siteid, date) IN (${Prisma.join(
+          latestPairs.map(([sid, d]) => Prisma.sql`(${sid}, ${d})`),
+        )})
+      `
+    : [];
+
+  const metricMap = new Map<string, MetricValues>();
+  for (const r of latestRows) {
     const sid = r.siteid ?? "";
-    if (!sid) continue;
-    if (heMap.has(sid)) continue;
+    if (!sid || metricMap.has(sid)) continue;
 
-    heMap.set(sid, {
-      hePsi: parseNumberLoose(r.hepres),
-      hePct: parseNumberLoose(r.heleve),
-    });
+    metricMap.set(
+      sid,
+      Object.fromEntries(
+        METRIC_KEYS.map((k) => [k, parseNumberLoose(r[k])]),
+      ) as MetricValues,
+    );
   }
 
-  // 4) ctrl 범위: prisma.ctrl로 직접 조회 (db pull 결과 기준)
-  const ctrlRows = await prisma.ctrl.findMany({
-    select: {
-      site: true,
-      mrplel: true,
-      mrpleh: true,
-      mrlevl: true,
-      mrlevh: true,
-    },
-  });
+  // 4) ctrl 범위: 8개 지표의 하한/상한을 모두 조회 (26행짜리 작은 테이블)
+  const ctrlRows = await prisma.ctrl.findMany();
 
   const ctrl: Record<string, CtrlRange> = {};
   for (const r of ctrlRows) {
-    ctrl[r.site] = {
-      mrplel: parseNumberLoose(r.mrplel),
-      mrpleh: parseNumberLoose(r.mrpleh),
-      mrlevl: parseNumberLoose(r.mrlevl),
-      mrlevh: parseNumberLoose(r.mrlevh),
-    };
+    ctrl[r.site] = Object.fromEntries(
+      CTRL_BOUNDS.flatMap((b) => [
+        [`${b}l`, parseNumberLoose(r[`${b}l`])],
+        [`${b}h`, parseNumberLoose(r[`${b}h`])],
+      ]),
+    ) as CtrlRange;
   }
 
   const ctrlDefault: CtrlRange | null = ctrl["000"] ?? null;
@@ -146,18 +159,20 @@ export async function getDashboardData(): Promise<DashboardResponse> {
       ? Math.max(0, Math.floor((nowMs - lastAtDate.getTime()) / 60000))
       : null;
 
-    const he = heMap.get(s.site) ?? { hePsi: null, hePct: null };
+    const metrics = metricMap.get(s.site) ?? emptyMetrics();
 
     return {
       siteDb: s.site,
-      siteSlug: siteSlug(s.site),
+      siteSlug: toSiteSlug(s.site),
       name: s.name,
       lastAt: lastAtDate ? lastAtDate.toISOString() : null,
       lagMin,
       count1h: c1Map.get(s.site) ?? 0,
       count24h: c24Map.get(s.site) ?? 0,
-      hePsi: he.hePsi,
-      hePct: he.hePct,
+      // 기존 기본 뷰가 쓰는 두 값은 metrics에서 그대로 파생시킵니다.
+      hePsi: metrics.hepres,
+      hePct: metrics.heleve,
+      metrics,
     };
   });
 
