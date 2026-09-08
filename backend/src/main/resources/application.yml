@@ -1,0 +1,32 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: pentaworks-backend
+  datasource:
+    url: ${DB_URL:jdbc:mariadb://localhost:3306/pentaworks_mri_db}
+    username: ${DB_USERNAME:pos21}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.mariadb.jdbc.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
+      minimum-idle: 1
+  jackson:
+    default-property-inclusion: non_null
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  jwt:
+    secret: ${JWT_SECRET:change-this-development-secret-to-a-long-random-value}
+    expiration-minutes: ${JWT_EXPIRATION_MINUTES:720}
+  monitor:
+    cron-secret: ${CRON_SECRET:}
+    slack-webhook-url: ${SLACK_WEBHOOK_URL:}
