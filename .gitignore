@@ -19,6 +19,7 @@ node_modules
 
 # production
 **/build
+**/.gradle
 **/src/generated/prisma
 
 # misc
