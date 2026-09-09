@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "로그인",
-  description: "PENTA WORKS 로그인",
+  description: "mreyes 로그인",
 };
 
 export default function LoginPage() {

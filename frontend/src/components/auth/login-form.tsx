@@ -107,7 +107,7 @@ export default function LoginForm() {
               className="h-12 w-12 rounded-lg"
             />
             <h1 className="text-text-major dark:text-text-dark-primary mt-3 text-xl font-semibold tracking-tight lg:text-2xl">
-              PENTA WORKS
+              mreyes
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
               계속하려면 로그인하세요.

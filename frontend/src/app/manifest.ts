@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PENTA WORKS",
-    short_name: "PENTA",
-    description: "PENTA WORKS 서비스",
+    name: "mreyes",
+    short_name: "mreyes",
+    description: "mreyes 서비스",
     start_url: "/",
     scope: "/",
     display: "standalone",

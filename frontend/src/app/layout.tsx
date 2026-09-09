@@ -27,13 +27,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "PENTA WORKS",
-    template: "%s | PENTA WORKS",
+    default: "mreyes",
+    template: "%s | mreyes",
   },
-  description: "PENTA WORKS 서비스",
-  applicationName: "PENTA WORKS",
-  keywords: ["PENTA WORKS", "Dashboard", "Monitoring"],
-  metadataBase: new URL("https://penta-works-web.vercel.app"),
+  description: "mreyes 서비스",
+  applicationName: "mreyes",
+  keywords: ["mreyes", "Dashboard", "Monitoring"],
+  metadataBase: new URL("https://app.pentaworks.net"),
   alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
   icons: {
@@ -47,24 +47,24 @@ export const metadata: Metadata = {
 
   openGraph: {
     type: "website",
-    siteName: "PENTA WORKS",
-    title: "PENTA WORKS",
-    description: "PENTA WORKS 서비스",
+    siteName: "mreyes",
+    title: "mreyes",
+    description: "mreyes 서비스",
     url: "/",
     images: [
       {
         url: "/favicon/android-chrome-512x512.png",
         width: 512,
         height: 512,
-        alt: "PENTA WORKS",
+        alt: "mreyes",
       },
     ],
   },
 
   twitter: {
     card: "summary",
-    title: "PENTA WORKS",
-    description: "PENTA WORKS 서비스",
+    title: "mreyes",
+    description: "mreyes 서비스",
     images: ["/favicon/android-chrome-512x512.png"],
   },
 };

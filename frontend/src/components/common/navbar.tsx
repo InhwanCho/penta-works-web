@@ -70,14 +70,14 @@ export default function Navbar() {
           >
             <Image
               src="/favicon/android-chrome-192x192.png"
-              alt="PENTA WORKS"
+              alt="mreyes"
               width={28}
               height={28}
               priority
               className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
             />
             <span className="hidden tracking-[-0.01em] whitespace-nowrap sm:inline">
-              PENTA WORKS
+              mreyes
             </span>
           </Link>
 
