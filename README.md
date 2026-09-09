@@ -33,4 +33,10 @@ GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 �
 
 운영 컨테이너는 호스트의 loopback 포트 `3100`(frontend), `8180`(backend)에만 바인딩됩니다. Nginx 설정 예시는 `deploy/nginx/pentaworks.net.conf`에 있습니다.
 
+운영 컨테이너의 첫 배포가 성공한 뒤 서버에서 아래 명령을 한 번 실행하면 Cloudflare DNS 인증서 발급과 Nginx 사이트 설정이 완료됩니다.
+
+```bash
+sudo bash /home/inhwan/apps/pentaworks-prod/deploy/setup-production-origin.sh
+```
+
 운영 전환 시에는 별도의 MariaDB 인스턴스와 볼륨을 만들고 `docker-compose.prod.yml`의 `DB_URL` 및 네트워크 구성을 분리해야 합니다.
