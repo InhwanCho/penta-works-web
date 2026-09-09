@@ -27,11 +27,11 @@ GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 �
 | Jenkins job | Branch | Compose project | Access |
 | --- | --- | --- | --- |
 | `pentaworks-dev` | `dev` | `pentaworks` | `http://192.168.0.210:3000` |
-| `pentaworks-prod` | `main` | `pentaworks-prod` | `https://pentaworks.net` |
+| `pentaworks-prod` | `main` | `pentaworks-prod` | `https://app.pentaworks.net` |
 
 개발 환경은 `docker-compose.yml`과 `/home/inhwan/pentaworks-secrets/.env`를 사용합니다. 운영 환경은 `docker-compose.prod.yml`과 `/home/inhwan/pentaworks-secrets/prod.env`를 사용하며, 프로토타입 기간에는 개발 환경의 `pentaworks_default` Docker 네트워크를 통해 같은 MariaDB를 공유합니다.
 
-운영 컨테이너는 호스트의 loopback 포트 `3100`(frontend), `8180`(backend)에만 바인딩됩니다. Nginx 설정 예시는 `deploy/nginx/pentaworks.net.conf`에 있습니다.
+운영 컨테이너는 호스트의 loopback 포트 `3100`(frontend), `8180`(backend)에만 바인딩됩니다. Nginx 설정은 `deploy/nginx/app.pentaworks.net.conf`에 있으며, 회사 홈페이지가 준비되기 전까지 `pentaworks.net`은 운영 앱으로 임시 리다이렉트됩니다.
 
 운영 컨테이너의 첫 배포가 성공한 뒤 서버에서 아래 명령을 한 번 실행하면 Cloudflare DNS 인증서 발급과 Nginx 사이트 설정이 완료됩니다.
 

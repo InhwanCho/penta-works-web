@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DOMAIN=pentaworks.net
+ROOT_DOMAIN=pentaworks.net
+APP_DOMAIN=app.pentaworks.net
 APP_DIR=/home/inhwan/apps/pentaworks-prod
 CLOUDFLARE_CREDENTIALS=/etc/letsencrypt/secrets/cloudflare.ini
-NGINX_AVAILABLE=/etc/nginx/sites-available/$DOMAIN
-NGINX_ENABLED=/etc/nginx/sites-enabled/$DOMAIN
 
 if [[ $EUID -ne 0 ]]; then
     echo "Run this script with sudo." >&2
@@ -17,21 +16,23 @@ if [[ ! -r "$CLOUDFLARE_CREDENTIALS" ]]; then
     exit 1
 fi
 
-if [[ ! -f "$APP_DIR/deploy/nginx/$DOMAIN.conf" ]]; then
-    echo "Missing Nginx config: $APP_DIR/deploy/nginx/$DOMAIN.conf" >&2
-    exit 1
-fi
+for domain in "$ROOT_DOMAIN" "$APP_DOMAIN"; do
+    if [[ ! -f "$APP_DIR/deploy/nginx/$domain.conf" ]]; then
+        echo "Missing Nginx config: $APP_DIR/deploy/nginx/$domain.conf" >&2
+        exit 1
+    fi
 
-certbot certonly \
-    --non-interactive \
-    --dns-cloudflare \
-    --dns-cloudflare-credentials "$CLOUDFLARE_CREDENTIALS" \
-    --dns-cloudflare-propagation-seconds 60 \
-    --cert-name "$DOMAIN" \
-    -d "$DOMAIN"
+    certbot certonly \
+        --non-interactive \
+        --dns-cloudflare \
+        --dns-cloudflare-credentials "$CLOUDFLARE_CREDENTIALS" \
+        --dns-cloudflare-propagation-seconds 60 \
+        --cert-name "$domain" \
+        -d "$domain"
 
-install -m 644 "$APP_DIR/deploy/nginx/$DOMAIN.conf" "$NGINX_AVAILABLE"
-ln -sfn "$NGINX_AVAILABLE" "$NGINX_ENABLED"
+    install -m 644 "$APP_DIR/deploy/nginx/$domain.conf" "/etc/nginx/sites-available/$domain"
+    ln -sfn "/etc/nginx/sites-available/$domain" "/etc/nginx/sites-enabled/$domain"
+done
 
 nginx -t
 systemctl reload nginx
@@ -40,7 +41,7 @@ curl --fail --silent --show-error \
     --retry 5 \
     --retry-all-errors \
     --retry-delay 1 \
-    --resolve "$DOMAIN:443:127.0.0.1" \
-    "https://$DOMAIN/" >/dev/null
+    --resolve "$APP_DOMAIN:443:127.0.0.1" \
+    "https://$APP_DOMAIN/" >/dev/null
 
-echo "Production origin is ready at https://$DOMAIN"
+echo "Production origin is ready at https://$APP_DOMAIN"
