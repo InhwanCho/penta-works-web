@@ -15,24 +15,24 @@ pipeline {
     }
 
     stages {
-        stage('Checkout dev') {
+        stage('Checkout main') {
             steps {
                 checkout([
                     $class: 'GitSCM',
-                    branches: [[name: '*/dev']],
+                    branches: [[name: '*/main']],
                     userRemoteConfigs: [[url: 'https://github.com/InhwanCho/penta-works-web.git']]
                 ])
             }
         }
 
-        stage('Deploy dev') {
+        stage('Deploy production') {
             steps {
                 sh '''
                     ssh -i "$HOME/.ssh/id_ed25519" \
                       -o BatchMode=yes \
                       -o StrictHostKeyChecking=yes \
                       inhwan@192.168.0.210 \
-                      'bash -s -- dev' < deploy/refresh-and-deploy.sh
+                      'bash -s -- prod' < deploy/refresh-and-deploy.sh
                 '''
             }
         }

@@ -1,33 +1,89 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-APP_DIR=/home/inhwan/apps/pentaworks
-ENV_FILE=/home/inhwan/pentaworks-secrets/.env
 REPOSITORY_URL=https://github.com/InhwanCho/penta-works-web.git
+
+DEPLOY_ENV=${1:-}
+
+case "$DEPLOY_ENV" in
+    dev)
+        APP_DIR=/home/inhwan/apps/pentaworks
+        ENV_FILE=/home/inhwan/pentaworks-secrets/.env
+        BRANCH=dev
+        COMPOSE_FILE=docker-compose.yml
+        COMPOSE_PROJECT=pentaworks
+        DEFAULT_FRONTEND_PORT=3000
+        DEFAULT_BACKEND_PORT=8080
+        ;;
+    prod)
+        APP_DIR=/home/inhwan/apps/pentaworks-prod
+        ENV_FILE=/home/inhwan/pentaworks-secrets/prod.env
+        BRANCH=main
+        COMPOSE_FILE=docker-compose.prod.yml
+        COMPOSE_PROJECT=pentaworks-prod
+        DEFAULT_FRONTEND_PORT=3100
+        DEFAULT_BACKEND_PORT=8180
+        ;;
+    *)
+        echo "Usage: $0 <dev|prod>" >&2
+        exit 2
+        ;;
+esac
+
+if [[ ! -f "$ENV_FILE" ]]; then
+    echo "Missing deployment environment file: $ENV_FILE" >&2
+    exit 1
+fi
+
+set -a
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+set +a
+
+FRONTEND_PORT=${FRONTEND_PORT:-$DEFAULT_FRONTEND_PORT}
+BACKEND_PORT=${BACKEND_PORT:-$DEFAULT_BACKEND_PORT}
 
 if [[ ! -d "$APP_DIR/.git" ]]; then
     mkdir -p "$(dirname "$APP_DIR")"
-    git clone --branch dev --single-branch "$REPOSITORY_URL" "$APP_DIR"
+    git clone --branch "$BRANCH" --single-branch "$REPOSITORY_URL" "$APP_DIR"
 else
-    git -C "$APP_DIR" fetch origin dev
-    git -C "$APP_DIR" checkout dev
-    git -C "$APP_DIR" merge --ff-only origin/dev
+    git -C "$APP_DIR" fetch origin "$BRANCH"
+    git -C "$APP_DIR" checkout "$BRANCH"
+    git -C "$APP_DIR" merge --ff-only "origin/$BRANCH"
 fi
 
 cd "$APP_DIR"
 
-docker compose --env-file "$ENV_FILE" build backend frontend
-docker compose --env-file "$ENV_FILE" up -d --remove-orphans
+if [[ ! -f "$COMPOSE_FILE" ]]; then
+    echo "Missing Compose file: $APP_DIR/$COMPOSE_FILE" >&2
+    exit 1
+fi
+
+if [[ "$DEPLOY_ENV" == "prod" ]] && ! docker network inspect pentaworks_default >/dev/null 2>&1; then
+    echo "Shared database network pentaworks_default does not exist" >&2
+    exit 1
+fi
+
+if [[ "$DEPLOY_ENV" == "prod" ]] && ! docker network inspect pentaworks_default \
+    --format '{{json .Containers}}' | grep -q 'pentaworks-mri-db'; then
+    echo "Shared database container pentaworks-mri-db is not attached to pentaworks_default" >&2
+    exit 1
+fi
+
+compose=(docker compose --project-name "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
+
+"${compose[@]}" build backend frontend
+"${compose[@]}" up -d --remove-orphans
 
 for attempt_no in $(seq 1 30); do
-    if curl --fail --silent http://127.0.0.1:8080/actuator/health >/dev/null \
-        && curl --fail --silent http://127.0.0.1:3000 >/dev/null; then
-        docker compose --env-file "$ENV_FILE" ps
+    if curl --fail --silent "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null \
+        && curl --fail --silent "http://127.0.0.1:${FRONTEND_PORT}" >/dev/null; then
+        "${compose[@]}" ps
         exit 0
     fi
     sleep 2
 done
 
-docker compose --env-file "$ENV_FILE" ps
-docker compose --env-file "$ENV_FILE" logs --tail=100 backend frontend
+"${compose[@]}" ps
+"${compose[@]}" logs --tail=100 backend frontend
 exit 1
