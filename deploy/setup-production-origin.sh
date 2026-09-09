@@ -37,6 +37,9 @@ nginx -t
 systemctl reload nginx
 
 curl --fail --silent --show-error \
+    --retry 5 \
+    --retry-all-errors \
+    --retry-delay 1 \
     --resolve "$DOMAIN:443:127.0.0.1" \
     "https://$DOMAIN/" >/dev/null
 
