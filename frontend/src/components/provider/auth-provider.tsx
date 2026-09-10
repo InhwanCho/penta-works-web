@@ -1,5 +1,6 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { login as requestLogin } from "@/lib/api";
 import {
   type Role,
@@ -37,26 +38,39 @@ const AuthContext = createContext<AuthContextType>({
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const stored = readStoredSession();
-    setSession(stored ? { username: stored.username, role: stored.role } : null);
+    setSession(
+      stored ? { username: stored.username, role: stored.role } : null,
+    );
     setIsLoading(false);
   }, []);
 
-  const login = useCallback(async (username: string, password: string) => {
-    const result = await requestLogin(username, password);
-    writeStoredSession({ ...result.user, accessToken: result.accessToken });
-    setSession(result.user);
-    return result.user;
-  }, []);
+  const login = useCallback(
+    async (username: string, password: string) => {
+      const result = await requestLogin(username, password);
+      queryClient.clear();
+      writeStoredSession({ ...result.user, accessToken: result.accessToken });
+      setSession(result.user);
+      return result.user;
+    },
+    [queryClient],
+  );
 
   const logout = useCallback(() => {
+    queryClient.clear();
     clearStoredSession();
     setSession(null);
-  }, []);
+  }, [queryClient]);
+
+  useEffect(() => {
+    window.addEventListener("auth:expired", logout);
+    return () => window.removeEventListener("auth:expired", logout);
+  }, [logout]);
 
   const value = useMemo<AuthContextType>(
     () => ({

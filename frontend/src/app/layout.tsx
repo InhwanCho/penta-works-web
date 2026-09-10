@@ -10,8 +10,8 @@ import "./globals.css";
 // 모바일 상태 표시줄(시간/배터리 영역) 색상을 navbar 배경과 일치
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#3f4e73" },
-    { media: "(prefers-color-scheme: dark)", color: "#373c47" },
+    { media: "(prefers-color-scheme: light)", color: "#123b5d" },
+    { media: "(prefers-color-scheme: dark)", color: "#243a4c" },
   ],
 };
 
@@ -27,12 +27,12 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "mreyes",
-    template: "%s | mreyes",
+    default: "Penta_MrEyes",
+    template: "%s | Penta_MrEyes",
   },
-  description: "mreyes 서비스",
-  applicationName: "mreyes",
-  keywords: ["mreyes", "Dashboard", "Monitoring"],
+  description: "Penta_MrEyes 서비스",
+  applicationName: "Penta_MrEyes",
+  keywords: ["Penta_MrEyes", "Dashboard", "Monitoring"],
   metadataBase: new URL("https://app.pentaworks.net"),
   alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
@@ -47,24 +47,24 @@ export const metadata: Metadata = {
 
   openGraph: {
     type: "website",
-    siteName: "mreyes",
-    title: "mreyes",
-    description: "mreyes 서비스",
+    siteName: "Penta_MrEyes",
+    title: "Penta_MrEyes",
+    description: "Penta_MrEyes 서비스",
     url: "/",
     images: [
       {
         url: "/favicon/android-chrome-512x512.png",
         width: 512,
         height: 512,
-        alt: "mreyes",
+        alt: "Penta_MrEyes",
       },
     ],
   },
 
   twitter: {
     card: "summary",
-    title: "mreyes",
-    description: "mreyes 서비스",
+    title: "Penta_MrEyes",
+    description: "Penta_MrEyes 서비스",
     images: ["/favicon/android-chrome-512x512.png"],
   },
 };
@@ -76,7 +76,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       data-scroll-behavior="smooth"
     >
       <body

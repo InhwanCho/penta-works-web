@@ -2,29 +2,19 @@
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { METRICS, isMetricOutOfRange } from "@/lib/metrics";
+import Link from "next/link";
 import type React from "react";
 
 /**
- * 고정(freeze) 열: 병원명 + 상태.
- * 상태 열의 sticky left 오프셋(STATUS_LEFT)은 병원명 열 너비(COL_NAME)와
- * 반드시 같아야 하므로 한곳에서 관리합니다.
- * 모바일 병원명 104px -> 상태 left-[104px], sm 이상 184px -> left-[184px].
- * 셋(COL_NAME / STATUS_LEFT / *_INNER)의 브레이크포인트를 항상 같이 바꿔야 합니다.
+ * 고정(freeze) 열: 병원명.
  *
- * table-layout: auto 에서는 셀의 min/max-width 가 무시되고 내용 길이가
- * 열 너비를 결정합니다. 그러면 병원명 열이 지정 너비를 넘겨 상태 열의
- * left 오프셋과 어긋나므로, 내용은 고정 너비 래퍼(*_INNER)로 감싸
- * 열 너비가 항상 상수와 일치하도록 강제합니다.
+ * table-layout: auto 에서는 내용 길이가 열 너비를 결정하므로 병원명은
+ * 고정 너비 래퍼로 감싸 가로 스크롤 중에도 첫 열 너비를 유지합니다.
  * (INNER 너비 = 열 너비 - 좌우 패딩 px-3 * 2 = 24px)
  */
 const COL_NAME =
-  "w-[104px] min-w-[104px] max-w-[104px] sm:w-[184px] sm:min-w-[184px] sm:max-w-[184px]";
-const COL_NAME_INNER = "block w-[80px] truncate sm:w-[160px]";
-const COL_STATUS =
-  "w-[88px] min-w-[88px] max-w-[88px] sm:w-[96px] sm:min-w-[96px] sm:max-w-[96px]";
-const COL_STATUS_INNER = "block w-[64px] sm:w-[72px]";
-/** 두 번째 고정열(상태)의 좌측 오프셋 = 병원명 열 너비 */
-const STATUS_LEFT = "left-[104px] sm:left-[184px]";
+  "w-[116px] min-w-[116px] max-w-[116px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
+const COL_NAME_INNER = "block w-[92px] truncate sm:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -80,26 +70,23 @@ function metricSubLabel(label: string | null, unit: string | null) {
 export default function DashboardExcelView({
   rows,
   ctrl,
-  since1hMs,
-  since24hMs,
 }: {
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
-  since1hMs: number;
-  since24hMs: number;
 }) {
   return (
     <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
       {/* 헤더 + 범례 */}
-      <div className="dark:border-background-dark-secondary flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-4 py-3">
-        <h2 className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight lg:text-base">
+      <div className="dark:border-background-dark-secondary flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-3 py-2.5 sm:px-4">
+        <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
           관리자 뷰
         </h2>
-        <p className="text-text-secondary dark:text-text-dark-primary/60 text-[11px] lg:text-xs">
+        <p className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
           <span className="font-semibold text-red-600 dark:text-red-400">
             빨간 값
           </span>
-          은 기준값(ctrl) 허용 범위를 벗어난 지표입니다.
+          은 허용 범위를 벗어난 값입니다.
+          <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
         </p>
       </div>
 
@@ -109,8 +96,8 @@ export default function DashboardExcelView({
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
-        <div className="max-h-[70vh] overflow-auto rounded-b-lg">
-          <table className="w-full min-w-[1500px] border-separate border-spacing-0 text-sm">
+        <div className="max-h-[calc(100dvh-250px)] overflow-auto rounded-b-lg sm:max-h-[70vh]">
+          <table className="w-full min-w-[1380px] border-separate border-spacing-0 text-sm">
             <caption className="sr-only">
               사이트별 최신 수집값 전체 지표 표
             </caption>
@@ -120,7 +107,7 @@ export default function DashboardExcelView({
                 <th
                   scope="col"
                   className={[
-                    "text-text-secondary dark:text-text-dark-primary/70 sticky top-0 left-0 px-3 py-2 text-left align-bottom text-[11px] font-semibold tracking-wide",
+                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-3 py-2.5 text-left align-bottom text-sm font-bold tracking-wide",
                     COL_NAME,
                     CELL_BORDER,
                     HEAD_BG,
@@ -129,20 +116,6 @@ export default function DashboardExcelView({
                 >
                   <span className={COL_NAME_INNER}>병원명</span>
                 </th>
-                <th
-                  scope="col"
-                  className={[
-                    "text-text-secondary dark:text-text-dark-primary/70 sticky top-0 px-3 py-2 text-left align-bottom text-[11px] font-semibold tracking-wide",
-                    STATUS_LEFT,
-                    COL_STATUS,
-                    CELL_BORDER,
-                    HEAD_BG,
-                    Z_CORNER,
-                  ].join(" ")}
-                >
-                  <span className={COL_STATUS_INNER}>상태</span>
-                </th>
-
                 {METRICS.map((m) => {
                   const sub = metricSubLabel(m.label, m.unit);
                   return (
@@ -156,11 +129,11 @@ export default function DashboardExcelView({
                         Z_HEAD,
                       ].join(" ")}
                     >
-                      <span className="text-text-major dark:text-text-dark-primary block text-xs font-bold">
+                      <span className="text-text-major dark:text-text-dark-primary block text-sm font-bold">
                         {m.code}
                       </span>
                       {sub ? (
-                        <span className="text-text-secondary dark:text-text-dark-primary/60 mt-0.5 block text-[10px] font-medium">
+                        <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-xs font-medium">
                           {sub}
                         </span>
                       ) : null}
@@ -185,20 +158,6 @@ export default function DashboardExcelView({
 
             <tbody>
               {rows.map((row) => {
-                const lastAtMs = row.lastAt ? Date.parse(row.lastAt) : null;
-                const isActive1h = !!lastAtMs && lastAtMs >= since1hMs;
-                const isActive24h = !!lastAtMs && lastAtMs >= since24hMs;
-                const status = isActive1h
-                  ? "ok"
-                  : isActive24h
-                    ? "warn"
-                    : "stale";
-                const statusLabel = isActive1h
-                  ? "정상"
-                  : isActive24h
-                    ? "주의"
-                    : "미수집";
-
                 const lastAtDate = parseIso(row.lastAt);
                 const range = ctrl[row.siteDb] ?? null;
 
@@ -221,25 +180,14 @@ export default function DashboardExcelView({
                       ].join(" ")}
                       title={row.name ?? undefined}
                     >
-                      <span className={COL_NAME_INNER}>{row.name ?? "-"}</span>
-                    </td>
-
-                    {/* 고정열 2 — 상태 */}
-                    <td
-                      className={[
-                        "sticky px-3 py-2 whitespace-nowrap",
-                        STATUS_LEFT,
-                        COL_STATUS,
-                        CELL_BORDER,
-                        FIXED_BG,
-                        Z_FIXED,
-                      ].join(" ")}
-                    >
-                      <span className={COL_STATUS_INNER}>
-                        <StatusBadge variant={status}>
-                          {statusLabel}
-                        </StatusBadge>
-                      </span>
+                      <Link
+                        className="text-text-major dark:text-text-dark-primary font-bold underline decoration-transparent underline-offset-4 hover:decoration-current"
+                        href={`/sites/${row.siteSlug}`}
+                      >
+                        <span className={COL_NAME_INNER}>
+                          {row.name ?? "-"}
+                        </span>
+                      </Link>
                     </td>
 
                     {METRICS.map((m) => {
@@ -288,7 +236,7 @@ export default function DashboardExcelView({
                       <span className="block text-xs leading-tight font-medium">
                         {fmtYmd(lastAtDate)}
                       </span>
-                      <span className="mt-0.5 block text-[11px] leading-tight opacity-70">
+                      <span className="mt-0.5 block text-xs leading-tight opacity-70">
                         {fmtHms(lastAtDate)}
                       </span>
                     </td>
@@ -331,7 +279,7 @@ function HeadCell({
     <th
       scope="col"
       className={[
-        "text-text-secondary dark:text-text-dark-primary/70 sticky top-0 px-3 py-2 align-bottom text-[11px] font-semibold tracking-wide whitespace-nowrap",
+        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-3 py-2.5 align-bottom text-sm font-bold tracking-wide whitespace-nowrap",
         CELL_BORDER,
         HEAD_BG,
         Z_HEAD,
@@ -340,39 +288,5 @@ function HeadCell({
     >
       {children}
     </th>
-  );
-}
-
-function StatusBadge({
-  children,
-  variant,
-}: {
-  children: React.ReactNode;
-  variant: "ok" | "warn" | "stale";
-}) {
-  const cls =
-    variant === "ok"
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-      : variant === "warn"
-        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-        : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300";
-
-  const dotCls =
-    variant === "ok"
-      ? "bg-emerald-500"
-      : variant === "warn"
-        ? "bg-amber-500"
-        : "bg-slate-400";
-
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        cls,
-      ].join(" ")}
-    >
-      <span className={["h-1.5 w-1.5 rounded-full", dotCls].join(" ")} />
-      {children}
-    </span>
   );
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
 
 import { apiFetch } from "@/lib/api";
 import type { CtrlRange, MetricKey } from "@/lib/metrics";
@@ -56,8 +55,6 @@ async function fetchDashboard(): Promise<DashboardResponse> {
  *
  * - 5분 주기 자동 폴링 (`refetchInterval`)
  * - 창 포커스 / 네트워크 재연결 시 자동 refetch
- * - 모바일 웹뷰에서 다른 앱 전환 후 복귀 시 즉시 refetch
- *   (`visibilitychange`, `pageshow` 이벤트 보강)
  * - 백그라운드에서는 폴링을 멈춰 배터리를 절약 (`refetchIntervalInBackground: false`)
  */
 export function useDashboardQuery() {
@@ -71,22 +68,6 @@ export function useDashboardQuery() {
     refetchOnReconnect: true,
     refetchOnMount: true,
   });
-
-  const { refetch } = query;
-
-  useEffect(() => {
-    const onVisible = () => {
-      if (document.visibilityState === "visible") {
-        refetch();
-      }
-    };
-    document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("pageshow", onVisible);
-    return () => {
-      document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("pageshow", onVisible);
-    };
-  }, [refetch]);
 
   return query;
 }

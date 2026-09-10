@@ -79,7 +79,9 @@ export default function LoginForm() {
         setError(null);
         goAfterLogin(next);
       } catch (error) {
-        setError(error instanceof Error ? error.message : "로그인에 실패했습니다.");
+        setError(
+          error instanceof Error ? error.message : "로그인에 실패했습니다.",
+        );
       }
     },
     [canSubmit, goAfterLogin, login, password, username],
@@ -93,9 +95,9 @@ export default function LoginForm() {
   }, [logout]);
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl items-center justify-center px-4 py-10 lg:px-8 lg:py-16">
+    <main className="mx-auto flex w-full max-w-7xl items-center justify-center px-3 py-6 sm:px-4 sm:py-8 lg:px-6 lg:py-12">
       <div className="w-full max-w-md">
-        <div className={[CARD_CLASS, "p-6 lg:p-8"].join(" ")}>
+        <div className={[CARD_CLASS, "rounded-xl p-4 sm:p-6 lg:p-8"].join(" ")}>
           {/* 워드마크 */}
           <header className="flex flex-col items-center text-center">
             <Image
@@ -107,7 +109,7 @@ export default function LoginForm() {
               className="h-12 w-12 rounded-lg"
             />
             <h1 className="text-text-major dark:text-text-dark-primary mt-3 text-xl font-semibold tracking-tight lg:text-2xl">
-              mreyes
+              Penta_MrEyes
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
               계속하려면 로그인하세요.
@@ -216,7 +218,6 @@ export default function LoginForm() {
               </form>
             )}
           </div>
-
         </div>
       </div>
     </main>

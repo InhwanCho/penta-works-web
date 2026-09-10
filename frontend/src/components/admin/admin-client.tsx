@@ -41,7 +41,7 @@ export default function AdminClient() {
   }
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
+    <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       <header className="mb-5 lg:mb-6">
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-text-major dark:text-text-dark-primary text-xl font-semibold tracking-tight lg:text-2xl">

@@ -10,5 +10,10 @@ export default function BaselinesPageClient() {
     queryFn: () => apiFetch<PsiThreshold[]>("/alerts/psi-thresholds"),
   });
 
-  return <BaselinesClient entries={query.data ?? []} loadFailed={query.isError} />;
+  return (
+    <BaselinesClient
+      entries={query.data ?? []}
+      loadFailed={query.isError}
+    />
+  );
 }

@@ -1,3 +1,5 @@
+import { readStoredSession, clearStoredSession } from "@/lib/auth";
+
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"
 ).replace(/\/$/, "");
@@ -18,10 +20,25 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const headers = new Headers(options.headers);
+  if (options.body && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  const token = readStoredSession()?.accessToken;
+  if (token && path !== "/auth/login")
+    headers.set("Authorization", `Bearer ${token}`);
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
-    headers: { "Content-Type": "application/json", ...options.headers },
+    headers,
   });
+  if (
+    typeof window !== "undefined" &&
+    response.status === 401 &&
+    path !== "/auth/login" &&
+    token === readStoredSession()?.accessToken
+  ) {
+    clearStoredSession();
+    window.dispatchEvent(new Event("auth:expired"));
+  }
   if (!response.ok) {
     const body = (await response.json().catch(() => null)) as {
       message?: string;

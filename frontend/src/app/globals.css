@@ -21,30 +21,30 @@
   }
 
   /* colors: brand */
-  --color-brand: #4d566d;
-  --color-brand-primary: #3f4e73;
-  --color-brand-primary-hover: #4f5e83;
-  --color-brand-dark-primary: #5c72a8;
+  --color-brand: #214f73;
+  --color-brand-primary: #123b5d;
+  --color-brand-primary-hover: #0d304d;
+  --color-brand-dark-primary: #82c8ef;
 
   /* colors: border */
-  --color-border: #d4d4d8;
-  --color-border-secondary: #aaaaaa;
-  --color-border-tertiary: #e5e5ec;
-  --color-border-table: #e5e7eb;
+  --color-border: #cad5df;
+  --color-border-secondary: #9aabba;
+  --color-border-tertiary: #dde5eb;
+  --color-border-table: #d7e0e8;
 
   /* colors: text */
   --color-text-primary: #767676;
-  --color-text-major: #3d4659;
-  --color-text-secondary: #505050;
-  --color-text-dark-primary: #dfe9fe;
+  --color-text-major: #172b3d;
+  --color-text-secondary: #44596a;
+  --color-text-dark-primary: #eef7ff;
 
   /* colors: background */
   --color-background: #e0e2e7;
-  --color-background-primary: #f8f8fa;
-  --color-background-tertiary: #e8ecef;
-  --color-background-dark-primary: #25272c;
-  --color-background-dark-secondary: #373c47;
-  --color-background-dark-card: #2b2e35;
+  --color-background-primary: #f1f5f8;
+  --color-background-tertiary: #e1eaf0;
+  --color-background-dark-primary: #13222f;
+  --color-background-dark-secondary: #243a4c;
+  --color-background-dark-card: #192d3d;
 
   /* colors: button */
   --color-button-primary: #6f81ab;
@@ -94,12 +94,30 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  html.large-text {
+    font-size: 20px;
+  }
+
   body {
     @apply bg-background-primary text-text-major;
     @apply dark:bg-background-dark-primary dark:text-text-dark-primary;
     /* 숫자 가독성 및 자간 */
     font-feature-settings: "tnum" 1;
     letter-spacing: -0.011em;
+    min-height: 100dvh;
+    background-image: linear-gradient(
+      180deg,
+      rgba(18, 59, 93, 0.035),
+      transparent 280px
+    );
+  }
+
+  html.dark body {
+    background-image: linear-gradient(
+      180deg,
+      rgba(130, 200, 239, 0.045),
+      transparent 280px
+    );
   }
 
   /* 기본 border/outline 톤(다크에서 과한 대비 방지) */
@@ -115,7 +133,7 @@
   input,
   textarea,
   select {
-    font-size: 16px;
+    font-size: max(16px, 1rem);
   }
 
   /* 터치 타겟 최소 44px 확보 */
@@ -132,94 +150,9 @@
   }
 }
 
-/* 토글(다크 theme) */
-.toggle-switch {
-  position: relative;
-  width: 70px;
-  height: 34px;
-  --light: #d8dbe0;
-  --dark: #28292c;
-  --link: rgb(27, 129, 112);
-  --link-hover: rgb(24, 94, 82);
-}
-
-.switch-label {
-  position: absolute;
-  width: 100%;
-  height: 34px;
-  background-color: var(--dark);
-  border-radius: 25px;
-  cursor: pointer;
-  border: 3px solid var(--dark);
-}
-
-.checkbox {
-  position: absolute;
-  display: none;
-}
-
-.slider {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  border-radius: 25px;
-  -webkit-transition: 0.3s;
-  transition: 0.3s;
-}
-
-.checkbox:checked ~ .slider {
-  background-color: var(--light);
-}
-
-.slider::before {
-  content: "";
-  position: absolute;
-  top: 3px;
-  left: 8px;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  -webkit-box-shadow: inset 12px -4px 0px 0px var(--light);
-  box-shadow: inset 12px -4px 0px 0px var(--light);
-  background-color: var(--dark);
-  -webkit-transition: 0.3s;
-  transition: 0.3s;
-}
-
-.checkbox:checked ~ .slider::before {
-  -webkit-transform: translateX(30px);
-  -ms-transform: translateX(30px);
-  transform: translateX(30px);
-  background-color: var(--dark);
-  -webkit-box-shadow: none;
-  box-shadow: none;
-}
-@media (max-width: 1024px) {
-  .toggle-switch {
-    width: 50px;
-    height: 28px;
-  }
-
-  .switch-label {
-    height: 28px;
-    border-radius: 18px;
-    border-width: 2px;
-  }
-
-  .slider {
-    border-radius: 18px;
-  }
-
-  .slider::before {
-    top: 3px;
-    left: 5px;
-    width: 18px;
-    height: 18px;
-    box-shadow: inset 10px -3px 0px 0px var(--light);
-  }
-
-  .checkbox:checked ~ .slider::before {
-    transform: translateX(19px);
+@media (max-width: 420px) {
+  html.large-text {
+    font-size: 19px;
   }
 }
 

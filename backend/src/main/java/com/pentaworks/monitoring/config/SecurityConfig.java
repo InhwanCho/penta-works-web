@@ -18,12 +18,30 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableConfigurationProperties(AppProperties.class)
 public class SecurityConfig {
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, com.pentaworks.monitoring.auth.JwtTokens tokens) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .addFilterBefore(new com.pentaworks.monitoring.auth.JwtAuthenticationFilter(tokens),
+                org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
+            .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, error) -> {
+                response.setStatus(401);
+                response.setContentType("application/json");
+                response.getWriter().write("{\"message\":\"Unauthorized\"}");
+            }))
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                    "/actuator/health",
+                    "/api/v1/monitor",
+                    "/api/v1/dashboard",
+                    "/api/v1/sites",
+                    "/api/v1/sites/**",
+                    "/api/v1/alerts/psi-thresholds").permitAll()
+                .requestMatchers("/api/v1/admin/**").hasRole("admin")
+                .requestMatchers("/api/v1/**").authenticated()
+                .anyRequest().denyAll())
             .build();
     }
 

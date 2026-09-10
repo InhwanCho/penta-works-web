@@ -40,3 +40,11 @@ sudo bash /home/inhwan/apps/pentaworks-prod/deploy/setup-production-origin.sh
 ```
 
 운영 전환 시에는 별도의 MariaDB 인스턴스와 볼륨을 만들고 `docker-compose.prod.yml`의 `DB_URL` 및 네트워크 구성을 분리해야 합니다.
+
+## Security and verification
+
+로그인 DB가 확정되기 전까지 대시보드, 사이트 목록·상세, 알림 기준값 조회 API는 인증 없이 읽을 수 있습니다. 쓰기·관리자 API는 계속 JWT 권한을 검사하고 모니터 호출은 CRON_SECRET 검증을 유지합니다. 로그인 연결 시 공개된 읽기 경로도 다시 인증 대상으로 전환해야 합니다. JWT_SECRET은 최소 32바이트의 무작위 값으로 설정해야 하며 예시 값은 사용할 수 없습니다. 변경 후 프론트와 백엔드를 함께 배포하세요.
+
+검증: Java 17 이상에서 `cd backend && ./gradlew test`, 프론트에서 `pnpm lint`, `pnpm build`, `pnpm audit --prod`.
+
+남은 보안 개선: 기존 users.password의 단순 SHA-256 해시는 DB 컬럼 길이 및 공유 인증 시스템을 확인한 뒤 bcrypt/Argon2로 마이그레이션해야 합니다. 현재 브라우저 토큰은 localStorage에 저장되므로 HttpOnly 쿠키로 전환하려면 CSRF 방어와 교차 출처 배포 설정을 함께 설계해야 합니다. 로그인 시도 제한도 운영 프록시 또는 공유 저장소 기반으로 추가해야 합니다.

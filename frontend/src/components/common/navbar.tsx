@@ -2,49 +2,20 @@
 
 import SiteSearchModal from "@/components/common/site-search-modal";
 import SearchIcon from "@/components/icons/search-icon";
-import { useAuth } from "@/components/provider/auth-provider";
 import { useModal } from "@/components/provider/modal-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 
 /**
  * 네비게이션 링크/버튼 공통 스타일.
  * 모바일에서 항목이 늘어나도 줄바꿈되지 않도록 whitespace-nowrap + 좁은 패딩을 씁니다.
  */
 const NAV_ITEM_CLASS =
-  "inline-flex h-9 shrink-0 items-center justify-center rounded-md px-2 text-[13px] font-medium whitespace-nowrap text-white/85 transition-colors hover:bg-white/10 hover:text-white sm:text-sm lg:px-3";
+  "inline-flex min-h-11 shrink-0 items-center justify-center rounded-lg px-2 text-sm font-semibold whitespace-nowrap text-white/90 transition-colors hover:bg-white/10 hover:text-white sm:px-3";
 
 export default function Navbar() {
-  const { theme, toggleTheme } = useTheme();
-  const { session, isAdmin, isLoading: isAuthLoading, logout } = useAuth();
-
-  const router = useRouter();
-  const pathname = usePathname();
-
-  const handleLogout = () => {
-    logout();
-    // 관리자 화면에 머문 채 로그아웃하면 접근 제한 화면이 뜨므로 대시보드로 보냅니다.
-    if (pathname?.startsWith("/admin")) router.push("/");
-  };
-
-  const [prefersDark, setPrefersDark] = useState(false);
-
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const set = () => setPrefersDark(mq.matches);
-
-    set();
-    mq.addEventListener?.("change", set);
-
-    return () => {
-      mq.removeEventListener?.("change", set);
-    };
-  }, []);
-
-  const isDarkChecked = theme === "dark" || (theme === "system" && prefersDark);
+  const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
 
   // 모달 제어
   const { open: openSearchModal } = useModal("SearchModal");
@@ -53,7 +24,7 @@ export default function Navbar() {
     <>
       <header
         className={[
-          "sticky top-0 z-10 h-14 w-full lg:h-[60px]",
+          "sticky top-0 z-50 h-14 w-full",
           // 브랜드 블루슬레이트 그라디언트(오렌지 로고와 보색 대비)
           "from-brand-primary via-brand to-brand-primary bg-gradient-to-r",
           "dark:from-background-dark-secondary dark:via-background-dark-card dark:to-background-dark-secondary",
@@ -63,21 +34,21 @@ export default function Navbar() {
           "shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,_0_1px_2px_0_rgba(0,0,0,0.08)]",
         ].join(" ")}
       >
-        <div className="mx-auto flex h-full w-full max-w-6xl items-center justify-between px-4 lg:px-8">
+        <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-1 px-3 sm:gap-2 sm:px-4 lg:px-6">
           <Link
             href="/"
-            className="relative flex cursor-pointer items-center gap-2.5 text-base font-semibold tracking-tight text-white lg:text-lg"
+            className="relative flex shrink-0 cursor-pointer items-center gap-2 text-base font-bold tracking-tight text-white lg:text-lg"
           >
             <Image
               src="/favicon/android-chrome-192x192.png"
-              alt="mreyes"
+              alt="Penta_MrEyes"
               width={28}
               height={28}
               priority
-              className="h-7 w-7 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
+              className="h-8 w-8 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
             />
             <span className="hidden tracking-[-0.01em] whitespace-nowrap sm:inline">
-              mreyes
+              Penta_MrEyes
             </span>
           </Link>
 
@@ -90,65 +61,44 @@ export default function Navbar() {
               기준값
             </Link>
 
-            {/* 인증 상태 확인 전에는 아무것도 그리지 않아 깜빡임을 막습니다. */}
-            {!isAuthLoading && isAdmin && (
-              <Link
-                href="/admin"
-                className={NAV_ITEM_CLASS}
-                aria-label="관리자 페이지"
-              >
-                관리자
-              </Link>
-            )}
-
-            {!isAuthLoading &&
-              (session ? (
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className={`${NAV_ITEM_CLASS} cursor-pointer`}
-                  aria-label={`${session.username} 로그아웃`}
-                  title={`${session.username} (${
-                    session.role === "admin" ? "관리자" : "일반"
-                  })`}
-                >
-                  로그아웃
-                </button>
-              ) : (
-                <Link
-                  href="/login"
-                  className={NAV_ITEM_CLASS}
-                  aria-label="로그인"
-                >
-                  로그인
-                </Link>
-              ))}
-
             <button
               type="button"
-              className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-white/85 transition-colors hover:bg-white/10 hover:text-white"
+              className="inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-lg text-white/90 transition-colors hover:bg-white/10 hover:text-white"
               onClick={() => {
                 openSearchModal();
               }}
-              aria-label="Open site search"
+              aria-label="병원 검색"
             >
               <SearchIcon className="h-5 w-5" />
             </button>
 
-            <div className="ml-1 flex items-center">
-              <div className="toggle-switch">
-                <label className="switch-label">
-                  <input
-                    type="checkbox"
-                    className="checkbox"
-                    checked={isDarkChecked}
-                    onChange={toggleTheme}
-                    aria-label="Toggle dark mode"
-                  />
-                  <span className="slider" />
-                </label>
-              </div>
-            </div>
+            <button
+              type="button"
+              className={[
+                "inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg px-2 text-sm font-bold whitespace-nowrap transition-colors sm:px-3",
+                isLargeText
+                  ? "text-brand-primary bg-white shadow-sm"
+                  : "text-white/90 hover:bg-white/10 hover:text-white",
+              ].join(" ")}
+              onClick={toggleLargeText}
+              aria-label="큰 글씨 모드"
+              aria-pressed={isLargeText}
+              title="큰 글씨 모드"
+            >
+              큰글씨
+            </button>
+
+            <button
+              type="button"
+              className="inline-flex min-h-11 shrink-0 cursor-pointer items-center justify-center rounded-lg px-2 text-sm font-bold whitespace-nowrap text-white/90 transition-colors hover:bg-white/10 hover:text-white sm:px-3"
+              onClick={toggleTheme}
+              aria-label={
+                isDark ? "밝은 화면으로 변경" : "어두운 화면으로 변경"
+              }
+              title={isDark ? "밝은 화면" : "어두운 화면"}
+            >
+              {isDark ? "밝게" : "어둡게"}
+            </button>
           </nav>
         </div>
       </header>

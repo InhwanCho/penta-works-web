@@ -42,24 +42,22 @@ export default function BaselinesClient({
   );
 
   return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
-      <div className="mb-4">
+    <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+      <div className="mb-2 sm:mb-3">
         <Link
           href="/"
-          className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-9 items-center justify-center gap-x-1.5 rounded-md px-2 text-sm font-medium transition-colors"
+          className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex min-h-10 items-center justify-center gap-x-1.5 rounded-lg px-2 text-sm font-bold transition-colors"
         >
           <ArrowBackIconMini className="h-4 w-4" /> 대시보드
         </Link>
       </div>
 
-      <header className="mb-5 lg:mb-6">
-        <h1 className="text-text-major dark:text-text-dark-primary text-xl font-semibold tracking-tight lg:text-2xl">
+      <header className="mb-3 sm:mb-4">
+        <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
           병원별 기준값
         </h1>
-        <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
-          hePsi 알림 허용범위입니다. 범위를 벗어나면 슬랙 알림이 발송됩니다.
-          값은 DB(<code className="text-xs">alert_settings</code>)에서
-          읽어오므로 수정 시 배포 없이 바로 반영됩니다.
+        <p className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-sm font-medium">
+          hePsi 알림 허용범위입니다. 범위를 벗어나면 알림이 발송됩니다.
         </p>
       </header>
 
@@ -105,7 +103,7 @@ export default function BaselinesClient({
             {filtered.map((e) => (
               <li
                 key={e.siteid}
-                className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white p-4 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]"
+                className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-xl border bg-white p-3 shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center gap-2.5">
@@ -124,7 +122,7 @@ export default function BaselinesClient({
                 <div className="bg-border/60 dark:bg-background-dark-secondary/60 my-3 h-px" />
                 <div className="flex items-end justify-between text-xs">
                   <div className="flex flex-col">
-                    <span className="text-text-secondary dark:text-text-dark-primary/60 text-[11px] font-medium">
+                    <span className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
                       최소
                     </span>
                     <span className="text-text-major dark:text-text-dark-primary/90 mt-0.5 text-sm font-semibold tabular-nums">
@@ -132,7 +130,7 @@ export default function BaselinesClient({
                     </span>
                   </div>
                   <div className="flex flex-col items-end">
-                    <span className="text-text-secondary dark:text-text-dark-primary/60 text-[11px] font-medium">
+                    <span className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
                       최대
                     </span>
                     <span className="text-text-major dark:text-text-dark-primary/90 mt-0.5 text-sm font-semibold tabular-nums">
@@ -253,7 +251,7 @@ function ActiveBadge({ active }: { active: boolean }) {
   return (
     <span
       className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-sm font-bold",
         active
           ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
           : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",

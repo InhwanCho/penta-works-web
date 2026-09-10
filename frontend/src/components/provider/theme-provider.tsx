@@ -1,11 +1,11 @@
 "use client";
 
 import {
-    type ReactNode,
-    createContext,
-    useContext,
-    useEffect,
-    useState,
+  type ReactNode,
+  createContext,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 
 // 테마 타입 정의
@@ -15,22 +15,27 @@ type Theme = "light" | "dark" | "system";
 interface ThemeContextType {
   theme: Theme;
   isDark: boolean;
+  isLargeText: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
+  toggleLargeText: () => void;
 }
 
 // Context 생성
 const ThemeContext = createContext<ThemeContextType>({
   theme: "system",
   isDark: false,
+  isLargeText: false,
   setTheme: () => {},
   toggleTheme: () => {},
+  toggleLargeText: () => {},
 });
 
 // ThemeProvider 컴포넌트
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
   const [isDark, setIsDarkState] = useState<boolean>(false);
+  const [isLargeText, setIsLargeText] = useState(false);
 
   // 시스템 환경 기준 다크 여부 판단
   const detectSystemDark = () =>
@@ -45,6 +50,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // 초기 로드 및 시스템 테마 변경 감지
   useEffect(() => {
     const saved = localStorage.getItem("theme") as Theme | null;
+    const largeText = localStorage.getItem("text-size") === "large";
+    setIsLargeText(largeText);
+    document.documentElement.classList.toggle("large-text", largeText);
     if (saved === "light" || saved === "dark") {
       setThemeState(saved);
       setIsDarkState(saved === "dark");
@@ -83,10 +91,26 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   // 토글 함수
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const toggleTheme = () => setTheme(isDark ? "light" : "dark");
+
+  const toggleLargeText = () => {
+    const next = !isLargeText;
+    setIsLargeText(next);
+    document.documentElement.classList.toggle("large-text", next);
+    localStorage.setItem("text-size", next ? "large" : "normal");
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, isDark, setTheme, toggleTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        isDark,
+        isLargeText,
+        setTheme,
+        toggleTheme,
+        toggleLargeText,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
