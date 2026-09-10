@@ -10,11 +10,11 @@ import type React from "react";
  *
  * table-layout: auto 에서는 내용 길이가 열 너비를 결정하므로 병원명은
  * 고정 너비 래퍼로 감싸 가로 스크롤 중에도 첫 열 너비를 유지합니다.
- * (INNER 너비 = 열 너비 - 좌우 패딩 px-3 * 2 = 24px)
+ * 모바일에서는 큰글씨 모드에서도 여백이 함께 커지지 않도록 px 단위를 씁니다.
  */
 const COL_NAME =
-  "w-[116px] min-w-[116px] max-w-[116px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
-const COL_NAME_INNER = "block w-[92px] truncate sm:w-[166px]";
+  "w-[100px] min-w-[100px] max-w-[100px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
+const COL_NAME_INNER = "block w-[88px] truncate sm:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -75,9 +75,9 @@ export default function DashboardExcelView({
   ctrl: Record<string, CtrlRange>;
 }) {
   return (
-    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
+    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:rounded-lg">
       {/* 헤더 + 범례 */}
-      <div className="dark:border-background-dark-secondary flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b px-3 py-2.5 sm:px-4">
+      <div className="dark:border-background-dark-secondary flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b px-[8px] py-[6px] sm:gap-x-3 sm:gap-y-1 sm:px-4 sm:py-2.5">
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
           관리자 뷰
         </h2>
@@ -96,8 +96,8 @@ export default function DashboardExcelView({
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
-        <div className="max-h-[calc(100dvh-250px)] overflow-auto rounded-b-lg sm:max-h-[70vh]">
-          <table className="w-full min-w-[1380px] border-separate border-spacing-0 text-sm">
+        <div className="max-h-[calc(100dvh-210px)] overflow-auto rounded-b-md sm:max-h-[70vh] sm:rounded-b-lg">
+          <table className="w-full min-w-[1250px] border-separate border-spacing-0 text-sm sm:min-w-[1380px]">
             <caption className="sr-only">
               사이트별 최신 수집값 전체 지표 표
             </caption>
@@ -107,7 +107,7 @@ export default function DashboardExcelView({
                 <th
                   scope="col"
                   className={[
-                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-3 py-2.5 text-left align-bottom text-sm font-bold tracking-wide",
+                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[6px] py-[5px] text-left align-bottom text-sm leading-tight font-bold tracking-wide sm:px-3 sm:py-2.5",
                     COL_NAME,
                     CELL_BORDER,
                     HEAD_BG,
@@ -123,7 +123,7 @@ export default function DashboardExcelView({
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[104px] px-3 py-2 text-right align-top whitespace-nowrap",
+                        "sticky top-0 min-w-[76px] px-[6px] py-[5px] text-right align-top whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
                         CELL_BORDER,
                         HEAD_BG,
                         Z_HEAD,
@@ -133,7 +133,7 @@ export default function DashboardExcelView({
                         {m.code}
                       </span>
                       {sub ? (
-                        <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-xs font-medium">
+                        <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 hidden text-xs font-medium sm:block">
                           {sub}
                         </span>
                       ) : null}
@@ -141,16 +141,16 @@ export default function DashboardExcelView({
                   );
                 })}
 
-                <HeadCell className="w-[96px] min-w-[96px] text-right">
+                <HeadCell className="w-[72px] min-w-[72px] text-right sm:w-[96px] sm:min-w-[96px]">
                   1시간 건수
                 </HeadCell>
-                <HeadCell className="w-[96px] min-w-[96px] text-right">
+                <HeadCell className="w-[72px] min-w-[72px] text-right sm:w-[96px] sm:min-w-[96px]">
                   24시간 건수
                 </HeadCell>
-                <HeadCell className="w-[128px] min-w-[128px] text-left">
+                <HeadCell className="w-[108px] min-w-[108px] text-left sm:w-[128px] sm:min-w-[128px]">
                   최신 시각
                 </HeadCell>
-                <HeadCell className="w-[84px] min-w-[84px] text-left">
+                <HeadCell className="w-[64px] min-w-[64px] text-left sm:w-[84px] sm:min-w-[84px]">
                   사이트
                 </HeadCell>
               </tr>
@@ -172,7 +172,7 @@ export default function DashboardExcelView({
                     {/* 고정열 1 — 병원명 */}
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary sticky left-0 px-3 py-2 font-medium",
+                        "text-text-major dark:text-text-dark-primary sticky left-0 px-[6px] py-[5px] font-medium sm:px-3 sm:py-2",
                         COL_NAME,
                         CELL_BORDER,
                         FIXED_BG,
@@ -198,7 +198,7 @@ export default function DashboardExcelView({
                         <td
                           key={m.key}
                           className={[
-                            "px-3 py-2 text-right whitespace-nowrap tabular-nums",
+                            "px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                             CELL_BORDER,
                             alert
                               ? "bg-red-50 font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400"
@@ -212,7 +212,7 @@ export default function DashboardExcelView({
 
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 px-3 py-2 text-right whitespace-nowrap tabular-nums",
+                        "text-text-major dark:text-text-dark-primary/90 px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                       ].join(" ")}
                     >
@@ -220,7 +220,7 @@ export default function DashboardExcelView({
                     </td>
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 px-3 py-2 text-right whitespace-nowrap tabular-nums",
+                        "text-text-major dark:text-text-dark-primary/90 px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                       ].join(" ")}
                     >
@@ -229,7 +229,7 @@ export default function DashboardExcelView({
 
                     <td
                       className={[
-                        "text-text-secondary dark:text-text-dark-primary/70 px-3 py-2 whitespace-nowrap tabular-nums",
+                        "text-text-secondary dark:text-text-dark-primary/70 px-[6px] py-[5px] whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                       ].join(" ")}
                     >
@@ -243,7 +243,7 @@ export default function DashboardExcelView({
 
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary px-3 py-2 text-sm font-semibold whitespace-nowrap tabular-nums",
+                        "text-text-major dark:text-text-dark-primary px-[6px] py-[5px] text-sm leading-tight font-semibold whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                       ].join(" ")}
                     >
@@ -279,7 +279,7 @@ function HeadCell({
     <th
       scope="col"
       className={[
-        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-3 py-2.5 align-bottom text-sm font-bold tracking-wide whitespace-nowrap",
+        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[6px] py-[5px] align-bottom text-sm leading-tight font-bold tracking-wide whitespace-nowrap sm:px-3 sm:py-2.5",
         CELL_BORDER,
         HEAD_BG,
         Z_HEAD,

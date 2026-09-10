@@ -137,10 +137,10 @@ export default function DashboardClient() {
       onRefresh={handleRefresh}
       topOffset={56}
     >
-      <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+      <main className="mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         <DashboardScrollTo offset={80} />
 
-        <header className="mb-3 flex items-end justify-between gap-3 sm:mb-4">
+        <header className="mb-[8px] flex items-end justify-between gap-2 sm:mb-4 sm:gap-3">
           <div>
             <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
               실시간 현황
@@ -158,7 +158,7 @@ export default function DashboardClient() {
         </header>
 
         {/* 요약 카드 */}
-        <section className="mb-3 grid grid-cols-3 gap-1.5 sm:mb-4 sm:gap-2.5">
+        <section className="mb-[8px] grid grid-cols-3 gap-[4px] sm:mb-4 sm:gap-2.5">
           <SummaryCard
             label="전체"
             value={stats.totalSites}
@@ -389,7 +389,7 @@ function SummaryCard({
         ? "text-amber-600 dark:text-amber-400"
         : "text-text-major dark:text-text-dark-primary";
   return (
-    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-xl border border-l-4 bg-white px-2.5 py-2 shadow-sm sm:px-4 sm:py-3">
+    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border border-l-4 bg-white px-[8px] py-[6px] shadow-sm sm:rounded-xl sm:px-4 sm:py-3">
       <div className="text-text-secondary dark:text-text-dark-primary/70 text-sm leading-tight font-bold">
         {label}
       </div>
