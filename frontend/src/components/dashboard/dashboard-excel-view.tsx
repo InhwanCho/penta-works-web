@@ -123,7 +123,8 @@ export default function DashboardExcelView({
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[76px] px-[6px] py-[5px] text-right align-top whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
+                        "sticky top-0 min-w-[76px] px-[6px] py-[5px] text-right whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
+                        sub ? "align-top" : "align-middle",
                         CELL_BORDER,
                         HEAD_BG,
                         Z_HEAD,
