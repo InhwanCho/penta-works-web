@@ -96,7 +96,7 @@ export default function DashboardExcelView({
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
-        <div className="max-h-[calc(100dvh-210px)] overflow-auto rounded-b-md sm:max-h-[70vh] sm:rounded-b-lg">
+        <div className="max-h-[calc(100dvh-160px)] overflow-auto rounded-b-md sm:max-h-[calc(100dvh-180px)] sm:rounded-b-lg">
           <table className="w-full min-w-[1250px] border-separate border-spacing-0 text-sm sm:min-w-[1380px]">
             <caption className="sr-only">
               사이트별 최신 수집값 전체 지표 표

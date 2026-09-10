@@ -130,7 +130,7 @@ export default function DashboardClient() {
     );
   }
 
-  const { meta, ctrl, stats } = data;
+  const { meta, ctrl } = data;
 
   return (
     <PullToRefresh
@@ -156,25 +156,6 @@ export default function DashboardClient() {
             onChange={changeViewMode}
           />
         </header>
-
-        {/* 요약 카드 */}
-        <section className="mb-[8px] grid grid-cols-3 gap-[4px] sm:mb-4 sm:gap-2.5">
-          <SummaryCard
-            label="전체"
-            value={stats.totalSites}
-            tone="neutral"
-          />
-          <SummaryCard
-            label="정상 (1시간)"
-            value={stats.active1h}
-            tone="ok"
-          />
-          <SummaryCard
-            label="미수집 (24시간)"
-            value={stats.stale24h}
-            tone={stats.stale24h > 0 ? "warn" : "neutral"}
-          />
-        </section>
 
         {viewMode === "grid" ? (
           <DashboardExcelView
@@ -369,38 +350,6 @@ function EmptyState() {
   return (
     <div className="text-text-secondary dark:text-text-dark-primary/60 py-12 text-center text-sm">
       데이터가 없습니다.
-    </div>
-  );
-}
-
-function SummaryCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number | string;
-  tone: "ok" | "warn" | "neutral";
-}) {
-  const toneCls =
-    tone === "ok"
-      ? "text-emerald-600 dark:text-emerald-400"
-      : tone === "warn"
-        ? "text-amber-600 dark:text-amber-400"
-        : "text-text-major dark:text-text-dark-primary";
-  return (
-    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border border-l-4 bg-white px-[8px] py-[6px] shadow-sm sm:rounded-xl sm:px-4 sm:py-3">
-      <div className="text-text-secondary dark:text-text-dark-primary/70 text-sm leading-tight font-bold">
-        {label}
-      </div>
-      <div
-        className={[
-          "mt-0.5 text-2xl font-extrabold tabular-nums sm:text-3xl",
-          toneCls,
-        ].join(" ")}
-      >
-        {value}
-      </div>
     </div>
   );
 }
