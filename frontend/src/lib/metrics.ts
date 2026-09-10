@@ -36,19 +36,44 @@ export type MetricDef = {
   /** 의미가 확인된 컬럼만 라벨을 답니다. 확인 안 된 건 null. */
   label: string | null;
   unit: string | null;
+  /** 컬럼명을 누르거나 마우스를 올렸을 때 표시할 설명 */
+  description: string;
   /** 대응하는 ctrl 임계값. 없으면 범위 이탈 판정을 하지 않습니다. */
   bound: CtrlBound | null;
 };
 
 export const METRICS: readonly MetricDef[] = [
-  { key: "recosi", code: "recosi", label: null, unit: null, bound: null },
-  { key: "coldtp", code: "coldtp", label: null, unit: null, bound: null },
-  { key: "recoru", code: "recoru", label: null, unit: null, bound: null },
+  {
+    key: "recosi",
+    code: "recosi",
+    label: null,
+    unit: null,
+    description: "정확한 의미가 아직 확인되지 않은 DB 컬럼입니다.",
+    bound: null,
+  },
+  {
+    key: "coldtp",
+    code: "coldtp",
+    label: null,
+    unit: null,
+    description:
+      "콜드헤드 또는 콜드칠러 온도로 추정됩니다. 정확한 의미는 확인이 필요합니다.",
+    bound: null,
+  },
+  {
+    key: "recoru",
+    code: "recoru",
+    label: null,
+    unit: null,
+    description: "정확한 의미가 아직 확인되지 않은 DB 컬럼입니다.",
+    bound: null,
+  },
   {
     key: "hepres",
     code: "hepres",
     label: "He Pressure",
     unit: "psi",
+    description: "헬륨 압력입니다. 단위는 psi입니다.",
     bound: "mrple",
   },
   {
@@ -56,6 +81,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "heleve",
     label: "He Level",
     unit: "%",
+    description: "헬륨 잔량입니다. 단위는 %입니다.",
     bound: "mrlev",
   },
   {
@@ -63,6 +89,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "actemp",
     label: "AC Temp",
     unit: "°C",
+    description: "AC 온도입니다. 단위는 °C입니다.",
     bound: "actmp",
   },
   {
@@ -70,6 +97,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "achumi",
     label: "AC Humidity",
     unit: "%",
+    description: "AC 습도입니다. 단위는 %입니다.",
     bound: "achum",
   },
   {
@@ -77,6 +105,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "gctemp",
     label: "GC Temp",
     unit: "°C",
+    description: "GC 온도입니다. 단위는 °C입니다.",
     bound: "gctmp",
   },
   {
@@ -84,6 +113,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "gcflow",
     label: "GC Flow",
     unit: null,
+    description: "GC 유량입니다.",
     bound: "gcflo",
   },
   {
@@ -91,6 +121,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "cctemp",
     label: "CC Temp",
     unit: "°C",
+    description: "CC 온도입니다. 단위는 °C입니다.",
     bound: "cctmp",
   },
   {
@@ -98,6 +129,7 @@ export const METRICS: readonly MetricDef[] = [
     code: "ccflow",
     label: "CC Flow",
     unit: null,
+    description: "CC 유량입니다.",
     bound: "ccflo",
   },
 ] as const;

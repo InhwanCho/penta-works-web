@@ -3,7 +3,7 @@
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { METRICS, isMetricOutOfRange } from "@/lib/metrics";
 import Link from "next/link";
-import type React from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * 고정(freeze) 열: 병원명.
@@ -74,6 +74,29 @@ export default function DashboardExcelView({
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
 }) {
+  const [openMetric, setOpenMetric] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = () => {
+    if (closeTimer.current) clearTimeout(closeTimer.current);
+    closeTimer.current = null;
+  };
+
+  const showMetricHelp = (key: string, autoClose = false) => {
+    clearCloseTimer();
+    setOpenMetric(key);
+    if (autoClose) {
+      closeTimer.current = setTimeout(() => setOpenMetric(null), 3000);
+    }
+  };
+
+  const hideMetricHelp = () => {
+    clearCloseTimer();
+    setOpenMetric(null);
+  };
+
+  useEffect(() => () => clearCloseTimer(), []);
+
   return (
     <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:rounded-lg">
       {/* 헤더 + 범례 */}
@@ -127,11 +150,36 @@ export default function DashboardExcelView({
                         sub ? "align-top" : "align-middle",
                         CELL_BORDER,
                         HEAD_BG,
-                        Z_HEAD,
+                        openMetric === m.key ? "z-50" : Z_HEAD,
                       ].join(" ")}
                     >
-                      <span className="text-text-major dark:text-text-dark-primary block text-sm font-bold">
-                        {m.code}
+                      <span className="relative inline-block">
+                        <button
+                          type="button"
+                          title={m.description}
+                          aria-expanded={openMetric === m.key}
+                          aria-describedby={`metric-help-${m.key}`}
+                          className="text-text-major dark:text-text-dark-primary cursor-help text-sm font-bold underline decoration-dotted underline-offset-4"
+                          onClick={() => showMetricHelp(m.key, true)}
+                          onMouseEnter={() => showMetricHelp(m.key)}
+                          onMouseLeave={hideMetricHelp}
+                          onFocus={() => showMetricHelp(m.key)}
+                          onBlur={hideMetricHelp}
+                        >
+                          {m.code}
+                        </button>
+                        {openMetric === m.key ? (
+                          <span
+                            id={`metric-help-${m.key}`}
+                            role="tooltip"
+                            className="dark:border-background-dark-secondary dark:bg-background-dark-card dark:text-text-dark-primary fixed top-[112px] right-[8px] left-[8px] z-50 rounded-lg border bg-white px-3 py-2 text-left text-sm leading-snug font-medium whitespace-normal text-slate-700 shadow-lg sm:absolute sm:top-full sm:right-auto sm:left-1/2 sm:mt-2 sm:w-[260px] sm:-translate-x-1/2"
+                          >
+                            <strong className="text-text-major dark:text-text-dark-primary mr-1 font-extrabold">
+                              {m.code}
+                            </strong>
+                            {m.description}
+                          </span>
+                        ) : null}
                       </span>
                       {sub ? (
                         <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 hidden text-xs font-medium sm:block">
@@ -273,7 +321,7 @@ function HeadCell({
   children,
   className = "",
 }: {
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
 }) {
   return (
