@@ -137,10 +137,10 @@ export default function DashboardClient() {
       onRefresh={handleRefresh}
       topOffset={56}
     >
-      <main className="mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+      <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         <DashboardScrollTo offset={80} />
 
-        <header className="mb-[8px] flex items-end justify-between gap-2 sm:mb-4 sm:gap-3">
+        <header className="mb-[8px] flex flex-wrap items-end justify-between gap-2 sm:mb-4 sm:gap-3">
           <div>
             <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
               실시간 현황
@@ -194,7 +194,6 @@ export default function DashboardClient() {
                   <table className="w-full min-w-[900px] border-collapse text-sm">
                     <thead className="bg-background-primary/60 text-text-secondary dark:border-background-dark-secondary dark:bg-background-dark-secondary/40 dark:text-text-dark-primary/70 border-b">
                       <tr>
-                        <Th>Site</Th>
                         <Th>병원명</Th>
                         <Th>최신 시각</Th>
                         <Th className="text-right">hePsi</Th>
@@ -225,10 +224,6 @@ export default function DashboardClient() {
                             id={`site-d-${r.siteSlug}`}
                             className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 scroll-mt-[120px] border-b transition-colors last:border-b-0"
                           >
-                            <Td className="text-text-major dark:text-text-dark-primary text-sm font-semibold tabular-nums">
-                              {r.siteSlug}
-                            </Td>
-
                             <Td className="text-text-major dark:text-text-dark-primary font-medium">
                               {r.name ?? "-"}
                             </Td>
@@ -270,7 +265,7 @@ export default function DashboardClient() {
                               <Link
                                 className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors"
                                 href={`/sites/${r.siteSlug}`}
-                                aria-label={`${r.name ?? r.siteSlug} 상세 보기`}
+                                aria-label={`${r.name ?? "병원"} 상세 보기`}
                               >
                                 <ChevronRightIcon className="h-4 w-4" />
                               </Link>
@@ -333,7 +328,7 @@ function ViewModeTab({
       aria-selected={active}
       onClick={onClick}
       className={[
-        "inline-flex min-h-8 cursor-pointer items-center justify-center rounded-md px-2.5 text-sm font-bold transition-all sm:px-3",
+        "inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-md px-2.5 text-sm font-bold whitespace-nowrap transition-all sm:px-3",
         active
           ? "text-text-major dark:bg-background-dark-card dark:text-text-dark-primary bg-white shadow-sm"
           : "text-text-secondary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
@@ -382,13 +377,7 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
     >
       {/* Header row */}
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-semibold tabular-nums">
-            {row.siteSlug}
-          </span>
-          <span className="text-border-strong dark:text-background-dark-secondary">
-            ·
-          </span>
+        <div className="flex min-w-0 items-center">
           <span
             className="text-text-major dark:text-text-dark-primary truncate text-[15px] font-semibold"
             title={row.name ?? ""}

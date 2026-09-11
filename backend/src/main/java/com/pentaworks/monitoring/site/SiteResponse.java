@@ -4,5 +4,6 @@ import java.util.List;
 
 public record SiteResponse(String slug, SiteSummary site, int take, String lastAt, List<Measurement> rows) {
     public record SiteSummary(String siteDb, String name) {}
-    public record Measurement(int index, String date, Double hepres, Double heleve, Double actemp, Double achumi) {}
+    public record Measurement(int index, String date, Double hepres, Double heleve, Double actemp, Double achumi,
+        Double recosi, Double coldtp, Double recoru, Double gctemp, Double gcflow, Double cctemp, Double ccflow) {}
 }

@@ -24,7 +24,7 @@ export default function Navbar() {
     <>
       <header
         className={[
-          "sticky top-0 z-50 h-14 w-full",
+          "mobile-safe-header sticky top-0 z-50 h-14 w-full",
           // 브랜드 블루슬레이트 그라디언트(오렌지 로고와 보색 대비)
           "from-brand-primary via-brand to-brand-primary bg-gradient-to-r",
           "dark:from-background-dark-secondary dark:via-background-dark-card dark:to-background-dark-secondary",
@@ -34,21 +34,21 @@ export default function Navbar() {
           "shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,_0_1px_2px_0_rgba(0,0,0,0.08)]",
         ].join(" ")}
       >
-        <div className="mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-1 px-3 sm:gap-2 sm:px-4 lg:px-6">
+        <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between gap-1 px-3 sm:gap-2 sm:px-4 lg:px-6">
           <Link
             href="/"
             className="relative flex shrink-0 cursor-pointer items-center gap-2 text-base font-bold tracking-tight text-white lg:text-lg"
           >
             <Image
               src="/favicon/android-chrome-192x192.png"
-              alt="Penta_MrEyes"
+              alt="MrEyes"
               width={28}
               height={28}
               priority
               className="h-8 w-8 drop-shadow-[0_1px_2px_rgba(0,0,0,0.25)]"
             />
             <span className="hidden tracking-[-0.01em] whitespace-nowrap sm:inline">
-              Penta_MrEyes
+              MrEyes
             </span>
           </Link>
 

@@ -78,16 +78,12 @@ export default function SiteSearchModal() {
 
     const scored = items
       .map((it) => {
-        const slug = norm(it.siteSlug);
-        const db = norm(it.siteDb);
         const name = norm(it.name);
 
         let score = 0;
-        if (slug === query || db === query) score += 100;
-        if (slug.startsWith(query) || db.startsWith(query)) score += 60;
-        if (name.startsWith(query)) score += 40;
-        if (slug.includes(query) || db.includes(query) || name.includes(query))
-          score += 10;
+        if (name === query) score += 100;
+        if (name.startsWith(query)) score += 60;
+        if (name.includes(query)) score += 10;
 
         return { it, score };
       })
@@ -125,7 +121,7 @@ export default function SiteSearchModal() {
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="사이트 또는 병원명으로 검색..."
+              placeholder="병원명으로 검색..."
               className="w-full border-0 bg-transparent px-11 py-4 text-sm outline-none placeholder:text-text-secondary/70 dark:placeholder:text-text-dark-primary/40 dark:text-text-dark-primary"
               inputMode="search"
               autoComplete="off"
@@ -174,9 +170,6 @@ export default function SiteSearchModal() {
                     onClick={() => goToDashboardAndScroll(it.siteSlug)}
                     className="group hover:bg-background-tertiary dark:hover:bg-background-dark-secondary flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors"
                   >
-                    <span className="text-text-secondary dark:text-text-dark-primary/60 w-10 shrink-0 text-xs font-semibold tabular-nums">
-                      {it.siteSlug}
-                    </span>
                     <span className="text-text-major dark:text-text-dark-primary min-w-0 flex-1 truncate text-sm font-medium">
                       {it.name || "-"}
                     </span>

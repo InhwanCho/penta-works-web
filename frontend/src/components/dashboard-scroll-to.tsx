@@ -25,15 +25,29 @@ export default function DashboardScrollTo({
     const tick = () => {
       if (cancelled) return;
 
-      const el = document.getElementById(id);
+      const gridRow = document.getElementById(`site-grid-${slug}`);
+      const el = gridRow ?? document.getElementById(id);
       if (!el) {
         tries += 1;
         if (tries < 40) requestAnimationFrame(tick); // 약 40프레임 재시도
         return;
       }
 
-      const y = el.getBoundingClientRect().top + window.scrollY - offset;
-      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      if (gridRow) {
+        const scroller = gridRow.closest<HTMLElement>("[data-dashboard-scroll]");
+        if (scroller) {
+          const headHeight = scroller.querySelector("thead")?.getBoundingClientRect().height ?? 60;
+          scroller.scrollTo({
+            top: scroller.scrollTop + gridRow.getBoundingClientRect().top - scroller.getBoundingClientRect().top - headHeight,
+            left: 0,
+            behavior: "smooth",
+          });
+        }
+      } else {
+        const y = el.getBoundingClientRect().top + window.scrollY - offset;
+        window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+      }
+      el.animate([{ outline: "2px solid #3b82f6", outlineOffset: "-2px" }, { outline: "2px solid transparent", outlineOffset: "-2px" }], { duration: 2200 });
 
       // URL에서 scrollTo 제거(다른 쿼리는 유지)
       const next = new URLSearchParams(sp.toString());

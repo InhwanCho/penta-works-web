@@ -2,7 +2,6 @@
 
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import type { PsiThreshold } from "@/lib/api";
-import { toSiteSlug } from "@/lib/site";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -23,17 +22,9 @@ export default function BaselinesClient({
     const query = q.trim().toLowerCase();
     if (!query) return entries;
 
-    // 숫자 질의는 부분일치를 쓰면 "1" 이 010·021 까지 걸려버립니다.
-    // 대시보드에서 본 번호("1")를 그대로 입력해도 통하도록 정확일치로 처리합니다.
-    const numeric = /^\d+$/.test(query);
-
-    return entries.filter((e) => {
-      if ((e.name ?? "").toLowerCase().includes(query)) return true;
-
-      const raw = e.siteid.toLowerCase();
-      if (numeric) return toSiteSlug(e.siteid) === String(Number(query));
-      return raw.includes(query);
-    });
+    return entries.filter((e) =>
+      (e.name ?? "").toLowerCase().includes(query),
+    );
   }, [q, entries]);
 
   const activeCount = useMemo(
@@ -77,7 +68,7 @@ export default function BaselinesClient({
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="병원명 또는 사이트 번호로 검색"
+            placeholder="병원명으로 검색"
             className="dark:border-background-dark-secondary dark:bg-background-dark-card placeholder:text-text-secondary/70 focus:border-text-major/40 dark:placeholder:text-text-dark-primary/40 dark:focus:border-text-dark-primary/40 w-full rounded-md border bg-white px-3.5 py-2.5 text-sm transition outline-none"
             inputMode="search"
             autoComplete="off"
@@ -106,13 +97,7 @@ export default function BaselinesClient({
                 className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-xl border bg-white p-3 shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-semibold tabular-nums">
-                      {toSiteSlug(e.siteid)}
-                    </span>
-                    <span className="text-border-strong dark:text-background-dark-secondary">
-                      ·
-                    </span>
+                  <div className="flex min-w-0 items-center">
                     <span className="text-text-major dark:text-text-dark-primary truncate text-[15px] font-semibold">
                       {e.name ?? "-"}
                     </span>
@@ -159,12 +144,6 @@ export default function BaselinesClient({
                     scope="col"
                     className="px-4 py-2.5 text-left text-[11px] font-semibold tracking-wide uppercase"
                   >
-                    사이트
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-4 py-2.5 text-left text-[11px] font-semibold tracking-wide uppercase"
-                  >
                     병원명
                   </th>
                   <th
@@ -193,9 +172,6 @@ export default function BaselinesClient({
                     key={e.siteid}
                     className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 border-b transition-colors last:border-b-0"
                   >
-                    <td className="text-text-secondary dark:text-text-dark-primary/70 px-4 py-3 font-semibold tabular-nums">
-                      {toSiteSlug(e.siteid)}
-                    </td>
                     <td className="text-text-major dark:text-text-dark-primary px-4 py-3 font-medium">
                       {e.name ?? "-"}
                     </td>

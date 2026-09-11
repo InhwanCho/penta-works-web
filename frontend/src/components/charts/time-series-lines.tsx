@@ -109,11 +109,13 @@ export function TimeSeriesLines({
   points,
   series,
   height = 280,
+  interactive = true,
 }: {
   title: string;
   points: TimeSeriesPoint[];
   series: Series[];
   height?: number;
+  interactive?: boolean;
 }) {
   const labels = points.map((p) => p.t);
 
@@ -124,6 +126,7 @@ export function TimeSeriesLines({
   const [zoomReady, setZoomReady] = React.useState(false);
 
   React.useEffect(() => {
+    if (!interactive) return;
     let alive = true;
 
     (async () => {
@@ -143,7 +146,7 @@ export function TimeSeriesLines({
     return () => {
       alive = false;
     };
-  }, []);
+  }, [interactive]);
 
   const maxTicksLimit = Math.min(labels.length, dark ? 18 : 22);
 
@@ -166,6 +169,7 @@ export function TimeSeriesLines({
   };
 
   const options: ChartOptions<"line"> = {
+    events: interactive ? undefined : [],
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
@@ -174,7 +178,7 @@ export function TimeSeriesLines({
         display: series.length > 1,
         labels: {
           color: cssVar(
-            "--color-text-major",
+            dark ? "--color-text-dark-primary" : "--color-text-major",
             dark ? "rgba(255,255,255,0.92)" : "rgba(15,23,42,0.90)",
           ),
           boxWidth: 12,
@@ -186,7 +190,7 @@ export function TimeSeriesLines({
       tooltip: { enabled: true },
 
       // zoom 플러그인은 준비된 이후에만 옵션을 넣는 것이 안전합니다.
-      ...(zoomReady
+      ...(zoomReady && interactive
         ? {
             zoom: {
               zoom: {
@@ -210,7 +214,7 @@ export function TimeSeriesLines({
       x: {
         ticks: {
           color: cssVar(
-            "--color-text-secondary",
+            dark ? "--color-text-dark-primary" : "--color-text-secondary",
             dark ? "rgba(255,255,255,0.70)" : "rgba(51,65,85,0.72)",
           ),
           minRotation: 45,
@@ -227,7 +231,7 @@ export function TimeSeriesLines({
       y: {
         ticks: {
           color: cssVar(
-            "--color-text-secondary",
+            dark ? "--color-text-dark-primary" : "--color-text-secondary",
             dark ? "rgba(255,255,255,0.70)" : "rgba(51,65,85,0.72)",
           ),
           font: { size: 10 },
@@ -240,21 +244,21 @@ export function TimeSeriesLines({
   };
 
   return (
-    <section className="dark:bg-background-dark-card dark:border-background-dark-secondary overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
+    <section className="dark:bg-background-dark-card dark:border-background-dark-secondary w-full min-w-0 max-w-full overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
       <div className="dark:border-background-dark-secondary/60 border-b border-border/60 px-4 py-3">
         <div className="flex items-baseline justify-between gap-2">
           <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
             {title}
           </strong>
-          <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
+          {interactive && <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
             휠/핀치 확대 · Shift + 드래그 이동
-          </span>
+          </span>}
         </div>
       </div>
 
       <div
         style={{ height }}
-        className="px-2 py-3"
+        className="w-full min-w-0 max-w-full overflow-hidden px-2 py-3"
       >
         <Line
           data={data}

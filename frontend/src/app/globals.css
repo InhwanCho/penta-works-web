@@ -105,6 +105,7 @@
     font-feature-settings: "tnum" 1;
     letter-spacing: -0.011em;
     min-height: 100dvh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
     background-image: linear-gradient(
       180deg,
       rgba(18, 59, 93, 0.035),
@@ -147,6 +148,31 @@
   :where(button, a, [role="button"], input, select, textarea):focus-visible {
     outline: none;
     box-shadow: 0 0 0 2px var(--color-ring);
+  }
+}
+
+/* PWA 전체 화면에서 둥근 화면 모서리와 홈 인디케이터 안쪽에 콘텐츠를 둡니다. */
+@media (max-width: 639px) {
+  .mobile-safe-header {
+    height: calc(3.5rem + env(safe-area-inset-top, 0px));
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .mobile-safe-nav {
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+  }
+
+  .mobile-safe-inline {
+    padding-left: max(4px, env(safe-area-inset-left, 0px));
+    padding-right: max(4px, env(safe-area-inset-right, 0px));
+  }
+
+  .dashboard-grid-height {
+    max-height: calc(
+      100dvh - 160px - env(safe-area-inset-top, 0px) -
+        env(safe-area-inset-bottom, 0px)
+    );
   }
 }
 

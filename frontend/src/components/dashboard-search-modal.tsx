@@ -21,17 +21,12 @@ export default function DashboardSearchModal({ items }: { items: Item[] }) {
 
     const scored = items
       .map((it) => {
-        const slug = normalized(it.siteSlug);
-        const db = normalized(it.siteDb);
         const name = normalized(it.name);
 
-        // 간단 스코어링: exact > prefix > includes
         let score = 0;
-        if (slug === query || db === query) score += 100;
-        if (slug.startsWith(query) || db.startsWith(query)) score += 50;
-        if (name.startsWith(query)) score += 30;
-        if (slug.includes(query) || db.includes(query) || name.includes(query))
-          score += 10;
+        if (name === query) score += 100;
+        if (name.startsWith(query)) score += 50;
+        if (name.includes(query)) score += 10;
 
         return { it, score };
       })
@@ -83,7 +78,7 @@ export default function DashboardSearchModal({ items }: { items: Item[] }) {
             ref={inputRef}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="site 또는 name으로 검색"
+            placeholder="병원명으로 검색"
             className="dark:border-background-dark-secondary dark:bg-background-dark-card w-full rounded-xl border px-3 py-2 text-sm outline-none"
           />
         </form>
@@ -103,12 +98,6 @@ export default function DashboardSearchModal({ items }: { items: Item[] }) {
                     className="hover:bg-background-tertiary dark:hover:bg-background-dark-secondary w-full px-4 py-3 text-left"
                   >
                     <div className="text-text-major dark:text-text-dark-primary text-sm font-semibold">
-                      {it.siteSlug}
-                      <span className="text-text-secondary dark:text-text-dark-primary/70 ml-2 text-xs">
-                        (DB: {it.siteDb})
-                      </span>
-                    </div>
-                    <div className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 text-xs">
                       {it.name || "-"}
                     </div>
                   </button>

@@ -75,7 +75,13 @@ export default function DashboardExcelView({
   ctrl: Record<string, CtrlRange>;
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
+  const [selectedCell, setSelectedCell] = useState<{
+    key: string;
+    hospital: string;
+    column: string;
+  } | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearCloseTimer = () => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -95,22 +101,31 @@ export default function DashboardExcelView({
     setOpenMetric(null);
   };
 
-  useEffect(() => () => clearCloseTimer(), []);
+  const selectCell = (row: SiteRow, column: string) => {
+    if (selectionTimer.current) clearTimeout(selectionTimer.current);
+    setSelectedCell({
+      key: `${row.siteDb}:${column}`,
+      hospital: row.name ?? "병원명 없음",
+      column,
+    });
+    selectionTimer.current = setTimeout(() => setSelectedCell(null), 2000);
+  };
+
+  useEffect(
+    () => () => {
+      clearCloseTimer();
+      if (selectionTimer.current) clearTimeout(selectionTimer.current);
+    },
+    [],
+  );
 
   return (
-    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:rounded-lg">
-      {/* 헤더 + 범례 */}
-      <div className="dark:border-background-dark-secondary flex flex-wrap items-center justify-between gap-x-2 gap-y-0.5 border-b px-[8px] py-[6px] sm:gap-x-3 sm:gap-y-1 sm:px-4 sm:py-2.5">
+    <section className="dashboard-grid-height dark:border-background-dark-secondary dark:bg-background-dark-card relative flex flex-col overflow-hidden rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:max-h-[calc(100dvh-180px)] sm:rounded-lg">
+      <div className="dark:border-background-dark-secondary shrink-0 border-b px-[8px] py-[6px] sm:px-4 sm:py-2.5">
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
-          관리자 뷰
+          관리자 뷰 <span className="text-sm font-medium opacity-70">· {rows.length}개 병원</span>
         </h2>
-        <p className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
-          <span className="font-semibold text-red-600 dark:text-red-400">
-            빨간 값
-          </span>
-          은 허용 범위를 벗어난 값입니다.
-          <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
-        </p>
+        <p className="text-xs text-text-secondary dark:text-text-dark-primary/70">병원명 → 상세 보기 · 수치 → 병원·항목 확인</p>
       </div>
 
       {rows.length === 0 ? (
@@ -119,10 +134,10 @@ export default function DashboardExcelView({
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
-        <div className="max-h-[calc(100dvh-160px)] overflow-auto rounded-b-md sm:max-h-[calc(100dvh-180px)] sm:rounded-b-lg">
-          <table className="w-full min-w-[1250px] border-separate border-spacing-0 text-sm sm:min-w-[1380px]">
+        <div data-dashboard-scroll className="min-h-0 flex-1 overflow-auto overscroll-x-contain">
+          <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-sm sm:min-w-[1290px]">
             <caption className="sr-only">
-              사이트별 최신 수집값 전체 지표 표
+              병원별 최신 수집값 전체 지표 표
             </caption>
             <thead>
               <tr>
@@ -199,9 +214,6 @@ export default function DashboardExcelView({
                 <HeadCell className="w-[108px] min-w-[108px] text-left sm:w-[128px] sm:min-w-[128px]">
                   최신 시각
                 </HeadCell>
-                <HeadCell className="w-[64px] min-w-[64px] text-left sm:w-[84px] sm:min-w-[84px]">
-                  사이트
-                </HeadCell>
               </tr>
             </thead>
 
@@ -213,6 +225,7 @@ export default function DashboardExcelView({
                 return (
                   <tr
                     key={row.siteDb}
+                    id={`site-grid-${row.siteSlug}`}
                     // 고정열은 불투명 배경이라 알파 hover 를 쓸 수 없습니다.
                     // 행 전체와 고정열의 hover 색이 어긋나지 않도록 양쪽 모두
                     // 알파 없는 같은 색(FIXED_BG 의 group-hover)을 사용합니다.
@@ -246,9 +259,21 @@ export default function DashboardExcelView({
                       return (
                         <td
                           key={m.key}
+                          onClick={() => selectCell(row, m.code)}
+                          tabIndex={0}
+                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${fmtNum(value)}`}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              selectCell(row, m.code);
+                            }
+                          }}
                           className={[
-                            "px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                            "cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                             CELL_BORDER,
+                            selectedCell?.key === `${row.siteDb}:${m.code}`
+                              ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
+                              : "",
                             alert
                               ? "bg-red-50 font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400"
                               : "text-text-major dark:text-text-dark-primary/90",
@@ -260,17 +285,25 @@ export default function DashboardExcelView({
                     })}
 
                     <td
+                      onClick={() => selectCell(row, "1시간 건수")}
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
+                        selectedCell?.key === `${row.siteDb}:1시간 건수`
+                          ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
+                          : "",
                       ].join(" ")}
                     >
                       {fmtNum(row.count1h)}
                     </td>
                     <td
+                      onClick={() => selectCell(row, "24시간 건수")}
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
+                        selectedCell?.key === `${row.siteDb}:24시간 건수`
+                          ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
+                          : "",
                       ].join(" ")}
                     >
                       {fmtNum(row.count24h)}
@@ -289,15 +322,6 @@ export default function DashboardExcelView({
                         {fmtHms(lastAtDate)}
                       </span>
                     </td>
-
-                    <td
-                      className={[
-                        "text-text-major dark:text-text-dark-primary px-[6px] py-[5px] text-sm leading-tight font-semibold whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
-                        CELL_BORDER,
-                      ].join(" ")}
-                    >
-                      {row.siteSlug}
-                    </td>
                   </tr>
                 );
               })}
@@ -305,6 +329,24 @@ export default function DashboardExcelView({
           </table>
         </div>
       )}
+
+      <p className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:px-4 sm:py-2.5">
+        <span className="font-semibold text-red-600 dark:text-red-400">
+          빨간 값
+        </span>
+        은 허용 범위를 벗어난 값입니다.
+        <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
+      </p>
+
+      {selectedCell ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none absolute bottom-16 left-3 right-3 z-50 rounded-md bg-slate-900/90 px-3 py-2 text-center text-sm font-semibold break-words text-white shadow-lg dark:bg-white/90 dark:text-slate-900"
+        >
+          {selectedCell.hospital} · {selectedCell.column}
+        </div>
+      ) : null}
     </section>
   );
 }

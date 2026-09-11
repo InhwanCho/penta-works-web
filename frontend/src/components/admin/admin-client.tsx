@@ -170,7 +170,7 @@ function AlertLogSection() {
         <table className="w-full min-w-[860px] border-collapse text-sm">
           <THead>
             <tr>
-              <Th>사이트</Th>
+              <Th>병원명</Th>
               <Th>유형</Th>
               <Th>메시지</Th>
               <Th className="text-right">트리거값</Th>

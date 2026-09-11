@@ -2,14 +2,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import type { MetricKey } from "@/lib/metrics";
 
-export type SiteDetailRow = {
+export type SiteDetailRow = Partial<Record<MetricKey, number | null>> & {
   index: number;
   date: string | null; // ISO
-  hepres: number | null;
-  heleve: number | null;
-  actemp: number | null;
-  achumi: number | null;
 };
 
 export type SiteDetailResponse = {
