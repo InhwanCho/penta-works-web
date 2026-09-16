@@ -121,11 +121,16 @@ export default function DashboardExcelView({
 
   return (
     <section className="dashboard-grid-height dark:border-background-dark-secondary dark:bg-background-dark-card relative flex flex-col overflow-hidden rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:max-h-[calc(100dvh-180px)] sm:rounded-lg">
-      <div className="dark:border-background-dark-secondary shrink-0 border-b px-[8px] py-[6px] sm:px-4 sm:py-2.5">
+      <div className="dark:border-background-dark-secondary hidden shrink-0 border-b px-4 py-2.5 sm:block">
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
-          관리자 뷰 <span className="text-sm font-medium opacity-70">· {rows.length}개 병원</span>
+          관리자 뷰{" "}
+          <span className="text-sm font-medium opacity-70">
+            · {rows.length}개 병원
+          </span>
         </h2>
-        <p className="text-xs text-text-secondary dark:text-text-dark-primary/70">병원명 → 상세 보기 · 수치 → 병원·항목 확인</p>
+        <p className="text-text-secondary dark:text-text-dark-primary/70 text-xs">
+          병원명 → 상세 보기 · 수치 → 병원·항목 확인
+        </p>
       </div>
 
       {rows.length === 0 ? (
@@ -134,7 +139,10 @@ export default function DashboardExcelView({
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
-        <div data-dashboard-scroll className="min-h-0 flex-1 overflow-auto overscroll-x-contain">
+        <div
+          data-dashboard-scroll
+          className="min-h-0 flex-1 overflow-auto overscroll-x-contain"
+        >
           <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-sm sm:min-w-[1290px]">
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
@@ -330,19 +338,32 @@ export default function DashboardExcelView({
         </div>
       )}
 
-      <p className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:px-4 sm:py-2.5">
-        <span className="font-semibold text-red-600 dark:text-red-400">
-          빨간 값
-        </span>
-        은 허용 범위를 벗어난 값입니다.
-        <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
-      </p>
+      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:px-4 sm:py-2.5">
+        <div className="border-border/70 dark:border-background-dark-secondary mb-2 border-b pb-2 sm:hidden">
+          <p className="text-text-major dark:text-text-dark-primary font-extrabold">
+            관리자 뷰{" "}
+            <span className="font-medium opacity-70">
+              · {rows.length}개 병원
+            </span>
+          </p>
+          <p className="mt-0.5 text-xs font-medium">
+            병원명 → 상세 보기 · 수치 → 병원·항목 확인
+          </p>
+        </div>
+        <p>
+          <span className="font-semibold text-red-600 dark:text-red-400">
+            빨간 값
+          </span>
+          은 허용 범위를 벗어난 값입니다.
+          <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
+        </p>
+      </div>
 
       {selectedCell ? (
         <div
           role="status"
           aria-live="polite"
-          className="pointer-events-none absolute bottom-16 left-3 right-3 z-50 rounded-md bg-slate-900/90 px-3 py-2 text-center text-sm font-semibold break-words text-white shadow-lg dark:bg-white/90 dark:text-slate-900"
+          className="pointer-events-none absolute right-3 bottom-16 left-3 z-50 rounded-md bg-slate-900/90 px-3 py-2 text-center text-sm font-semibold break-words text-white shadow-lg dark:bg-white/90 dark:text-slate-900"
         >
           {selectedCell.hospital} · {selectedCell.column}
         </div>

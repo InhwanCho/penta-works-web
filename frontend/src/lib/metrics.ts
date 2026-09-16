@@ -46,9 +46,9 @@ export const METRICS: readonly MetricDef[] = [
   {
     key: "recosi",
     code: "recosi",
-    label: null,
+    label: "리콘덴서 SI",
     unit: null,
-    description: "정확한 의미가 아직 확인되지 않은 DB 컬럼입니다.",
+    description: "리콘덴서 SI 값입니다.",
     bound: null,
   },
   {
@@ -63,9 +63,9 @@ export const METRICS: readonly MetricDef[] = [
   {
     key: "recoru",
     code: "recoru",
-    label: null,
+    label: "리콘덴서 RU",
     unit: null,
-    description: "정확한 의미가 아직 확인되지 않은 DB 컬럼입니다.",
+    description: "리콘덴서 RU 값입니다.",
     bound: null,
   },
   {
@@ -103,33 +103,34 @@ export const METRICS: readonly MetricDef[] = [
   {
     key: "gctemp",
     code: "gctemp",
-    label: "GC Temp",
+    label: "그라디언트칠러 온도",
     unit: "°C",
-    description: "GC 온도입니다. 단위는 °C입니다.",
+    description:
+      "GC는 그라디언트칠러이며, 그라디언트칠러 온도입니다. 단위는 °C입니다.",
     bound: "gctmp",
   },
   {
     key: "gcflow",
     code: "gcflow",
-    label: "GC Flow",
+    label: "그라디언트칠러 유량",
     unit: null,
-    description: "GC 유량입니다.",
+    description: "GC는 그라디언트칠러이며, 그라디언트칠러 유량입니다.",
     bound: "gcflo",
   },
   {
     key: "cctemp",
     code: "cctemp",
-    label: "CC Temp",
+    label: "콜드칠러 온도",
     unit: "°C",
-    description: "CC 온도입니다. 단위는 °C입니다.",
+    description: "CC는 콜드칠러이며, 콜드칠러 온도입니다. 단위는 °C입니다.",
     bound: "cctmp",
   },
   {
     key: "ccflow",
     code: "ccflow",
-    label: "CC Flow",
+    label: "콜드칠러 유량",
     unit: null,
-    description: "CC 유량입니다.",
+    description: "CC는 콜드칠러이며, 콜드칠러 유량입니다.",
     bound: "ccflo",
   },
 ] as const;
