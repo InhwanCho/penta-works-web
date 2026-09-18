@@ -33,6 +33,7 @@ export const metadata: Metadata = {
   },
   description: "MrEyes 서비스",
   applicationName: "MrEyes",
+  robots: { index: false, follow: false },
   keywords: ["MrEyes", "Dashboard", "Monitoring"],
   metadataBase: new URL("https://app.pentaworks.net"),
   alternates: { canonical: "/" },
