@@ -88,6 +88,15 @@ compose=(docker compose --project-name "$COMPOSE_PROJECT" --env-file "$ENV_FILE"
 for attempt_no in $(seq 1 30); do
     if curl --fail --silent "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null \
         && curl --fail --silent "http://127.0.0.1:${FRONTEND_PORT}" >/dev/null; then
+        docker run --rm \
+            --network pentaworks-integration \
+            --env OFFICE_API_KEY \
+            --entrypoint sh \
+            curlimages/curl:8.12.1 \
+            -c 'curl --fail --silent --show-error \
+                --header "X-MREyes-Api-Key: ${OFFICE_API_KEY}" \
+                "http://office-backend:8080/api/v1/integrations/mreyes/sites/006"' \
+            >/dev/null
         "${compose[@]}" ps
         exit 0
     fi

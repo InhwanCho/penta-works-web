@@ -68,7 +68,7 @@ export type OfficeAssetsResponse = {
   generatedAt: string;
 };
 
-export function useOfficeAssetsQuery(siteId: string) {
+export function useOfficeAssetsQuery(siteId: string, enabled = true) {
   return useQuery({
     queryKey: ["officeAssets", siteId] as const,
     queryFn: () =>
@@ -78,5 +78,6 @@ export function useOfficeAssetsQuery(siteId: string) {
       ),
     staleTime: 60_000,
     retry: 1,
+    enabled: enabled && Boolean(siteId),
   });
 }

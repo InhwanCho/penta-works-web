@@ -32,6 +32,7 @@ export async function apiFetch<T>(
   });
   if (
     typeof window !== "undefined" &&
+    Boolean(token) &&
     response.status === 401 &&
     path !== "/auth/login" &&
     token === readStoredSession()?.accessToken

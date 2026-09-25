@@ -4,6 +4,8 @@ import {
   type OfficeMaintenance,
   useOfficeAssetsQuery,
 } from "@/hooks/use-office-assets-query";
+import { useAuth } from "@/components/provider/auth-provider";
+import Link from "next/link";
 import { useState } from "react";
 
 type Tab = "equipment" | "components" | "maintenance";
@@ -18,15 +20,43 @@ const SERVICE_LABELS: Record<string, string> = {
   ETC: "기타",
 };
 
-export default function OfficeAssetsPanel({ siteId }: { siteId: string }) {
+export default function OfficeAssetsPanel({
+  siteId,
+  returnPath,
+}: {
+  siteId: string;
+  returnPath: string;
+}) {
   const [tab, setTab] = useState<Tab>("equipment");
-  const query = useOfficeAssetsQuery(siteId);
+  const { session, isLoading: isAuthLoading } = useAuth();
+  const query = useOfficeAssetsQuery(siteId, Boolean(session));
 
-  if (query.isLoading) {
+  if (isAuthLoading || (session && query.isLoading)) {
     return (
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
         <div className="h-5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
         <div className="mt-3 h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+      </section>
+    );
+  }
+
+  if (!session) {
+    return (
+      <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-extrabold">장비·정비 정보</h2>
+            <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
+              사내 장비, 부품, 정비 이력은 로그인 후 볼 수 있습니다.
+            </p>
+          </div>
+          <Link
+            href={`/login?next=${encodeURIComponent(returnPath)}`}
+            className="bg-button-primary hover:bg-button-primary-hover inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-bold text-white"
+          >
+            로그인
+          </Link>
+        </div>
       </section>
     );
   }

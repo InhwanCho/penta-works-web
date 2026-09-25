@@ -177,7 +177,10 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <OfficeAssetsPanel siteId={data.site.siteDb} />
+      <OfficeAssetsPanel
+        siteId={data.site.siteDb}
+        returnPath={`/sites/${encodeURIComponent(slug)}`}
+      />
 
       <fieldset className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
