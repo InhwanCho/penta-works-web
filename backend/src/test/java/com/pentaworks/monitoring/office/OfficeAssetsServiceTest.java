@@ -53,6 +53,36 @@ class OfficeAssetsServiceTest {
         assertEquals(503, error.status().value());
     }
 
+    @Test
+    void proxiesPhotoWithApiKeyAndContentType() throws Exception {
+        var path = new AtomicReference<String>();
+        var apiKey = new AtomicReference<String>();
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/", exchange -> {
+            path.set(exchange.getRequestURI().getPath());
+            apiKey.set(exchange.getRequestHeaders().getFirst("X-MREyes-Api-Key"));
+            byte[] body = new byte[] { 1, 2, 3 };
+            exchange.getResponseHeaders().set("Content-Type", "image/png");
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+        server.start();
+        try {
+            String baseUrl = "http://127.0.0.1:" + server.getAddress().getPort();
+            OfficeAssetsService service = new OfficeAssetsService(RestClient.builder(), properties(true, baseUrl, "service-key"));
+
+            OfficeAssetsService.OfficePhoto photo = service.photo("6", 12, 34);
+
+            assertEquals("/api/v1/integrations/mreyes/sites/006/maintenance/12/photos/34", path.get());
+            assertEquals("service-key", apiKey.get());
+            assertEquals("image/png", photo.mediaType().toString());
+            assertEquals(3, photo.data().length);
+        } finally {
+            server.stop(0);
+        }
+    }
+
     private AppProperties properties(boolean enabled, String baseUrl, String apiKey) {
         return new AppProperties(null, null, null,
             new AppProperties.OfficeIntegration(enabled, baseUrl, apiKey));

@@ -49,6 +49,24 @@ export async function apiFetch<T>(
   return response.json() as Promise<T>;
 }
 
+export async function apiFetchBlob(path: string): Promise<Blob> {
+  const token = readStoredSession()?.accessToken;
+  const headers = new Headers();
+  if (token) headers.set("Authorization", `Bearer ${token}`);
+  const response = await fetch(`${API_BASE_URL}${path}`, { headers });
+  if (
+    typeof window !== "undefined" &&
+    Boolean(token) &&
+    response.status === 401 &&
+    token === readStoredSession()?.accessToken
+  ) {
+    clearStoredSession();
+    window.dispatchEvent(new Event("auth:expired"));
+  }
+  if (!response.ok) throw new Error(`API request failed (${response.status})`);
+  return response.blob();
+}
+
 export async function login(username: string, password: string) {
   return apiFetch<{ accessToken: string; user: Session }>("/auth/login", {
     method: "POST",

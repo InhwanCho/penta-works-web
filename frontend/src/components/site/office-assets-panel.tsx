@@ -2,11 +2,14 @@
 
 import {
   type OfficeMaintenance,
+  type OfficePhoto,
   useOfficeAssetsQuery,
 } from "@/hooks/use-office-assets-query";
 import { useAuth } from "@/components/provider/auth-provider";
+import { apiFetchBlob } from "@/lib/api";
+import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type Tab = "equipment" | "components" | "maintenance";
 
@@ -219,7 +222,7 @@ export default function OfficeAssetsPanel({
         {tab === "maintenance" && (
           <div className="space-y-2">
             {data.maintenanceHistory.map((item) => (
-              <MaintenanceRow key={item.id} item={item} />
+              <MaintenanceRow key={item.id} item={item} siteId={siteId} />
             ))}
             {!data.maintenanceHistory.length && (
               <Empty text="등록된 정비 이력이 없습니다." />
@@ -231,7 +234,7 @@ export default function OfficeAssetsPanel({
   );
 }
 
-function MaintenanceRow({ item }: { item: OfficeMaintenance }) {
+function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: string }) {
   const title =
     item.serviceTitle ||
     SERVICE_LABELS[item.serviceType ?? ""] ||
@@ -271,7 +274,7 @@ function MaintenanceRow({ item }: { item: OfficeMaintenance }) {
               text={`${item.workStartTime.slice(0, 5)}${item.workEndTime ? `–${item.workEndTime.slice(0, 5)}` : ""}`}
             />
           )}
-          {item.photoCount > 0 && <Tag text={`사진 ${item.photoCount}장`} />}
+          {item.photos.length > 0 && <Tag text={`사진 ${item.photos.length}장`} />}
         </div>
         {details.length ? (
           <dl className="space-y-3">
@@ -291,8 +294,103 @@ function MaintenanceRow({ item }: { item: OfficeMaintenance }) {
             추가 작업 내용이 없습니다.
           </p>
         )}
+        {item.photos.length > 0 && (
+          <PhotoGrid siteId={siteId} maintenanceId={item.id} photos={item.photos} />
+        )}
       </div>
     </details>
+  );
+}
+
+function PhotoGrid({
+  siteId,
+  maintenanceId,
+  photos,
+}: {
+  siteId: string;
+  maintenanceId: number;
+  photos: OfficePhoto[];
+}) {
+  return (
+    <div className="mt-4">
+      <h3 className="text-text-secondary dark:text-text-dark-primary/60 mb-2 text-xs font-bold">
+        작업 사진
+      </h3>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+        {photos.map((photo) => (
+          <OfficePhotoThumbnail
+            key={photo.id}
+            siteId={siteId}
+            maintenanceId={maintenanceId}
+            photo={photo}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OfficePhotoThumbnail({
+  siteId,
+  maintenanceId,
+  photo,
+}: {
+  siteId: string;
+  maintenanceId: number;
+  photo: OfficePhoto;
+}) {
+  const [source, setSource] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    let objectUrl: string | null = null;
+    apiFetchBlob(
+      `/sites/${encodeURIComponent(siteId)}/office-assets/maintenance/${maintenanceId}/photos/${photo.id}`,
+    )
+      .then((blob) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSource(objectUrl);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [maintenanceId, photo.id, siteId]);
+
+  if (failed) {
+    return (
+      <div className="text-text-secondary dark:text-text-dark-primary/60 flex aspect-[4/3] items-center justify-center rounded-lg border border-dashed p-2 text-center text-xs">
+        사진을 불러오지 못했습니다.
+      </div>
+    );
+  }
+
+  if (!source) {
+    return <div className="aspect-[4/3] animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />;
+  }
+
+  return (
+    <a
+      href={source}
+      target="_blank"
+      rel="noreferrer"
+      className="dark:border-background-dark-secondary group/photo relative block aspect-[4/3] overflow-hidden rounded-lg border bg-slate-100"
+      title={photo.originalName || "작업 사진 크게 보기"}
+    >
+      <Image
+        src={source}
+        alt={photo.originalName || "정비 작업 사진"}
+        fill
+        unoptimized
+        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+        className="object-cover transition-transform group-hover/photo:scale-[1.02]"
+      />
+    </a>
   );
 }
 

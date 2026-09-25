@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -17,6 +19,11 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @EnableWebSecurity
 @EnableConfigurationProperties(AppProperties.class)
 public class SecurityConfig {
+    @Bean
+    PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
+    }
+
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, com.pentaworks.monitoring.auth.JwtTokens tokens) throws Exception {
         return http
@@ -33,6 +40,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/sites/*/office-assets").authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/sites/*/office-assets/**").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/actuator/health",
                     "/api/v1/monitor",

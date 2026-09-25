@@ -2,6 +2,7 @@ package com.pentaworks.monitoring.office;
 
 import com.pentaworks.monitoring.config.AppProperties;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.HttpClientErrorException;
@@ -24,12 +25,7 @@ public class OfficeAssetsService {
     }
 
     public OfficeAssetsResponse bySite(String rawSiteId) {
-        if (config == null || !config.enabled()) {
-            throw new OfficeIntegrationException(HttpStatus.SERVICE_UNAVAILABLE, "인트라넷 연동이 비활성화되어 있습니다.");
-        }
-        if (config.apiKey() == null || config.apiKey().isBlank()) {
-            throw new OfficeIntegrationException(HttpStatus.SERVICE_UNAVAILABLE, "인트라넷 연동 인증정보가 설정되지 않았습니다.");
-        }
+        requireEnabled();
         String siteId = normalizeSiteId(rawSiteId);
         try {
             OfficeAssetsResponse response = client.get()
@@ -50,6 +46,39 @@ public class OfficeAssetsService {
         }
     }
 
+    public OfficePhoto photo(String rawSiteId, long maintenanceId, long photoId) {
+        requireEnabled();
+        String siteId = normalizeSiteId(rawSiteId);
+        try {
+            var response = client.get()
+                .uri("/api/v1/integrations/mreyes/sites/{siteId}/maintenance/{maintenanceId}/photos/{photoId}",
+                    siteId, maintenanceId, photoId)
+                .header("X-MREyes-Api-Key", config.apiKey())
+                .retrieve()
+                .toEntity(byte[].class);
+            if (response.getBody() == null) throw new RestClientException("Empty response");
+            MediaType mediaType = response.getHeaders().getContentType();
+            return new OfficePhoto(response.getBody(), mediaType == null ? MediaType.IMAGE_JPEG : mediaType);
+        } catch (HttpClientErrorException.NotFound error) {
+            throw new OfficeIntegrationException(HttpStatus.NOT_FOUND, "정비 사진을 찾을 수 없습니다.");
+        } catch (HttpClientErrorException.Unauthorized error) {
+            throw new OfficeIntegrationException(HttpStatus.BAD_GATEWAY, "인트라넷 연동 인증에 실패했습니다.");
+        } catch (OfficeIntegrationException error) {
+            throw error;
+        } catch (RestClientException error) {
+            throw new OfficeIntegrationException(HttpStatus.BAD_GATEWAY, "정비 사진을 불러오지 못했습니다.");
+        }
+    }
+
+    private void requireEnabled() {
+        if (config == null || !config.enabled()) {
+            throw new OfficeIntegrationException(HttpStatus.SERVICE_UNAVAILABLE, "인트라넷 연동이 비활성화되어 있습니다.");
+        }
+        if (config.apiKey() == null || config.apiKey().isBlank()) {
+            throw new OfficeIntegrationException(HttpStatus.SERVICE_UNAVAILABLE, "인트라넷 연동 인증정보가 설정되지 않았습니다.");
+        }
+    }
+
     private String normalizeSiteId(String siteId) {
         String value = siteId == null ? "" : siteId.trim();
         if (value.isEmpty() || value.length() > 32) {
@@ -58,4 +87,6 @@ public class OfficeAssetsService {
         if (value.matches("\\d{1,3}")) return String.format("%03d", Integer.parseInt(value));
         return value;
     }
+
+    public record OfficePhoto(byte[] data, MediaType mediaType) {}
 }

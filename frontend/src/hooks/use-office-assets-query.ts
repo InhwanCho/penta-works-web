@@ -57,7 +57,15 @@ export type OfficeMaintenance = {
   status: string;
   completedAt: string | null;
   updatedAt: string | null;
-  photoCount: number;
+  photos: OfficePhoto[];
+};
+
+export type OfficePhoto = {
+  id: number;
+  originalName: string | null;
+  mimeType: string;
+  width: number | null;
+  height: number | null;
 };
 
 export type OfficeAssetsResponse = {

@@ -12,5 +12,6 @@ public record OfficeAssetsResponse(Site site, List<Equipment> equipment, List<Co
     public record Maintenance(long id, String equipmentName, String modelName, String serviceType, String serviceTitle,
         String engineerName, String symptom, String description, String contractType, String workDate,
         String workStartTime, String workEndTime, String specialNotes, String partsDetails, String remarks,
-        String followUp, String status, String completedAt, String updatedAt, int photoCount) {}
+        String followUp, String status, String completedAt, String updatedAt, List<Photo> photos) {}
+    public record Photo(long id, String originalName, String mimeType, Integer width, Integer height) {}
 }

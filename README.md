@@ -26,6 +26,8 @@ GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 �
 
 MREyes→Office 읽기 전용 연동은 Jenkins Secret Text 자격증 `mreyes-office-api-key`를 사용합니다. dev·prod 배포 시 같은 값을 각 환경파일의 `OFFICE_API_KEY`로 저장하고, 해당 키는 브라우저에 전달하지 않습니다.
 MREyes 브라우저는 로그인 JWT로 `GET /api/v1/sites/{siteId}/office-assets`를 호출하고, MREyes 백엔드가 서버 내부에서만 Office API 키를 첨부합니다.
+로그인 JWT 기본 유효기간은 30일(`43200`분)입니다. 기존 SHA-256 비밀번호는 사용자가 비밀번호를 바꾸지 않아도 정상 로그인 직후 BCrypt(12 rounds)로 자동 교체됩니다.
+정비 사진은 Office API 키가 브라우저에 노출되지 않도록 MREyes 백엔드가 중계하며, 사이트 상세 화면에서 기기 폭에 맞춘 반응형 썸네일로 표시합니다.
 
 | Jenkins job | Branch | Compose project | Access |
 | --- | --- | --- | --- |
@@ -50,4 +52,4 @@ sudo bash /home/inhwan/apps/pentaworks-prod/deploy/setup-production-origin.sh
 
 검증: Java 17 이상에서 `cd backend && ./gradlew test`, 프론트에서 `pnpm lint`, `pnpm build`, `pnpm audit --prod`.
 
-남은 보안 개선: 기존 users.password의 단순 SHA-256 해시는 DB 컬럼 길이 및 공유 인증 시스템을 확인한 뒤 bcrypt/Argon2로 마이그레이션해야 합니다. 현재 브라우저 토큰은 localStorage에 저장되므로 HttpOnly 쿠키로 전환하려면 CSRF 방어와 교차 출처 배포 설정을 함께 설계해야 합니다. 로그인 시도 제한도 운영 프록시 또는 공유 저장소 기반으로 추가해야 합니다.
+남은 보안 개선: 아직 로그인하지 않은 기존 계정은 첫 정상 로그인 때 BCrypt로 전환됩니다. 현재 브라우저 토큰은 localStorage에 저장되므로 HttpOnly 쿠키로 전환하려면 CSRF 방어와 교차 출처 배포 설정을 함께 설계해야 합니다. 로그인 시도 제한도 운영 프록시 또는 공유 저장소 기반으로 추가해야 합니다.

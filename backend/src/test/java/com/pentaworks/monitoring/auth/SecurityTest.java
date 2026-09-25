@@ -28,6 +28,7 @@ class SecurityTest {
         @GetMapping("/api/v1/probe") String data() { return "ok"; }
         @GetMapping("/api/v1/admin/probe") String admin() { return "ok"; }
         @GetMapping("/api/v1/sites/001/office-assets") String officeAssets() { return "ok"; }
+        @GetMapping("/api/v1/sites/001/office-assets/maintenance/2/photos/3") String officePhoto() { return "ok"; }
         @GetMapping({
             "/api/v1/dashboard",
             "/api/v1/sites",
@@ -46,6 +47,8 @@ class SecurityTest {
     @Test void anonymousIsRejected() throws Exception {
         mvc.perform(get("/api/v1/probe")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/v1/sites/001/office-assets")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/sites/001/office-assets/maintenance/2/photos/3"))
+            .andExpect(status().isUnauthorized());
     }
     @Test void validTokenIsAccepted() throws Exception {
         mvc.perform(get("/api/v1/probe").header("Authorization", "Bearer " + tokens.issue("alice", "user")))
