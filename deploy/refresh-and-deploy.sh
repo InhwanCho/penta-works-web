@@ -47,6 +47,12 @@ if [[ ! -d "$APP_DIR/.git" ]]; then
     mkdir -p "$(dirname "$APP_DIR")"
     git clone --branch "$BRANCH" --single-branch "$REPOSITORY_URL" "$APP_DIR"
 else
+    if ! git -C "$APP_DIR" diff --quiet \
+        || ! git -C "$APP_DIR" diff --cached --quiet \
+        || [[ -n "$(git -C "$APP_DIR" ls-files --others --exclude-standard)" ]]; then
+        git -C "$APP_DIR" stash push --include-untracked \
+            --message "jenkins-predeploy-$(date +%Y%m%d-%H%M%S)"
+    fi
     git -C "$APP_DIR" fetch origin "$BRANCH"
     git -C "$APP_DIR" checkout "$BRANCH"
     git -C "$APP_DIR" merge --ff-only "origin/$BRANCH"
