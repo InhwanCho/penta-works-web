@@ -21,8 +21,8 @@ public class AuthService {
 
     public LoginResponse login(String username, String password) {
         UserRow user = jdbcTemplate.query(
-            "SELECT username, password, role FROM users WHERE username = ?",
-            rs -> rs.next() ? new UserRow(rs.getString("username"), rs.getString("password"), rs.getString("role")) : null,
+            "SELECT username, password_hash, role FROM app_user WHERE username = ? AND status = 'ACTIVE'",
+            rs -> rs.next() ? new UserRow(rs.getString("username"), rs.getString("password_hash"), rs.getString("role")) : null,
             username.trim());
 
         if (user == null || !matches(password, user.password())) {

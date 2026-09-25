@@ -24,6 +24,9 @@ MariaDB 데이터는 기존 `homepage_mariadb_data` Docker 볼륨을 그대로 �
 
 GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 두 Jenkins Pipeline을 트리거합니다. 각 잡은 자신이 추적하는 브랜치에 새 커밋이 있을 때만 배포합니다.
 
+MREyes→Office 읽기 전용 연동은 Jenkins Secret Text 자격증 `mreyes-office-api-key`를 사용합니다. dev·prod 배포 시 같은 값을 각 환경파일의 `OFFICE_API_KEY`로 저장하고, 해당 키는 브라우저에 전달하지 않습니다.
+MREyes 브라우저는 로그인 JWT로 `GET /api/v1/sites/{siteId}/office-assets`를 호출하고, MREyes 백엔드가 서버 내부에서만 Office API 키를 첨부합니다.
+
 | Jenkins job | Branch | Compose project | Access |
 | --- | --- | --- | --- |
 | `pentaworks-dev` | `dev` | `pentaworks` | `http://192.168.0.210:3000` |

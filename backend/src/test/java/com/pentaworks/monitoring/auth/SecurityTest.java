@@ -15,7 +15,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = SecurityTest.Probe.class, properties = {
     "app.jwt.secret=test-only-random-secret-with-at-least-32-bytes",
-    "app.jwt.expiration-minutes=5", "app.cors.allowed-origins=http://localhost:3000"
+    "app.jwt.expiration-minutes=5", "app.cors.allowed-origins=http://localhost:3000",
+    "app.office-integration.enabled=false"
 })
 @Import({SecurityConfig.class, JwtTokens.class, SecurityTest.Probe.class})
 class SecurityTest {
@@ -26,6 +27,7 @@ class SecurityTest {
     static class Probe {
         @GetMapping("/api/v1/probe") String data() { return "ok"; }
         @GetMapping("/api/v1/admin/probe") String admin() { return "ok"; }
+        @GetMapping("/api/v1/sites/001/office-assets") String officeAssets() { return "ok"; }
         @GetMapping({
             "/api/v1/dashboard",
             "/api/v1/sites",
@@ -43,6 +45,7 @@ class SecurityTest {
 
     @Test void anonymousIsRejected() throws Exception {
         mvc.perform(get("/api/v1/probe")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/api/v1/sites/001/office-assets")).andExpect(status().isUnauthorized());
     }
     @Test void validTokenIsAccepted() throws Exception {
         mvc.perform(get("/api/v1/probe").header("Authorization", "Bearer " + tokens.issue("alice", "user")))
@@ -54,7 +57,7 @@ class SecurityTest {
     }
     @Test void wrongSignatureIsRejected() throws Exception {
         JwtTokens other = new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("different-secret-with-at-least-32-bytes", 5), null));
+            new AppProperties.Jwt("different-secret-with-at-least-32-bytes", 5), null, null));
         mvc.perform(get("/api/v1/probe").header("Authorization", "Bearer " + other.issue("alice", "user")))
             .andExpect(status().isUnauthorized());
     }
@@ -74,8 +77,8 @@ class SecurityTest {
     }
     @Test void weakSecretFailsClosed() {
         assertThrows(IllegalArgumentException.class, () -> new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("replace-with-at-least-32-random-characters", 5), null)));
+            new AppProperties.Jwt("replace-with-at-least-32-random-characters", 5), null, null)));
         assertThrows(io.jsonwebtoken.security.WeakKeyException.class, () -> new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("short", 5), null)));
+            new AppProperties.Jwt("short", 5), null, null)));
     }
 }

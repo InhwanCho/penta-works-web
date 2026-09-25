@@ -3,6 +3,7 @@
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import OfficeAssetsPanel from "@/components/site/office-assets-panel";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
@@ -175,6 +176,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           </span>
         </div>
       </div>
+
+      <OfficeAssetsPanel siteId={data.site.siteDb} />
 
       <fieldset className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">

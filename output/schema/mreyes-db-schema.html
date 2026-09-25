@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MREyes DB 구조 설계</title>
+  <style>
+    :root { --navy:#102536; --ink:#142433; --muted:#66788a; --line:#d7e0e8; --blue:#2563eb; --canvas:#f6f9fc; }
+    * { box-sizing:border-box; }
+    html,body { margin:0; min-height:100%; font-family:Inter, Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color:var(--ink); background:#eaf0f5; }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    .topbar { min-height:72px; padding:14px 22px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:white; background:linear-gradient(135deg,#102536,#1b425c); box-shadow:0 1px 0 rgba(255,255,255,.08) inset; }
+    .title-row { display:flex; align-items:center; gap:10px; }
+    h1 { margin:0; font-size:20px; letter-spacing:-.02em; }
+    .draft { padding:5px 9px; border:1px solid rgba(255,255,255,.2); border-radius:999px; font-size:11px; font-weight:800; color:#ffe8b2; background:rgba(234,88,12,.25); }
+    .subtitle { margin:5px 0 0; color:#c9d6df; font-size:13px; }
+    .toolbar { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .btn { min-height:38px; padding:0 13px; border:1px solid #d4dde5; border-radius:9px; color:#405466; background:#fff; font-size:13px; font-weight:750; box-shadow:0 1px 2px rgba(15,23,42,.04); }
+    .btn:hover { background:#f4f7fa; }
+    .btn.primary { color:white; border-color:#3b82f6; background:#2563eb; }
+    .btn.primary:hover { background:#1d4ed8; }
+    .btn.danger { color:#c83232; border-color:#f1c7c7; }
+    .shell { display:grid; grid-template-columns:230px minmax(500px,1fr) 280px; min-height:calc(100vh - 72px); max-width:1900px; margin:auto; }
+    aside { padding:18px; background:#fff; }
+    .left { border-right:1px solid var(--line); }
+    .right { border-left:1px solid var(--line); }
+    .stats { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stat { padding:11px; border:1px solid #e1e7ed; border-radius:11px; background:#f7f9fb; }
+    .stat span { display:block; color:#8493a1; font-size:11px; }
+    .stat b { display:block; margin-top:3px; font-size:21px; }
+    .section-title { margin:23px 0 11px; color:#91a0ad; font-size:11px; font-weight:850; letter-spacing:.12em; }
+    .legend { display:flex; flex-direction:column; gap:11px; }
+    .legend-row { display:flex; justify-content:space-between; align-items:center; gap:8px; font-size:13px; }
+    .legend-name { display:flex; align-items:center; gap:8px; }
+    .dot { width:9px; height:9px; border-radius:3px; }
+    .count { color:#91a0ad; font-variant-numeric:tabular-nums; }
+    .tip { margin-top:22px; padding:12px; border:1px solid #cfe0f7; border-radius:11px; color:#28547d; background:#f0f7ff; font-size:12px; line-height:1.65; }
+    .tip b { display:block; margin-bottom:3px; }
+    .policy { margin-top:12px; padding:12px; border:1px solid #bbded2; border-radius:11px; color:#285f4f; background:#effaf6; font-size:11px; line-height:1.65; }
+    .policy b { display:block; margin-bottom:4px; color:#176448; font-size:12px; }
+    .policy ul { margin:5px 0 0; padding-left:17px; }
+    .workspace { min-width:0; padding:14px; }
+    .canvas-bar { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px; }
+    .canvas-bar p { margin:0; color:#617384; font-size:13px; }
+    .zoom { display:flex; overflow:hidden; border:1px solid var(--line); border-radius:9px; background:#fff; box-shadow:0 1px 2px rgba(15,23,42,.05); }
+    .zoom button { width:36px; height:34px; border:0; color:#566b7d; background:white; font-size:18px; }
+    .zoom button:hover { background:#f2f5f8; }
+    .zoom output { width:52px; display:grid; place-items:center; color:#687b8b; font-size:11px; font-weight:800; }
+    .viewport { position:relative; width:100%; height:calc(100vh - 132px); min-height:600px; overflow:auto; border:1px solid var(--line); border-radius:15px; background:var(--canvas); box-shadow:0 13px 35px rgba(15,23,42,.08); }
+    .stage-wrap { position:relative; }
+    .stage { position:absolute; top:0; left:0; width:1800px; height:1900px; transform-origin:top left; background-color:#f8fbfd; background-image:radial-gradient(circle at 1px 1px,rgba(100,116,139,.23) 1px,transparent 0); background-size:24px 24px; }
+    #edges { position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+    .edge-hit { fill:none; stroke:transparent; stroke-width:16; cursor:pointer; }
+    .edge-line { fill:none; stroke:#9aa9b7; stroke-width:1.6; pointer-events:none; }
+    .edge-label { fill:#607386; stroke:#f8fbfd; stroke-width:4px; paint-order:stroke; text-anchor:middle; dominant-baseline:central; font:800 10px "SFMono-Regular",Consolas,monospace; pointer-events:none; }
+    .edge.selected .edge-line { stroke:#2563eb; stroke-width:2.7; }
+    .edge.selected .edge-label { fill:#2563eb; }
+    .node { position:absolute; width:300px; overflow:hidden; padding:0; border:1px solid #d7e0e8; border-radius:11px; background:white; text-align:left; box-shadow:0 8px 22px rgba(15,23,42,.10); user-select:none; touch-action:none; }
+    .node:hover { border-color:#8da0b2; }
+    .node.selected { border-color:#2563eb; box-shadow:0 0 0 4px rgba(37,99,235,.14),0 8px 22px rgba(15,23,42,.10); }
+    .node.connecting { border-color:#ea580c; box-shadow:0 0 0 4px rgba(234,88,12,.15),0 8px 22px rgba(15,23,42,.10); }
+    .node-bar { height:6px; }
+    .node-body { display:flex; align-items:flex-start; justify-content:space-between; gap:8px; padding:12px 11px 10px; }
+    .node-copy { min-width:0; }
+    .node-name { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:"SFMono-Regular",Consolas,monospace; font-size:12px; font-weight:850; color:#172738; }
+    .node-note { display:block; margin-top:6px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#718293; font-size:10px; }
+    .badge { flex:none; padding:4px 6px; border-radius:5px; font-size:9px; font-weight:850; }
+    .node-badges { display:flex; flex:none; align-items:flex-end; flex-direction:column; gap:4px; }
+    .mode-read { color:#047857; background:#dff7ed; }
+    .column-list { display:block; border-top:1px solid #e6ebef; background:#fbfcfd; }
+    .column-row { min-height:24px; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:8px; padding:4px 10px; border-bottom:1px solid #edf1f4; font:500 10px/1.35 "SFMono-Regular",Consolas,monospace; color:#415466; }
+    .column-row:last-child { border-bottom:0; }
+    .column-main { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .column-key { margin-right:5px; color:#b45309; font-weight:850; }
+    .column-name { color:#1f3345; font-weight:750; }
+    .column-desc { max-width:128px; overflow:hidden; color:#7a8997; text-overflow:ellipsis; white-space:nowrap; }
+    .column-inspector { margin-top:16px; border-top:1px solid #e0e6eb; }
+    .column-inspector h3 { margin:16px 0 8px; font-size:12px; }
+    .column-inspector .column-row { padding:7px 2px; background:white; font-size:11px; }
+    .status-existing { color:#526170; background:#edf1f4; }
+    .status-new { color:#1d4ed8; background:#eaf2ff; }
+    .status-replace { color:#6d28d9; background:#f1eafe; }
+    .status-review { color:#a44d05; background:#fff2d8; }
+    .empty { display:flex; min-height:320px; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#8695a3; }
+    .empty-icon { width:48px; height:48px; display:grid; place-items:center; border:1px solid #dce3e9; border-radius:14px; background:#f6f8fa; font-size:21px; }
+    .empty b { margin-top:13px; color:#526475; }
+    .empty p { max-width:210px; margin:7px 0 0; font-size:12px; line-height:1.6; }
+    .eyebrow { color:#2563eb; font-size:10px; font-weight:900; letter-spacing:.16em; }
+    .panel-title { margin:5px 0 18px; font-size:18px; }
+    .field { display:block; margin-bottom:14px; color:#526577; font-size:12px; font-weight:800; }
+    .field input,.field select,.field textarea { width:100%; margin-top:6px; border:1px solid #d7e0e8; border-radius:8px; color:#172738; background:white; font-size:13px; font-weight:500; outline:none; }
+    .field input,.field select { height:40px; padding:0 10px; }
+    .field textarea { min-height:88px; padding:10px; resize:vertical; line-height:1.5; }
+    .field input:focus,.field select:focus,.field textarea:focus { border-color:#4a86ed; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+    .panel-btn { width:100%; margin-top:7px; }
+    .route { margin-bottom:14px; padding:11px; border:1px solid #e0e6eb; border-radius:10px; background:#f6f8fa; font:700 11px/1.8 "SFMono-Regular",Consolas,monospace; color:#516273; }
+    .save-state { margin-right:3px; color:#bcd0df; font-size:11px; }
+    .hidden { display:none!important; }
+    @media (max-width:1100px) {
+      .shell { grid-template-columns:1fr; }
+      .workspace { order:1; }
+      .left { order:2; border-top:1px solid var(--line); border-right:0; }
+      .right { order:3; border-top:1px solid var(--line); border-left:0; }
+      .viewport { height:68vh; }
+      .stats { grid-template-columns:repeat(4,1fr); }
+      .legend { display:grid; grid-template-columns:repeat(3,1fr); }
+      .empty { min-height:180px; }
+    }
+    @media (max-width:700px) {
+      .topbar { align-items:flex-start; flex-direction:column; padding:14px; }
+      .toolbar { justify-content:flex-start; }
+      .save-state { width:100%; }
+      .shell { min-height:auto; }
+      .workspace { padding:10px; }
+      .viewport { height:62vh; min-height:440px; }
+      .stats { grid-template-columns:1fr 1fr; }
+      .legend { grid-template-columns:1fr; }
+      .btn { min-height:40px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="title-row"><h1>MREyes DB 구조 설계</h1><span class="draft">검토중</span></div>
+      <p class="subtitle">테이블별 컬럼의 역할과 관계, 시스템 경계를 함께 설계합니다.</p>
+    </div>
+    <div class="toolbar">
+      <span class="save-state" id="saveState">브라우저에 자동 저장</span>
+      <button class="btn primary" id="addTable">+ 테이블</button>
+      <button class="btn" id="importButton">불러오기</button>
+      <button class="btn" id="exportButton">JSON 저장</button>
+      <button class="btn" id="resetButton">초기화</button>
+      <input class="hidden" id="fileInput" type="file" accept="application/json">
+    </div>
+  </header>
+
+  <main class="shell">
+    <aside class="left">
+      <div class="stats">
+        <div class="stat"><span>테이블</span><b id="tableCount">0</b></div>
+        <div class="stat"><span>관계</span><b id="relationCount">0</b></div>
+        <div class="stat"><span>기존 유지</span><b id="existingCount">0</b></div>
+        <div class="stat"><span>신규·검토</span><b id="plannedCount">0</b></div>
+      </div>
+      <p class="section-title">영역</p>
+      <div class="legend" id="legend"></div>
+      <div class="tip"><b>키 표기</b>PK 기본키 · FK 외래키 · UQ 고유키 · AI 자동 증가 · UQ* 복합 고유키</div>
+      <div class="tip"><b>관계 추가</b>테이블을 선택한 뒤 ‘여기서 연결’을 누르고, 연결할 테이블을 선택하세요.</div>
+      <div class="policy">
+        <b>Office 자산 연동 원칙</b>
+        <ul>
+          <li>원본 데이터는 사내 인트라넷(Office)이 소유</li>
+          <li>MREyes <code>site.site</code> = Intranet <code>service_hospitals.mreyes_site_id</code>로 연결</li>
+          <li>MREyes DB에는 장비·부품·정비이력을 복제하지 않음</li>
+          <li>생성·수정·삭제는 Office에서만 수행</li>
+          <li>1차 적용은 자사 COMPANY만 활성화</li>
+        </ul>
+      </div>
+      <div class="policy">
+        <b>로그인 유지 원칙</b>
+        <ul>
+          <li>Redis 없이 DB의 USER_SESSION 사용</li>
+          <li>Access Token은 짧게, Refresh Session은 길게 유지</li>
+          <li>로그아웃·비밀번호 변경 시 세션 폐기</li>
+        </ul>
+      </div>
+      <button class="btn panel-btn hidden" id="cancelConnect">연결 취소</button>
+    </aside>
+
+    <section class="workspace">
+      <div class="canvas-bar">
+        <p>컬럼의 역할과 키 관계를 확인하고, 카드를 끌어서 구조를 정리하세요.</p>
+        <div class="zoom"><button id="zoomOut" aria-label="축소">−</button><output id="zoomValue">82%</output><button id="zoomIn" aria-label="확대">+</button></div>
+      </div>
+      <div class="viewport" id="viewport">
+        <div class="stage-wrap" id="stageWrap"><div class="stage" id="stage"><svg id="edges"></svg></div></div>
+      </div>
+    </section>
+
+    <aside class="right" id="inspector"></aside>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+      const W=1800,H=1900,NW=300,KEY="mreyes-db-schema-single-html-v9";
+      const areas={legacy:{label:"기존 데이터",color:"#64748b"},tenant:{label:"회사 · 사이트",color:"#2563eb"},access:{label:"사용자 · 권한",color:"#7c3aed"},integration:{label:"Intranet 연결",color:"#059669"},alert:{label:"감시 · 알림",color:"#ea580c"}};
+      const statuses={existing:"기존 유지",new:"신규",replace:"교체",review:"검토"};
+      const c=(name,type,key="")=>({name,type,key});
+      const columnDescriptions={
+        id:"식별자",code:"회사 코드",name:"이름",status:"상태",created_at:"생성 시각",updated_at:"수정 시각",
+        company_id:"회사",site_id:"사이트",site:"사이트 코드",siteid:"사이트 코드",display_name:"화면 표시명",address:"현장 주소",contact_name:"현장 담당자",contact_phone:"담당자 연락처",timezone:"표준 시간대",
+        metric_key:"측정 항목 코드",unit:"표시 단위",sort_order:"표시 순서",is_visible:"화면 표시 여부",
+        username:"로그인 아이디",password_hash:"암호화 비밀번호",phone:"연락처",role:"사용자 역할",failed_login_count:"로그인 실패 횟수",locked_until:"계정 잠금 만료",password_changed_at:"비밀번호 변경 시각",
+        user_id:"사용자",channel:"알림 채널",destination:"발송 주소",priority:"알림 우선순위",quiet_start:"알림 제한 시작",quiet_end:"알림 제한 종료",is_enabled:"사용 여부",
+        refresh_token_hash:"갱신 토큰 해시",device_name:"로그인 기기",ip_address:"접속 IP",last_used_at:"마지막 사용 시각",expires_at:"세션 만료 시각",revoked_at:"세션 폐기 시각",
+        actor_user_id:"작업 사용자",actor_name:"작업자 이름",action:"수행 작업",target_type:"대상 종류",target_id:"대상 식별값",before_data:"변경 전 내용",after_data:"변경 후 내용",
+        base_url:"Office API 주소",credential_ref:"연동 인증정보 참조",last_success_at:"마지막 성공 시각",integration_id:"Office 연동",entity_type:"동기화 대상 종류",sync_cursor:"다음 동기화 위치",last_synced_at:"마지막 동기화 시각",last_source_at:"원본 최종 변경 시각",error_message:"오류 내용",
+        trigger_type:"실행 방식",started_at:"시작 시각",finished_at:"종료 시각",equipment_count:"처리 장비 수",component_count:"처리 부품 수",maintenance_count:"처리 정비이력 수",
+        deleted_at:"삭제 시각",
+        index:"기존 측정 식별자",date:"측정 시각",recosi:"기존 recosi 측정값",coldtp:"기존 coldtp 측정값",recoru:"기존 recoru 측정값",hepres:"헬륨 압력",heleve:"헬륨 레벨",actemp:"실내 온도",achumi:"실내 습도",gctemp:"냉각기 온도",gcflow:"냉각기 유량",cctemp:"냉각수 온도",ccflow:"냉각수 유량",
+        rule_id:"알림 규칙",rule_type:"규칙 종류",min_value:"최솟값",max_value:"최댓값",no_data_minutes:"무수신 기준 시간",severity:"심각도",event_type:"이벤트 종류",measured_value:"감지된 측정값",message:"알림 내용",recipient_snapshot:"발송 대상 목록",delivery_status:"발송 결과",delivery_error:"발송 오류",occurred_at:"발생 시각",acknowledged_by:"확인 사용자",acknowledged_at:"확인 시각",recovered_at:"복구 시각",
+        "audit_log.target_type":"변경 대상 종류"
+      };
+      const initial={tables:[
+        {id:"company",name:"company",area:"tenant",status:"new",note:"서비스 이용 회사",x:40,y:40,columns:[c("id","BIGINT","PK · AI"),c("code","VARCHAR(64)","UQ"),c("name","VARCHAR(120)"),c("status","VARCHAR(20)"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"company_site",name:"company_site",area:"tenant",status:"review",note:"회사-기존 사이트 연결",x:380,y:40,columns:[c("company_id","BIGINT","PK · FK"),c("site_id","VARCHAR(32)","PK · FK · UQ"),c("created_at","DATETIME")]},
+        {id:"site",name:"site",area:"legacy",status:"existing",note:"기존 사이트 정보",x:720,y:40,columns:[c("site","VARCHAR(32)","PK"),c("name","VARCHAR(120)")]},
+        {id:"site_profile",name:"site_profile",area:"tenant",status:"new",note:"사이트 화면명과 현장 정보",x:1060,y:40,columns:[c("site_id","VARCHAR(32)","PK · FK"),c("display_name","VARCHAR(120)"),c("address","VARCHAR(255)"),c("contact_name","VARCHAR(80)"),c("contact_phone","VARCHAR(30)"),c("timezone","VARCHAR(40)"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"company_metric",name:"company_metric_config",area:"tenant",status:"new",note:"회사별 측정 항목 표시명",x:1400,y:40,columns:[c("id","BIGINT","PK · AI"),c("company_id","BIGINT","FK"),c("metric_key","VARCHAR(50)","UQ*"),c("display_name","VARCHAR(80)"),c("unit","VARCHAR(20)"),c("sort_order","INT"),c("is_visible","BOOLEAN"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"app_user",name:"app_user",area:"access",status:"new",note:"MREyes 로그인 사용자",x:40,y:390,columns:[c("id","BIGINT","PK · AI"),c("company_id","BIGINT","FK"),c("username","VARCHAR(80)","UQ"),c("password_hash","VARCHAR(255)"),c("name","VARCHAR(80)"),c("phone","VARCHAR(30)"),c("role","VARCHAR(20)"),c("status","VARCHAR(20)"),c("failed_login_count","INT"),c("locked_until","DATETIME NULL"),c("password_changed_at","DATETIME"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"user_site",name:"user_site",area:"access",status:"new",note:"사용자가 접근 가능한 사이트",x:380,y:390,columns:[c("user_id","BIGINT","PK · FK"),c("site_id","VARCHAR(32)","PK · FK"),c("created_at","DATETIME")]},
+        {id:"site_recipient",name:"site_alert_recipient",area:"access",status:"new",note:"알림 범위, 우선순위, 심야 제한",x:720,y:390,columns:[c("id","BIGINT","PK · AI"),c("site_id","VARCHAR(32)","FK"),c("user_id","BIGINT","FK"),c("channel","VARCHAR(20)"),c("destination","VARCHAR(120)"),c("priority","INT"),c("quiet_start","TIME NULL"),c("quiet_end","TIME NULL"),c("is_enabled","BOOLEAN"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"user_session",name:"user_session",area:"access",status:"new",note:"DB 기반 장기 로그인·기기별 세션",x:1060,y:390,columns:[c("id","CHAR(36)","PK"),c("user_id","BIGINT","FK"),c("refresh_token_hash","CHAR(64)","UQ"),c("device_name","VARCHAR(120)"),c("ip_address","VARCHAR(45)"),c("last_used_at","DATETIME"),c("expires_at","DATETIME"),c("revoked_at","DATETIME NULL"),c("created_at","DATETIME")]},
+        {id:"audit_log",name:"audit_log",area:"access",status:"new",note:"로그인·권한·설정 변경 감사 기록",x:1400,y:390,columns:[c("id","BIGINT","PK · AI"),c("company_id","BIGINT","FK"),c("actor_user_id","BIGINT NULL","FK"),c("actor_name","VARCHAR(80)"),c("action","VARCHAR(60)"),c("target_type","VARCHAR(50)"),c("target_id","VARCHAR(100)"),c("before_data","JSON NULL"),c("after_data","JSON NULL"),c("ip_address","VARCHAR(45)"),c("created_at","DATETIME")]},
+        {id:"office_integration",name:"office_integration",area:"integration",status:"review",note:"사이트 ID로 Intranet 장비·부품·정비이력을 읽는 전용 연결",x:40,y:850,columns:[c("id","BIGINT","PK · AI"),c("company_id","BIGINT","FK · UQ"),c("status","VARCHAR(20)"),c("base_url","VARCHAR(255)"),c("credential_ref","VARCHAR(255)"),c("last_success_at","DATETIME NULL"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"asset_sync_state",name:"office_asset_sync_state",area:"integration",status:"review",note:"사이트·엔티티별 동기화 커서와 결과",x:380,y:850,columns:[c("id","BIGINT","PK · AI"),c("integration_id","BIGINT","FK"),c("site_id","VARCHAR(32)","FK · UQ*"),c("entity_type","VARCHAR(30)","UQ*"),c("sync_cursor","VARCHAR(255)"),c("status","VARCHAR(20)"),c("last_synced_at","DATETIME NULL"),c("last_source_at","DATETIME NULL"),c("error_message","TEXT NULL"),c("updated_at","DATETIME")]},
+        {id:"office_sync_run",name:"office_sync_run",area:"integration",status:"review",note:"Office 동기화 실행·처리 건수·오류 이력",x:720,y:850,columns:[c("id","BIGINT","PK · AI"),c("integration_id","BIGINT","FK"),c("trigger_type","VARCHAR(20)"),c("status","VARCHAR(20)"),c("started_at","DATETIME"),c("finished_at","DATETIME NULL"),c("equipment_count","INT"),c("component_count","INT"),c("maintenance_count","INT"),c("error_message","TEXT NULL")]},
+        {id:"mrtb",name:"mrtb",area:"legacy",status:"existing",note:"기존 MRI 측정 데이터",x:40,y:1370,columns:[c("index","BIGINT","PK"),c("siteid","VARCHAR(32)","FK"),c("date","DATETIME"),c("recosi","VARCHAR"),c("coldtp","VARCHAR"),c("recoru","VARCHAR"),c("hepres","VARCHAR"),c("heleve","VARCHAR"),c("actemp","VARCHAR"),c("achumi","VARCHAR"),c("gctemp","VARCHAR"),c("gcflow","VARCHAR"),c("cctemp","VARCHAR"),c("ccflow","VARCHAR")]},
+        {id:"alert_rule",name:"alert_rule",area:"alert",status:"new",note:"사이트별 범위·전원·무수신 규칙",x:720,y:1370,columns:[c("id","BIGINT","PK · AI"),c("site_id","VARCHAR(32)","FK"),c("metric_key","VARCHAR(50)"),c("rule_type","VARCHAR(30)"),c("min_value","DECIMAL NULL"),c("max_value","DECIMAL NULL"),c("no_data_minutes","INT NULL"),c("severity","VARCHAR(20)"),c("is_enabled","BOOLEAN"),c("created_at","DATETIME"),c("updated_at","DATETIME")]},
+        {id:"alert_event",name:"alert_event",area:"alert",status:"new",note:"사이트별 발생·확인·복구와 발송 대상·결과",x:1060,y:1370,columns:[c("id","BIGINT","PK · AI"),c("rule_id","BIGINT","FK"),c("site_id","VARCHAR(32)","FK"),c("event_type","VARCHAR(30)"),c("severity","VARCHAR(20)"),c("measured_value","DECIMAL NULL"),c("message","VARCHAR(500)"),c("recipient_snapshot","JSON"),c("delivery_status","VARCHAR(20)"),c("delivery_error","TEXT NULL"),c("occurred_at","DATETIME"),c("acknowledged_by","BIGINT NULL","FK"),c("acknowledged_at","DATETIME NULL"),c("recovered_at","DATETIME NULL"),c("created_at","DATETIME")]}
+      ],relations:[
+        ["company","company_site","1:N","소유"],["company_site","site","N:1","소속"],["site","site_profile","1:1","화면 정보"],["company","company_metric","1:N","표시명 설정"],
+        ["company","app_user","1:N","사용자"],["app_user","user_site","1:N","접근 범위"],["site","user_site","1:N","허용 사이트"],["app_user","site_recipient","1:N","수신자"],["app_user","user_session","1:N","로그인 세션"],["app_user","audit_log","1:N","행위 기록"],
+        ["site","site_recipient","1:N","알림 담당"],
+        ["company","office_integration","1:1","자사만 활성화"],["office_integration","asset_sync_state","1:N","연결 상태"],["office_integration","office_sync_run","1:N","조회 이력"],["site","asset_sync_state","1:N","사이트별 상태"],
+        ["site","mrtb","1:N","측정값"],
+        ["site","alert_rule","1:N","사이트 규칙"],
+        ["alert_rule","alert_event","1:N","이벤트 생성"]
+      ].map((r,i)=>({id:"r"+(i+1),from:r[0],to:r[1],cardinality:r[2],label:r[3]}))};
+
+      let state=load(),selectedTable=null,selectedRelation=null,connectFrom=null,zoom=.82,drag=null,saveTimer=null;
+      const $=id=>document.getElementById(id),stage=$("stage"),edges=$("edges"),inspector=$("inspector");
+      function clone(v){return JSON.parse(JSON.stringify(v));}
+      function load(){try{const saved=localStorage.getItem(KEY);if(saved)return JSON.parse(saved);}catch(e){}return clone(initial);}
+      function uid(prefix){return prefix+"-"+Date.now()+"-"+Math.random().toString(36).slice(2,7);}
+      function esc(v){return String(v).replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));}
+      function save(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{localStorage.setItem(KEY,JSON.stringify(state));$("saveState").textContent=new Intl.DateTimeFormat("ko-KR",{hour:"2-digit",minute:"2-digit"}).format(new Date())+" 자동 저장";},250);}
+      function update(){render();save();}
+      function table(id){return state.tables.find(t=>t.id===id);}
+      function nodeHeight(t){return 82+((t.columns||[]).length*24);}
+      function columnRows(t){return (t.columns||[]).map(col=>`<span class="column-row"><span class="column-main">${col.key?`<span class="column-key">${esc(col.key)}</span>`:""}<span class="column-name">${esc(col.name)}</span></span><span class="column-desc">${esc(columnDescriptions[`${t.id}.${col.name}`]||columnDescriptions[col.name]||"업무 데이터")}</span></span>`).join("");}
+      function render(){
+        [...stage.querySelectorAll(".node")].forEach(n=>n.remove()); renderEdges();
+        state.tables.forEach(t=>{const el=document.createElement("button");el.className="node"+(selectedTable===t.id?" selected":"")+(connectFrom===t.id?" connecting":"");el.style.left=t.x+"px";el.style.top=t.y+"px";el.style.height=nodeHeight(t)+"px";el.dataset.id=t.id;el.innerHTML=`<span class="node-bar" style="background:${areas[t.area].color}"></span><span class="node-body"><span class="node-copy"><span class="node-name">${esc(t.name)}</span><span class="node-note">${esc(t.note)}</span></span><span class="node-badges"><span class="badge status-${t.status}">${statuses[t.status]}</span>${t.mode==="read"?'<span class="badge mode-read">READ ONLY</span>':""}</span></span><span class="column-list">${columnRows(t)}</span>`;
+          el.addEventListener("pointerdown",e=>{if(e.button!==0)return;const r=el.getBoundingClientRect();drag={id:t.id,dx:(e.clientX-r.left)/zoom,dy:(e.clientY-r.top)/zoom,moved:false};el.setPointerCapture(e.pointerId);selectedRelation=null;});
+          el.addEventListener("pointermove",e=>{if(!drag||drag.id!==t.id||!el.hasPointerCapture(e.pointerId))return;const r=stage.getBoundingClientRect();const nx=Math.max(15,Math.min(W-NW-15,(e.clientX-r.left)/zoom-drag.dx));const ny=Math.max(15,Math.min(H-nodeHeight(t)-15,(e.clientY-r.top)/zoom-drag.dy));if(Math.abs(nx-t.x)>2||Math.abs(ny-t.y)>2)drag.moved=true;t.x=nx;t.y=ny;el.style.left=nx+"px";el.style.top=ny+"px";renderEdges();});
+          el.addEventListener("pointerup",()=>{drag=null;if(connectFrom&&connectFrom!==t.id){const exists=state.relations.some(r=>(r.from===connectFrom&&r.to===t.id)||(r.from===t.id&&r.to===connectFrom));if(!exists)state.relations.push({id:uid("relation"),from:connectFrom,to:t.id,cardinality:"1:N",label:"관계"});connectFrom=null;}selectedTable=t.id;selectedRelation=null;update();});stage.appendChild(el);});
+        renderInspector();renderMeta();
+      }
+      function renderEdges(){edges.innerHTML=`<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="#9aa9b7"/></marker><marker id="arrowActive" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8Z" fill="#2563eb"/></marker></defs>`;
+        state.relations.forEach(r=>{const a=table(r.from),b=table(r.to);if(!a||!b)return;const ah=nodeHeight(a),bh=nodeHeight(b),ac={x:a.x+NW/2,y:a.y+ah/2},bc={x:b.x+NW/2,y:b.y+bh/2},horizontal=Math.abs(bc.x-ac.x)>Math.abs(bc.y-ac.y);let sx,sy,ex,ey;if(horizontal){sx=a.x+(bc.x>=ac.x?NW:0);sy=ac.y;ex=b.x+(bc.x>=ac.x?0:NW);ey=bc.y;}else{sx=ac.x;sy=a.y+(bc.y>=ac.y?ah:0);ex=bc.x;ey=b.y+(bc.y>=ac.y?0:bh);}const d=horizontal?`M${sx} ${sy} C${(sx+ex)/2} ${sy},${(sx+ex)/2} ${ey},${ex} ${ey}`:`M${sx} ${sy} C${sx} ${(sy+ey)/2},${ex} ${(sy+ey)/2},${ex} ${ey}`;const mx=(sx+ex)/2,my=(sy+ey)/2;const g=document.createElementNS("http://www.w3.org/2000/svg","g");g.setAttribute("class","edge"+(selectedRelation===r.id?" selected":""));g.innerHTML=`<path class="edge-hit" d="${d}"/><path class="edge-line" d="${d}" marker-end="url(#${selectedRelation===r.id?"arrowActive":"arrow"})"/><text class="edge-label" x="${mx}" y="${my}">${esc(r.cardinality)}</text>`;g.querySelector(".edge-hit").addEventListener("click",e=>{e.stopPropagation();selectedRelation=r.id;selectedTable=null;render();});edges.appendChild(g);});
+      }
+      function renderMeta(){
+        $("tableCount").textContent=state.tables.length;$("relationCount").textContent=state.relations.length;$("existingCount").textContent=state.tables.filter(t=>t.status==="existing").length;$("plannedCount").textContent=state.tables.filter(t=>t.status!=="existing").length;
+        $("legend").innerHTML=Object.entries(areas).map(([k,a])=>`<div class="legend-row"><span class="legend-name"><span class="dot" style="background:${a.color}"></span>${a.label}</span><span class="count">${state.tables.filter(t=>t.area===k).length}</span></div>`).join("");
+        $("cancelConnect").classList.toggle("hidden",!connectFrom);$("stageWrap").style.width=W*zoom+"px";$("stageWrap").style.height=H*zoom+"px";stage.style.transform=`scale(${zoom})`;$("zoomValue").textContent=Math.round(zoom*100)+"%";
+      }
+      function renderInspector(){const t=table(selectedTable),r=state.relations.find(x=>x.id===selectedRelation);if(t){inspector.innerHTML=`<div class="eyebrow">TABLE · ${(t.columns||[]).length} COLUMNS</div><h2 class="panel-title">테이블 편집</h2><label class="field">테이블 이름<input id="editName" value="${esc(t.name)}"></label><label class="field">영역<select id="editArea">${Object.entries(areas).map(([k,v])=>`<option value="${k}" ${k===t.area?"selected":""}>${v.label}</option>`).join("")}</select></label><label class="field">상태<select id="editStatus">${Object.entries(statuses).map(([k,v])=>`<option value="${k}" ${k===t.status?"selected":""}>${v}</option>`).join("")}</select></label><label class="field">역할 메모<textarea id="editNote">${esc(t.note)}</textarea></label><button class="btn primary panel-btn" id="connectButton">${connectFrom===t.id?"연결할 테이블을 선택하세요":"여기서 연결"}</button><button class="btn danger panel-btn" id="deleteTable">테이블 삭제</button><div class="column-inspector"><h3>컬럼 정의</h3>${columnRows(t)}</div>`;
+          $("editName").oninput=e=>{t.name=e.target.value.toUpperCase();update();};$("editArea").onchange=e=>{t.area=e.target.value;update();};$("editStatus").onchange=e=>{t.status=e.target.value;update();};$("editNote").oninput=e=>{t.note=e.target.value;update();};$("connectButton").onclick=()=>{connectFrom=t.id;render();};$("deleteTable").onclick=()=>{if(!confirm(t.name+" 테이블과 연결된 관계를 삭제할까요?"))return;state.tables=state.tables.filter(x=>x.id!==t.id);state.relations=state.relations.filter(x=>x.from!==t.id&&x.to!==t.id);selectedTable=null;connectFrom=null;update();};
+        }else if(r){const a=table(r.from),b=table(r.to);inspector.innerHTML=`<div class="eyebrow">RELATION</div><h2 class="panel-title">관계 편집</h2><div class="route">${esc(a?.name||"-")}<br>↓<br>${esc(b?.name||"-")}</div><label class="field">관계 표기<select id="editCard">${["1:1","1:N","N:1","N:M"].map(v=>`<option ${v===r.cardinality?"selected":""}>${v}</option>`).join("")}</select></label><label class="field">관계 설명<input id="editLabel" value="${esc(r.label)}"></label><button class="btn danger panel-btn" id="deleteRelation">관계 삭제</button>`;$("editCard").onchange=e=>{r.cardinality=e.target.value;update();};$("editLabel").oninput=e=>{r.label=e.target.value;update();};$("deleteRelation").onclick=()=>{state.relations=state.relations.filter(x=>x.id!==r.id);selectedRelation=null;update();};
+        }else{inspector.innerHTML=`<div class="empty"><span class="empty-icon">↗</span><b>항목을 선택하세요</b><p>테이블 또는 관계선을 선택하면 설계 메모를 수정할 수 있습니다. READ ONLY는 실제 MREyes 기능의 데이터 변경 금지를 뜻합니다.</p></div>`;}
+      }
+      stage.addEventListener("click",e=>{if(e.target===stage||e.target===edges){selectedTable=null;selectedRelation=null;render();}});
+      $("addTable").onclick=()=>{const t={id:uid("table"),name:"new_table",area:"tenant",status:"review",note:"설계 메모를 입력하세요",x:120,y:120,columns:[{name:"id",type:"BIGINT",key:"PK · AI"}]};state.tables.push(t);selectedTable=t.id;selectedRelation=null;update();};
+      $("cancelConnect").onclick=()=>{connectFrom=null;render();};
+      $("zoomOut").onclick=()=>{zoom=Math.max(.5,+(zoom-.1).toFixed(2));renderMeta();};$("zoomIn").onclick=()=>{zoom=Math.min(1.2,+(zoom+.1).toFixed(2));renderMeta();};
+      $("exportButton").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="mreyes-db-schema.json";a.click();URL.revokeObjectURL(url);};
+      $("importButton").onclick=()=>$("fileInput").click();$("fileInput").onchange=e=>{const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=()=>{try{const next=JSON.parse(reader.result);if(!Array.isArray(next.tables)||!Array.isArray(next.relations))throw Error();state=next;selectedTable=null;selectedRelation=null;connectFrom=null;update();}catch(err){alert("이 화면에서 저장한 JSON 파일인지 확인해 주세요.");}};reader.readAsText(f);e.target.value="";};
+      $("resetButton").onclick=()=>{if(!confirm("현재 초안을 지우고 최초 구조로 되돌릴까요?"))return;state=clone(initial);selectedTable=null;selectedRelation=null;connectFrom=null;update();};
+      render();
+    })();
+  </script>
+</body>
+</html>

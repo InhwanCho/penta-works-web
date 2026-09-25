@@ -30,12 +30,18 @@ services:
       CRON_SECRET: ${CRON_SECRET}
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      OFFICE_INTEGRATION_ENABLED: "true"
+      OFFICE_BASE_URL: ${OFFICE_BASE_URL:-http://office-backend:8080}
+      OFFICE_API_KEY: ${OFFICE_API_KEY:?OFFICE_API_KEY is required}
       TZ: Asia/Seoul
     ports:
       - "${BACKEND_PORT:-8080}:8080"
     depends_on:
       database:
         condition: service_healthy
+    networks:
+      default:
+      integration:
 
   frontend:
     build:
@@ -52,3 +58,8 @@ volumes:
   pentaworks_mariadb_data:
     external: true
     name: homepage_mariadb_data
+
+networks:
+  integration:
+    external: true
+    name: pentaworks-integration

@@ -1,5 +1,6 @@
 package com.pentaworks.monitoring.common;
 
+import com.pentaworks.monitoring.office.OfficeIntegrationException;
 import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     ResponseEntity<Map<String, Object>> unauthorized(UnauthorizedException error) {
         return response(HttpStatus.UNAUTHORIZED, error.getMessage());
+    }
+
+    @ExceptionHandler(OfficeIntegrationException.class)
+    ResponseEntity<Map<String, Object>> officeIntegration(OfficeIntegrationException error) {
+        return response(error.status(), error.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

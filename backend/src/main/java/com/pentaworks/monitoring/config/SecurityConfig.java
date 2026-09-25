@@ -32,6 +32,7 @@ public class SecurityConfig {
             }))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/sites/*/office-assets").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.GET,
                     "/actuator/health",
                     "/api/v1/monitor",

@@ -59,6 +59,10 @@ if [[ ! -f "$COMPOSE_FILE" ]]; then
     exit 1
 fi
 
+if ! docker network inspect pentaworks-integration >/dev/null 2>&1; then
+    docker network create pentaworks-integration >/dev/null
+fi
+
 if [[ "$DEPLOY_ENV" == "prod" ]] && ! docker network inspect pentaworks_default >/dev/null 2>&1; then
     echo "Shared database network pentaworks_default does not exist" >&2
     exit 1

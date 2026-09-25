@@ -12,6 +12,11 @@ spring:
     hikari:
       maximum-pool-size: ${DB_POOL_MAX_SIZE:10}
       minimum-idle: 1
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
   jackson:
     default-property-inclusion: non_null
 
@@ -30,3 +35,7 @@ app:
   monitor:
     cron-secret: ${CRON_SECRET:}
     slack-webhook-url: ${SLACK_WEBHOOK_URL:}
+  office-integration:
+    enabled: ${OFFICE_INTEGRATION_ENABLED:false}
+    base-url: ${OFFICE_BASE_URL:http://office-backend:8080}
+    api-key: ${OFFICE_API_KEY:}
