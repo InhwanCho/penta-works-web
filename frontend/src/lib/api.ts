@@ -4,6 +4,7 @@ import {
   writeStoredSession,
   type StoredSession,
 } from "@/lib/auth";
+import type { MetricKey } from "@/lib/metrics";
 
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"
@@ -30,6 +31,22 @@ export type PsiThreshold = {
   min: number | null;
   max: number | null;
   active: boolean;
+};
+
+export type AlertThreshold = {
+  key: MetricKey;
+  label: string;
+  unit: string | null;
+  min: number;
+  max: number;
+  active: boolean;
+};
+
+export type SiteAlertSettings = {
+  siteid: string;
+  name: string | null;
+  configured: boolean;
+  thresholds: AlertThreshold[];
 };
 
 let refreshPromise: Promise<StoredSession> | null = null;

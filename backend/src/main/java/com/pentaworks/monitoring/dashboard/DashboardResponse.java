@@ -10,7 +10,9 @@ public record DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows,
     public record DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
                                int count1h, int count24h, Double hePsi, Double hePct,
                                Map<String, Double> metrics) {}
-    public record CtrlRange(Double mrplel, Double mrpleh, Double mrlevl, Double mrlevh,
+    public record CtrlRange(Double recosil, Double recosih, Double coldtpl, Double coldtph,
+                            Double recorul, Double recoruh,
+                            Double mrplel, Double mrpleh, Double mrlevl, Double mrlevh,
                             Double actmpl, Double actmph, Double achuml, Double achumh,
                             Double gctmpl, Double gctmph, Double gcflol, Double gcfloh,
                             Double cctmpl, Double cctmph, Double ccflol, Double ccfloh) {}

@@ -20,6 +20,9 @@ export type MetricKey =
  * 예) mrple -> mrplel, mrpleh
  */
 export type CtrlBound =
+  | "recosi"
+  | "coldtp"
+  | "recoru"
   | "mrple"
   | "mrlev"
   | "actmp"
@@ -49,7 +52,7 @@ export const METRICS: readonly MetricDef[] = [
     label: "리콘덴서 SI",
     unit: null,
     description: "리콘덴서 SI 값입니다.",
-    bound: null,
+    bound: "recosi",
   },
   {
     key: "coldtp",
@@ -58,7 +61,7 @@ export const METRICS: readonly MetricDef[] = [
     unit: null,
     description:
       "콜드헤드 또는 콜드칠러 온도로 추정됩니다. 정확한 의미는 확인이 필요합니다.",
-    bound: null,
+    bound: "coldtp",
   },
   {
     key: "recoru",
@@ -66,7 +69,7 @@ export const METRICS: readonly MetricDef[] = [
     label: "리콘덴서 RU",
     unit: null,
     description: "리콘덴서 RU 값입니다.",
-    bound: null,
+    bound: "recoru",
   },
   {
     key: "hepres",
@@ -139,6 +142,9 @@ export const METRIC_KEYS: readonly MetricKey[] = METRICS.map((m) => m.key);
 
 /** ctrl 임계값 컬럼명 전체 (하한/상한 쌍) */
 export const CTRL_BOUNDS: readonly CtrlBound[] = [
+  "recosi",
+  "coldtp",
+  "recoru",
   "mrple",
   "mrlev",
   "actmp",

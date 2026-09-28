@@ -5,6 +5,8 @@ import com.pentaworks.monitoring.auth.CurrentUserService;
 import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
 import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ForbiddenException;
+import com.pentaworks.monitoring.dashboard.DashboardService;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -34,12 +36,13 @@ class AlertServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         CurrentUserService currentUsers = mock(CurrentUserService.class);
         AuditService audit = mock(AuditService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit);
+        DashboardService dashboard = mock(DashboardService.class);
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard);
         CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
 
         assertThrows(ForbiddenException.class,
             () -> service.updatePsiThreshold(user, "001", 0.8, 1.3, true));
-        verifyNoInteractions(jdbcTemplate, currentUsers, audit);
+        verifyNoInteractions(jdbcTemplate, currentUsers, audit, dashboard);
     }
 
     @Test
@@ -48,15 +51,19 @@ class AlertServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         CurrentUserService currentUsers = mock(CurrentUserService.class);
         AuditService audit = mock(AuditService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit);
+        DashboardService dashboard = mock(DashboardService.class);
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard);
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
-        PsiThreshold saved = new PsiThreshold("001", "병원", 0.8, 1.3, true);
-        when(jdbcTemplate.queryForObject(any(String.class), any(RowMapper.class), eq("001"))).thenReturn(saved);
+        SiteAlertSettings savedSettings = new SiteAlertSettings("001", "병원", true,
+            List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)));
+        when(jdbcTemplate.queryForObject(any(String.class), any(RowMapper.class), eq("001"))).thenReturn(savedSettings);
 
-        assertEquals(saved, service.updatePsiThreshold(admin, "001", 0.8, 1.3, true));
+        assertEquals(new PsiThreshold("001", "병원", 0.8, 1.3, true),
+            service.updatePsiThreshold(admin, "001", 0.8, 1.3, true));
 
         verify(currentUsers).requireSiteAccess(admin, "001");
-        verify(jdbcTemplate).update(any(String.class), eq("001"), eq(0.8), eq(1.3), eq(true));
-        verify(audit).record(eq(admin), eq("PSI_THRESHOLD_UPDATED"), eq("SITE"), eq("001"), any());
+        verify(jdbcTemplate).update(any(String.class), eq(0.8), eq(1.3), eq(true), eq("001"));
+        verify(audit).record(eq(admin), eq("ALERT_THRESHOLDS_UPDATED"), eq("SITE"), eq("001"), any());
+        verify(dashboard).invalidateCache();
     }
 }

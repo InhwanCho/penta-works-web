@@ -61,6 +61,10 @@ public class DashboardService {
             new Stats(rows.size(), active1h, rows.size() - active24h, total24h), rows, ctrl, all.ctrlDefault());
     }
 
+    public void invalidateCache() {
+        cachedDashboard = null;
+    }
+
     private static boolean after(String value, Instant threshold) {
         return value != null && Instant.parse(value).isAfter(threshold);
     }
@@ -109,11 +113,17 @@ public class DashboardService {
         jdbcTemplate.query("""
             SELECT s.site,
                    a.psi_min AS mrplel, a.psi_max AS mrpleh,
-                   c.mrlevl, c.mrlevh, c.actmpl, c.actmph, c.achuml, c.achumh,
-                   c.gctmpl, c.gctmph, c.gcflol, c.gcfloh,
-                   c.cctmpl, c.cctmph, c.ccflol, c.ccfloh
+                   a.he_min AS mrlevl, a.he_max AS mrlevh,
+                   a.si410_min AS recosil, a.si410_max AS recosih,
+                   a.chtemp_min AS coldtpl, a.chtemp_max AS coldtph,
+                   a.rou_min AS recorul, a.rou_max AS recoruh,
+                   a.actemp_min AS actmpl, a.actemp_max AS actmph,
+                   a.achumi_min AS achuml, a.achumi_max AS achumh,
+                   a.gctemp_min AS gctmpl, a.gctemp_max AS gctmph,
+                   a.gcflow_min AS gcflol, a.gcflow_max AS gcfloh,
+                   a.cctemp_min AS cctmpl, a.cctemp_max AS cctmph,
+                   a.ccflow_min AS ccflol, a.ccflow_max AS ccfloh
               FROM site s
-              LEFT JOIN ctrl c ON c.site=s.site
               LEFT JOIN alert_settings a ON a.siteid=s.site
              ORDER BY s.site
             """, (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"), ctrlRange(rs)));
@@ -149,7 +159,9 @@ public class DashboardService {
     }
 
     private CtrlRange ctrlRange(ResultSet rs) throws SQLException {
-        return new CtrlRange(number(rs, "mrplel"), number(rs, "mrpleh"), number(rs, "mrlevl"), number(rs, "mrlevh"),
+        return new CtrlRange(number(rs, "recosil"), number(rs, "recosih"), number(rs, "coldtpl"), number(rs, "coldtph"),
+            number(rs, "recorul"), number(rs, "recoruh"),
+            number(rs, "mrplel"), number(rs, "mrpleh"), number(rs, "mrlevl"), number(rs, "mrlevh"),
             number(rs, "actmpl"), number(rs, "actmph"), number(rs, "achuml"), number(rs, "achumh"),
             number(rs, "gctmpl"), number(rs, "gctmph"), number(rs, "gcflol"), number(rs, "gcfloh"),
             number(rs, "cctmpl"), number(rs, "cctmph"), number(rs, "ccflol"), number(rs, "ccfloh"));

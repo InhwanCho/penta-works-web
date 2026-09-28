@@ -3,6 +3,8 @@ package com.pentaworks.monitoring.alert;
 import com.pentaworks.monitoring.auth.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,6 +29,22 @@ public class AlertController {
         return alertService.psiThresholds(currentUsers.allowedSiteIds(user));
     }
 
+    @GetMapping("/thresholds")
+    public List<SiteAlertSettings> thresholds(Authentication authentication) {
+        var user = currentUsers.require(authentication);
+        return alertService.alertSettings(currentUsers.allowedSiteIds(user));
+    }
+
+    @PatchMapping("/thresholds/{siteId}")
+    public SiteAlertSettings updateThresholds(@PathVariable String siteId,
+                                              @Valid @RequestBody UpdateAlertThresholdsRequest request,
+                                              Authentication authentication) {
+        List<AlertService.ThresholdUpdate> updates = request.thresholds().stream()
+            .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(), value.active()))
+            .toList();
+        return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates);
+    }
+
     @PatchMapping("/psi-thresholds/{siteId}")
     public PsiThreshold updatePsiThreshold(@PathVariable String siteId,
                                            @Valid @RequestBody UpdatePsiThresholdRequest request,
@@ -37,4 +55,7 @@ public class AlertController {
 
     public record UpdatePsiThresholdRequest(@NotNull Double min, @NotNull Double max,
                                             @NotNull Boolean active) {}
+    public record UpdateAlertThresholdsRequest(@NotEmpty List<@Valid ThresholdUpdateRequest> thresholds) {}
+    public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
+                                         @NotNull Boolean active) {}
 }
