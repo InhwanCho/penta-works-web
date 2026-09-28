@@ -49,6 +49,23 @@ export type SiteAlertSettings = {
   thresholds: AlertThreshold[];
 };
 
+export type AlertEventSummary = {
+  id: number;
+  siteId: string;
+  siteName: string | null;
+  metricKey: MetricKey;
+  eventType: "LOW" | "HIGH" | "RECOVERY";
+  severity: string;
+  measuredValue: number | null;
+  min: number | null;
+  max: number | null;
+  message: string;
+  deliveryStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+  occurredAt: string;
+  acknowledgedAt: string | null;
+  recoveredAt: string | null;
+};
+
 let refreshPromise: Promise<StoredSession> | null = null;
 
 async function errorFrom(response: Response): Promise<Error> {

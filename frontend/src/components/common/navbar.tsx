@@ -81,7 +81,7 @@ export default function Navbar() {
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="py-1.5">
                       <MenuLink href="/" icon={<HomeIcon />}>대시보드</MenuLink>
-                      <MenuLink href="/baselines" icon={<GaugeIcon />}>기준값</MenuLink>
+                      <MenuLink href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
                       {isAdmin && <MenuLink href="/admin" icon={<UsersIcon />}>사용자 관리</MenuLink>}
                       <MenuLink href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
                     </div>

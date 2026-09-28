@@ -38,13 +38,15 @@ public class AlertService {
     private final CurrentUserService currentUsers;
     private final AuditService audit;
     private final DashboardService dashboardService;
+    private final AlertEventService alertEvents;
 
     public AlertService(JdbcTemplate jdbcTemplate, CurrentUserService currentUsers, AuditService audit,
-                        DashboardService dashboardService) {
+                        DashboardService dashboardService, AlertEventService alertEvents) {
         this.jdbcTemplate = jdbcTemplate;
         this.currentUsers = currentUsers;
         this.audit = audit;
         this.dashboardService = dashboardService;
+        this.alertEvents = alertEvents;
     }
 
     public List<PsiThreshold> psiThresholds(Set<String> allowedSiteIds) {
@@ -101,6 +103,7 @@ public class AlertService {
             jdbcTemplate.update("UPDATE alert_settings SET " + prefix + "_min=?," + prefix + "_max=?," +
                     prefix + "_active=?,updated_at=CURRENT_TIMESTAMP WHERE siteid=?",
                 update.min(), update.max(), update.active(), siteId);
+            if (!update.active()) alertEvents.disableRule(siteId, update.key());
         }
         audit.record(actor, "ALERT_THRESHOLDS_UPDATED", "SITE", siteId,
             Map.of("thresholds", updates.stream().map(update -> Map.of(

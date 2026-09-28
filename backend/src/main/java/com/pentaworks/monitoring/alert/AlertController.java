@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -18,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/alerts")
 public class AlertController {
     private final AlertService alertService;
+    private final AlertEventService alertEvents;
     private final CurrentUserService currentUsers;
-    public AlertController(AlertService alertService, CurrentUserService currentUsers) {
+    public AlertController(AlertService alertService, AlertEventService alertEvents, CurrentUserService currentUsers) {
         this.alertService = alertService;
+        this.alertEvents = alertEvents;
         this.currentUsers = currentUsers;
     }
     @GetMapping("/psi-thresholds")
@@ -43,6 +46,18 @@ public class AlertController {
             .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(), value.active()))
             .toList();
         return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates);
+    }
+
+    @GetMapping("/events")
+    public List<AlertEventSummary> events(@RequestParam(defaultValue = "200") int limit,
+                                          Authentication authentication) {
+        var user = currentUsers.require(authentication);
+        return alertEvents.events(currentUsers.allowedSiteIds(user), limit);
+    }
+
+    @PatchMapping("/events/{eventId}/acknowledge")
+    public AlertEventSummary acknowledge(@PathVariable long eventId, Authentication authentication) {
+        return alertEvents.acknowledge(currentUsers.require(authentication), eventId);
     }
 
     @PatchMapping("/psi-thresholds/{siteId}")

@@ -1,10 +1,10 @@
 "use client";
 
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
-import type { AlertThreshold, SiteAlertSettings } from "@/lib/api";
+import type { AlertEventSummary, AlertThreshold, SiteAlertSettings } from "@/lib/api";
 import { METRICS } from "@/lib/metrics";
 import Link from "next/link";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
 
 const METRIC_DESCRIPTION = new Map(METRICS.map((metric) => [metric.key, metric.description]));
 
@@ -13,12 +13,21 @@ export default function BaselinesClient({
   loadFailed = false,
   canEdit = false,
   onSave,
+  events,
+  eventsLoading = false,
+  eventsFailed = false,
+  onAcknowledge,
 }: {
   entries: SiteAlertSettings[];
   loadFailed?: boolean;
   canEdit?: boolean;
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
+  events: AlertEventSummary[];
+  eventsLoading?: boolean;
+  eventsFailed?: boolean;
+  onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
 }) {
+  const [view, setView] = useState<"thresholds" | "events">("thresholds");
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<SiteAlertSettings | null>(null);
   const filtered = useMemo(() => {
@@ -49,6 +58,12 @@ export default function BaselinesClient({
         </p>
       </header>
 
+      <div className="mb-5 inline-flex rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm dark:border-white/8 dark:bg-background-dark-card">
+        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>기준값</ViewTab>
+        <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
+      </div>
+
+      {view === "thresholds" ? <>
       {loadFailed && <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50/70 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">기준값을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>}
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto] sm:gap-3">
@@ -80,11 +95,64 @@ export default function BaselinesClient({
           })}
         </section>
       )}
+      </> : <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} />}
 
       {selected && <SiteThresholdEditor entry={selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
   );
 }
+
+function ViewTab({ active, onClick, badge, children }: { active: boolean; onClick: () => void; badge?: number; children: ReactNode }) {
+  return <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/5"}`}>{children}{badge ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/15 text-white" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"}`}>{badge}</span> : null}</button>;
+}
+
+function AlertEventsPanel({ events, loading, failed, onAcknowledge }: { events: AlertEventSummary[]; loading: boolean; failed: boolean; onAcknowledge: (eventId: number) => Promise<AlertEventSummary> }) {
+  const [filter, setFilter] = useState<"all" | "open" | "recovered">("all");
+  const [acknowledging, setAcknowledging] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const filtered = events.filter((event) => filter === "all" || (filter === "open" ? event.eventType !== "RECOVERY" && !event.recoveredAt : event.eventType === "RECOVERY" || !!event.recoveredAt));
+  const openCount = events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length;
+
+  async function acknowledge(eventId: number) {
+    setAcknowledging(eventId); setError(null);
+    try { await onAcknowledge(eventId); }
+    catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 확인 처리하지 못했습니다."); }
+    finally { setAcknowledging(null); }
+  }
+
+  if (loading) return <div className="text-text-secondary py-16 text-center text-sm">알림 이력을 불러오는 중…</div>;
+  return (
+    <section>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div><h2 className="text-lg font-extrabold">발생·복구 이력</h2><p className="text-text-secondary mt-1 text-sm">동일한 이상 상태는 한 번만 기록되고 정상 복귀 시 복구 이력이 추가됩니다.</p></div>
+        <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "recovered"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : "복구"}</button>)}</div>
+      </div>
+      {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다.</p>}
+      {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
+      {filtered.length === 0 ? <EmptyState /> : <div className="space-y-2">{filtered.map((event) => <AlertEventRow key={event.id} event={event} acknowledging={acknowledging === event.id} onAcknowledge={() => acknowledge(event.id)} />)}</div>}
+    </section>
+  );
+}
+
+function AlertEventRow({ event, acknowledging, onAcknowledge }: { event: AlertEventSummary; acknowledging: boolean; onAcknowledge: () => void }) {
+  const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
+  const metric = METRICS.find((item) => item.key === event.metricKey);
+  return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_5px_20px_rgba(22,58,82,0.05)] dark:border-white/8 dark:bg-background-dark-card">
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 items-start gap-3"><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">측정 {formatValue(event.measuredValue, metric?.unit)} · 범위 {formatValue(event.min, metric?.unit)} – {formatValue(event.max, metric?.unit)}</p></div></div>
+      <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
+    </div>
+    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "복구됨" : "진행 중"}</span>{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인 처리"}</button>}</div>
+  </article>;
+}
+
+function EventBadge({ type }: { type: AlertEventSummary["eventType"] }) {
+  const style = type === "RECOVERY" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : type === "LOW" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300";
+  return <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold ${style}`}>{type === "RECOVERY" ? "복구" : type === "LOW" ? "낮음" : "높음"}</span>;
+}
+
+function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
+function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENT: "완료", FAILED: "실패", SKIPPED: "채널 없음" } as const)[status]; }
 
 function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   entry: SiteAlertSettings;

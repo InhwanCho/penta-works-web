@@ -3,6 +3,8 @@ package com.pentaworks.monitoring.monitoring;
 import com.pentaworks.monitoring.alert.AlertService;
 import com.pentaworks.monitoring.alert.AlertThreshold;
 import com.pentaworks.monitoring.alert.SiteAlertSettings;
+import com.pentaworks.monitoring.alert.AlertEventService;
+import com.pentaworks.monitoring.alert.AlertEventService.Transition;
 import com.pentaworks.monitoring.config.AppProperties;
 import com.pentaworks.monitoring.dashboard.DashboardResponse;
 import com.pentaworks.monitoring.dashboard.DashboardService;
@@ -18,50 +20,53 @@ import org.springframework.web.client.RestClient;
 public class MonitorService {
     private final DashboardService dashboardService;
     private final AlertService alertService;
+    private final AlertEventService alertEvents;
     private final AppProperties properties;
     private final RestClient restClient = RestClient.create();
 
-    public MonitorService(DashboardService dashboardService, AlertService alertService, AppProperties properties) {
-        this.dashboardService = dashboardService; this.alertService = alertService; this.properties = properties;
+    public MonitorService(DashboardService dashboardService, AlertService alertService,
+                          AlertEventService alertEvents, AppProperties properties) {
+        this.dashboardService = dashboardService;
+        this.alertService = alertService;
+        this.alertEvents = alertEvents;
+        this.properties = properties;
     }
 
     public Map<String, Object> run() {
         Map<String, SiteAlertSettings> settings = new LinkedHashMap<>();
         alertService.alertSettings().forEach(value -> settings.put(value.siteid(), value));
-        List<Map<String, Object>> alerts = new ArrayList<>();
+        List<Transition> transitions = new ArrayList<>();
         for (DashboardResponse.DashboardRow row : dashboardService.getDashboard().rows()) {
             SiteAlertSettings site = settings.get(row.siteDb());
             if (row.name() == null || site == null) continue;
             for (AlertThreshold threshold : site.thresholds()) {
                 Double value = row.metrics().get(threshold.key());
-                if (value == null || !threshold.active()) continue;
-                String direction = value < nullableMin(threshold.min()) ? "low"
-                    : value > nullableMax(threshold.max()) ? "high" : null;
-                if (direction == null || (threshold.min() != null && threshold.max() != null
-                    && threshold.min() > threshold.max())) continue;
-                Map<String, Object> alert = new LinkedHashMap<>();
-                alert.put("siteid", row.siteDb());
-                alert.put("name", row.name());
-                alert.put("metric", threshold.key());
-                alert.put("label", threshold.label());
-                alert.put("unit", threshold.unit());
-                alert.put("current", value);
-                alert.put("min", threshold.min());
-                alert.put("max", threshold.max());
-                alert.put("direction", direction);
-                alerts.add(alert);
+                if (!threshold.active()) continue;
+                Transition transition = alertEvents.evaluate(site, threshold, value);
+                if (transition != null) transitions.add(transition);
             }
         }
-        sendSlack(alerts);
-        return Map.of("ok", true, "count", alerts.size(), "alerts", alerts);
+        sendSlack(transitions);
+        return Map.of("ok", true, "count", transitions.size(), "alerts", transitions);
     }
 
-    private double nullableMin(Double value) { return value == null ? Double.NEGATIVE_INFINITY : value; }
-    private double nullableMax(Double value) { return value == null ? Double.POSITIVE_INFINITY : value; }
-    private void sendSlack(List<Map<String, Object>> alerts) {
+    private void sendSlack(List<Transition> alerts) {
+        if (alerts.isEmpty()) return;
+        List<Long> eventIds = alerts.stream().map(Transition::eventId).toList();
         String webhook = properties.monitor().slackWebhookUrl();
-        if (alerts.isEmpty() || webhook == null || webhook.isBlank()) return;
+        if (webhook == null || webhook.isBlank()) {
+            alertEvents.markDelivery(eventIds, "SKIPPED", null);
+            return;
+        }
         String text = "[MREyes 이상 감지 " + alerts.size() + "건]";
-        restClient.post().uri(webhook).contentType(MediaType.APPLICATION_JSON).body(Map.of("text", text, "alerts", alerts)).retrieve().toBodilessEntity();
+        try {
+            restClient.post().uri(webhook).contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("text", text, "alerts", alerts)).retrieve().toBodilessEntity();
+            alertEvents.markDelivery(eventIds, "SENT", null);
+        } catch (RuntimeException error) {
+            String message = error.getMessage() == null ? "Slack delivery failed" : error.getMessage();
+            alertEvents.markDelivery(eventIds, "FAILED", message.substring(0, Math.min(message.length(), 1000)));
+            throw error;
+        }
     }
 }

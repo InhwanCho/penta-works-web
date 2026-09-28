@@ -37,12 +37,13 @@ class AlertServiceTest {
         CurrentUserService currentUsers = mock(CurrentUserService.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard);
+        AlertEventService alertEvents = mock(AlertEventService.class);
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
         CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
 
         assertThrows(ForbiddenException.class,
             () -> service.updatePsiThreshold(user, "001", 0.8, 1.3, true));
-        verifyNoInteractions(jdbcTemplate, currentUsers, audit, dashboard);
+        verifyNoInteractions(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
     }
 
     @Test
@@ -52,7 +53,8 @@ class AlertServiceTest {
         CurrentUserService currentUsers = mock(CurrentUserService.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard);
+        AlertEventService alertEvents = mock(AlertEventService.class);
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
         SiteAlertSettings savedSettings = new SiteAlertSettings("001", "병원", true,
             List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)));
