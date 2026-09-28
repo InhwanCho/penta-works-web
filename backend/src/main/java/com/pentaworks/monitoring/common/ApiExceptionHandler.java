@@ -21,6 +21,21 @@ public class ApiExceptionHandler {
         return response(HttpStatus.UNAUTHORIZED, error.getMessage());
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    ResponseEntity<Map<String, Object>> forbidden(ForbiddenException error) {
+        return response(HttpStatus.FORBIDDEN, error.getMessage());
+    }
+
+    @ExceptionHandler(BadRequestException.class)
+    ResponseEntity<Map<String, Object>> badRequest(BadRequestException error) {
+        return response(HttpStatus.BAD_REQUEST, error.getMessage());
+    }
+
+    @ExceptionHandler(ConflictException.class)
+    ResponseEntity<Map<String, Object>> conflict(ConflictException error) {
+        return response(HttpStatus.CONFLICT, error.getMessage());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> invalidRequest(MethodArgumentNotValidException error) {
         return response(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요.");

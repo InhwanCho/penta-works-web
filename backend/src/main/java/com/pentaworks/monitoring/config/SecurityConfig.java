@@ -38,7 +38,11 @@ public class SecurityConfig {
                 response.getWriter().write("{\"message\":\"Unauthorized\"}");
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.POST,
+                    "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/logout",
+                    "/api/v1/auth/invitations/*/accept", "/api/v1/auth/password-resets/*").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET,
+                    "/api/v1/auth/invitations/*", "/api/v1/auth/password-resets/*").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health", "/api/v1/monitor").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                 .requestMatchers("/api/v1/**").authenticated()

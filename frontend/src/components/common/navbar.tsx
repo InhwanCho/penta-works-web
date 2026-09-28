@@ -3,9 +3,11 @@
 import SiteSearchModal from "@/components/common/site-search-modal";
 import SearchIcon from "@/components/icons/search-icon";
 import { useModal } from "@/components/provider/modal-provider";
+import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 /**
  * 네비게이션 링크/버튼 공통 스타일.
@@ -16,6 +18,8 @@ const NAV_ITEM_CLASS =
 
 export default function Navbar() {
   const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
+  const { session, isAdmin, logout } = useAuth();
+  const router = useRouter();
 
   // 모달 제어
   const { open: openSearchModal } = useModal("SearchModal");
@@ -53,6 +57,14 @@ export default function Navbar() {
           </Link>
 
           <nav className="flex shrink-0 items-center gap-0.5 lg:gap-1">
+            {isAdmin && (
+              <Link href="/admin" className={NAV_ITEM_CLASS}>관리자</Link>
+            )}
+
+            {session && (
+              <Link href="/account" className={NAV_ITEM_CLASS}>내 계정</Link>
+            )}
+
             <Link
               href="/baselines"
               className={NAV_ITEM_CLASS}
@@ -99,6 +111,15 @@ export default function Navbar() {
             >
               {isDark ? "밝게" : "어둡게"}
             </button>
+
+            {session ? (
+              <button type="button" className={NAV_ITEM_CLASS} onClick={async () => {
+                await logout();
+                router.replace("/login");
+              }}>로그아웃</button>
+            ) : (
+              <Link href="/login" className={NAV_ITEM_CLASS}>로그인</Link>
+            )}
           </nav>
         </div>
       </header>

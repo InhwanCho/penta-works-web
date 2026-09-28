@@ -14,6 +14,8 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -39,6 +41,28 @@ public class DashboardService {
             if (cachedDashboard == null) cachedDashboard = loadDashboard();
             return cachedDashboard;
         }
+    }
+
+    public DashboardResponse getDashboard(Set<String> allowedSiteIds) {
+        DashboardResponse all = getDashboard();
+        List<DashboardRow> rows = all.rows().stream()
+            .filter(row -> allowedSiteIds.contains(row.siteDb()))
+            .toList();
+        Instant since1h = Instant.ofEpochMilli(all.meta().since1hMs());
+        Instant since24h = Instant.ofEpochMilli(all.meta().since24hMs());
+        int active1h = (int) rows.stream().filter(row -> after(row.lastAt(), since1h)).count();
+        int active24h = (int) rows.stream().filter(row -> after(row.lastAt(), since24h)).count();
+        int total24h = rows.stream().mapToInt(DashboardRow::count24h).sum();
+        Map<String, CtrlRange> ctrl = all.ctrl().entrySet().stream()
+            .filter(entry -> "000".equals(entry.getKey()) || allowedSiteIds.contains(entry.getKey()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                (left, right) -> left, LinkedHashMap::new));
+        return new DashboardResponse(all.meta(),
+            new Stats(rows.size(), active1h, rows.size() - active24h, total24h), rows, ctrl, all.ctrlDefault());
+    }
+
+    private static boolean after(String value, Instant threshold) {
+        return value != null && Instant.parse(value).isAfter(threshold);
     }
 
     @EventListener(ApplicationReadyEvent.class)

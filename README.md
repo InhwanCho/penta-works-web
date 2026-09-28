@@ -53,3 +53,5 @@ sudo bash /home/inhwan/apps/pentaworks-prod/deploy/setup-production-origin.sh
 검증: Java 17 이상에서 `cd backend && ./gradlew test`, 프론트에서 `pnpm lint`, `pnpm build`, `pnpm audit --prod`.
 
 Access Token은 빠른 첫 화면 표시를 위해 브라우저 저장소에 유지하고, 장기 로그인용 Refresh Token만 Secure·HttpOnly·SameSite 쿠키에 저장합니다. 로그인 실패가 5회 누적되면 계정을 15분간 잠급니다.
+
+최고관리자와 관리자는 관리자 화면에서 사용자를 초대하고 계정 상태 및 사업장 접근 범위를 관리합니다. 초대 링크는 7일, 비밀번호 초기화 링크는 1시간 동안 유효하며 사용자가 직접 비밀번호를 설정합니다. 일반 사용자는 배정된 사업장의 대시보드, 상세 데이터, 기준값 및 Office 자산만 조회할 수 있고 계정·권한·비밀번호 변경은 감사 로그에 기록됩니다.

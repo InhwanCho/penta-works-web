@@ -3,6 +3,7 @@ package com.pentaworks.monitoring.site;
 import com.pentaworks.monitoring.common.NotFoundException;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.util.List;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -11,13 +12,15 @@ public class SiteService {
     private final JdbcTemplate jdbcTemplate;
     public SiteService(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
 
-    public List<SiteResponse.SiteSummary> list() {
-        return jdbcTemplate.query("SELECT site, name FROM site ORDER BY site", (rs, row) -> new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name")));
+    public List<SiteResponse.SiteSummary> list(Set<String> allowedSiteIds) {
+        return jdbcTemplate.query("SELECT site, name FROM site ORDER BY site",
+            (rs, row) -> new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name"))).stream()
+            .filter(site -> allowedSiteIds.contains(site.siteDb())).toList();
     }
 
     public SiteResponse detail(String slug, int rawTake) {
         int take = Math.min(Math.max(rawTake, 10), 1000);
-        String siteId = slug.matches("\\d+") ? String.format("%03d", Integer.parseInt(slug)) : slug;
+        String siteId = normalizeSiteId(slug);
         SiteResponse.SiteSummary site = jdbcTemplate.query("SELECT site, name FROM site WHERE site = ?", rs ->
             rs.next() ? new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name")) : null, siteId);
         if (site == null) throw new NotFoundException("사이트를 찾을 수 없습니다.");
@@ -34,5 +37,9 @@ public class SiteService {
                 DashboardService.parseNumber(rs.getString("gcflow")), DashboardService.parseNumber(rs.getString("cctemp")),
                 DashboardService.parseNumber(rs.getString("ccflow"))), site.siteDb(), take);
         return new SiteResponse(slug, site, take, rows.isEmpty() ? null : rows.get(0).date(), rows);
+    }
+
+    public static String normalizeSiteId(String slug) {
+        return slug.matches("\\d+") ? String.format("%03d", Integer.parseInt(slug)) : slug;
     }
 }

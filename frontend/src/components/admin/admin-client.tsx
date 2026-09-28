@@ -2,544 +2,367 @@
 
 import ThreeDotLoader from "@/components/icons/three-dot-loader";
 import { useAuth } from "@/components/provider/auth-provider";
-import {
-  ALERT_KIND_LABEL,
-  type AlertLogKind,
-  MOCK_ALERT_LOGS,
-  MOCK_ALERT_THRESHOLDS,
-  MOCK_USERS_ROWS,
-  USER_ROLE_LABEL,
-  formatIsoDate,
-  formatIsoDateTime,
-} from "@/components/admin/mock-data";
+import { apiFetch, type Role } from "@/lib/api";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import type React from "react";
-import { useState } from "react";
+import { type FormEvent, useMemo, useState } from "react";
 
-type TabKey = "thresholds" | "logs" | "users";
+type UserRow = {
+  id: number;
+  email: string;
+  name: string;
+  role: Role;
+  status: "ACTIVE" | "SUSPENDED";
+  lastLoginAt: string | null;
+  createdAt: string;
+  siteIds: string[];
+};
+type SiteOption = { id: string; name: string | null };
+type Invitation = {
+  id: string;
+  email: string;
+  name: string;
+  role: Role;
+  expiresAt: string;
+  createdAt: string;
+  siteIds: string[];
+};
+type InvitationCreated = {
+  id: string;
+  token: string;
+  email: string;
+  expiresAt: string;
+};
+type AuditRow = {
+  id: number;
+  actorName: string;
+  action: string;
+  targetType: string;
+  targetId: string | null;
+  createdAt: string;
+};
+type PasswordResetCreated = { token: string; email: string; expiresAt: string };
 
-const TABS: readonly { key: TabKey; label: string; table: string }[] = [
-  { key: "thresholds", label: "알림 임계값", table: "alert_settings" },
-  { key: "logs", label: "발송 이력", table: "alert_log" },
-  { key: "users", label: "사용자", table: "users" },
-] as const;
+const CARD =
+  "rounded-lg border bg-white shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card";
+const INPUT =
+  "w-full rounded-md border bg-white px-3 py-2 text-sm dark:border-background-dark-secondary dark:bg-background-dark-primary";
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
-  const [tab, setTab] = useState<TabKey>("thresholds");
+  const [tab, setTab] = useState<"users" | "invitations" | "audit">("users");
+  const users = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: () => apiFetch<UserRow[]>("/admin/accounts/users"),
+    enabled: Boolean(session && session.role !== "USER"),
+  });
+  const sites = useQuery({
+    queryKey: ["admin-sites"],
+    queryFn: () => apiFetch<SiteOption[]>("/admin/accounts/sites"),
+    enabled: Boolean(session && session.role !== "USER"),
+    staleTime: 5 * 60_000,
+  });
+  const invitations = useQuery({
+    queryKey: ["admin-invitations"],
+    queryFn: () => apiFetch<Invitation[]>("/admin/accounts/invitations"),
+    enabled: Boolean(session && session.role !== "USER"),
+  });
+  const audits = useQuery({
+    queryKey: ["admin-audits"],
+    queryFn: () => apiFetch<AuditRow[]>("/admin/accounts/audit-logs"),
+    enabled: tab === "audit" && Boolean(session && session.role !== "USER"),
+  });
 
-  if (isLoading) {
-    return (
-      <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
-        <ThreeDotLoader size="xl" />
-      </main>
-    );
-  }
-
-  if (
-    !session ||
-    (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")
-  ) {
-    return <AccessDenied hasSession={!!session} />;
-  }
+  if (isLoading) return <Loading />;
+  if (!session || session.role === "USER") return <AccessDenied />;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-      <header className="mb-5 lg:mb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="text-text-major dark:text-text-dark-primary text-xl font-semibold tracking-tight lg:text-2xl">
-            관리자
-          </h1>
-          <MockBadge />
-        </div>
-        <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
-          {session.email} (관리자) 로 로그인했습니다. 아래 화면은 실제 DB와
-          연결되지 않은 목업입니다.
+    <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 lg:px-6">
+      <header className="mb-5">
+        <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-bold">
+          계정 관리
+        </h1>
+        <p className="text-text-secondary mt-1 text-sm">
+          사용자 초대, 권한, 사업장 접근 범위와 변경 이력을 관리합니다.
         </p>
       </header>
 
-      {/* 목업 안내 배너 */}
-      <div className="mb-5 rounded-lg border border-amber-300/70 bg-amber-50/70 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/25 dark:text-amber-300">
-        <span className="font-semibold">아직 DB에 연결되지 않았습니다.</span>{" "}
-        표시되는 값은 전부 고정된 예시 데이터이며, 저장·수정 기능은 동작하지
-        않습니다.
+      <div className="mb-4 flex gap-2">
+        <Tab active={tab === "users"} onClick={() => setTab("users")}>사용자</Tab>
+        <Tab active={tab === "invitations"} onClick={() => setTab("invitations")}>초대</Tab>
+        <Tab active={tab === "audit"} onClick={() => setTab("audit")}>감사 로그</Tab>
       </div>
 
-      {/* 탭 */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div
-          role="group"
-          aria-label="관리자 화면 섹션 선택"
-          className="dark:bg-background-dark-secondary/60 bg-background-tertiary inline-flex h-9 items-center rounded-md p-1 text-sm"
-        >
-          {TABS.map((t) => (
-            <TabButton
-              key={t.key}
-              label={t.label}
-              active={tab === t.key}
-              onClick={() => setTab(t.key)}
-            />
-          ))}
-        </div>
-      </div>
-
-      {tab === "thresholds" && <ThresholdSection />}
-      {tab === "logs" && <AlertLogSection />}
-      {tab === "users" && <UserSection />}
+      {tab === "users" && (
+        <UserSection
+          users={users.data ?? []}
+          sites={sites.data ?? []}
+          loading={users.isLoading || sites.isLoading}
+          canManageAdmins={session.role === "SUPER_ADMIN"}
+        />
+      )}
+      {tab === "invitations" && (
+        <InvitationSection
+          invitations={invitations.data ?? []}
+          sites={sites.data ?? []}
+          canInviteAdmins={session.role === "SUPER_ADMIN"}
+        />
+      )}
+      {tab === "audit" && <AuditSection rows={audits.data ?? []} loading={audits.isLoading} />}
     </main>
   );
 }
 
-/* ---------------- 섹션: 알림 임계값 ---------------- */
-
-function ThresholdSection() {
-  const enabledCount = MOCK_ALERT_THRESHOLDS.filter((t) => t.enabled).length;
-
-  return (
-    <Section
-      title="알림 임계값"
-      description="측정 항목별 알림 발송 범위입니다. 현재는 읽기 전용입니다."
-      table="alert_settings"
-      meta={`사용중 ${enabledCount} / 전체 ${MOCK_ALERT_THRESHOLDS.length}`}
-    >
-      <TableWrap>
-        <table className="w-full min-w-[560px] border-collapse text-sm">
-          <THead>
-            <tr>
-              <Th>항목</Th>
-              <Th>설명</Th>
-              <Th className="text-right">최소값</Th>
-              <Th className="text-right">최대값</Th>
-              <Th className="text-right">사용여부</Th>
-            </tr>
-          </THead>
-          <tbody>
-            {MOCK_ALERT_THRESHOLDS.map((t) => (
-              <Tr key={t.key}>
-                <Td className="text-text-major dark:text-text-dark-primary font-semibold">
-                  {t.key}
-                </Td>
-                <Td className="text-text-secondary dark:text-text-dark-primary/70">
-                  {t.label}
-                  {t.unit ? (
-                    <span className="text-text-secondary/70 dark:text-text-dark-primary/50 ml-1 text-xs">
-                      ({t.unit})
-                    </span>
-                  ) : null}
-                </Td>
-                <Td
-                  className={[
-                    "text-right tabular-nums",
-                    t.enabled
-                      ? "text-text-major dark:text-text-dark-primary/90 font-medium"
-                      : "text-text-secondary dark:text-text-dark-primary/60",
-                  ].join(" ")}
-                >
-                  {t.min}
-                </Td>
-                <Td
-                  className={[
-                    "text-right tabular-nums",
-                    t.enabled
-                      ? "text-text-major dark:text-text-dark-primary/90 font-medium"
-                      : "text-text-secondary dark:text-text-dark-primary/60",
-                  ].join(" ")}
-                >
-                  {t.max}
-                </Td>
-                <Td className="text-right">
-                  <UsageBadge enabled={t.enabled} />
-                </Td>
-              </Tr>
-            ))}
-          </tbody>
-        </table>
-      </TableWrap>
-    </Section>
-  );
-}
-
-/* ---------------- 섹션: 알림 발송 이력 ---------------- */
-
-function AlertLogSection() {
-  return (
-    <Section
-      title="알림 발송 이력"
-      description="최근에 발송된 알림입니다. 최신순으로 정렬되어 있습니다."
-      table="alert_log"
-      meta={`최근 ${MOCK_ALERT_LOGS.length}건`}
-    >
-      <TableWrap>
-        <table className="w-full min-w-[860px] border-collapse text-sm">
-          <THead>
-            <tr>
-              <Th>병원명</Th>
-              <Th>유형</Th>
-              <Th>메시지</Th>
-              <Th className="text-right">트리거값</Th>
-              <Th className="text-right">발송시각</Th>
-            </tr>
-          </THead>
-          <tbody>
-            {MOCK_ALERT_LOGS.map((row) => (
-              <Tr key={row.id}>
-                <Td className="text-text-major dark:text-text-dark-primary font-medium">
-                  {row.site}
-                </Td>
-                <Td>
-                  <KindBadge kind={row.kind} />
-                </Td>
-                <Td
-                  wrap
-                  className="text-text-secondary dark:text-text-dark-primary/70"
-                >
-                  <span className="block max-w-[420px] leading-relaxed">
-                    {row.message}
-                    <span className="text-text-secondary/70 dark:text-text-dark-primary/50 ml-1.5 text-xs">
-                      · {row.metric}
-                    </span>
-                  </span>
-                </Td>
-                <Td className="text-text-major dark:text-text-dark-primary/90 text-right font-semibold tabular-nums">
-                  {row.triggeredValue}
-                </Td>
-                <Td className="text-text-secondary dark:text-text-dark-primary/70 text-right tabular-nums">
-                  {formatIsoDateTime(row.sentAt)}
-                </Td>
-              </Tr>
-            ))}
-          </tbody>
-        </table>
-      </TableWrap>
-    </Section>
-  );
-}
-
-/* ---------------- 섹션: 사용자 목록 ---------------- */
-
-function UserSection() {
-  return (
-    <Section
-      title="사용자 목록"
-      description="로그인 계정 목록입니다. 비밀번호는 어떤 경우에도 표시하지 않습니다."
-      table="users"
-      meta={`총 ${MOCK_USERS_ROWS.length}명`}
-    >
-      <TableWrap>
-        <table className="w-full min-w-[420px] border-collapse text-sm">
-          <THead>
-            <tr>
-              <Th>아이디</Th>
-              <Th>권한</Th>
-              <Th className="text-right">생성일</Th>
-            </tr>
-          </THead>
-          <tbody>
-            {MOCK_USERS_ROWS.map((u) => (
-              <Tr key={u.id}>
-                <Td className="text-text-major dark:text-text-dark-primary font-medium">
-                  {u.username}
-                </Td>
-                <Td>
-                  <RoleBadge admin={u.role === "admin"}>
-                    {USER_ROLE_LABEL[u.role]}
-                  </RoleBadge>
-                </Td>
-                <Td className="text-text-secondary dark:text-text-dark-primary/70 text-right tabular-nums">
-                  {formatIsoDate(u.createdAt)}
-                </Td>
-              </Tr>
-            ))}
-          </tbody>
-        </table>
-      </TableWrap>
-    </Section>
-  );
-}
-
-/* ---------------- 접근 제한 ---------------- */
-
-function AccessDenied({ hasSession }: { hasSession: boolean }) {
-  return (
-    <main className="mx-auto w-full max-w-6xl px-4 py-5 lg:px-8 lg:py-8">
-      <div className="dark:border-background-dark-secondary dark:bg-background-dark-card mx-auto max-w-md rounded-lg border bg-white p-6 text-center shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300">
-          <LockIcon className="h-5 w-5" />
-        </div>
-
-        <h1 className="text-text-major dark:text-text-dark-primary mt-4 text-lg font-semibold tracking-tight">
-          접근 권한이 없습니다
-        </h1>
-
-        <p className="text-text-secondary dark:text-text-dark-primary/60 mt-2 text-sm leading-relaxed">
-          {hasSession
-            ? "관리자 계정으로 로그인해야 이 화면을 볼 수 있습니다. 다른 계정으로 다시 로그인해 주세요."
-            : "이 화면은 관리자 전용입니다. 먼저 로그인해 주세요."}
-        </p>
-
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href="/login?next=/admin"
-            className="bg-button-primary hover:bg-button-primary-hover inline-flex h-10 items-center justify-center rounded-md px-4 text-sm font-semibold text-white transition-colors dark:text-white"
-          >
-            로그인하러 가기
-          </Link>
-          <Link
-            href="/"
-            className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:border-background-dark-secondary dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-medium transition-colors"
-          >
-            대시보드로
-          </Link>
-        </div>
-      </div>
-    </main>
-  );
-}
-
-/* ---------------- 공통 UI ---------------- */
-
-function Section({
-  title,
-  description,
-  table,
-  meta,
-  children,
-}: {
-  title: string;
-  description: string;
-  table: string;
-  meta: string;
-  children: React.ReactNode;
+function UserSection({ users, sites, loading, canManageAdmins }: {
+  users: UserRow[];
+  sites: SiteOption[];
+  loading: boolean;
+  canManageAdmins: boolean;
 }) {
+  if (loading) return <Loading />;
   return (
-    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
-      <div className="dark:border-background-dark-secondary flex flex-wrap items-start justify-between gap-2 border-b px-4 py-3.5">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-text-major dark:text-text-dark-primary text-[15px] font-semibold tracking-tight">
-              {title}
-            </h2>
-            <TableTag table={table} />
-          </div>
-          <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-xs leading-relaxed">
-            {description}
-          </p>
-        </div>
-        <span className="text-text-secondary dark:text-text-dark-primary/60 shrink-0 text-xs font-medium tabular-nums">
-          {meta}
-        </span>
-      </div>
-
-      {children}
+    <section className="space-y-3">
+      {users.map((user) => (
+        <UserEditor key={user.id} user={user} sites={sites} canManageAdmins={canManageAdmins} />
+      ))}
+      {users.length === 0 && <Empty>등록된 사용자가 없습니다.</Empty>}
     </section>
   );
 }
 
-/** 나중에 실제 연동할 때 참고할 원본 테이블명 */
-function TableTag({ table }: { table: string }) {
+function UserEditor({ user, sites, canManageAdmins }: {
+  user: UserRow;
+  sites: SiteOption[];
+  canManageAdmins: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [role, setRole] = useState<Role>(user.role);
+  const [status, setStatus] = useState(user.status);
+  const [siteIds, setSiteIds] = useState(user.siteIds);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [resetLink, setResetLink] = useState<string | null>(null);
+  const immutable = user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && !canManageAdmins);
+
+  async function save() {
+    setSaving(true);
+    setMessage(null);
+    try {
+      await apiFetch(`/admin/accounts/users/${user.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ role, status, siteIds }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
+      setMessage("저장했습니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createPasswordReset() {
+    setSaving(true);
+    setMessage(null);
+    try {
+      const result = await apiFetch<PasswordResetCreated>(`/admin/accounts/users/${user.id}/password-reset`, { method: "POST" });
+      setResetLink(`${window.location.origin}/reset-password?token=${encodeURIComponent(result.token)}`);
+      await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "재설정 링크를 만들지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
-    <span className="text-text-secondary/80 dark:bg-background-dark-secondary/60 dark:text-text-dark-primary/50 bg-background-tertiary rounded px-1.5 py-0.5 font-mono text-[10px] font-medium">
-      {table}
-    </span>
+    <article className={`${CARD} p-4`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold">{user.name}</p>
+          <p className="text-text-secondary text-sm">{user.email}</p>
+          <p className="text-text-secondary mt-1 text-xs">
+            최근 로그인 {formatDate(user.lastLoginAt)} · 가입 {formatDate(user.createdAt)}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <select className={INPUT} value={role} disabled={immutable}
+            onChange={(event) => setRole(event.target.value as Role)}>
+            {user.role === "SUPER_ADMIN" && <option value="SUPER_ADMIN">최고관리자</option>}
+            {(canManageAdmins || user.role === "ADMIN") && <option value="ADMIN">관리자</option>}
+            <option value="USER">일반 사용자</option>
+          </select>
+          <select className={INPUT} value={status} disabled={immutable}
+            onChange={(event) => setStatus(event.target.value as "ACTIVE" | "SUSPENDED")}>
+            <option value="ACTIVE">활성</option>
+            <option value="SUSPENDED">정지</option>
+          </select>
+        </div>
+      </div>
+      {role === "USER" && !immutable && (
+        <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />
+      )}
+      {!immutable && (
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+          {message && <span className="text-text-secondary text-xs">{message}</span>}
+          <button type="button" disabled={saving} onClick={createPasswordReset}
+            className="rounded-md border px-3 py-2 text-sm font-semibold dark:border-background-dark-secondary">
+            비밀번호 초기화 링크
+          </button>
+          <button type="button" disabled={saving} onClick={save}
+            className="bg-button-primary rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            {saving ? "저장 중…" : "변경 저장"}
+          </button>
+        </div>
+      )}
+      {resetLink && (
+        <div className="mt-3 rounded-md border border-amber-300 bg-amber-50 p-3 dark:bg-amber-950/20">
+          <p className="mb-2 text-xs font-semibold">1시간 동안 유효한 비밀번호 재설정 링크</p>
+          <textarea className={`${INPUT} min-h-20`} readOnly value={resetLink} />
+          <button type="button" className="mt-2 text-sm font-semibold underline" onClick={() => navigator.clipboard.writeText(resetLink)}>링크 복사</button>
+        </div>
+      )}
+    </article>
   );
 }
 
-function TableWrap({ children }: { children: React.ReactNode }) {
+function InvitationSection({ invitations, sites, canInviteAdmins }: {
+  invitations: Invitation[];
+  sites: SiteOption[];
+  canInviteAdmins: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<"ADMIN" | "USER">("USER");
+  const [siteIds, setSiteIds] = useState<string[]>([]);
+  const [link, setLink] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    setSaving(true);
+    setMessage(null);
+    try {
+      const result = await apiFetch<InvitationCreated>("/admin/accounts/invitations", {
+        method: "POST",
+        body: JSON.stringify({ email, name, role, siteIds }),
+      });
+      setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
+      setEmail("");
+      setName("");
+      setSiteIds([]);
+      await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
+      await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "초대하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function revoke(id: string) {
+    await apiFetch(`/admin/accounts/invitations/${id}`, { method: "DELETE" });
+    await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
+  }
+
   return (
-    <div className="overflow-x-auto overscroll-x-contain rounded-b-lg">
-      {children}
+    <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+      <form onSubmit={submit} className={`${CARD} space-y-3 p-4`}>
+        <h2 className="font-semibold">새 사용자 초대</h2>
+        <input className={INPUT} type="email" required placeholder="이메일" value={email}
+          onChange={(event) => setEmail(event.target.value)} />
+        <input className={INPUT} required placeholder="이름" value={name}
+          onChange={(event) => setName(event.target.value)} />
+        <select className={INPUT} value={role}
+          onChange={(event) => setRole(event.target.value as "ADMIN" | "USER")}>
+          <option value="USER">일반 사용자</option>
+          {canInviteAdmins && <option value="ADMIN">관리자</option>}
+        </select>
+        {role === "USER" && <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />}
+        {message && <p className="text-sm text-red-600">{message}</p>}
+        <button type="submit" disabled={saving}
+          className="bg-button-primary w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">
+          {saving ? "생성 중…" : "7일 초대 링크 생성"}
+        </button>
+        {link && (
+          <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm dark:bg-emerald-950/20">
+            <p className="mb-2 font-semibold">초대 링크가 생성되었습니다.</p>
+            <textarea className={`${INPUT} min-h-20`} readOnly value={link} />
+            <button type="button" className="mt-2 text-sm font-semibold underline"
+              onClick={() => navigator.clipboard.writeText(link)}>링크 복사</button>
+          </div>
+        )}
+      </form>
+      <section className={`${CARD} p-4`}>
+        <h2 className="mb-3 font-semibold">대기 중인 초대</h2>
+        <div className="space-y-2">
+          {invitations.map((invitation) => (
+            <div key={invitation.id} className="flex items-center justify-between gap-3 rounded-md border p-3 dark:border-background-dark-secondary">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">{invitation.name} · {invitation.email}</p>
+                <p className="text-text-secondary text-xs">{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
+              </div>
+              <button type="button" onClick={() => revoke(invitation.id)} className="text-sm font-semibold text-red-600">취소</button>
+            </div>
+          ))}
+          {invitations.length === 0 && <Empty>대기 중인 초대가 없습니다.</Empty>}
+        </div>
+      </section>
     </div>
   );
 }
 
-function THead({ children }: { children: React.ReactNode }) {
+function AuditSection({ rows, loading }: { rows: AuditRow[]; loading: boolean }) {
+  if (loading) return <Loading />;
   return (
-    <thead className="dark:border-background-dark-secondary dark:bg-background-dark-secondary/40 dark:text-text-dark-primary/70 bg-background-primary/60 text-text-secondary border-b">
-      {children}
-    </thead>
+    <section className={`${CARD} overflow-hidden`}>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[680px] text-sm">
+          <thead className="bg-background-primary dark:bg-background-dark-secondary">
+            <tr><th className="p-3 text-left">시각</th><th className="p-3 text-left">작업자</th><th className="p-3 text-left">작업</th><th className="p-3 text-left">대상</th></tr>
+          </thead>
+          <tbody>{rows.map((row) => (
+            <tr key={row.id} className="border-t dark:border-background-dark-secondary">
+              <td className="p-3">{formatDateTime(row.createdAt)}</td><td className="p-3">{row.actorName}</td>
+              <td className="p-3 font-medium">{actionLabel(row.action)}</td><td className="p-3">{row.targetType} {row.targetId ?? ""}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      {rows.length === 0 && <Empty>기록된 변경이 없습니다.</Empty>}
+    </section>
   );
 }
 
-function Tr({ children }: { children: React.ReactNode }) {
+function SiteChecks({ sites, selected, onChange }: { sites: SiteOption[]; selected: string[]; onChange: (value: string[]) => void }) {
+  const selectedSet = useMemo(() => new Set(selected), [selected]);
   return (
-    <tr className="dark:border-background-dark-secondary dark:hover:bg-background-dark-secondary/30 hover:bg-background-primary/40 border-b transition-colors last:border-b-0">
-      {children}
-    </tr>
+    <fieldset className="mt-3 rounded-md border p-3 dark:border-background-dark-secondary">
+      <legend className="px-1 text-xs font-semibold">접근 가능 사업장</legend>
+      <div className="max-h-44 space-y-1 overflow-y-auto">
+        {sites.map((site) => (
+          <label key={site.id} className="flex cursor-pointer items-center gap-2 py-1 text-sm">
+            <input type="checkbox" checked={selectedSet.has(site.id)} onChange={(event) => {
+              onChange(event.target.checked ? [...selected, site.id] : selected.filter((id) => id !== site.id));
+            }} />
+            <span>{site.id} · {site.name ?? "이름 없음"}</span>
+          </label>
+        ))}
+      </div>
+    </fieldset>
   );
 }
 
-function Th({
-  children,
-  className = "",
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th
-      scope="col"
-      className={[
-        "px-4 py-2.5 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase",
-        className,
-      ].join(" ")}
-    >
-      {children}
-    </th>
-  );
+function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return <button type="button" onClick={onClick} className={`rounded-md px-4 py-2 text-sm font-semibold ${active ? "bg-button-primary text-white" : "bg-background-tertiary dark:bg-background-dark-secondary"}`}>{children}</button>;
 }
-
-function Td({
-  children,
-  className = "",
-  wrap = false,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  /** 긴 문장 셀에서 줄바꿈을 허용합니다. (기본은 한 줄 고정) */
-  wrap?: boolean;
-}) {
-  return (
-    <td
-      className={[
-        "px-4 py-3",
-        wrap ? "whitespace-normal" : "whitespace-nowrap",
-        className,
-      ].join(" ")}
-    >
-      {children}
-    </td>
-  );
-}
-
-function TabButton({
-  label,
-  active,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        "inline-flex h-7 cursor-pointer items-center justify-center rounded px-3 text-xs font-semibold transition-all",
-        active
-          ? "dark:bg-background-dark-card dark:text-text-dark-primary text-text-major bg-white shadow-sm"
-          : "text-text-secondary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
-      ].join(" ")}
-      aria-pressed={active}
-    >
-      {label}
-    </button>
-  );
-}
-
-function MockBadge() {
-  return (
-    <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/50 dark:text-amber-300">
-      {/* 점 자체에 ping 을 걸면 주기마다 사라지므로, 잔상 레이어를 따로 둡니다. */}
-      <span className="relative flex h-1.5 w-1.5 shrink-0">
-        <span className="animate-ping-slow absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75" />
-        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-amber-500" />
-      </span>
-      목업 데이터
-    </span>
-  );
-}
-
-function UsageBadge({ enabled }: { enabled: boolean }) {
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        enabled
-          ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-          : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "h-1.5 w-1.5 rounded-full",
-          enabled ? "bg-emerald-500" : "bg-slate-400",
-        ].join(" ")}
-      />
-      {enabled ? "사용중" : "미사용"}
-    </span>
-  );
-}
-
-function KindBadge({ kind }: { kind: AlertLogKind }) {
-  const cls =
-    kind === "critical"
-      ? "bg-red-50 text-red-700 dark:bg-red-950/40 dark:text-red-300"
-      : kind === "warning"
-        ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300"
-        : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
-
-  const dotCls =
-    kind === "critical"
-      ? "bg-red-500"
-      : kind === "warning"
-        ? "bg-amber-500"
-        : "bg-emerald-500";
-
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        cls,
-      ].join(" ")}
-    >
-      <span className={["h-1.5 w-1.5 rounded-full", dotCls].join(" ")} />
-      {ALERT_KIND_LABEL[kind]}
-    </span>
-  );
-}
-
-function RoleBadge({
-  admin,
-  children,
-}: {
-  admin: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[11px] font-medium",
-        admin
-          ? "bg-brand-primary/10 text-brand-primary dark:bg-brand-dark-primary/20 dark:text-brand-dark-primary"
-          : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300",
-      ].join(" ")}
-    >
-      {children}
-    </span>
-  );
-}
-
-function LockIcon({ className = "" }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={1.8}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect
-        x="4"
-        y="10"
-        width="16"
-        height="10"
-        rx="2"
-      />
-      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
-    </svg>
-  );
-}
+function Loading() { return <main className="flex min-h-[50vh] items-center justify-center"><ThreeDotLoader size="xl" /></main>; }
+function Empty({ children }: { children: React.ReactNode }) { return <p className="text-text-secondary p-5 text-center text-sm">{children}</p>; }
+function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-center"><h1 className="text-xl font-bold">접근 권한이 없습니다</h1><Link href="/" className="mt-4 inline-block underline">대시보드로 이동</Link></main>; }
+function roleLabel(role: Role) { return role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
+function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
+function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
+function actionLabel(value: string) { return ({ ACCOUNT_INVITED: "사용자 초대", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료" } as Record<string, string>)[value] ?? value; }

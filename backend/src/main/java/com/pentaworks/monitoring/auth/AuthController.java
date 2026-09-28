@@ -10,6 +10,7 @@ import java.time.Instant;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -48,6 +49,14 @@ public class AuthController {
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request,
+                                                Authentication authentication, HttpServletResponse response) {
+        authService.changePassword(authentication.getName(), request.currentPassword(), request.newPassword());
+        response.addHeader(HttpHeaders.SET_COOKIE, authService.clearRefreshCookie().toString());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
     private ResponseEntity<LoginResponse> withRefreshCookie(AuthService.AuthResult result) {
         return ResponseEntity.ok()
             .cacheControl(CacheControl.noStore())
@@ -69,6 +78,7 @@ public class AuthController {
     }
 
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
+    public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
     public record LoginResponse(String accessToken, Instant accessTokenExpiresAt, SessionUser user) {}
     public record SessionUser(long id, String email, String name, String role) {}
 }

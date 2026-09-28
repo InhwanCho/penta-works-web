@@ -40,7 +40,7 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const { session, isLoading, isAdmin, login, logout } = useAuth();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);

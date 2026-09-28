@@ -9,7 +9,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, isLoading } = useAuth();
-  const publicPage = pathname === "/login";
+  const publicPage = pathname === "/login" || pathname === "/accept-invite" || pathname === "/reset-password";
 
   useEffect(() => {
     if (!publicPage && !isLoading && !session) {

@@ -2,6 +2,7 @@ package com.pentaworks.monitoring.alert;
 
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.util.List;
+import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +10,11 @@ import org.springframework.stereotype.Service;
 public class AlertService {
     private final JdbcTemplate jdbcTemplate;
     public AlertService(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
+
+    public List<PsiThreshold> psiThresholds(Set<String> allowedSiteIds) {
+        return psiThresholds().stream()
+            .filter(row -> allowedSiteIds.contains(row.siteid())).toList();
+    }
 
     public List<PsiThreshold> psiThresholds() {
         return jdbcTemplate.query("""

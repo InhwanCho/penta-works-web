@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(controllers = SecurityTest.Probe.class, properties = {
@@ -32,10 +33,20 @@ class SecurityTest {
         @GetMapping("/api/v1/probe") String data() { return "ok"; }
         @GetMapping("/api/v1/admin/probe") String admin() { return "ok"; }
         @GetMapping("/api/v1/dashboard") String dashboard() { return "ok"; }
+        @GetMapping("/api/v1/auth/invitations/token") String invitation() { return "ok"; }
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/change-password")
+        String changePassword() { return "ok"; }
     }
 
     @Test void dashboardRequiresAuthentication() throws Exception {
         mvc.perform(get("/api/v1/dashboard")).andExpect(status().isUnauthorized());
+    }
+
+    @Test void invitationLookupIsPublicButPasswordChangeIsPrivate() throws Exception {
+        mvc.perform(get("/api/v1/auth/invitations/token")).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/auth/change-password")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/auth/change-password").header("Authorization", "Bearer " + issue("USER")))
+            .andExpect(status().isOk());
     }
 
     @Test void validTokenIsAccepted() throws Exception {

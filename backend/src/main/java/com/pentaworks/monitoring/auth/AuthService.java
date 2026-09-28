@@ -69,7 +69,7 @@ public class AuthService {
         if (refreshToken == null || refreshToken.isBlank()) throw expiredSession();
         String oldHash = sha256(refreshToken);
         SessionRow session = jdbcTemplate.query("""
-            SELECT s.id AS session_id, u.id, u.email, u.password_hash, u.name, u.role, u.status,
+            SELECT s.id AS session_id, u.id, u.company_id, u.email, u.password_hash, u.name, u.role, u.status,
                    u.failed_login_count, u.locked_until
               FROM user_session s
               JOIN app_user u ON u.id = s.user_id
@@ -97,6 +97,28 @@ public class AuthService {
             UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6)
              WHERE refresh_token_hash=? AND revoked_at IS NULL
             """, sha256(refreshToken));
+    }
+
+    @Transactional
+    public void changePassword(String email, String currentPassword, String newPassword) {
+        UserRow user = findUserByEmail(normalizeEmail(email));
+        if (user == null || !passwordEncoder.matches(currentPassword, user.passwordHash())) {
+            throw invalidCredentials();
+        }
+        InvitationService.validatePassword(newPassword);
+        jdbcTemplate.update("""
+            UPDATE app_user SET password_hash=?,password_changed_at=CURRENT_TIMESTAMP(6),
+                   updated_at=CURRENT_TIMESTAMP(6) WHERE id=?
+            """, passwordEncoder.encode(newPassword), user.id());
+        jdbcTemplate.update("""
+            UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6)
+             WHERE user_id=? AND revoked_at IS NULL
+            """, user.id());
+        jdbcTemplate.update("""
+            INSERT INTO audit_log
+                (company_id,actor_user_id,actor_name,action,target_type,target_id,created_at)
+            VALUES (?,?,?,'PASSWORD_CHANGED','APP_USER',?,CURRENT_TIMESTAMP(6))
+            """, user.companyId(), user.id(), user.name(), Long.toString(user.id()));
     }
 
     public ResponseCookie refreshCookie(String refreshToken) {
@@ -132,14 +154,14 @@ public class AuthService {
 
     private UserRow findUserByEmail(String email) {
         return jdbcTemplate.query("""
-            SELECT id,email,password_hash,name,role,status,failed_login_count,locked_until
+            SELECT id,company_id,email,password_hash,name,role,status,failed_login_count,locked_until
               FROM app_user WHERE email=?
             """, rs -> rs.next() ? userRow(rs) : null, email);
     }
 
     private static UserRow userRow(java.sql.ResultSet rs) throws java.sql.SQLException {
         Timestamp locked = rs.getTimestamp("locked_until");
-        return new UserRow(rs.getLong("id"), rs.getString("email"), rs.getString("password_hash"),
+        return new UserRow(rs.getLong("id"), rs.getLong("company_id"), rs.getString("email"), rs.getString("password_hash"),
             rs.getString("name"), rs.getString("role"), rs.getString("status"),
             rs.getInt("failed_login_count"), locked == null ? null : locked.toInstant());
     }
@@ -186,7 +208,7 @@ public class AuthService {
         return new UnauthorizedException("로그인이 만료되었습니다. 다시 로그인해주세요.");
     }
 
-    record UserRow(long id, String email, String passwordHash, String name, String role, String status,
+    record UserRow(long id, long companyId, String email, String passwordHash, String name, String role, String status,
                    int failedLoginCount, Instant lockedUntil) {}
     private record SessionRow(String sessionId, UserRow user) {}
     public record AuthResult(LoginResponse response, String refreshToken) {}
