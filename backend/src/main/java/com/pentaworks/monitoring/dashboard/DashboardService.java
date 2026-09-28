@@ -106,7 +106,17 @@ public class DashboardService {
                 new Latest(rs.getTimestamp("date").toInstant(), metricMap(rs))));
 
         Map<String, CtrlRange> ctrl = new LinkedHashMap<>();
-        jdbcTemplate.query("SELECT * FROM ctrl ORDER BY site", (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"), ctrlRange(rs)));
+        jdbcTemplate.query("""
+            SELECT s.site,
+                   a.psi_min AS mrplel, a.psi_max AS mrpleh,
+                   c.mrlevl, c.mrlevh, c.actmpl, c.actmph, c.achuml, c.achumh,
+                   c.gctmpl, c.gctmph, c.gcflol, c.gcfloh,
+                   c.cctmpl, c.cctmph, c.ccflol, c.ccfloh
+              FROM site s
+              LEFT JOIN ctrl c ON c.site=s.site
+              LEFT JOIN alert_settings a ON a.siteid=s.site
+             ORDER BY s.site
+            """, (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"), ctrlRange(rs)));
         List<DashboardRow> rows = new ArrayList<>();
         for (Site site : sites) {
             Counts count = counts.get(site.id());

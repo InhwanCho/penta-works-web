@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,6 +35,8 @@ class SecurityTest {
         @GetMapping("/api/v1/admin/probe") String admin() { return "ok"; }
         @GetMapping("/api/v1/dashboard") String dashboard() { return "ok"; }
         @GetMapping("/api/v1/auth/invitations/token") String invitation() { return "ok"; }
+        @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/psi-thresholds/001")
+        String updateThreshold() { return "ok"; }
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/change-password")
         String changePassword() { return "ok"; }
     }
@@ -73,6 +76,18 @@ class SecurityTest {
         mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + issue("ADMIN")))
             .andExpect(status().isOk());
         mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + issue("SUPER_ADMIN")))
+            .andExpect(status().isOk());
+    }
+
+    @Test void onlyAdministratorsCanUpdateAlertThresholds() throws Exception {
+        mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
+                .header("Authorization", "Bearer " + issue("USER")))
+            .andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
+                .header("Authorization", "Bearer " + issue("ADMIN")))
+            .andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
+                .header("Authorization", "Bearer " + issue("SUPER_ADMIN")))
             .andExpect(status().isOk());
     }
 

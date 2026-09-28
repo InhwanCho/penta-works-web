@@ -3,7 +3,7 @@
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import type { PsiThreshold } from "@/lib/api";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 function fmtBound(v: number | null) {
   return v == null ? "-" : String(v);
@@ -12,18 +12,23 @@ function fmtBound(v: number | null) {
 export default function BaselinesClient({
   entries,
   loadFailed = false,
+  canEdit = false,
+  onSave,
 }: {
   entries: PsiThreshold[];
   loadFailed?: boolean;
+  canEdit?: boolean;
+  onSave: (entry: PsiThreshold) => Promise<PsiThreshold>;
 }) {
   const [q, setQ] = useState("");
+  const [editing, setEditing] = useState<PsiThreshold | null>(null);
 
   const filtered = useMemo(() => {
     const query = q.trim().toLowerCase();
     if (!query) return entries;
 
     return entries.filter((e) =>
-      (e.name ?? "").toLowerCase().includes(query),
+      (e.name ?? "").toLowerCase().includes(query) || e.siteid.toLowerCase().includes(query),
     );
   }, [q, entries]);
 
@@ -49,7 +54,7 @@ export default function BaselinesClient({
           병원별 기준값
         </h1>
         <p className="mt-2 text-sm font-medium text-white/70">
-          hePsi 알림 허용범위입니다. 범위를 벗어나면 알림이 발송됩니다.
+          hePsi 알림과 대시보드 이상 표시가 함께 사용하는 허용범위입니다.
         </p>
       </header>
 
@@ -99,11 +104,9 @@ export default function BaselinesClient({
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center">
-                    <span className="text-text-major dark:text-text-dark-primary truncate text-[15px] font-semibold">
-                      {e.name ?? "-"}
-                    </span>
+                    <div className="min-w-0"><span className="text-text-major dark:text-text-dark-primary block truncate text-[15px] font-semibold">{e.name ?? "-"}</span><span className="text-text-secondary text-xs">사업장 {e.siteid}</span></div>
                   </div>
-                  <ActiveBadge active={e.active} />
+                  <div className="flex items-center gap-2"><ActiveBadge active={e.active} />{canEdit && <EditButton onClick={() => setEditing(e)} />}</div>
                 </div>
                 <div className="bg-border/60 dark:bg-background-dark-secondary/60 my-3 h-px" />
                 <div className="flex items-end justify-between text-xs">
@@ -165,6 +168,7 @@ export default function BaselinesClient({
                   >
                     알림
                   </th>
+                  {canEdit && <th scope="col" className="px-4 py-2.5 text-right text-[11px] font-semibold tracking-wide uppercase">관리</th>}
                 </tr>
               </thead>
               <tbody>
@@ -174,7 +178,7 @@ export default function BaselinesClient({
                     className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 border-b transition-colors last:border-b-0"
                   >
                     <td className="text-text-major dark:text-text-dark-primary px-4 py-3 font-medium">
-                      {e.name ?? "-"}
+                      <span className="block">{e.name ?? "-"}</span><span className="text-text-secondary text-xs font-medium">{e.siteid}</span>
                     </td>
                     <td className="text-text-major dark:text-text-dark-primary px-4 py-3 text-right font-semibold tabular-nums">
                       {fmtBound(e.min)}
@@ -185,6 +189,7 @@ export default function BaselinesClient({
                     <td className="px-4 py-3">
                       <ActiveBadge active={e.active} />
                     </td>
+                    {canEdit && <td className="px-4 py-3 text-right"><EditButton onClick={() => setEditing(e)} /></td>}
                   </tr>
                 ))}
               </tbody>
@@ -192,7 +197,82 @@ export default function BaselinesClient({
           </div>
         )}
       </section>
+      {editing && <ThresholdEditor entry={editing} onClose={() => setEditing(null)} onSave={onSave} />}
     </main>
+  );
+}
+
+function EditButton({ onClick }: { onClick: () => void }) {
+  return <button type="button" onClick={onClick} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:bg-white/5 dark:text-sky-200 dark:hover:bg-sky-950/30">수정</button>;
+}
+
+function ThresholdEditor({ entry, onClose, onSave }: {
+  entry: PsiThreshold;
+  onClose: () => void;
+  onSave: (entry: PsiThreshold) => Promise<PsiThreshold>;
+}) {
+  const [min, setMin] = useState(entry.min == null ? "" : String(entry.min));
+  const [max, setMax] = useState(entry.max == null ? "" : String(entry.max));
+  const [active, setActive] = useState(entry.active);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    function close(event: KeyboardEvent) { if (event.key === "Escape" && !saving) onClose(); }
+    document.addEventListener("keydown", close);
+    return () => document.removeEventListener("keydown", close);
+  }, [onClose, saving]);
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const nextMin = Number(min);
+    const nextMax = Number(max);
+    if (min.trim() === "" || max.trim() === "" || !Number.isFinite(nextMin) || !Number.isFinite(nextMax)) {
+      setError("최소값과 최대값을 숫자로 입력해주세요.");
+      return;
+    }
+    if (nextMin < 0 || nextMax < 0) {
+      setError("기준값은 0 이상이어야 합니다.");
+      return;
+    }
+    if (nextMin > nextMax) {
+      setError("최소값은 최대값보다 클 수 없습니다.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ ...entry, min: nextMin, max: nextMax, active });
+      onClose();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 p-0 backdrop-blur-[2px] sm:items-center sm:p-4" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <form role="dialog" aria-modal="true" aria-labelledby="threshold-title" onSubmit={submit} className="w-full rounded-t-3xl border border-slate-200 bg-white p-5 shadow-[0_24px_80px_rgba(12,37,54,0.28)] sm:max-w-md sm:rounded-3xl sm:p-6 dark:border-white/10 dark:bg-background-dark-card">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid}</p><h2 id="threshold-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">He Pressure (psi) 허용범위</p></div>
+          <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm font-bold">최소값<input autoFocus type="number" min="0" step="any" required value={min} onChange={(event) => setMin(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold tabular-nums outline-none focus:border-sky-400 dark:border-white/10 dark:bg-white/5" /></label>
+          <label className="text-sm font-bold">최대값<input type="number" min="0" step="any" required value={max} onChange={(event) => setMax(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-base font-semibold tabular-nums outline-none focus:border-sky-400 dark:border-white/10 dark:bg-white/5" /></label>
+        </div>
+        <label className="mt-4 flex cursor-pointer items-center justify-between rounded-2xl bg-slate-50 px-4 py-3 dark:bg-white/4">
+          <span><span className="block text-sm font-bold">이상 알림 사용</span><span className="text-text-secondary mt-0.5 block text-xs">끄면 범위를 벗어나도 알림을 보내지 않습니다.</span></span>
+          <input type="checkbox" checked={active} onChange={(event) => setActive(event.target.checked)} className="h-5 w-5 accent-sky-700" />
+        </label>
+        {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          <button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-200 py-3 text-sm font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">취소</button>
+          <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover rounded-xl py-3 text-sm font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? "저장 중…" : "변경 저장"}</button>
+        </div>
+      </form>
+    </div>
   );
 }
 
