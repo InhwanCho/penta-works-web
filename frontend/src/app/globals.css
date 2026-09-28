@@ -130,6 +130,15 @@
     @apply text-brand-primary hover:text-brand-primary-hover dark:text-text-dark-primary;
   }
 
+  /* 데스크톱에서도 클릭 가능한 요소가 즉시 구분되도록 합니다. */
+  :where(a, button, select, summary, label[for], input[type="checkbox"], input[type="radio"]):not(:disabled) {
+    cursor: pointer;
+  }
+
+  :where(button, select, input):disabled {
+    cursor: not-allowed;
+  }
+
   /* 모바일에서 iOS zoom 방지(input 16px 이상) */
   input,
   textarea,

@@ -43,11 +43,12 @@ export default function BaselinesClient({
         </Link>
       </div>
 
-      <header className="mb-3 sm:mb-4">
-        <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
+      <header className="mb-5 overflow-hidden rounded-3xl bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white shadow-[0_16px_45px_rgba(17,65,94,0.16)] sm:px-7">
+        <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
           병원별 기준값
         </h1>
-        <p className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-sm font-medium">
+        <p className="mt-2 text-sm font-medium text-white/70">
           hePsi 알림 허용범위입니다. 범위를 벗어나면 알림이 발송됩니다.
         </p>
       </header>
@@ -69,7 +70,7 @@ export default function BaselinesClient({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="병원명으로 검색"
-            className="dark:border-background-dark-secondary dark:bg-background-dark-card placeholder:text-text-secondary/70 focus:border-text-major/40 dark:placeholder:text-text-dark-primary/40 dark:focus:border-text-dark-primary/40 w-full rounded-md border bg-white px-3.5 py-2.5 text-sm transition outline-none"
+            className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition outline-none placeholder:text-text-secondary/70 focus:border-sky-400 dark:border-white/8 dark:bg-background-dark-card dark:placeholder:text-text-dark-primary/40"
             inputMode="search"
             autoComplete="off"
           />
@@ -94,7 +95,7 @@ export default function BaselinesClient({
             {filtered.map((e) => (
               <li
                 key={e.siteid}
-                className="dark:border-background-dark-secondary dark:bg-background-dark-card rounded-xl border bg-white p-3 shadow-sm"
+                className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] dark:border-white/8 dark:bg-background-dark-card"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex min-w-0 items-center">
@@ -130,7 +131,7 @@ export default function BaselinesClient({
       </section>
 
       {/* Desktop: 테이블 */}
-      <section className="dark:border-background-dark-secondary dark:bg-background-dark-card hidden overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.04)] md:block">
+      <section className="hidden overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(22,58,82,0.06)] md:block dark:border-white/8 dark:bg-background-dark-card">
         {filtered.length === 0 ? (
           <div className="py-12">
             <EmptyState />
@@ -205,7 +206,7 @@ function StatChip({
   accent?: boolean;
 }) {
   return (
-    <div className="dark:border-background-dark-secondary dark:bg-background-dark-card inline-flex items-center gap-2 rounded-md border bg-white px-3 py-2 shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
+    <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5 shadow-sm dark:border-white/8 dark:bg-background-dark-card">
       <span className="text-text-secondary dark:text-text-dark-primary/60 text-xs font-medium">
         {label}
       </span>

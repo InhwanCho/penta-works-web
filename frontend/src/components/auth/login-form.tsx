@@ -8,10 +8,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useCallback, useMemo, useState } from "react";
 
 const CARD_CLASS =
-  "dark:border-background-dark-secondary dark:bg-background-dark-card rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]";
+  "rounded-3xl border border-slate-200/70 bg-white shadow-[0_20px_60px_rgba(22,58,82,0.12)] dark:border-white/8 dark:bg-background-dark-card";
 
 const INPUT_CLASS = [
-  "w-full rounded-md border bg-white px-3 py-2.5",
+  "w-full rounded-xl border bg-slate-50/60 px-3.5 py-3",
   "text-text-major placeholder:text-text-secondary/45",
   "dark:border-background-dark-secondary dark:bg-background-dark-primary/50",
   "dark:text-text-dark-primary dark:placeholder:text-text-dark-primary/30",
@@ -94,7 +94,7 @@ export default function LoginForm() {
   return (
     <main className="mx-auto flex w-full max-w-7xl items-center justify-center px-3 py-6 sm:px-4 sm:py-8 lg:px-6 lg:py-12">
       <div className="w-full max-w-md">
-        <div className={[CARD_CLASS, "rounded-xl p-4 sm:p-6 lg:p-8"].join(" ")}>
+        <div className={[CARD_CLASS, "overflow-hidden p-5 sm:p-7 lg:p-8"].join(" ")}>
           {/* 워드마크 */}
           <header className="flex flex-col items-center text-center">
             <Image
@@ -103,9 +103,9 @@ export default function LoginForm() {
               width={48}
               height={48}
               priority
-              className="h-12 w-12 rounded-lg"
+              className="h-14 w-14 rounded-2xl shadow-[0_8px_20px_rgba(22,58,82,0.16)]"
             />
-            <h1 className="text-text-major dark:text-text-dark-primary mt-3 text-xl font-semibold tracking-tight lg:text-2xl">
+            <h1 className="text-text-major dark:text-text-dark-primary mt-4 text-2xl font-extrabold tracking-tight">
               MrEyes
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
@@ -208,7 +208,7 @@ export default function LoginForm() {
                 <button
                   type="submit"
                   disabled={!canSubmit}
-                  className="bg-button-primary hover:bg-button-primary-hover disabled:hover:bg-button-primary mt-6 inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-md text-sm font-semibold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-45"
+                  className="bg-button-primary hover:bg-button-primary-hover disabled:hover:bg-button-primary mt-6 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   로그인
                 </button>

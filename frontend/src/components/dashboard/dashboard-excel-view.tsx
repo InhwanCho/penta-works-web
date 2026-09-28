@@ -120,10 +120,11 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="dashboard-grid-height dark:border-background-dark-secondary dark:bg-background-dark-card relative flex flex-col overflow-hidden rounded-md border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)] sm:max-h-[calc(100dvh-180px)] sm:rounded-lg">
-      <div className="dark:border-background-dark-secondary hidden shrink-0 border-b px-4 py-2.5 sm:block">
+    <section className="dashboard-grid-height relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] dark:border-white/8 dark:bg-background-dark-card">
+      <div className="hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
+        <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
-          관리자 뷰{" "}
+          전체 지표{" "}
           <span className="text-sm font-medium opacity-70">
             · {rows.length}개 병원
           </span>
@@ -131,6 +132,8 @@ export default function DashboardExcelView({
         <p className="text-text-secondary dark:text-text-dark-primary/70 text-xs">
           병원명 → 상세 보기 · 수치 → 병원·항목 확인
         </p>
+        </div>
+        <span className="rounded-full bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">가로로 밀어 더 보기</span>
       </div>
 
       {rows.length === 0 ? (
@@ -341,7 +344,7 @@ export default function DashboardExcelView({
       <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:px-4 sm:py-2.5">
         <div className="border-border/70 dark:border-background-dark-secondary mb-2 border-b pb-2 sm:hidden">
           <p className="text-text-major dark:text-text-dark-primary font-extrabold">
-            관리자 뷰{" "}
+            전체 지표{" "}
             <span className="font-medium opacity-70">
               · {rows.length}개 병원
             </span>

@@ -140,15 +140,21 @@ export default function DashboardClient() {
       <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         <DashboardScrollTo offset={80} />
 
-        <header className="mb-[8px] flex flex-wrap items-end justify-between gap-2 sm:mb-4 sm:gap-3">
-          <div>
-            <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight">
+        <header className="mb-3 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-4 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:mb-5 sm:px-5 dark:border-white/8 dark:bg-background-dark-card/90">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
+              <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
+              <span className="relative h-2.5 w-2.5 rounded-full bg-emerald-500" />
+            </span>
+            <div className="min-w-0">
+            <h1 className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight sm:text-2xl">
               실시간 현황
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 text-[0.8125rem] font-medium">
-              기준 시각{" "}
+              마지막 갱신{" "}
               <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>
             </p>
+            </div>
           </div>
 
           <ViewModeTabs
@@ -184,7 +190,7 @@ export default function DashboardClient() {
             </section>
 
             {/* Desktop: table */}
-            <section className="dark:border-background-dark-secondary dark:bg-background-dark-card hidden overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.04)] md:block">
+            <section className="hidden overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(22,58,82,0.06)] md:block dark:border-white/8 dark:bg-background-dark-card">
               {sortedRows.length === 0 ? (
                 <div className="py-12">
                   <EmptyState />
@@ -296,7 +302,7 @@ function ViewModeTabs({
     <div
       role="tablist"
       aria-label="대시보드 보기 방식"
-      className="dark:bg-background-dark-secondary/70 bg-background-tertiary inline-flex min-h-10 items-center rounded-lg p-1 text-sm shadow-inner"
+      className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1 text-sm dark:border-white/8 dark:bg-white/5"
     >
       <ViewModeTab
         active={value === "grid"}
@@ -328,9 +334,9 @@ function ViewModeTab({
       aria-selected={active}
       onClick={onClick}
       className={[
-        "inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-md px-2.5 text-sm font-bold whitespace-nowrap transition-all sm:px-3",
+        "inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-xl px-2.5 text-sm font-bold whitespace-nowrap transition-all sm:px-3",
         active
-          ? "text-text-major dark:bg-background-dark-card dark:text-text-dark-primary bg-white shadow-sm"
+          ? "bg-white text-[#174d70] shadow-sm dark:bg-sky-800 dark:text-white"
           : "text-text-secondary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
       ].join(" ")}
     >
@@ -369,8 +375,8 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
       href={`/sites/${row.siteSlug}`}
       id={`site-m-${row.siteSlug}`}
       className={[
-        "group block scroll-mt-[120px] rounded-xl border bg-white p-3 shadow-sm transition-all active:scale-[0.997]",
-        "hover:border-border-secondary dark:hover:border-background-dark-secondary/60",
+        "group block scroll-mt-[120px] rounded-2xl border bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] transition-all active:scale-[0.997]",
+        "hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:hover:border-sky-900/60",
         "dark:border-background-dark-secondary dark:bg-background-dark-card",
         anyAlert ? "border-red-300/80 dark:border-red-900/50" : "border-border",
       ].join(" ")}
@@ -391,10 +397,10 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
       </div>
 
       {/* Divider */}
-      <div className="bg-border/60 dark:bg-background-dark-secondary/60 my-3 h-px" />
+      <div className="bg-border/50 dark:bg-background-dark-secondary/60 my-3 h-px" />
 
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50/75 p-2.5 dark:bg-white/3">
         <MetricCol
           label="최신 시각"
           value={
