@@ -38,17 +38,9 @@ public class SecurityConfig {
                 response.getWriter().write("{\"message\":\"Unauthorized\"}");
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/sites/*/office-assets").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/sites/*/office-assets/**").authenticated()
-                .requestMatchers(org.springframework.http.HttpMethod.GET,
-                    "/actuator/health",
-                    "/api/v1/monitor",
-                    "/api/v1/dashboard",
-                    "/api/v1/sites",
-                    "/api/v1/sites/**",
-                    "/api/v1/alerts/psi-thresholds").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasRole("admin")
+                .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health", "/api/v1/monitor").permitAll()
+                .requestMatchers("/api/v1/admin/**").hasAnyRole("SUPER_ADMIN", "ADMIN")
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().denyAll())
             .build();
@@ -62,7 +54,7 @@ public class SecurityConfig {
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Request-Id"));
         config.setExposedHeaders(List.of("Authorization", "X-Request-Id"));
-        config.setAllowCredentials(false);
+        config.setAllowCredentials(true);
         config.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

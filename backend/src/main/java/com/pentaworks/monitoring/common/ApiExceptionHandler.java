@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -18,6 +19,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(UnauthorizedException.class)
     ResponseEntity<Map<String, Object>> unauthorized(UnauthorizedException error) {
         return response(HttpStatus.UNAUTHORIZED, error.getMessage());
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    ResponseEntity<Map<String, Object>> invalidRequest(MethodArgumentNotValidException error) {
+        return response(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요.");
     }
 
     @ExceptionHandler(OfficeIntegrationException.class)

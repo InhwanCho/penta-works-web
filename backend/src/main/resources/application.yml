@@ -27,11 +27,15 @@ management:
         include: health,info
 
 app:
+  dashboard:
+    refresh-ms: ${DASHBOARD_REFRESH_MS:10000}
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
   jwt:
     secret: ${JWT_SECRET}
-    expiration-minutes: ${JWT_EXPIRATION_MINUTES:43200}
+    access-expiration-minutes: ${JWT_ACCESS_EXPIRATION_MINUTES:43200}
+    refresh-expiration-days: ${JWT_REFRESH_EXPIRATION_DAYS:365}
+    secure-cookie: ${JWT_SECURE_COOKIE:false}
   monitor:
     cron-secret: ${CRON_SECRET:}
     slack-webhook-url: ${SLACK_WEBHOOK_URL:}

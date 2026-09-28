@@ -1,13 +1,16 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { login as requestLogin } from "@/lib/api";
+import {
+  login as requestLogin,
+  logout as requestLogout,
+  refreshAccessToken,
+} from "@/lib/api";
 import {
   type Role,
   type Session,
   clearStoredSession,
   readStoredSession,
-  writeStoredSession,
 } from "@/lib/auth";
 import {
   type ReactNode,
@@ -24,8 +27,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAdmin: boolean;
   role: Role | null;
-  login: (username: string, password: string) => Promise<Session | null>;
-  logout: () => void;
+  login: (email: string, password: string) => Promise<Session>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -33,9 +36,20 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAdmin: false,
   role: null,
-  login: async () => null,
-  logout: () => {},
+  login: async () => Promise.reject(new Error("AuthProvider is unavailable")),
+  logout: async () => {},
 });
+
+function sessionFromStorage(): Session | null {
+  const stored = readStoredSession();
+  if (!stored) return null;
+  return {
+    id: stored.id,
+    email: stored.email,
+    name: stored.name,
+    role: stored.role,
+  };
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -43,40 +57,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = readStoredSession();
-    setSession(
-      stored ? { username: stored.username, role: stored.role } : null,
-    );
-    setIsLoading(false);
+    const stored = sessionFromStorage();
+    if (stored) {
+      setSession(stored);
+      setIsLoading(false);
+    }
+
+    refreshAccessToken()
+      .then((refreshed) => {
+        setSession({
+          id: refreshed.id,
+          email: refreshed.email,
+          name: refreshed.name,
+          role: refreshed.role,
+        });
+      })
+      .catch(() => {
+        if (!stored) setSession(null);
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const login = useCallback(
-    async (username: string, password: string) => {
-      const result = await requestLogin(username, password);
+    async (email: string, password: string) => {
+      const result = await requestLogin(email, password);
       queryClient.clear();
-      writeStoredSession({ ...result.user, accessToken: result.accessToken });
-      setSession(result.user);
-      return result.user;
+      const next = {
+        id: result.id,
+        email: result.email,
+        name: result.name,
+        role: result.role,
+      };
+      setSession(next);
+      return next;
     },
     [queryClient],
   );
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await requestLogout();
     queryClient.clear();
     clearStoredSession();
     setSession(null);
   }, [queryClient]);
 
   useEffect(() => {
-    window.addEventListener("auth:expired", logout);
-    return () => window.removeEventListener("auth:expired", logout);
-  }, [logout]);
+    const refreshed = () => setSession(sessionFromStorage());
+    const expired = () => {
+      queryClient.clear();
+      setSession(null);
+    };
+    window.addEventListener("auth:refreshed", refreshed);
+    window.addEventListener("auth:expired", expired);
+    return () => {
+      window.removeEventListener("auth:refreshed", refreshed);
+      window.removeEventListener("auth:expired", expired);
+    };
+  }, [queryClient]);
 
   const value = useMemo<AuthContextType>(
     () => ({
       session,
       isLoading,
-      isAdmin: session?.role === "admin",
+      isAdmin:
+        session?.role === "SUPER_ADMIN" || session?.role === "ADMIN",
       role: session?.role ?? null,
       login,
       logout,

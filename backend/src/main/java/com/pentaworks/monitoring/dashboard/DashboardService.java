@@ -14,18 +14,45 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowCallbackHandler;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 @Service
 public class DashboardService {
+    private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
     private static final List<String> METRICS = List.of("recosi", "coldtp", "recoru", "hepres", "heleve", "actemp", "achumi", "gctemp", "gcflow", "cctemp", "ccflow");
     private final JdbcTemplate jdbcTemplate;
+    private volatile DashboardResponse cachedDashboard;
 
     public DashboardService(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
 
     public DashboardResponse getDashboard() {
+        DashboardResponse cached = cachedDashboard;
+        if (cached != null) return cached;
+        synchronized (this) {
+            if (cachedDashboard == null) cachedDashboard = loadDashboard();
+            return cachedDashboard;
+        }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    @Scheduled(fixedDelayString = "${app.dashboard.refresh-ms:10000}")
+    public void refreshDashboardCache() {
+        try {
+            DashboardResponse next = loadDashboard();
+            cachedDashboard = next;
+        } catch (Exception error) {
+            log.warn("Dashboard cache refresh failed; serving the last successful snapshot", error);
+        }
+    }
+
+    private DashboardResponse loadDashboard() {
         Instant now = Instant.now();
         Instant since1h = now.minus(Duration.ofHours(1));
         Instant since24h = now.minus(Duration.ofHours(24));
@@ -33,27 +60,35 @@ public class DashboardService {
 
         Map<String, Counts> counts = new HashMap<>();
         jdbcTemplate.query("""
-            SELECT siteid, MAX(date) AS last_at,
-                   SUM(date >= ?) AS count_1h, SUM(date >= ?) AS count_24h
-              FROM mrtb WHERE siteid IS NOT NULL AND date IS NOT NULL GROUP BY siteid
-            """, (RowCallbackHandler) rs -> counts.put(rs.getString("siteid"), new Counts(
-                rs.getTimestamp("last_at") == null ? null : rs.getTimestamp("last_at").toInstant(),
-                rs.getInt("count_1h"), rs.getInt("count_24h"))), since1h, since24h);
+            SELECT siteid, SUM(date >= ?) AS count_1h, COUNT(*) AS count_24h
+              FROM mrtb
+             WHERE siteid IS NOT NULL AND date >= ?
+             GROUP BY siteid
+            """, (RowCallbackHandler) rs -> counts.put(rs.getString("siteid"),
+                new Counts(rs.getInt("count_1h"), rs.getInt("count_24h"))), since1h, since24h);
 
-        Map<String, Map<String, Double>> metrics = new HashMap<>();
+        Map<String, Latest> latestBySite = new HashMap<>();
         jdbcTemplate.query("""
-            SELECT siteid, recosi, coldtp, recoru, hepres, heleve, actemp, achumi, gctemp, gcflow, cctemp, ccflow
-            FROM (SELECT m.*, ROW_NUMBER() OVER (PARTITION BY siteid ORDER BY date DESC, `index` DESC) AS rn
-                  FROM mrtb m WHERE siteid IS NOT NULL AND date IS NOT NULL) latest WHERE rn = 1
-            """, (RowCallbackHandler) rs -> metrics.put(rs.getString("siteid"), metricMap(rs)));
+            SELECT m.siteid, m.date, m.recosi, m.coldtp, m.recoru, m.hepres, m.heleve,
+                   m.actemp, m.achumi, m.gctemp, m.gcflow, m.cctemp, m.ccflow
+              FROM mrtb m
+              JOIN (
+                    SELECT siteid, MAX(`index`) AS max_index
+                      FROM mrtb
+                     WHERE siteid IS NOT NULL AND date IS NOT NULL
+                     GROUP BY siteid
+                   ) latest ON latest.siteid=m.siteid AND latest.max_index=m.`index`
+            """, (RowCallbackHandler) rs -> latestBySite.put(rs.getString("siteid"),
+                new Latest(rs.getTimestamp("date").toInstant(), metricMap(rs))));
 
         Map<String, CtrlRange> ctrl = new LinkedHashMap<>();
         jdbcTemplate.query("SELECT * FROM ctrl ORDER BY site", (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"), ctrlRange(rs)));
         List<DashboardRow> rows = new ArrayList<>();
         for (Site site : sites) {
             Counts count = counts.get(site.id());
-            Instant lastAt = count == null ? null : count.lastAt();
-            Map<String, Double> values = metrics.getOrDefault(site.id(), emptyMetrics());
+            Latest latest = latestBySite.get(site.id());
+            Instant lastAt = latest == null ? null : latest.lastAt();
+            Map<String, Double> values = latest == null ? emptyMetrics() : latest.metrics();
             rows.add(new DashboardRow(site.id(), siteSlug(site.id()), site.name(), lastAt == null ? null : lastAt.toString(),
                 lastAt == null ? null : Math.max(0, Duration.between(lastAt, now).toMinutes()),
                 count == null ? 0 : count.count1h(), count == null ? 0 : count.count24h(), values.get("hepres"), values.get("heleve"), values));
@@ -95,5 +130,6 @@ public class DashboardService {
     }
     private static String siteSlug(String id) { return id.matches("\\d+") ? String.valueOf(Integer.parseInt(id)) : id; }
     private record Site(String id, String name) {}
-    private record Counts(Instant lastAt, int count1h, int count24h) {}
+    private record Counts(int count1h, int count24h) {}
+    private record Latest(Instant lastAt, Map<String, Double> metrics) {}
 }

@@ -26,7 +26,7 @@ GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 �
 
 MREyes→Office 읽기 전용 연동은 Jenkins Secret Text 자격증 `mreyes-office-api-key`를 사용합니다. dev·prod 배포 시 같은 값을 각 환경파일의 `OFFICE_API_KEY`로 저장하고, 해당 키는 브라우저에 전달하지 않습니다.
 MREyes 브라우저는 로그인 JWT로 `GET /api/v1/sites/{siteId}/office-assets`를 호출하고, MREyes 백엔드가 서버 내부에서만 Office API 키를 첨부합니다.
-로그인 JWT 기본 유효기간은 30일(`43200`분)입니다. 기존 SHA-256 비밀번호는 사용자가 비밀번호를 바꾸지 않아도 정상 로그인 직후 BCrypt(12 rounds)로 자동 교체됩니다.
+로그인은 이메일을 ID로 사용합니다. Access Token은 기본 30일, HttpOnly Refresh Token은 기본 365일이며 앱을 다시 열거나 Access Token이 만료될 때 Refresh Token을 회전하면서 로그인 상태를 연장합니다. 비밀번호는 BCrypt(12 rounds)로 저장합니다.
 정비 사진은 Office API 키가 브라우저에 노출되지 않도록 MREyes 백엔드가 중계하며, 사이트 상세 화면에서 기기 폭에 맞춘 반응형 썸네일로 표시합니다.
 
 | Jenkins job | Branch | Compose project | Access |
@@ -48,8 +48,8 @@ sudo bash /home/inhwan/apps/pentaworks-prod/deploy/setup-production-origin.sh
 
 ## Security and verification
 
-로그인 DB가 확정되기 전까지 대시보드, 사이트 목록·상세, 알림 기준값 조회 API는 인증 없이 읽을 수 있습니다. 쓰기·관리자 API는 계속 JWT 권한을 검사하고 모니터 호출은 CRON_SECRET 검증을 유지합니다. 로그인 연결 시 공개된 읽기 경로도 다시 인증 대상으로 전환해야 합니다. JWT_SECRET은 최소 32바이트의 무작위 값으로 설정해야 하며 예시 값은 사용할 수 없습니다. 변경 후 프론트와 백엔드를 함께 배포하세요.
+대시보드, 사이트 목록·상세, 알림 기준값을 포함한 애플리케이션 API는 로그인이 필요합니다. 모니터 호출은 CRON_SECRET 검증을 유지합니다. JWT_SECRET은 최소 32바이트의 무작위 값으로 설정해야 하며 예시 값은 사용할 수 없습니다. 변경 후 프론트와 백엔드를 함께 배포하세요.
 
 검증: Java 17 이상에서 `cd backend && ./gradlew test`, 프론트에서 `pnpm lint`, `pnpm build`, `pnpm audit --prod`.
 
-남은 보안 개선: 아직 로그인하지 않은 기존 계정은 첫 정상 로그인 때 BCrypt로 전환됩니다. 현재 브라우저 토큰은 localStorage에 저장되므로 HttpOnly 쿠키로 전환하려면 CSRF 방어와 교차 출처 배포 설정을 함께 설계해야 합니다. 로그인 시도 제한도 운영 프록시 또는 공유 저장소 기반으로 추가해야 합니다.
+Access Token은 빠른 첫 화면 표시를 위해 브라우저 저장소에 유지하고, 장기 로그인용 Refresh Token만 Secure·HttpOnly·SameSite 쿠키에 저장합니다. 로그인 실패가 5회 누적되면 계정을 15분간 잠급니다.

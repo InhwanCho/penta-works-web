@@ -36,7 +36,10 @@ export default function AdminClient() {
     );
   }
 
-  if (!session || session.role !== "admin") {
+  if (
+    !session ||
+    (session.role !== "SUPER_ADMIN" && session.role !== "ADMIN")
+  ) {
     return <AccessDenied hasSession={!!session} />;
   }
 
@@ -50,7 +53,7 @@ export default function AdminClient() {
           <MockBadge />
         </div>
         <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
-          {session.username} (관리자) 로 로그인했습니다. 아래 화면은 실제 DB와
+          {session.email} (관리자) 로 로그인했습니다. 아래 화면은 실제 DB와
           연결되지 않은 목업입니다.
         </p>
       </header>

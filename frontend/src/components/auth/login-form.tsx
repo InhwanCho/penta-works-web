@@ -29,13 +29,10 @@ function safeNextPath(raw: string | null): string | null {
   return raw;
 }
 
-/** 권한별 기본 진입 경로 */
-function homePathFor(role: Role | null | undefined): string {
-  return role === "admin" ? "/admin" : "/";
-}
-
 function roleLabel(role: Role | null | undefined): string {
-  return role === "admin" ? "관리자" : "일반 사용자";
+  if (role === "SUPER_ADMIN") return "최고관리자";
+  if (role === "ADMIN") return "관리자";
+  return "일반 사용자";
 }
 
 export default function LoginForm() {
@@ -43,7 +40,7 @@ export default function LoginForm() {
   const searchParams = useSearchParams();
   const { session, isLoading, isAdmin, login, logout } = useAuth();
 
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,7 +50,7 @@ export default function LoginForm() {
     [searchParams],
   );
 
-  const canSubmit = username.trim().length > 0 && password.length > 0;
+  const canSubmit = email.trim().length > 0 && password.length > 0;
 
   // 이동 버튼 문구는 실제 이동 경로와 어긋나지 않게 맞춥니다.
   const moveLabel = nextPath
@@ -63,8 +60,8 @@ export default function LoginForm() {
       : "대시보드로 이동";
 
   const goAfterLogin = useCallback(
-    (target: Session | null) => {
-      router.replace(nextPath ?? homePathFor(target?.role));
+    () => {
+      router.replace(nextPath ?? "/");
     },
     [nextPath, router],
   );
@@ -75,21 +72,21 @@ export default function LoginForm() {
       if (!canSubmit) return;
 
       try {
-        const next = await login(username, password);
+        await login(email, password);
         setError(null);
-        goAfterLogin(next);
+        goAfterLogin();
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "로그인에 실패했습니다.",
         );
       }
     },
-    [canSubmit, goAfterLogin, login, password, username],
+    [canSubmit, email, goAfterLogin, login, password],
   );
 
-  const handleLogout = useCallback(() => {
-    logout();
-    setUsername("");
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setEmail("");
     setPassword("");
     setError(null);
   }, [logout]);
@@ -125,7 +122,7 @@ export default function LoginForm() {
               <SignedInPanel
                 session={session}
                 moveLabel={moveLabel}
-                onMove={() => goAfterLogin(session)}
+                onMove={goAfterLogin}
                 onLogout={handleLogout}
               />
             ) : (
@@ -136,23 +133,23 @@ export default function LoginForm() {
                 <div className="space-y-4">
                   <div>
                     <label
-                      htmlFor="login-username"
+                      htmlFor="login-email"
                       className="text-text-secondary dark:text-text-dark-primary/70 mb-1.5 block text-xs font-medium"
                     >
-                      아이디
+                      이메일
                     </label>
                     <input
-                      id="login-username"
-                      name="username"
-                      type="text"
-                      autoComplete="username"
+                      id="login-email"
+                      name="email"
+                      type="email"
+                      autoComplete="email"
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck={false}
-                      placeholder="아이디를 입력하세요"
-                      value={username}
+                      placeholder="name@example.com"
+                      value={email}
                       onChange={(e) => {
-                        setUsername(e.target.value);
+                        setEmail(e.target.value);
                         if (error) setError(null);
                       }}
                       className={INPUT_CLASS}
@@ -250,7 +247,7 @@ function SignedInPanel({
               계정
             </dt>
             <dd className="text-text-major dark:text-text-dark-primary truncate font-medium">
-              {session.username}
+              {session.email}
             </dd>
           </div>
           <div className="flex items-center justify-between gap-3">
@@ -286,11 +283,14 @@ function SignedInPanel({
 
 function RoleBadge({ role }: { role: Role }) {
   const cls =
-    role === "admin"
+    role === "SUPER_ADMIN" || role === "ADMIN"
       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
       : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300";
 
-  const dotCls = role === "admin" ? "bg-emerald-500" : "bg-slate-400";
+  const dotCls =
+    role === "SUPER_ADMIN" || role === "ADMIN"
+      ? "bg-emerald-500"
+      : "bg-slate-400";
 
   return (
     <span

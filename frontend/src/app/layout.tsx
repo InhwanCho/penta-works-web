@@ -1,4 +1,5 @@
 import Navbar from "@/components/common/navbar";
+import AuthGate from "@/components/auth/auth-gate";
 import { AuthProvider } from "@/components/provider/auth-provider";
 import { ModalProvider } from "@/components/provider/modal-provider";
 import { QueryProviders } from "@/components/provider/query-provider";
@@ -96,7 +97,7 @@ export default function RootLayout({
             <AuthProvider>
               <ModalProvider>
                 <Navbar />
-                {children}
+                <AuthGate>{children}</AuthGate>
               </ModalProvider>
             </AuthProvider>
           </ThemeProvider>

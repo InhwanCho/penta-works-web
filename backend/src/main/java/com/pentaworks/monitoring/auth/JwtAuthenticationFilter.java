@@ -20,7 +20,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         return request.getServletPath().equals("/api/v1/monitor")
-            || request.getServletPath().equals("/api/v1/auth/login");
+            || request.getServletPath().startsWith("/api/v1/auth/");
     }
 
     @Override
@@ -31,7 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (!header.startsWith("Bearer ")) throw new IllegalArgumentException("Invalid authorization");
                 Claims claims = tokens.verify(header.substring(7));
-                var authentication = new UsernamePasswordAuthenticationToken(claims.getSubject(), null,
+                var authentication = new UsernamePasswordAuthenticationToken(claims.get("email", String.class), null,
                     List.of(new SimpleGrantedAuthority("ROLE_" + claims.get("role", String.class))));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             } catch (JwtException | IllegalArgumentException error) {

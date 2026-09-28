@@ -2,9 +2,12 @@ import type { Role, Session } from "@/lib/api";
 
 export type { Role, Session };
 
-const STORAGE_KEY = "pentaworks_session";
+const STORAGE_KEY = "pentaworks_session_v2";
 
-export type StoredSession = Session & { accessToken: string };
+export type StoredSession = Session & {
+  accessToken: string;
+  accessTokenExpiresAt: string;
+};
 
 export function readStoredSession(): StoredSession | null {
   if (typeof window === "undefined") return null;
@@ -12,7 +15,12 @@ export function readStoredSession(): StoredSession | null {
     const value = JSON.parse(
       window.localStorage.getItem(STORAGE_KEY) ?? "null",
     ) as StoredSession | null;
-    return value?.username && value?.role && value?.accessToken ? value : null;
+    return value?.email &&
+      value?.role &&
+      value?.accessToken &&
+      value?.accessTokenExpiresAt
+      ? value
+      : null;
   } catch {
     return null;
   }
@@ -24,4 +32,5 @@ export function writeStoredSession(session: StoredSession): void {
 
 export function clearStoredSession(): void {
   window.localStorage.removeItem(STORAGE_KEY);
+  window.localStorage.removeItem("pentaworks_session");
 }
