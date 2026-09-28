@@ -39,3 +39,11 @@ app:
     enabled: ${OFFICE_INTEGRATION_ENABLED:false}
     base-url: ${OFFICE_BASE_URL:http://office-backend:8080}
     api-key: ${OFFICE_API_KEY:}
+  mrtb-sync:
+    enabled: ${MRTB_SYNC_ENABLED:false}
+    url: ${MRTB_SYNC_DB_URL:}
+    username: ${MRTB_SYNC_DB_USERNAME:}
+    password: ${MRTB_SYNC_DB_PASSWORD:}
+    interval-ms: ${MRTB_SYNC_INTERVAL_MS:10000}
+    batch-size: ${MRTB_SYNC_BATCH_SIZE:1000}
+    max-batches-per-run: ${MRTB_SYNC_MAX_BATCHES_PER_RUN:100}
