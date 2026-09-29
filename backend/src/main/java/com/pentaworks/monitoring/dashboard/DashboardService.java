@@ -117,10 +117,11 @@ public class DashboardService {
 
         Map<String, List<AlertIssue>> issuesBySite = new HashMap<>();
         jdbcTemplate.query("""
-            SELECT id,site_id,metric_key,event_type,message,occurred_at,acknowledged_at
-              FROM alert_event
-             WHERE recovered_at IS NULL AND event_type IN ('LOW','HIGH','NO_DATA')
-             ORDER BY occurred_at DESC,id DESC
+            SELECT e.id,e.site_id,r.metric_key,e.event_type,e.message,e.occurred_at,e.acknowledged_at
+              FROM alert_event e
+              JOIN alert_rule r ON r.id=e.rule_id
+             WHERE e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+             ORDER BY e.occurred_at DESC,e.id DESC
             """, (RowCallbackHandler) rs -> issuesBySite.computeIfAbsent(rs.getString("site_id"), ignored -> new ArrayList<>())
                 .add(new AlertIssue(rs.getLong("id"), rs.getString("metric_key"), rs.getString("event_type"),
                     rs.getString("message"), rs.getTimestamp("occurred_at").toInstant().toString(),
