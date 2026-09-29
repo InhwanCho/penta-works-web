@@ -56,6 +56,13 @@ public class AdminAccountController {
         return service.updateSite(currentUsers.require(authentication), siteId, request);
     }
 
+    @PatchMapping("/sites/{siteId}/visibility")
+    public SiteOption updateSiteVisibility(@PathVariable String siteId,
+                                           @Valid @RequestBody UpdateSiteVisibilityRequest request,
+                                           Authentication authentication) {
+        return service.updateSiteVisibility(currentUsers.require(authentication), siteId, request.visible());
+    }
+
     @GetMapping("/invitations")
     public List<InvitationSummary> invitations(Authentication authentication) {
         return service.invitations(currentUsers.require(authentication));
@@ -110,10 +117,11 @@ public class AdminAccountController {
                                     String contactName, String contactPhone, String timezone) {}
     public record UpdateSiteRequest(@NotBlank String name, String address, String contactName,
                                     String contactPhone, String timezone) {}
+    public record UpdateSiteVisibilityRequest(@jakarta.validation.constraints.NotNull Boolean visible) {}
     public record CompanySummary(long id, String code, String name) {}
     public record SiteOption(String id, String name, String address, String contactName,
                              String contactPhone, String timezone, long companyId,
-                             String companyCode, String companyName) {}
+                             String companyCode, String companyName, boolean dashboardVisible) {}
     public record InvitationSummary(String id, String email, String name, String role,
                                     Instant expiresAt, Instant createdAt, List<String> siteIds) {}
     public record InvitationCreated(String id, String token, String email, Instant expiresAt,

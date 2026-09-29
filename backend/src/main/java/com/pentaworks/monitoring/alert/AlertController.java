@@ -37,13 +37,42 @@ public class AlertController {
     @GetMapping("/psi-thresholds")
     public List<PsiThreshold> psiThresholds(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return alertService.psiThresholds(currentUsers.allowedSiteIds(user));
+        return alertService.psiThresholds(user.isAdmin()
+            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user));
     }
 
     @GetMapping("/thresholds")
     public List<SiteAlertSettings> thresholds(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return alertService.alertSettings(currentUsers.allowedSiteIds(user));
+        return alertService.alertSettings(user.isAdmin()
+            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user));
+    }
+
+    @GetMapping("/company-thresholds")
+    public List<AlertThreshold> companyThresholds(Authentication authentication) {
+        return alertService.companyThresholds(currentUsers.require(authentication));
+    }
+
+    @PatchMapping("/company-thresholds")
+    public List<AlertThreshold> updateCompanyThresholds(
+        @Valid @RequestBody @NotEmpty List<@Valid ThresholdUpdateRequest> request,
+        Authentication authentication) {
+        return alertService.updateCompanyThresholds(currentUsers.require(authentication),
+            request.stream().map(value -> new AlertService.ThresholdUpdate(
+                value.key(), value.min(), value.max(), value.active())).toList());
+    }
+
+    @PostMapping("/thresholds/{siteId}/restore-company")
+    public SiteAlertSettings restoreCompanyThresholds(@PathVariable String siteId,
+                                                       Authentication authentication) {
+        return alertService.restoreCompanyThresholds(currentUsers.require(authentication), siteId);
+    }
+
+    @PatchMapping("/policy/{siteId}")
+    public SiteAlertSettings updatePolicy(@PathVariable String siteId,
+                                          @Valid @RequestBody UpdatePolicyRequest request,
+                                          Authentication authentication) {
+        return alertService.setAlertsEnabled(currentUsers.require(authentication), siteId, request.enabled());
     }
 
     @PatchMapping("/thresholds/{siteId}")
@@ -63,7 +92,8 @@ public class AlertController {
     public List<AlertEventSummary> events(@RequestParam(defaultValue = "200") int limit,
                                           Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return alertEvents.events(currentUsers.allowedSiteIds(user), limit);
+        return alertEvents.events(user.isAdmin()
+            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user), limit);
     }
 
     @PatchMapping("/events/{eventId}/acknowledge")
@@ -105,5 +135,6 @@ public class AlertController {
                                                @NotNull List<@NotNull LocalDate> holidayDates) {}
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
                                          @NotNull Boolean active) {}
+    public record UpdatePolicyRequest(@NotNull Boolean enabled) {}
     public record AcknowledgeEventsRequest(@NotEmpty List<@NotNull Long> eventIds) {}
 }

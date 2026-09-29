@@ -19,6 +19,7 @@ import com.pentaworks.monitoring.common.ConflictException;
 import com.pentaworks.monitoring.common.ForbiddenException;
 import com.pentaworks.monitoring.common.NotFoundException;
 import com.pentaworks.monitoring.dashboard.DashboardService;
+import com.pentaworks.monitoring.alert.AlertEventService;
 import java.sql.Timestamp;
 import java.time.DateTimeException;
 import java.time.Instant;
@@ -46,15 +47,18 @@ public class AdminAccountService {
     private final DashboardService dashboard;
     private final AccountMailService mail;
     private final SessionRegistry sessions;
+    private final AlertEventService alertEvents;
 
     public AdminAccountService(JdbcTemplate jdbcTemplate, SecureTokens secureTokens, AuditService audit,
-                               DashboardService dashboard, AccountMailService mail, SessionRegistry sessions) {
+                               DashboardService dashboard, AccountMailService mail, SessionRegistry sessions,
+                               AlertEventService alertEvents) {
         this.jdbcTemplate = jdbcTemplate;
         this.secureTokens = secureTokens;
         this.audit = audit;
         this.dashboard = dashboard;
         this.mail = mail;
         this.sessions = sessions;
+        this.alertEvents = alertEvents;
     }
 
     public List<UserSummary> users(CurrentUser actor) {
@@ -82,7 +86,7 @@ public class AdminAccountService {
     public List<SiteOption> sites(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
-            SELECT cs.site_id,s.name,p.address,p.contact_name,p.contact_phone,
+            SELECT cs.site_id,cs.is_dashboard_visible,s.name,p.address,p.contact_name,p.contact_phone,
                    COALESCE(p.timezone,'Asia/Seoul') AS timezone,
                    c.id AS company_id,c.code AS company_code,c.name AS company_name
               FROM company_site cs
@@ -93,7 +97,7 @@ public class AdminAccountService {
             """, (rs, row) -> new SiteOption(rs.getString("site_id"), rs.getString("name"),
                 rs.getString("address"), rs.getString("contact_name"), rs.getString("contact_phone"),
                 rs.getString("timezone"), rs.getLong("company_id"), rs.getString("company_code"),
-                rs.getString("company_name")), actor.companyId());
+                rs.getString("company_name"), rs.getBoolean("is_dashboard_visible")), actor.companyId());
     }
 
     @Transactional
@@ -140,6 +144,25 @@ public class AdminAccountService {
             """, siteId, fields.name(), fields.address(), fields.contactName(), fields.contactPhone(), fields.timezone());
         audit.record(actor, "SITE_UPDATED", "SITE", siteId,
             Map.of("name", fields.name(), "timezone", fields.timezone()));
+        dashboard.invalidateCache();
+        return site(actor, siteId);
+    }
+
+    @Transactional
+    public SiteOption updateSiteVisibility(CurrentUser actor, String siteId, boolean visible) {
+        if (!actor.isSuperAdmin()) throw new ForbiddenException("회사 최고관리자 권한이 필요합니다.");
+        requireManagedSite(actor, siteId);
+        jdbcTemplate.update("UPDATE company_site SET is_dashboard_visible=? WHERE company_id=? AND site_id=?",
+            visible, actor.companyId(), siteId);
+        if (!visible) {
+            jdbcTemplate.update("""
+                INSERT INTO site_alert_policy (site_id,is_enabled,created_at,updated_at)
+                VALUES (?,FALSE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+                ON DUPLICATE KEY UPDATE is_enabled=FALSE,updated_at=CURRENT_TIMESTAMP(6)
+                """, siteId);
+            alertEvents.disableSite(siteId);
+        }
+        audit.record(actor, "SITE_VISIBILITY_UPDATED", "SITE", siteId, Map.of("dashboardVisible", visible));
         dashboard.invalidateCache();
         return site(actor, siteId);
     }

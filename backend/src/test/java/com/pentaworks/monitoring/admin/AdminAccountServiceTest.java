@@ -24,12 +24,24 @@ import static org.mockito.Mockito.when;
 
 class AdminAccountServiceTest {
     @Test
+    void companyAdministratorCannotHideSitesForTheWholeCompany() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class),
+            mock(AuditService.class), mock(DashboardService.class), mock(AccountMailService.class),
+            mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
+        CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
+
+        assertThrows(ForbiddenException.class, () -> service.updateSiteVisibility(admin, "001", false));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void regularUserCannotCreateSite() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
-            mock(AccountMailService.class), mock(SessionRegistry.class));
+            mock(AccountMailService.class), mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
 
         assertThrows(ForbiddenException.class, () -> service.createSite(user,
@@ -44,7 +56,7 @@ class AdminAccountServiceTest {
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
-            mock(AccountMailService.class), mock(SessionRegistry.class));
+            mock(AccountMailService.class), mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
 
         assertThrows(BadRequestException.class, () -> service.createSite(admin,
@@ -59,7 +71,7 @@ class AdminAccountServiceTest {
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
-            mock(AccountMailService.class), mock(SessionRegistry.class));
+            mock(AccountMailService.class), mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
 
         assertThrows(BadRequestException.class, () -> service.createSite(admin,
@@ -76,7 +88,7 @@ class AdminAccountServiceTest {
         AccountMailService mail = mock(AccountMailService.class);
         SessionRegistry sessions = mock(SessionRegistry.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
-            mail, sessions);
+            mail, sessions, mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
 
         assertThrows(ForbiddenException.class, () -> service.invite(admin,
@@ -91,7 +103,7 @@ class AdminAccountServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit,
-            mock(DashboardService.class), mock(AccountMailService.class), mock(SessionRegistry.class));
+            mock(DashboardService.class), mock(AccountMailService.class), mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser superAdmin = new CurrentUser(1, 1, "root@example.com", "Root", "SUPER_ADMIN", "ACTIVE");
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(1L), eq(1L))).thenAnswer(invocation -> {
             ResultSet rs = mock(ResultSet.class);
@@ -116,7 +128,7 @@ class AdminAccountServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit,
-            mock(DashboardService.class), mock(AccountMailService.class), mock(SessionRegistry.class));
+            mock(DashboardService.class), mock(AccountMailService.class), mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
         CurrentUser superAdmin = new CurrentUser(1, 1, "root@example.com", "Root", "SUPER_ADMIN", "ACTIVE");
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(2L), eq(1L))).thenAnswer(invocation -> {
             ResultSet rs = mock(ResultSet.class);

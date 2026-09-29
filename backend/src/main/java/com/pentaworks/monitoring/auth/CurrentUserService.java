@@ -47,6 +47,22 @@ public class CurrentUserService {
         return new LinkedHashSet<>(jdbcTemplate.query(sql, (rs, row) -> rs.getString(1), args));
     }
 
+    public Set<String> visibleSiteIds(CurrentUser user) {
+        String sql = user.isAdmin()
+            ? "SELECT site_id FROM company_site WHERE company_id=? AND is_dashboard_visible=TRUE ORDER BY site_id"
+            : "SELECT us.site_id FROM user_site us JOIN company_site cs ON cs.site_id=us.site_id " +
+                "WHERE us.user_id=? AND cs.company_id=? AND cs.is_dashboard_visible=TRUE ORDER BY us.site_id";
+        Object[] args = user.isAdmin() ? new Object[] {user.companyId()}
+            : new Object[] {user.id(), user.companyId()};
+        return new LinkedHashSet<>(jdbcTemplate.query(sql, (rs, row) -> rs.getString(1), args));
+    }
+
+    public void requireVisibleSiteAccess(CurrentUser user, String siteId) {
+        if (!visibleSiteIds(user).contains(siteId)) {
+            throw new ForbiddenException("대시보드에 표시되지 않는 사업장입니다.");
+        }
+    }
+
     public void requireSiteAccess(CurrentUser user, String siteId) {
         if (!allowedSiteIds(user).contains(siteId)) {
             throw new ForbiddenException("이 사업장에 접근할 권한이 없습니다.");

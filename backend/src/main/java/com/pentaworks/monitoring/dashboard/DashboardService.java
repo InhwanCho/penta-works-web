@@ -59,12 +59,13 @@ public class DashboardService {
         int noDataSites = (int) rows.stream().filter(row -> "NO_DATA".equals(row.alertStatus())).count();
         int openAlerts = rows.stream().mapToInt(DashboardRow::openAlertCount).sum();
         Map<String, CtrlRange> ctrl = all.ctrl().entrySet().stream()
-            .filter(entry -> "000".equals(entry.getKey()) || allowedSiteIds.contains(entry.getKey()))
+            .filter(entry -> allowedSiteIds.contains(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                 (left, right) -> left, LinkedHashMap::new));
         return new DashboardResponse(all.meta(),
             new Stats(rows.size(), active1h, rows.size() - active24h, total24h,
-                normalSites, warningSites, noDataSites, openAlerts), rows, ctrl, all.ctrlDefault());
+                normalSites, warningSites, noDataSites, openAlerts), rows, ctrl,
+            allowedSiteIds.contains("000") ? all.ctrlDefault() : null);
     }
 
     public void invalidateCache() {
@@ -128,6 +129,13 @@ public class DashboardService {
                     rs.getTimestamp("acknowledged_at") != null)));
 
         Map<String, CtrlRange> ctrl = new LinkedHashMap<>();
+        Map<String, Map<String, double[]>> inheritedRanges = new HashMap<>();
+        jdbcTemplate.query("""
+            SELECT cs.site_id,t.metric_key,t.min_value,t.max_value
+              FROM company_site cs JOIN company_alert_threshold t ON t.company_id=cs.company_id
+            """, (RowCallbackHandler) rs -> inheritedRanges
+                .computeIfAbsent(rs.getString("site_id"), ignored -> new HashMap<>())
+                .put(rs.getString("metric_key"), new double[] {rs.getDouble("min_value"), rs.getDouble("max_value")}));
         jdbcTemplate.query("""
             SELECT s.site,
                    a.psi_min AS mrplel, a.psi_max AS mrpleh,
@@ -144,7 +152,8 @@ public class DashboardService {
               FROM site s
               LEFT JOIN alert_settings a ON a.siteid=s.site
              ORDER BY s.site
-            """, (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"), ctrlRange(rs)));
+            """, (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"),
+                ctrlRange(rs, inheritedRanges.getOrDefault(rs.getString("site"), Map.of()))));
         List<DashboardRow> rows = new ArrayList<>();
         for (Site site : sites) {
             Counts count = counts.get(site.id());
@@ -186,16 +195,27 @@ public class DashboardService {
         return result;
     }
 
-    private CtrlRange ctrlRange(ResultSet rs) throws SQLException {
-        return new CtrlRange(number(rs, "recosil"), number(rs, "recosih"), number(rs, "coldtpl"), number(rs, "coldtph"),
-            number(rs, "recorul"), number(rs, "recoruh"),
-            number(rs, "mrplel"), number(rs, "mrpleh"), number(rs, "mrlevl"), number(rs, "mrlevh"),
-            number(rs, "actmpl"), number(rs, "actmph"), number(rs, "achuml"), number(rs, "achumh"),
-            number(rs, "gctmpl"), number(rs, "gctmph"), number(rs, "gcflol"), number(rs, "gcfloh"),
-            number(rs, "cctmpl"), number(rs, "cctmph"), number(rs, "ccflol"), number(rs, "ccfloh"));
+    private CtrlRange ctrlRange(ResultSet rs, Map<String, double[]> inherited) throws SQLException {
+        return new CtrlRange(number(rs, "recosil", inherited, "recosi", 0), number(rs, "recosih", inherited, "recosi", 1),
+            number(rs, "coldtpl", inherited, "coldtp", 0), number(rs, "coldtph", inherited, "coldtp", 1),
+            number(rs, "recorul", inherited, "recoru", 0), number(rs, "recoruh", inherited, "recoru", 1),
+            number(rs, "mrplel", inherited, "hepres", 0), number(rs, "mrpleh", inherited, "hepres", 1),
+            number(rs, "mrlevl", inherited, "heleve", 0), number(rs, "mrlevh", inherited, "heleve", 1),
+            number(rs, "actmpl", inherited, "actemp", 0), number(rs, "actmph", inherited, "actemp", 1),
+            number(rs, "achuml", inherited, "achumi", 0), number(rs, "achumh", inherited, "achumi", 1),
+            number(rs, "gctmpl", inherited, "gctemp", 0), number(rs, "gctmph", inherited, "gctemp", 1),
+            number(rs, "gcflol", inherited, "gcflow", 0), number(rs, "gcfloh", inherited, "gcflow", 1),
+            number(rs, "cctmpl", inherited, "cctemp", 0), number(rs, "cctmph", inherited, "cctemp", 1),
+            number(rs, "ccflol", inherited, "ccflow", 0), number(rs, "ccfloh", inherited, "ccflow", 1));
     }
 
-    private Double number(ResultSet rs, String field) throws SQLException { return parseNumber(rs.getString(field)); }
+    private Double number(ResultSet rs, String field, Map<String, double[]> inherited,
+                          String metric, int side) throws SQLException {
+        Double saved = parseNumber(rs.getString(field));
+        if (saved != null) return saved;
+        double[] range = inherited.get(metric);
+        return range == null ? null : range[side];
+    }
     public static Double parseNumber(String value) {
         if (value == null || value.isBlank()) return null;
         String cleaned = value.trim().replaceAll("[^\\d.+-]", "");

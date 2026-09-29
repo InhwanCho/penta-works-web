@@ -71,12 +71,14 @@ public class AlertService {
 
     public List<SiteAlertSettings> alertSettings() {
         Map<String, List<LocalDate>> holidays = holidayDates();
+        Map<Long, Map<String, AlertThreshold>> companyDefaults = companyDefaults();
         return jdbcTemplate.query("""
-            SELECT a.*, s.site AS registered_site, s.name,
+            SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
                    p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
                    p.quiet_start,p.quiet_end,p.suppress_weekends
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
+              LEFT JOIN company_site cs ON cs.site_id=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
               LEFT JOIN site_alert_policy p ON p.site_id=s.site
@@ -90,7 +92,78 @@ public class AlertService {
                 rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
                 localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
-                holidays.getOrDefault(rs.getString("registered_site"), List.of())));
+                holidays.getOrDefault(rs.getString("registered_site"), List.of()),
+                rs.getObject("is_dashboard_visible") != null && rs.getBoolean("is_dashboard_visible"),
+                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of())));
+    }
+
+    public List<AlertThreshold> companyThresholds(CurrentUser actor) {
+        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        Map<String, AlertThreshold> configured = companyDefaults().getOrDefault(actor.companyId(), Map.of());
+        return METRICS.stream().map(metric -> configured.getOrDefault(metric.key(),
+            new AlertThreshold(metric.key(), metric.label(), metric.unit(),
+                metric.defaultMin(), metric.defaultMax(), false))).toList();
+    }
+
+    @Transactional
+    public SiteAlertSettings setAlertsEnabled(CurrentUser actor, String siteId, boolean enabled) {
+        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        currentUsers.requireSiteAccess(actor, siteId);
+        if (enabled && !currentUsers.visibleSiteIds(actor).contains(siteId)) {
+            throw new BadRequestException("대시보드에 표시되는 사업장만 알림을 켤 수 있습니다.");
+        }
+        jdbcTemplate.update("""
+            INSERT INTO site_alert_policy (site_id,is_enabled,created_at,updated_at)
+            VALUES (?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),updated_at=CURRENT_TIMESTAMP(6)
+            """, siteId, enabled);
+        if (!enabled) alertEvents.disableSite(siteId);
+        audit.record(actor, "SITE_ALERT_POLICY_UPDATED", "SITE", siteId, Map.of("enabled", enabled));
+        dashboardService.invalidateCache();
+        return settings(siteId);
+    }
+
+    @Transactional
+    public List<AlertThreshold> updateCompanyThresholds(CurrentUser actor, List<ThresholdUpdate> updates) {
+        if (!actor.isSuperAdmin()) throw new ForbiddenException("회사 최고관리자 권한이 필요합니다.");
+        if (updates == null || updates.isEmpty()) throw new BadRequestException("변경할 기준값이 없습니다.");
+        Set<String> seen = new LinkedHashSet<>();
+        for (ThresholdUpdate update : updates) {
+            if (!METRIC_BY_KEY.containsKey(update.key()) || !seen.add(update.key())) {
+                throw new BadRequestException("중복되거나 지원하지 않는 측정항목입니다.");
+            }
+            validateThreshold(update.min(), update.max());
+        }
+        for (ThresholdUpdate update : updates) {
+            jdbcTemplate.update("""
+                INSERT INTO company_alert_threshold (company_id,metric_key,min_value,max_value,is_enabled)
+                VALUES (?,?,?,?,?) ON DUPLICATE KEY UPDATE min_value=VALUES(min_value),
+                    max_value=VALUES(max_value),is_enabled=VALUES(is_enabled),updated_at=CURRENT_TIMESTAMP(6)
+                """, actor.companyId(), update.key(), update.min(), update.max(), update.active());
+            if (!update.active()) {
+                List<String> inheriting = jdbcTemplate.query("""
+                    SELECT cs.site_id FROM company_site cs LEFT JOIN alert_settings a ON a.siteid=cs.site_id
+                     WHERE cs.company_id=? AND a.siteid IS NULL
+                    """, (rs, row) -> rs.getString(1), actor.companyId());
+                if (inheriting != null) inheriting.forEach(siteId -> alertEvents.disableRule(siteId, update.key()));
+            }
+        }
+        audit.record(actor, "COMPANY_THRESHOLDS_UPDATED", "COMPANY", String.valueOf(actor.companyId()),
+            Map.of("metricKeys", updates.stream().map(ThresholdUpdate::key).toList()));
+        dashboardService.invalidateCache();
+        return companyThresholds(actor);
+    }
+
+    @Transactional
+    public SiteAlertSettings restoreCompanyThresholds(CurrentUser actor, String siteId) {
+        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        currentUsers.requireSiteAccess(actor, siteId);
+        jdbcTemplate.update("DELETE FROM alert_settings WHERE siteid=?", siteId);
+        METRICS.forEach(metric -> alertEvents.disableRule(siteId, metric.key()));
+        audit.record(actor, "SITE_THRESHOLDS_RESTORED", "SITE", siteId,
+            Map.of("source", "COMPANY"));
+        dashboardService.invalidateCache();
+        return settings(siteId);
     }
 
     @Transactional
@@ -119,6 +192,9 @@ public class AlertService {
                                                  Boolean suppressWeekends, List<LocalDate> holidayDates) {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
+        if (Boolean.TRUE.equals(alertsEnabled) && !currentUsers.visibleSiteIds(actor).contains(siteId)) {
+            throw new BadRequestException("대시보드에 표시되는 사업장만 알림을 켤 수 있습니다.");
+        }
         if (updates == null || updates.isEmpty()) throw new BadRequestException("변경할 기준값이 없습니다.");
         if ((noDataMinutes == null) != (noDataActive == null)) {
             throw new BadRequestException("수신 중단 알림 설정을 확인해주세요.");
@@ -206,12 +282,14 @@ public class AlertService {
     }
 
     private SiteAlertSettings settings(String siteId) {
+        Map<Long, Map<String, AlertThreshold>> companyDefaults = companyDefaults();
         return jdbcTemplate.queryForObject("""
-            SELECT a.*, s.site AS registered_site, s.name,
+            SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
                    p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
                    p.quiet_start,p.quiet_end,p.suppress_weekends
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
+              LEFT JOIN company_site cs ON cs.site_id=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
               LEFT JOIN site_alert_policy p ON p.site_id=s.site
@@ -225,7 +303,9 @@ public class AlertService {
                 rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
                 localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
-                holidayDates(siteId)),
+                holidayDates(siteId), rs.getObject("is_dashboard_visible") != null &&
+                    rs.getBoolean("is_dashboard_visible"),
+                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of())),
             siteId);
     }
 
@@ -234,27 +314,43 @@ public class AlertService {
                                        int noDataMinutes, boolean noDataActive,
                                        boolean alertsEnabled, int triggerAfterMinutes, int repeatMinutes,
                                        LocalTime quietStart, LocalTime quietEnd,
-                                       boolean suppressWeekends, List<LocalDate> holidayDates) throws SQLException {
+                                       boolean suppressWeekends, List<LocalDate> holidayDates,
+                                       boolean dashboardVisible,
+                                       Map<String, AlertThreshold> companyDefaults) throws SQLException {
         List<AlertThreshold> thresholds = new ArrayList<>();
         for (Metric metric : METRICS) {
             String prefix = metric.storagePrefix();
             Double min = DashboardService.parseNumber(strings.get(prefix + "_min"));
             Double max = DashboardService.parseNumber(strings.get(prefix + "_max"));
-            if (min == null) min = metric.defaultMin();
-            if (max == null) max = metric.defaultMax();
-            boolean active = exists && (objects.get(prefix + "_active") == null
-                || !"0".equals(strings.get(prefix + "_active")));
+            AlertThreshold inherited = companyDefaults.get(metric.key());
+            if (min == null) min = inherited == null ? metric.defaultMin() : inherited.min();
+            if (max == null) max = inherited == null ? metric.defaultMax() : inherited.max();
+            boolean active = exists ? (objects.get(prefix + "_active") == null
+                || !"0".equals(strings.get(prefix + "_active"))) : inherited != null && inherited.active();
             thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active));
         }
         return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive,
             alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,
-            holidayDates);
+            holidayDates, dashboardVisible);
     }
 
     private static Map<String, Metric> metricMap() {
         Map<String, Metric> result = new LinkedHashMap<>();
         METRICS.forEach(metric -> result.put(metric.key(), metric));
         return Map.copyOf(result);
+    }
+
+    private Map<Long, Map<String, AlertThreshold>> companyDefaults() {
+        Map<Long, Map<String, AlertThreshold>> result = new LinkedHashMap<>();
+        jdbcTemplate.query("SELECT company_id,metric_key,min_value,max_value,is_enabled FROM company_alert_threshold",
+            (org.springframework.jdbc.core.RowCallbackHandler) rs -> {
+                Metric metric = METRIC_BY_KEY.get(rs.getString("metric_key"));
+                if (metric == null) return;
+                result.computeIfAbsent(rs.getLong("company_id"), ignored -> new LinkedHashMap<>())
+                    .put(metric.key(), new AlertThreshold(metric.key(), metric.label(), metric.unit(),
+                        rs.getDouble("min_value"), rs.getDouble("max_value"), rs.getBoolean("is_enabled")));
+            });
+        return result;
     }
 
     private static Time time(LocalTime value) { return value == null ? null : Time.valueOf(value); }

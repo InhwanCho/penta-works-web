@@ -19,6 +19,6 @@ public class DashboardController {
     @GetMapping
     public DashboardResponse getDashboard(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return dashboardService.getDashboard(currentUsers.allowedSiteIds(user));
+        return dashboardService.getDashboard(currentUsers.visibleSiteIds(user));
     }
 }

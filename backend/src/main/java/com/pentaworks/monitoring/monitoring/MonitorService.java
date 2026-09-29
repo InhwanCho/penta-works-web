@@ -47,7 +47,7 @@ public class MonitorService {
         List<Transition> transitions = new ArrayList<>();
         for (DashboardResponse.DashboardRow row : dashboardService.getDashboard().rows()) {
             SiteAlertSettings site = settings.get(row.siteDb());
-            if (row.name() == null || site == null || !site.alertsEnabled()) continue;
+            if (row.name() == null || site == null || !site.dashboardVisible() || !site.alertsEnabled()) continue;
             Transition noData = alertEvents.evaluateNoData(site, row.lagMin());
             if (noData != null) transitions.add(noData);
             if (site.noDataActive() && (row.lagMin() == null || row.lagMin() > site.noDataMinutes())) continue;

@@ -56,6 +56,7 @@ export type SiteAlertSettings = {
   quietEnd: string | null;
   suppressWeekends: boolean;
   holidayDates: string[];
+  dashboardVisible: boolean;
 };
 
 export type AlertEventSummary = {

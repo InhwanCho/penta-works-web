@@ -56,7 +56,7 @@ public class AlertEventService {
 
     @Transactional
     public Transition evaluate(SiteAlertSettings site, AlertThreshold threshold, Double value) {
-        if (!site.alertsEnabled() || !threshold.active()) return null;
+        if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active()) return null;
         jdbcTemplate.update("""
             INSERT INTO alert_rule
                 (site_id,metric_key,rule_type,min_value,max_value,severity,is_enabled,created_at,updated_at)
@@ -103,6 +103,7 @@ public class AlertEventService {
 
     @Transactional
     public Transition evaluateNoData(SiteAlertSettings site, Long lagMinutes) {
+        if (!site.dashboardVisible()) return null;
         if (!site.alertsEnabled() || !site.noDataActive()) return null;
         jdbcTemplate.update("""
             INSERT INTO alert_rule
@@ -204,6 +205,7 @@ public class AlertEventService {
             eventId);
         if (event == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
         currentUsers.requireSiteAccess(actor, event.siteId());
+        currentUsers.requireVisibleSiteAccess(actor, event.siteId());
         if (!"FAILED".equals(event.deliveryStatus())) throw new BadRequestException("전송에 실패한 알림만 재전송할 수 있습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
             event.metricKey(), null, event.eventType(), event.value(), event.min(), event.max(), event.message());

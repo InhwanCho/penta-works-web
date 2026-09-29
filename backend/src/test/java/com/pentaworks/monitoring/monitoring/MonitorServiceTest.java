@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 class MonitorServiceTest {
     @Test
@@ -57,6 +58,27 @@ class MonitorServiceTest {
         assertEquals("actemp", rows.get(0).metricKey());
         assertEquals("HIGH", rows.get(0).eventType());
         verify(alertEvents).markDelivery(List.of(10L), "SKIPPED", null, 0);
+    }
+
+    @Test
+    void hiddenSiteNeverCreatesOrSendsAlerts() {
+        DashboardService dashboard = mock(DashboardService.class);
+        AlertService alerts = mock(AlertService.class);
+        AlertEventService alertEvents = mock(AlertEventService.class);
+        AlertRecipientService recipients = mock(AlertRecipientService.class);
+        AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
+        DashboardResponse.DashboardRow row = new DashboardResponse.DashboardRow(
+            "001", "1", "병원", "2026-09-28T00:00:00Z", 0L, 1, 1, 1.0, 70.0,
+            Map.of("hepres", 1.0), "NORMAL", 0, 0, List.of());
+        when(dashboard.getDashboard()).thenReturn(new DashboardResponse(
+            new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1, 1, 0, 0, 0),
+            List.of(row), Map.of(), null));
+        when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true,
+            List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)),
+            30, true, true, 0, 0, null, null, false, List.of(), false)));
+
+        assertEquals(0, new MonitorService(dashboard, alerts, alertEvents, recipients, properties).run().get("count"));
+        verifyNoInteractions(alertEvents, recipients);
     }
 
     @Test

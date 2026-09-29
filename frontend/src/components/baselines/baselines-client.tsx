@@ -12,7 +12,13 @@ export default function BaselinesClient({
   entries,
   loadFailed = false,
   canEdit = false,
+  canEditCompany = false,
+  companyThresholds,
+  onSaveCompany,
+  onRestoreCompany,
   onSave,
+  onToggleVisibility,
+  onToggleAlerts,
   events,
   eventsLoading = false,
   eventsFailed = false,
@@ -29,7 +35,13 @@ export default function BaselinesClient({
   entries: SiteAlertSettings[];
   loadFailed?: boolean;
   canEdit?: boolean;
+  canEditCompany?: boolean;
+  companyThresholds: AlertThreshold[];
+  onSaveCompany: (thresholds: AlertThreshold[]) => Promise<AlertThreshold[]>;
+  onRestoreCompany: (siteId: string) => Promise<SiteAlertSettings>;
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
+  onToggleVisibility: (siteId: string, visible: boolean) => Promise<void>;
+  onToggleAlerts: (siteId: string, enabled: boolean) => Promise<void>;
   events: AlertEventSummary[];
   eventsLoading?: boolean;
   eventsFailed?: boolean;
@@ -43,7 +55,10 @@ export default function BaselinesClient({
   onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDeleteRecipient: (id: number) => Promise<void>;
 }) {
-  const [view, setView] = useState<"thresholds" | "events" | "recipients">("thresholds");
+  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients">("sites");
+  const [busySite, setBusySite] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [restoringSite, setRestoringSite] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<SiteAlertSettings | null>(null);
   const filtered = useMemo(() => {
@@ -58,6 +73,28 @@ export default function BaselinesClient({
     [entries],
   );
 
+  async function toggleVisibility(entry: SiteAlertSettings) {
+    setBusySite(entry.siteid); setActionError(null);
+    try { await onToggleVisibility(entry.siteid, !entry.dashboardVisible); }
+    catch (error) { setActionError(error instanceof Error ? error.message : "표시 설정을 변경하지 못했습니다."); }
+    finally { setBusySite(null); }
+  }
+
+  async function toggleAlerts(entry: SiteAlertSettings) {
+    setBusySite(entry.siteid); setActionError(null);
+    try { await onToggleAlerts(entry.siteid, !entry.alertsEnabled); }
+    catch (error) { setActionError(error instanceof Error ? error.message : "알림 설정을 변경하지 못했습니다."); }
+    finally { setBusySite(null); }
+  }
+
+  async function restoreCompany(entry: SiteAlertSettings) {
+    if (!window.confirm(`${entry.name ?? entry.siteid}의 병원별 측정 기준을 지우고 회사 공통 기준으로 되돌릴까요?`)) return;
+    setRestoringSite(entry.siteid); setActionError(null);
+    try { await onRestoreCompany(entry.siteid); }
+    catch (error) { setActionError(error instanceof Error ? error.message : "회사 기준으로 복원하지 못했습니다."); }
+    finally { setRestoringSite(null); }
+  }
+
   return (
     <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       <div className="mb-2 sm:mb-3">
@@ -70,18 +107,38 @@ export default function BaselinesClient({
         <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">알림 관리</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-white/70">
-          11개 측정항목의 허용범위와 데이터 수신 중단 알림을 관리합니다. 같은 범위가 대시보드 이상 표시에 적용됩니다.
+          먼저 대시보드에 보여줄 사업장을 선택하세요. 표시된 사업장에만 알림을 켤 수 있습니다.
         </p>
       </header>
 
       <div className="mb-5 inline-flex rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
-        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>기준값</ViewTab>
+        <ViewTab active={view === "sites"} onClick={() => setView("sites")}>사업장·알림</ViewTab>
+        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>상세 기준값</ViewTab>
         <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
         {canEdit && <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>수신 채널</ViewTab>}
       </div>
 
-      {view === "thresholds" ? <>
+      {view === "sites" ? <section className="space-y-3">
+        <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-100">
+          <p className="font-bold">사업장 표시 → 알림 사용 → 상세 기준값</p>
+          <p className="mt-1 text-xs opacity-75">표시를 끄면 대시보드에서 사라지고 진행 중인 알림도 종료됩니다. 다시 표시해도 알림은 직접 켜야 합니다.</p>
+        </div>
+        {actionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
+        {loadFailed && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">사업장 설정을 불러오지 못했습니다.</p>}
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="사업장 이름 또는 코드 검색" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-400 dark:border-white/10 dark:bg-background-dark-card" />
+        <div className="space-y-2">{filtered.map((entry) => <article key={entry.siteid} className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(22,58,82,0.035)] sm:flex-row sm:items-center dark:border-white/8 dark:bg-background-dark-card">
+          <div className="min-w-0 flex-1"><h2 className="truncate font-bold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-0.5 text-xs">{entry.siteid} · {entry.dashboardVisible ? (entry.alertsEnabled ? "대시보드 표시 · 알림 켜짐" : "대시보드 표시 · 알림 꺼짐") : "대시보드 숨김 · 알림 불가"}</p></div>
+          <div className="flex flex-wrap items-center gap-2">
+            {canEditCompany && <button type="button" disabled={busySite === entry.siteid} onClick={() => toggleVisibility(entry)} className={`min-h-10 cursor-pointer rounded-lg px-3 text-xs font-bold transition disabled:opacity-50 ${entry.dashboardVisible ? "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-sky-950/50 dark:text-sky-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`} aria-label={`${entry.name ?? entry.siteid} 대시보드 ${entry.dashboardVisible ? "숨기기" : "표시하기"}`}>{entry.dashboardVisible ? "대시보드 표시 중" : "대시보드 숨김"}</button>}
+            {canEdit && <button type="button" disabled={busySite === entry.siteid || !entry.dashboardVisible} onClick={() => toggleAlerts(entry)} className={`min-h-10 cursor-pointer rounded-lg px-3 text-xs font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${entry.alertsEnabled && entry.dashboardVisible ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`}>{entry.alertsEnabled && entry.dashboardVisible ? "알림 켜짐" : "알림 꺼짐"}</button>}
+            <button type="button" onClick={() => setSelected(entry)} className="min-h-10 cursor-pointer rounded-lg border border-slate-200 px-3 text-xs font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">상세 설정</button>
+          </div>
+        </article>)}</div>
+        {filtered.length === 0 && <EmptyState />}
+      </section> : view === "thresholds" ? <>
+      <CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} />
       {loadFailed && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50/70 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">기준값을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>}
+      {actionError && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto] sm:gap-3">
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원명 또는 사업장 코드 검색" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm outline-none transition placeholder:text-text-secondary/70 focus:border-sky-400 dark:border-white/8 dark:bg-background-dark-card" />
@@ -106,19 +163,47 @@ export default function BaselinesClient({
                   <RangePreview label="He Level" threshold={level} />
                   <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">수신 중단</p><p className="mt-1 text-sm font-extrabold tabular-nums">{entry.noDataActive ? `${entry.noDataMinutes}분` : "사용 안 함"}</p></div>
                 </div>
-                {!entry.configured && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">아직 저장된 기준값이 없습니다.</p>}
-                <button type="button" onClick={() => setSelected(entry)} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:text-sky-200 dark:hover:bg-sky-950/30">{canEdit ? "전체 기준값 관리" : "전체 기준값 보기"}</button>
+                <p className="text-text-secondary mt-3 text-xs">{entry.configured ? "병원별 기준 적용 중" : "회사 공통 기준 적용 중"}</p>
+                <div className="mt-3 flex gap-2"><button type="button" onClick={() => setSelected(entry)} className="min-h-10 flex-1 cursor-pointer rounded-lg border border-slate-200 px-3 text-sm font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:text-sky-200 dark:hover:bg-sky-950/30">{canEdit ? "상세 설정" : "기준값 보기"}</button>{canEdit && entry.configured && <button type="button" disabled={restoringSite === entry.siteid} onClick={() => restoreCompany(entry)} className="min-h-10 cursor-pointer rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:text-white/70">회사 기준 복원</button>}</div>
               </article>
             );
           })}
         </section>
       )}
       </> : view === "events" ? <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
-        : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
+        : <RecipientPanel sites={entries.filter((entry) => entry.dashboardVisible)} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
 
       {selected && <SiteThresholdEditor entry={selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
   );
+}
+
+function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
+  thresholds: AlertThreshold[];
+  canEdit: boolean;
+  onSave: (thresholds: AlertThreshold[]) => Promise<AlertThreshold[]>;
+}) {
+  const [draft, setDraft] = useState<AlertThreshold[]>(thresholds);
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => setDraft(thresholds), [thresholds]);
+  async function save() {
+    for (const row of draft) {
+      if (!Number.isFinite(row.min) || !Number.isFinite(row.max) || row.min < 0 || row.min > row.max) {
+        setError(`${row.label}: 최소·최대값을 확인해주세요.`); return;
+      }
+    }
+    setSaving(true); setError(null);
+    try { await onSave(draft); setOpen(false); }
+    catch (saveError) { setError(saveError instanceof Error ? saveError.message : "회사 기준을 저장하지 못했습니다."); }
+    finally { setSaving(false); }
+  }
+  if (thresholds.length === 0) return null;
+  return <section className="mb-4 rounded-xl border border-sky-200/80 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/15">
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">회사 공통 기준</h2><p className="text-text-secondary mt-1 text-xs">병원별 기준이 없는 사업장에 적용됩니다. 병원별 기준을 저장하면 그 사업장에는 회사 기준 변경이 자동 적용되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
+    {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "회사 기준 저장"}</button></div>}</>}
+  </section>;
 }
 
 function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate, onDelete }: {
@@ -344,12 +429,12 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다.</p></div>
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid} · {entry.configured ? "병원별 기준" : "회사 공통 기준 상속"}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다. 저장하면 이 사업장만 별도 기준을 사용합니다.</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           <section className={`mb-4 rounded-xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 한 번에 관리합니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">{entry.dashboardVisible ? "전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 관리합니다." : "숨긴 사업장은 알림을 켤 수 없습니다. 먼저 대시보드 표시를 켜주세요."}</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-text-secondary text-xs font-bold">이상 지속 후 알림 (분)<input type="number" min="0" max="1440" step="1" required value={triggerAfterMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setTriggerAfterMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 이상 감지 즉시 알립니다.</span></label>
               <label className="text-text-secondary text-xs font-bold">반복 알림 주기 (분)<input type="number" min="0" max="10080" step="1" required value={repeatMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setRepeatMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 최초 발생과 복구 시에만 알립니다.</span></label>

@@ -22,14 +22,14 @@ public class SiteController {
     @GetMapping
     public List<SiteResponse.SiteSummary> list(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return siteService.list(currentUsers.allowedSiteIds(user));
+        return siteService.list(currentUsers.visibleSiteIds(user));
     }
 
     @GetMapping("/{siteid}")
     public SiteResponse detail(@PathVariable String siteid, @RequestParam(defaultValue = "200") int take,
                                Authentication authentication) {
         var user = currentUsers.require(authentication);
-        currentUsers.requireSiteAccess(user, SiteService.normalizeSiteId(siteid));
+        currentUsers.requireVisibleSiteAccess(user, SiteService.normalizeSiteId(siteid));
         return siteService.detail(siteid, take);
     }
 }
