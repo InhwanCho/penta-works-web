@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class JwtTokens {
-    private static final Set<String> ROLES = Set.of("SUPER_ADMIN", "ADMIN", "USER");
+    private static final Set<String> ROLES = Set.of("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN", "USER");
 
     private final SecretKey key;
     private final long accessExpirationMinutes;

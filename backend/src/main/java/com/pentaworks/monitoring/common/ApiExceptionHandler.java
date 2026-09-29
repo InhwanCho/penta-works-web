@@ -6,6 +6,7 @@ import java.util.Map;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -39,6 +40,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> invalidRequest(MethodArgumentNotValidException error) {
         return response(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요.");
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<Map<String, Object>> uploadTooLarge(MaxUploadSizeExceededException error) {
+        return response(HttpStatus.BAD_REQUEST, "첨부 파일은 900KB 이하여야 합니다.");
     }
 
     @ExceptionHandler(OfficeIntegrationException.class)

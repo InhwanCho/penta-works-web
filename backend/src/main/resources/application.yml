@@ -30,6 +30,10 @@ spring:
           auth: ${SMTP_AUTH:true}
           starttls:
             enable: ${SMTP_STARTTLS:true}
+  servlet:
+    multipart:
+      max-file-size: 900KB
+      max-request-size: 1MB
 
 management:
   health:
@@ -45,6 +49,8 @@ app:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:}
     public-base-url: ${PUBLIC_BASE_URL:http://localhost:3000}
+  company-documents:
+    directory: ${COMPANY_DOCUMENTS_DIRECTORY:./data/company-documents}
   dashboard:
     refresh-ms: ${DASHBOARD_REFRESH_MS:10000}
   cors:

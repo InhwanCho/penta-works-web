@@ -82,6 +82,7 @@ export default function Navbar() {
                     <div className="py-1.5">
                       <MenuLink href="/" icon={<HomeIcon />}>대시보드</MenuLink>
                       <MenuLink href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
+                      {session.role === "PLATFORM_ADMIN" && <MenuLink href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
                       {isAdmin && <MenuLink href="/admin" icon={<UsersIcon />}>사용자 관리</MenuLink>}
                       <MenuLink href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
                     </div>
@@ -125,12 +126,13 @@ function PreferenceButton({ active, onClick, icon, children }: { active: boolean
   return <button type="button" onClick={onClick} className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${active ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200" : "border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:text-text-dark-primary/70 dark:hover:bg-white/5"}`}>{icon}{children}</button>;
 }
 
-function roleLabel(role: string) { return role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "사용자"; }
+function roleLabel(role: string) { return role === "PLATFORM_ADMIN" ? "플랫폼 관리자" : role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "사용자"; }
 const iconClass = "h-[18px] w-[18px]";
 function ChevronIcon({ className }: { className?: string }) { return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m6 9 6 6 6-6" /></svg>; }
 function HomeIcon() { return <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg>; }
 function GaugeIcon() { return <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 19a8 8 0 1 1 16 0"/><path d="m12 15 4-4"/><path d="M8 19h8"/></svg>; }
 function UsersIcon() { return <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3"/><path d="M3 20c0-4 2-6 6-6s6 2 6 6M16 5a3 3 0 0 1 0 6M17 14c2.7.4 4 2.3 4 5"/></svg>; }
+function CompanyIcon() { return <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 21V5l8-3 8 3v16M8 8h2M14 8h2M8 12h2M14 12h2M9 21v-5h6v5"/></svg>; }
 function PersonIcon() { return <svg className={iconClass} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>; }
 function TextIcon() { return <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>; }
 function MoonIcon() { return <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></svg>; }

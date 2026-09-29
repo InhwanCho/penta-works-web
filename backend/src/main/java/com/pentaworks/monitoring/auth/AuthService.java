@@ -76,6 +76,7 @@ public class AuthService {
                    u.failed_login_count, u.locked_until
               FROM user_session s
               JOIN app_user u ON u.id = s.user_id
+              JOIN company c ON c.id = u.company_id AND c.status='ACTIVE'
              WHERE s.refresh_token_hash=? AND s.revoked_at IS NULL
                AND s.expires_at > CURRENT_TIMESTAMP(6) AND u.status='ACTIVE'
             """, rs -> rs.next() ? new SessionRow(rs.getString("session_id"), userRow(rs)) : null, oldHash);
@@ -205,8 +206,10 @@ public class AuthService {
 
     private UserRow findUserByEmail(String email) {
         return jdbcTemplate.query("""
-            SELECT id,company_id,email,password_hash,name,role,status,failed_login_count,locked_until
-              FROM app_user WHERE email=?
+            SELECT u.id,u.company_id,u.email,u.password_hash,u.name,u.role,u.status,
+                   u.failed_login_count,u.locked_until
+              FROM app_user u JOIN company c ON c.id=u.company_id
+             WHERE u.email=? AND c.status='ACTIVE'
             """, rs -> rs.next() ? userRow(rs) : null, email);
     }
 

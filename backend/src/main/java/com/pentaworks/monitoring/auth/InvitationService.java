@@ -59,6 +59,12 @@ public class InvitationService {
             }
         }
         jdbcTemplate.update("UPDATE account_invitation SET accepted_at=CURRENT_TIMESTAMP(6) WHERE id=?", invitation.id());
+        if ("SUPER_ADMIN".equals(invitation.role())) {
+            jdbcTemplate.update("""
+                UPDATE company SET status='ACTIVE',updated_at=CURRENT_TIMESTAMP(6)
+                 WHERE id=? AND status='PENDING'
+                """, invitation.companyId());
+        }
         CurrentUser created = new CurrentUser(userId, invitation.companyId(), invitation.email(), invitation.name(),
             invitation.role(), "ACTIVE");
         audit.record(created, "INVITATION_ACCEPTED", "APP_USER", Long.toString(userId),

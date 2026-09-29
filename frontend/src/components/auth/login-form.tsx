@@ -32,6 +32,7 @@ function safeNextPath(raw: string | null): string | null {
 }
 
 function roleLabel(role: Role | null | undefined): string {
+  if (role === "PLATFORM_ADMIN") return "플랫폼 관리자";
   if (role === "SUPER_ADMIN") return "최고관리자";
   if (role === "ADMIN") return "관리자";
   return "일반 사용자";
@@ -307,12 +308,12 @@ function SignedInPanel({
 
 function RoleBadge({ role }: { role: Role }) {
   const cls =
-    role === "SUPER_ADMIN" || role === "ADMIN"
+    role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN" || role === "ADMIN"
       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
       : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300";
 
   const dotCls =
-    role === "SUPER_ADMIN" || role === "ADMIN"
+    role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN" || role === "ADMIN"
       ? "bg-emerald-500"
       : "bg-slate-400";
 

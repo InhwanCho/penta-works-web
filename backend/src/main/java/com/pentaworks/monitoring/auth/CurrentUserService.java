@@ -21,8 +21,9 @@ public class CurrentUserService {
             throw new UnauthorizedException("로그인이 필요합니다.");
         }
         CurrentUser user = jdbcTemplate.query("""
-            SELECT id,company_id,email,name,role,status
-              FROM app_user WHERE email=?
+            SELECT u.id,u.company_id,u.email,u.name,u.role,u.status
+              FROM app_user u JOIN company c ON c.id=u.company_id
+             WHERE u.email=? AND c.status='ACTIVE'
             """, rs -> rs.next() ? new CurrentUser(rs.getLong("id"), rs.getLong("company_id"),
                 rs.getString("email"), rs.getString("name"), rs.getString("role"), rs.getString("status")) : null,
             authentication.getName());
@@ -52,7 +53,8 @@ public class CurrentUserService {
     }
 
     public record CurrentUser(long id, long companyId, String email, String name, String role, String status) {
-        public boolean isSuperAdmin() { return "SUPER_ADMIN".equals(role); }
+        public boolean isPlatformAdmin() { return "PLATFORM_ADMIN".equals(role); }
+        public boolean isSuperAdmin() { return isPlatformAdmin() || "SUPER_ADMIN".equals(role); }
         public boolean isAdmin() { return isSuperAdmin() || "ADMIN".equals(role); }
     }
 }

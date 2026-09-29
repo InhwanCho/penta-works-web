@@ -10,7 +10,7 @@ const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"
 ).replace(/\/$/, "");
 
-export type Role = "SUPER_ADMIN" | "ADMIN" | "USER";
+export type Role = "PLATFORM_ADMIN" | "SUPER_ADMIN" | "ADMIN" | "USER";
 
 export type Session = {
   id: number;
@@ -134,7 +134,7 @@ export async function apiFetch<T>(
   options: RequestInit = {},
 ): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !headers.has("Content-Type"))
+  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
   const token = readStoredSession()?.accessToken;
   if (token && !isPublicAuthPath(path))

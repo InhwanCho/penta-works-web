@@ -133,7 +133,7 @@ export default function AdminClient() {
           users={users.data ?? []}
           sites={sites.data ?? []}
           loading={users.isLoading || sites.isLoading}
-          canManageAdmins={session.role === "SUPER_ADMIN"}
+          canManageAdmins={session.role === "PLATFORM_ADMIN" || session.role === "SUPER_ADMIN"}
           currentUserId={session.id}
         />
       )}
@@ -141,7 +141,7 @@ export default function AdminClient() {
         <InvitationSection
           invitations={invitations.data ?? []}
           sites={sites.data ?? []}
-          canInviteAdmins={session.role === "SUPER_ADMIN"}
+          canInviteAdmins={session.role === "PLATFORM_ADMIN" || session.role === "SUPER_ADMIN"}
         />
       )}
       {tab === "sites" && <SiteSection sites={sites.data ?? []} company={company.data ?? null} loading={sites.isLoading || company.isLoading} />}
@@ -176,7 +176,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
     <section>
       <div className={`${CARD} mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto]`}>
         <input type="search" className={INPUT} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름·이메일·전화번호 검색" />
-        <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
+        <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
@@ -207,8 +207,8 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
   const [message, setMessage] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const immutable = user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && !canManageAdmins);
-  const canDelete = user.id !== currentUserId && (user.role === "USER" || canManageAdmins);
+  const immutable = user.role === "PLATFORM_ADMIN" || user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && !canManageAdmins);
+  const canDelete = user.role !== "PLATFORM_ADMIN" && user.id !== currentUserId && (user.role === "USER" || canManageAdmins);
 
   async function save() {
     setSaving(true);
@@ -274,6 +274,7 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
         <div className="flex min-w-[13rem] flex-1 gap-2 sm:max-w-sm">
           <select className={INPUT} value={role} disabled={immutable}
             onChange={(event) => setRole(event.target.value as Role)}>
+            {user.role === "PLATFORM_ADMIN" && <option value="PLATFORM_ADMIN">플랫폼 관리자</option>}
             {user.role === "SUPER_ADMIN" && <option value="SUPER_ADMIN">최고관리자</option>}
             {(canManageAdmins || user.role === "ADMIN") && <option value="ADMIN">관리자</option>}
             <option value="USER">일반 사용자</option>
@@ -583,7 +584,7 @@ function Tab({ active, onClick, children }: { active: boolean; onClick: () => vo
 function Loading() { return <main className="flex min-h-[50vh] items-center justify-center"><ThreeDotLoader size="xl" /></main>; }
 function Empty({ children }: { children: React.ReactNode }) { return <p className="text-text-secondary p-5 text-center text-sm">{children}</p>; }
 function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-center"><h1 className="text-xl font-bold">접근 권한이 없습니다</h1><Link href="/" className="mt-4 inline-block underline">대시보드로 이동</Link></main>; }
-function roleLabel(role: Role) { return role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
+function roleLabel(role: Role) { return role === "PLATFORM_ADMIN" ? "플랫폼 관리자" : role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
 function actionLabel(value: string) { return ({ ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }

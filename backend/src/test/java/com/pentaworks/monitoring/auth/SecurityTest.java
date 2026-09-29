@@ -44,6 +44,7 @@ class SecurityTest {
     static class Probe {
         @GetMapping("/api/v1/probe") String data() { return "ok"; }
         @GetMapping("/api/v1/admin/probe") String admin() { return "ok"; }
+        @GetMapping("/api/v1/platform/probe") String platform() { return "ok"; }
         @GetMapping("/api/v1/dashboard") String dashboard() { return "ok"; }
         @GetMapping("/api/v1/auth/invitations/token") String invitation() { return "ok"; }
         @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/psi-thresholds/001")
@@ -87,6 +88,15 @@ class SecurityTest {
         mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + issue("ADMIN")))
             .andExpect(status().isOk());
         mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + issue("SUPER_ADMIN")))
+            .andExpect(status().isOk());
+        mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + issue("PLATFORM_ADMIN")))
+            .andExpect(status().isOk());
+    }
+
+    @Test void onlyPlatformAdministratorCanAccessCompanyManagement() throws Exception {
+        mvc.perform(get("/api/v1/platform/probe").header("Authorization", "Bearer " + issue("SUPER_ADMIN")))
+            .andExpect(status().isForbidden());
+        mvc.perform(get("/api/v1/platform/probe").header("Authorization", "Bearer " + issue("PLATFORM_ADMIN")))
             .andExpect(status().isOk());
     }
 

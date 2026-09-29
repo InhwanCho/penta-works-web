@@ -120,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isAdmin:
-        session?.role === "SUPER_ADMIN" || session?.role === "ADMIN",
+        session?.role === "PLATFORM_ADMIN" || session?.role === "SUPER_ADMIN" || session?.role === "ADMIN",
       role: session?.role ?? null,
       login,
       logout,

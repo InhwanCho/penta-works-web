@@ -62,7 +62,8 @@ public class AdminAccountService {
         return jdbcTemplate.query("""
             SELECT id,email,name,phone,role,status,last_login_at,created_at
               FROM app_user WHERE company_id=? AND email IS NOT NULL AND status<>'DELETED'
-             ORDER BY CASE role WHEN 'SUPER_ADMIN' THEN 0 WHEN 'ADMIN' THEN 1 ELSE 2 END, name, email
+             ORDER BY CASE role WHEN 'PLATFORM_ADMIN' THEN 0 WHEN 'SUPER_ADMIN' THEN 1 WHEN 'ADMIN' THEN 2 ELSE 3 END,
+                      name,email
             """, (rs, row) -> new UserSummary(rs.getLong("id"), rs.getString("email"), rs.getString("name"),
                 rs.getString("phone"), rs.getString("role"), rs.getString("status"), instant(rs.getTimestamp("last_login_at")),
                 instant(rs.getTimestamp("created_at")), userSites(rs.getLong("id"))), actor.companyId());
@@ -245,6 +246,7 @@ public class AdminAccountService {
                 rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
                 rs.getString("status")) : null, userId, actor.companyId());
         if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
+        if ("PLATFORM_ADMIN".equals(target.role())) throw new ForbiddenException("플랫폼 관리자 계정은 변경할 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) throw new ForbiddenException("최고관리자 계정은 변경할 수 없습니다.");
         if (!actor.isSuperAdmin() && "ADMIN".equals(target.role())) {
             throw new ForbiddenException("관리자 계정은 최고관리자만 변경할 수 있습니다.");
@@ -298,13 +300,14 @@ public class AdminAccountService {
             userId, actor.companyId());
         if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
         if (target.id() == actor.id()) throw new BadRequestException("현재 로그인한 본인 계정은 삭제할 수 없습니다.");
+        if ("PLATFORM_ADMIN".equals(target.role())) throw new ForbiddenException("플랫폼 관리자 계정은 삭제할 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) {
             if (!actor.isSuperAdmin()) throw new ForbiddenException("최고관리자 계정은 최고관리자만 삭제할 수 있습니다.");
             jdbcTemplate.queryForObject("SELECT id FROM company WHERE id=? FOR UPDATE", Long.class,
                 actor.companyId());
             Integer count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM app_user
-                 WHERE company_id=? AND role='SUPER_ADMIN' AND status<>'DELETED'
+                 WHERE company_id=? AND role IN ('PLATFORM_ADMIN','SUPER_ADMIN') AND status<>'DELETED'
                 """, Integer.class, actor.companyId());
             if (count == null || count <= 1) throw new BadRequestException("마지막 최고관리자 계정은 삭제할 수 없습니다.");
         } else if ("ADMIN".equals(target.role()) && !actor.isSuperAdmin()) {
@@ -334,6 +337,9 @@ public class AdminAccountService {
                 rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
                 rs.getString("status")) : null, userId, actor.companyId());
         if (target == null || target.email() == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
+        if ("PLATFORM_ADMIN".equals(target.role()) && target.id() != actor.id()) {
+            throw new ForbiddenException("다른 플랫폼 관리자의 비밀번호를 초기화할 수 없습니다.");
+        }
         if ("SUPER_ADMIN".equals(target.role()) && target.id() != actor.id()) {
             throw new ForbiddenException("다른 최고관리자의 비밀번호를 초기화할 수 없습니다.");
         }
