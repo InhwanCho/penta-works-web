@@ -32,6 +32,9 @@ spring:
             enable: ${SMTP_STARTTLS:true}
 
 management:
+  health:
+    mail:
+      enabled: ${MAIL_ENABLED:false}
   endpoints:
     web:
       exposure:
