@@ -25,12 +25,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, com.pentaworks.monitoring.auth.JwtTokens tokens) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, com.pentaworks.monitoring.auth.JwtTokens tokens,
+                                            com.pentaworks.monitoring.auth.SessionRegistry sessions) throws Exception {
         return http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .addFilterBefore(new com.pentaworks.monitoring.auth.JwtAuthenticationFilter(tokens),
+            .addFilterBefore(new com.pentaworks.monitoring.auth.JwtAuthenticationFilter(tokens, sessions),
                 org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class)
             .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, error) -> {
                 response.setStatus(401);

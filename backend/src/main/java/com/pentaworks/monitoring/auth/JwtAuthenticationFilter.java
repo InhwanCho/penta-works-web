@@ -15,7 +15,11 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtTokens tokens;
-    public JwtAuthenticationFilter(JwtTokens tokens) { this.tokens = tokens; }
+    private final SessionRegistry sessions;
+    public JwtAuthenticationFilter(JwtTokens tokens, SessionRegistry sessions) {
+        this.tokens = tokens;
+        this.sessions = sessions;
+    }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
@@ -36,6 +40,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 if (!header.startsWith("Bearer ")) throw new IllegalArgumentException("Invalid authorization");
                 Claims claims = tokens.verify(header.substring(7));
+                long userId = Long.parseLong(claims.getSubject());
+                if (!sessions.isActive(claims.get("sid", String.class), userId)) {
+                    throw new IllegalArgumentException("Inactive session");
+                }
                 var authentication = new UsernamePasswordAuthenticationToken(claims.get("email", String.class), null,
                     List.of(new SimpleGrantedAuthority("ROLE_" + claims.get("role", String.class))));
                 SecurityContextHolder.getContext().setAuthentication(authentication);

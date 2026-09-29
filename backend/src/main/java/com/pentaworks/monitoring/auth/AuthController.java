@@ -7,6 +7,10 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import java.time.Instant;
+import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
@@ -54,6 +58,27 @@ public class AuthController {
                                                 Authentication authentication, HttpServletResponse response) {
         authService.changePassword(authentication.getName(), request.currentPassword(), request.newPassword());
         response.addHeader(HttpHeaders.SET_COOKIE, authService.clearRefreshCookie().toString());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
+    @GetMapping("/sessions")
+    public List<AuthService.SessionSummary> sessions(Authentication authentication,
+                                                     HttpServletRequest request) {
+        return authService.sessions(authentication.getName(), cookie(request, REFRESH_COOKIE));
+    }
+
+    @DeleteMapping("/sessions/{sessionId}")
+    public ResponseEntity<Void> revokeSession(@PathVariable String sessionId, Authentication authentication,
+                                              HttpServletRequest request, HttpServletResponse response) {
+        boolean current = authService.revokeSession(authentication.getName(), sessionId,
+            cookie(request, REFRESH_COOKIE));
+        if (current) response.addHeader(HttpHeaders.SET_COOKIE, authService.clearRefreshCookie().toString());
+        return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+
+    @PostMapping("/sessions/revoke-others")
+    public ResponseEntity<Void> revokeOtherSessions(Authentication authentication, HttpServletRequest request) {
+        authService.revokeOtherSessions(authentication.getName(), cookie(request, REFRESH_COOKIE));
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 

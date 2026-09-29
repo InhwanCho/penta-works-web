@@ -38,7 +38,8 @@ class AuthServiceTest {
         when(tokens.issue(eq(7L), eq("alice@example.com"), eq("Alice"), eq("USER"), anyString()))
             .thenReturn(new JwtTokens.AccessToken("jwt", Instant.parse("2027-01-01T00:00:00Z")));
 
-        AuthService service = new AuthService(jdbc, tokens, new BCryptPasswordEncoder(4), properties());
+        AuthService service = new AuthService(jdbc, tokens, new BCryptPasswordEncoder(4), properties(),
+            mock(SessionRegistry.class));
         AuthService.AuthResult result = service.login(" Alice@Example.com ", "same-password", "127.0.0.1", "test");
 
         assertEquals("jwt", result.response().accessToken());

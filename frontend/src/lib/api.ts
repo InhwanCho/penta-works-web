@@ -83,6 +83,11 @@ export type AlertRecipient = {
 
 let refreshPromise: Promise<StoredSession> | null = null;
 
+function isPublicAuthPath(path: string) {
+  return path === "/auth/login" || path === "/auth/refresh" || path === "/auth/logout" ||
+    path.startsWith("/auth/invitations/") || path.startsWith("/auth/password-resets/");
+}
+
 async function errorFrom(response: Response): Promise<Error> {
   const body = (await response.json().catch(() => null)) as {
     message?: string;
@@ -125,7 +130,7 @@ export async function apiFetch<T>(
   if (options.body && !headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
   const token = readStoredSession()?.accessToken;
-  if (token && !path.startsWith("/auth/"))
+  if (token && !isPublicAuthPath(path))
     headers.set("Authorization", `Bearer ${token}`);
 
   let response = await fetch(`${API_BASE_URL}${path}`, {
@@ -134,7 +139,7 @@ export async function apiFetch<T>(
     headers,
   });
 
-  if (response.status === 401 && !path.startsWith("/auth/")) {
+  if (response.status === 401 && !isPublicAuthPath(path)) {
     try {
       const refreshed = await refreshAccessToken();
       headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
