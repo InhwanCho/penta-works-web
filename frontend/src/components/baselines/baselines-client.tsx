@@ -66,7 +66,7 @@ export default function BaselinesClient({
         </Link>
       </div>
 
-      <header className="mb-5 overflow-hidden rounded-3xl bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white shadow-[0_16px_45px_rgba(17,65,94,0.16)] sm:px-7">
+      <header className="mb-5 overflow-hidden rounded-2xl bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white shadow-[0_10px_28px_rgba(17,65,94,0.12)] sm:px-7">
         <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">알림 관리</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-white/70">
@@ -74,14 +74,14 @@ export default function BaselinesClient({
         </p>
       </header>
 
-      <div className="mb-5 inline-flex rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-sm dark:border-white/8 dark:bg-background-dark-card">
+      <div className="mb-5 inline-flex rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
         <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>기준값</ViewTab>
         <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
         {canEdit && <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>수신 채널</ViewTab>}
       </div>
 
       {view === "thresholds" ? <>
-      {loadFailed && <div role="alert" className="mb-4 rounded-2xl border border-red-200 bg-red-50/70 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">기준값을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>}
+      {loadFailed && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50/70 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">기준값을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>}
 
       <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto_auto] sm:gap-3">
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원명 또는 사업장 코드 검색" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm outline-none transition placeholder:text-text-secondary/70 focus:border-sky-400 dark:border-white/8 dark:bg-background-dark-card" />
@@ -96,7 +96,7 @@ export default function BaselinesClient({
             const level = entry.thresholds.find((threshold) => threshold.key === "heleve");
             const enabled = entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0);
             return (
-              <article key={entry.siteid} className="group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:border-white/8 dark:bg-background-dark-card">
+              <article key={entry.siteid} className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_14px_rgba(22,58,82,0.045)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_7px_22px_rgba(22,58,82,0.075)] dark:border-white/8 dark:bg-background-dark-card">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><h2 className="truncate font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-0.5 text-xs">사업장 {entry.siteid}</p></div>
                   <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${entry.alertsEnabled && enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{entry.alertsEnabled ? `${enabled}/12 사용` : "전체 중지"}</span>
@@ -148,7 +148,7 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
   }
 
   return <section className="grid gap-4 xl:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
-    <form onSubmit={submit} className="h-fit rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_8px_30px_rgba(22,58,82,0.06)] dark:border-white/8 dark:bg-background-dark-card">
+    <form onSubmit={submit} className="h-fit rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card">
       <h2 className="text-lg font-extrabold">Slack 수신 채널 추가</h2><p className="text-text-secondary mt-1 text-sm leading-6">사업장별 Incoming Webhook으로 알림을 보냅니다. 주소는 저장 후 다시 노출되지 않습니다.</p>
       <label className="mt-5 block text-sm font-bold">사업장<select required value={siteId} onChange={(event) => setSiteId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5">{sites.map((site) => <option key={site.siteid} value={site.siteid}>{site.name ?? site.siteid} · {site.siteid}</option>)}</select></label>
       <label className="mt-4 block text-sm font-bold">Slack Webhook URL<input required type="url" autoComplete="off" placeholder="https://hooks.slack.com/services/..." value={destination} onChange={(event) => setDestination(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5" /></label>
@@ -245,7 +245,7 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
         <div><h2 className="text-lg font-extrabold">발생·복구 이력</h2><p className="text-text-secondary mt-1 text-sm">동일한 이상 상태는 한 번만 기록되고 정상 복귀 시 복구 이력이 추가됩니다.</p></div>
         <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "unacknowledged", "failed", "recovered"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : value === "unacknowledged" ? "미확인" : value === "failed" ? "전송 실패" : "복구"}</button>)}</div>
       </div>
-      <div className="mb-3 grid gap-2 rounded-2xl border border-slate-200/80 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(9rem,.5fr)_auto_auto] dark:border-white/8 dark:bg-background-dark-card">
+      <div className="mb-3 grid gap-2 rounded-xl border border-slate-200/80 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(9rem,.5fr)_auto_auto] dark:border-white/8 dark:bg-background-dark-card">
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원명·측정항목·내용 검색" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-sky-400 dark:border-white/10 dark:bg-white/5" />
         <select value={siteId} onChange={(event) => setSiteId(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm dark:border-white/10 dark:bg-white/5"><option value="">모든 사업장</option>{sites.map(([id, name]) => <option key={id} value={id}>{name} · {id}</option>)}</select>
         <label className="text-text-secondary text-[11px] font-bold">시작일<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" /></label>
@@ -268,7 +268,7 @@ function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onA
   const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
   const metric = METRICS.find((item) => item.key === event.metricKey);
   const isNoData = event.metricKey === "__data__";
-  return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_5px_20px_rgba(22,58,82,0.05)] dark:border-white/8 dark:bg-background-dark-card">
+  return <article className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_12px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={!!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatValue(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
@@ -342,13 +342,13 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(12,37,54,0.28)] sm:max-w-4xl sm:rounded-3xl dark:border-white/10 dark:bg-background-dark-card">
+      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
           <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다.</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <section className={`mb-4 rounded-2xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
+          <section className={`mb-4 rounded-xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 한 번에 관리합니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-text-secondary text-xs font-bold">이상 지속 후 알림 (분)<input type="number" min="0" max="1440" step="1" required value={triggerAfterMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setTriggerAfterMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 이상 감지 즉시 알립니다.</span></label>
@@ -358,7 +358,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
             {quietEnabled && <div className="mt-3 grid max-w-md grid-cols-2 gap-2"><TimeField label="제외 시작" value={quietStart} onChange={setQuietStart} /><TimeField label="제외 종료" value={quietEnd} onChange={setQuietEnd} /></div>}
             <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!holidayDate || !canEdit || saving || holidayDates.includes(holidayDate)} onClick={() => { setHolidayDates((current) => [...current, holidayDate].sort()); setHolidayDate(""); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
           </section>
-          <section className={`mb-4 rounded-2xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
+          <section className={`mb-4 rounded-xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">마지막 데이터 이후 설정 시간을 넘기면 한 번 알리고, 수신 재개 시 복구 알림을 보냅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
             <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
           </section>
@@ -388,7 +388,7 @@ function MetricEditor({ threshold, disabled, onChange }: { threshold: AlertThres
     onChange({ min: roundThreshold(center - appliedTolerance), max: roundThreshold(center + appliedTolerance) });
   }
   return (
-    <section className={`rounded-2xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50/45 dark:border-sky-900/70 dark:bg-sky-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
+    <section className={`rounded-xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50/45 dark:border-sky-900/70 dark:bg-sky-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="font-extrabold">{threshold.label}{threshold.unit && <span className="text-text-secondary ml-1 text-xs font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-xs">{METRIC_DESCRIPTION.get(threshold.key)}</p><code className="mt-1 block text-[10px] text-slate-400">{threshold.key}</code></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
@@ -424,4 +424,4 @@ function StatChip({ label, value, accent = false }: { label: string; value: numb
   return <div className="inline-flex items-center gap-2 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5 shadow-sm dark:border-white/8 dark:bg-background-dark-card"><span className="text-text-secondary text-xs font-medium">{label}</span><span className={`text-sm font-bold tabular-nums ${accent ? "text-emerald-600 dark:text-emerald-400" : ""}`}>{value}</span></div>;
 }
 
-function EmptyState() { return <div className="text-text-secondary rounded-2xl border border-dashed border-slate-300 py-12 text-center text-sm dark:border-white/10">검색 결과가 없습니다.</div>; }
+function EmptyState() { return <div className="text-text-secondary rounded-xl border border-dashed border-slate-300 py-12 text-center text-sm dark:border-white/10">검색 결과가 없습니다.</div>; }

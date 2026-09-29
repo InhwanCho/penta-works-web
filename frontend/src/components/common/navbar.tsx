@@ -43,7 +43,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_8px_30px_rgba(13,42,63,0.12)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
+      <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
         <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between px-3 sm:px-4 lg:px-6">
           <Link href="/" className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
             <Image src="/favicon/android-chrome-192x192.png" alt="MrEyes" width={32} height={32} priority
@@ -73,7 +73,7 @@ export default function Navbar() {
                 </button>
 
                 {menuOpen && (
-                  <div role="menu" className="absolute top-[calc(100%+10px)] right-0 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-2xl border border-black/5 bg-white p-2 text-text-major shadow-[0_20px_60px_rgba(12,37,54,0.22)] dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
+                  <div role="menu" className="absolute top-[calc(100%+10px)] right-0 w-[min(19rem,calc(100vw-1.5rem))] overflow-hidden rounded-xl border border-black/5 bg-white p-2 text-text-major shadow-[0_12px_36px_rgba(12,37,54,0.16)] dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
                     <div className="px-3 pt-2 pb-3">
                       <p className="truncate text-sm font-bold">{session.name}</p>
                       <p className="text-text-secondary dark:text-text-dark-primary/55 mt-0.5 truncate text-xs">{session.email}</p>

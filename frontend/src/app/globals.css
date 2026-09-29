@@ -191,6 +191,16 @@
   }
 }
 
+/* 네이티브 셀렉트 화살표를 카드 가장자리에서 살짝 안쪽으로 배치합니다. */
+.select-inset-arrow {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%2364758b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 1rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  padding-right: 3rem;
+}
+
 /* three dot loader */
 
 .three-dot-loader-container {

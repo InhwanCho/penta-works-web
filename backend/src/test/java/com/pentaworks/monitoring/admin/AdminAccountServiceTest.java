@@ -131,6 +131,7 @@ class AdminAccountServiceTest {
             return extractor.extractData(rs);
         });
         when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(1L))).thenReturn(1);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(1L))).thenReturn(1L);
 
         assertThrows(BadRequestException.class, () -> service.deleteUser(superAdmin, 2L));
         verifyNoInteractions(audit);

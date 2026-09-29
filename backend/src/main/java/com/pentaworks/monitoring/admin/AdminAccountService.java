@@ -2,6 +2,7 @@ package com.pentaworks.monitoring.admin;
 
 import com.pentaworks.monitoring.admin.AdminAccountController.AuditSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.CreateSiteRequest;
+import com.pentaworks.monitoring.admin.AdminAccountController.CompanySummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.InvitationCreated;
 import com.pentaworks.monitoring.admin.AdminAccountController.InvitationSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.InviteRequest;
@@ -67,18 +68,31 @@ public class AdminAccountService {
                 instant(rs.getTimestamp("created_at")), userSites(rs.getLong("id"))), actor.companyId());
     }
 
+    public CompanySummary company(CurrentUser actor) {
+        requireAdmin(actor);
+        CompanySummary company = jdbcTemplate.query("""
+            SELECT id,code,name FROM company WHERE id=? AND status='ACTIVE'
+            """, rs -> rs.next() ? new CompanySummary(rs.getLong("id"), rs.getString("code"),
+                rs.getString("name")) : null, actor.companyId());
+        if (company == null) throw new NotFoundException("회사를 찾을 수 없습니다.");
+        return company;
+    }
+
     public List<SiteOption> sites(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
             SELECT cs.site_id,s.name,p.address,p.contact_name,p.contact_phone,
-                   COALESCE(p.timezone,'Asia/Seoul') AS timezone
+                   COALESCE(p.timezone,'Asia/Seoul') AS timezone,
+                   c.id AS company_id,c.code AS company_code,c.name AS company_name
               FROM company_site cs
+              JOIN company c ON c.id=cs.company_id
             LEFT JOIN site s ON s.site=cs.site_id
             LEFT JOIN site_profile p ON p.site_id=cs.site_id
             WHERE cs.company_id=? ORDER BY cs.site_id
             """, (rs, row) -> new SiteOption(rs.getString("site_id"), rs.getString("name"),
                 rs.getString("address"), rs.getString("contact_name"), rs.getString("contact_phone"),
-                rs.getString("timezone")), actor.companyId());
+                rs.getString("timezone"), rs.getLong("company_id"), rs.getString("company_code"),
+                rs.getString("company_name")), actor.companyId());
     }
 
     @Transactional
@@ -286,6 +300,8 @@ public class AdminAccountService {
         if (target.id() == actor.id()) throw new BadRequestException("현재 로그인한 본인 계정은 삭제할 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) {
             if (!actor.isSuperAdmin()) throw new ForbiddenException("최고관리자 계정은 최고관리자만 삭제할 수 있습니다.");
+            jdbcTemplate.queryForObject("SELECT id FROM company WHERE id=? FOR UPDATE", Long.class,
+                actor.companyId());
             Integer count = jdbcTemplate.queryForObject("""
                 SELECT COUNT(*) FROM app_user
                  WHERE company_id=? AND role='SUPER_ADMIN' AND status<>'DELETED'

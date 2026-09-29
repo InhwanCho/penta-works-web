@@ -34,6 +34,11 @@ public class AdminAccountController {
         return service.users(currentUsers.require(authentication));
     }
 
+    @GetMapping("/company")
+    public CompanySummary company(Authentication authentication) {
+        return service.company(currentUsers.require(authentication));
+    }
+
     @GetMapping("/sites")
     public List<SiteOption> sites(Authentication authentication) {
         return service.sites(currentUsers.require(authentication));
@@ -105,8 +110,10 @@ public class AdminAccountController {
                                     String contactName, String contactPhone, String timezone) {}
     public record UpdateSiteRequest(@NotBlank String name, String address, String contactName,
                                     String contactPhone, String timezone) {}
+    public record CompanySummary(long id, String code, String name) {}
     public record SiteOption(String id, String name, String address, String contactName,
-                             String contactPhone, String timezone) {}
+                             String contactPhone, String timezone, long companyId,
+                             String companyCode, String companyName) {}
     public record InvitationSummary(String id, String email, String name, String role,
                                     Instant expiresAt, Instant createdAt, List<String> siteIds) {}
     public record InvitationCreated(String id, String token, String email, Instant expiresAt,

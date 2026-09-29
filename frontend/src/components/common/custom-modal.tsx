@@ -63,7 +63,7 @@ export default function CustomModal({
         aria-modal="true"
         className={[
           "dark:bg-background-dark-card relative w-full bg-white",
-          "shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),_0_10px_20px_-15px_rgba(22,23,24,0.15)]",
+          "shadow-[0_7px_26px_-10px_rgba(22,23,24,0.18),_0_6px_14px_-12px_rgba(22,23,24,0.1)]",
           "border border-border/80 dark:border-background-dark-secondary/80",
           // 모바일: 바텀 시트
           "max-h-[92vh] overflow-hidden rounded-t-xl",

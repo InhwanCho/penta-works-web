@@ -10,7 +10,7 @@ import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react
 const REMEMBERED_EMAIL_KEY = "mreyes_remembered_email";
 
 const CARD_CLASS =
-  "rounded-3xl border border-slate-200/70 bg-white shadow-[0_20px_60px_rgba(22,58,82,0.12)] dark:border-white/8 dark:bg-background-dark-card";
+  "rounded-2xl border border-slate-200/70 bg-white shadow-[0_12px_36px_rgba(22,58,82,0.085)] dark:border-white/8 dark:bg-background-dark-card";
 
 const INPUT_CLASS = [
   "w-full rounded-xl border bg-slate-50/60 px-3.5 py-3",
@@ -114,7 +114,7 @@ export default function LoginForm() {
               width={48}
               height={48}
               priority
-              className="h-14 w-14 rounded-2xl shadow-[0_8px_20px_rgba(22,58,82,0.16)]"
+              className="h-14 w-14 rounded-xl shadow-[0_5px_14px_rgba(22,58,82,0.12)]"
             />
             <h1 className="text-text-major dark:text-text-dark-primary mt-4 text-2xl font-extrabold tracking-tight">
               MrEyes

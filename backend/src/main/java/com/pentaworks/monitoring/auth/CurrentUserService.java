@@ -35,10 +35,7 @@ public class CurrentUserService {
     public Set<String> allowedSiteIds(CurrentUser user) {
         String sql;
         Object[] args;
-        if (user.isSuperAdmin()) {
-            sql = "SELECT site FROM site ORDER BY site";
-            args = new Object[0];
-        } else if (user.isAdmin()) {
+        if (user.isAdmin()) {
             sql = "SELECT site_id FROM company_site WHERE company_id=? ORDER BY site_id";
             args = new Object[] {user.companyId()};
         } else {
