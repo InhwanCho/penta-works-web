@@ -11,6 +11,7 @@ import {
   type Role,
   type Session,
   clearStoredSession,
+  accessTokenExpiresSoon,
   readStoredSession,
 } from "@/lib/auth";
 import {
@@ -22,6 +23,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 interface AuthContextType {
   session: Session | null;
@@ -58,10 +60,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const stored = sessionFromStorage();
-    if (stored) {
-      setSession(stored);
+    const stored = readStoredSession();
+    if (stored && !accessTokenExpiresSoon(stored)) {
+      setSession({ id: stored.id, email: stored.email, name: stored.name, role: stored.role });
       setIsLoading(false);
+      return;
     }
 
     refreshAccessToken()
@@ -75,10 +78,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch((error) => {
         if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          clearStoredSession();
-          queryClient.clear();
-          setSession(null);
-        } else if (!stored) setSession(null);
+          const current = readStoredSession();
+          if (current && current.accessToken !== stored?.accessToken) {
+            setSession({ id: current.id, email: current.email, name: current.name, role: current.role });
+          } else {
+            clearStoredSession();
+            clearDashboardSnapshot();
+            queryClient.clear();
+            setSession(null);
+          }
+        } else if (stored && !accessTokenExpiresSoon(stored, 0)) {
+          setSession({ id: stored.id, email: stored.email, name: stored.name, role: stored.role });
+        } else setSession(null);
       })
       .finally(() => setIsLoading(false));
   }, [queryClient]);
@@ -87,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const result = await requestLogin(email, password);
       queryClient.clear();
+      clearDashboardSnapshot();
       const next = {
         id: result.id,
         email: result.email,
@@ -103,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await requestLogout();
     queryClient.clear();
     clearStoredSession();
+    clearDashboardSnapshot();
     setSession(null);
   }, [queryClient]);
 
@@ -110,6 +123,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshed = () => setSession(sessionFromStorage());
     const expired = () => {
       queryClient.clear();
+      clearDashboardSnapshot();
       setSession(null);
     };
     window.addEventListener("auth:refreshed", refreshed);

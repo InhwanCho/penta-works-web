@@ -9,6 +9,11 @@ export type StoredSession = Session & {
   accessTokenExpiresAt: string;
 };
 
+export function accessTokenExpiresSoon(session: StoredSession, marginMs = 5 * 60 * 1000): boolean {
+  const expiresAt = Date.parse(session.accessTokenExpiresAt);
+  return !Number.isFinite(expiresAt) || expiresAt <= Date.now() + marginMs;
+}
+
 export function readStoredSession(): StoredSession | null {
   if (typeof window === "undefined") return null;
   try {

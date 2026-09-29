@@ -1,9 +1,11 @@
 import {
   clearStoredSession,
+  accessTokenExpiresSoon,
   readStoredSession,
   writeStoredSession,
   type StoredSession,
 } from "@/lib/auth";
+import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 import type { MetricKey } from "@/lib/metrics";
 
 const API_BASE_URL = (
@@ -129,13 +131,23 @@ function storeAuthResponse(result: AuthResponse): StoredSession {
 
 export async function refreshAccessToken(): Promise<StoredSession> {
   if (refreshPromise) return refreshPromise;
+  const previousToken = readStoredSession()?.accessToken;
   refreshPromise = (async () => {
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: "POST",
       credentials: "include",
       cache: "no-store",
     });
-    if (!response.ok) throw await errorFrom(response);
+    if (!response.ok) {
+      const error = await errorFrom(response);
+      if ((error.status === 401 || error.status === 403) &&
+          readStoredSession()?.accessToken === previousToken) {
+        clearStoredSession();
+        clearDashboardSnapshot();
+        window.dispatchEvent(new Event("auth:expired"));
+      }
+      throw error;
+    }
     return storeAuthResponse((await response.json()) as AuthResponse);
   })().finally(() => {
     refreshPromise = null;
@@ -150,7 +162,11 @@ export async function apiFetch<T>(
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");
-  const token = readStoredSession()?.accessToken;
+  let stored = readStoredSession();
+  if (stored && !isPublicAuthPath(path) && accessTokenExpiresSoon(stored)) {
+    stored = await refreshAccessToken();
+  }
+  const token = stored?.accessToken;
   if (token && !isPublicAuthPath(path))
     headers.set("Authorization", `Bearer ${token}`);
 
@@ -169,10 +185,7 @@ export async function apiFetch<T>(
         credentials: "include",
         headers,
       });
-    } catch {
-      clearStoredSession();
-      window.dispatchEvent(new Event("auth:expired"));
-    }
+    } catch { /* The refresh request handles invalid sessions. */ }
   }
 
   if (!response.ok) throw await errorFrom(response);
@@ -182,7 +195,9 @@ export async function apiFetch<T>(
 
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const headers = new Headers();
-  const token = readStoredSession()?.accessToken;
+  let stored = readStoredSession();
+  if (stored && accessTokenExpiresSoon(stored)) stored = await refreshAccessToken();
+  const token = stored?.accessToken;
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let response = await fetch(`${API_BASE_URL}${path}`, {
     credentials: "include",
@@ -196,10 +211,7 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
         credentials: "include",
         headers,
       });
-    } catch {
-      clearStoredSession();
-      window.dispatchEvent(new Event("auth:expired"));
-    }
+    } catch { /* The refresh request handles invalid sessions. */ }
   }
   if (!response.ok) throw await errorFrom(response);
   return response.blob();

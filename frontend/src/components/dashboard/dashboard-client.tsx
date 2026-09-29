@@ -9,6 +9,7 @@ import {
   type CtrlRange,
   type SiteRow,
   useDashboardQuery,
+  RESTORED_DASHBOARD_UPDATED_AT,
 } from "@/hooks/use-dashboard-query";
 import Link from "next/link";
 import type React from "react";
@@ -83,7 +84,7 @@ function fmtYmdHms(ms: number) {
 }
 
 export default function DashboardClient() {
-  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
+  const { data, dataUpdatedAt, isLoading, isError, error, refetch } = useDashboardQuery();
 
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -128,7 +129,7 @@ export default function DashboardClient() {
     );
   }
 
-  if (isError || !data) {
+  if (!data) {
     return (
       <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 lg:px-6">
         <div className="rounded-lg border border-red-200 bg-red-50/60 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
@@ -163,6 +164,9 @@ export default function DashboardClient() {
               마지막 갱신{" "}
               <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>{data.stats.openAlerts > 0 && <span className="ml-2 font-bold text-rose-600 dark:text-rose-300">· 진행 중 알림 {data.stats.openAlerts}건</span>}
             </p>
+            {dataUpdatedAt === RESTORED_DASHBOARD_UPDATED_AT ?
+              <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">저장된 화면 · {isError ? "연결 실패, 다시 시도해주세요" : "최신 정보 확인 중"}</p> :
+              isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
 
