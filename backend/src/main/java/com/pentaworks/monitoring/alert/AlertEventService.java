@@ -86,9 +86,14 @@ public class AlertEventService {
     }
 
     public void markDelivery(List<Long> eventIds, String status, String error) {
+        markDelivery(eventIds, status, error, 0);
+    }
+
+    public void markDelivery(List<Long> eventIds, String status, String error, int recipientCount) {
+        String snapshot = "{\"channel\":\"SLACK_WEBHOOK\",\"count\":" + recipientCount + "}";
         for (Long eventId : eventIds) {
-            jdbcTemplate.update("UPDATE alert_event SET delivery_status=?,delivery_error=? WHERE id=?",
-                status, error, eventId);
+            jdbcTemplate.update("UPDATE alert_event SET delivery_status=?,delivery_error=?,recipient_snapshot=? WHERE id=?",
+                status, error, snapshot, eventId);
         }
     }
 

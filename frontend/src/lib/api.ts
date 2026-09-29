@@ -66,6 +66,19 @@ export type AlertEventSummary = {
   recoveredAt: string | null;
 };
 
+export type AlertRecipient = {
+  id: number;
+  siteId: string;
+  siteName: string | null;
+  userId: number;
+  userName: string;
+  channel: "SLACK_WEBHOOK";
+  destinationMasked: string;
+  quietStart: string | null;
+  quietEnd: string | null;
+  enabled: boolean;
+};
+
 let refreshPromise: Promise<StoredSession> | null = null;
 
 async function errorFrom(response: Response): Promise<Error> {
