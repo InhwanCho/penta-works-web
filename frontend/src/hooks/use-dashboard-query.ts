@@ -21,6 +21,17 @@ export type SiteRow = {
   hePct: number | null;
   /** 관리자 뷰용 전체 지표 (최신 1건) */
   metrics: MetricValues;
+  alertStatus: "NORMAL" | "WARNING" | "NO_DATA";
+  openAlertCount: number;
+  unacknowledgedAlertCount: number;
+  alertIssues: {
+    id: number;
+    metricKey: MetricKey | "__data__";
+    eventType: "LOW" | "HIGH" | "NO_DATA";
+    message: string;
+    occurredAt: string;
+    acknowledged: boolean;
+  }[];
 };
 
 export type DashboardResponse = {
@@ -34,6 +45,10 @@ export type DashboardResponse = {
     active1h: number;
     stale24h: number;
     total24hRecords: number;
+    normalSites: number;
+    warningSites: number;
+    noDataSites: number;
+    openAlerts: number;
   };
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;

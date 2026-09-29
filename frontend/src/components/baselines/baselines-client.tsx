@@ -17,6 +17,8 @@ export default function BaselinesClient({
   eventsLoading = false,
   eventsFailed = false,
   onAcknowledge,
+  onAcknowledgeMany,
+  onRetryDelivery,
   recipients,
   recipientsLoading = false,
   recipientsFailed = false,
@@ -32,6 +34,8 @@ export default function BaselinesClient({
   eventsLoading?: boolean;
   eventsFailed?: boolean;
   onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
+  onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
+  onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
   recipients: AlertRecipient[];
   recipientsLoading?: boolean;
   recipientsFailed?: boolean;
@@ -95,7 +99,7 @@ export default function BaselinesClient({
               <article key={entry.siteid} className="group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:border-white/8 dark:bg-background-dark-card">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><h2 className="truncate font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-0.5 text-xs">사업장 {entry.siteid}</p></div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{enabled}/12 사용</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${entry.alertsEnabled && enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{entry.alertsEnabled ? `${enabled}/12 사용` : "전체 중지"}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <RangePreview label="He Pressure" threshold={pressure} />
@@ -109,7 +113,7 @@ export default function BaselinesClient({
           })}
         </section>
       )}
-      </> : view === "events" ? <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} />
+      </> : view === "events" ? <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
         : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
 
       {selected && <SiteThresholdEditor entry={selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
@@ -174,12 +178,43 @@ function ViewTab({ active, onClick, badge, children }: { active: boolean; onClic
   return <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/5"}`}>{children}{badge ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/15 text-white" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"}`}>{badge}</span> : null}</button>;
 }
 
-function AlertEventsPanel({ events, loading, failed, onAcknowledge }: { events: AlertEventSummary[]; loading: boolean; failed: boolean; onAcknowledge: (eventId: number) => Promise<AlertEventSummary> }) {
-  const [filter, setFilter] = useState<"all" | "open" | "recovered">("all");
+function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledgeMany, onRetryDelivery }: {
+  events: AlertEventSummary[];
+  loading: boolean;
+  failed: boolean;
+  onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
+  onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
+  onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
+}) {
+  const [filter, setFilter] = useState<"all" | "open" | "recovered" | "unacknowledged" | "failed">("all");
+  const [query, setQuery] = useState("");
+  const [siteId, setSiteId] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [selected, setSelected] = useState<number[]>([]);
   const [acknowledging, setAcknowledging] = useState<number | null>(null);
+  const [bulkSaving, setBulkSaving] = useState(false);
+  const [retrying, setRetrying] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const filtered = events.filter((event) => filter === "all" || (filter === "open" ? event.eventType !== "RECOVERY" && !event.recoveredAt : event.eventType === "RECOVERY" || !!event.recoveredAt));
+  const sites = useMemo(() => Array.from(new Map(events.map((event) => [event.siteId, event.siteName ?? event.siteId])).entries()), [events]);
+  const filtered = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    const from = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
+    const to = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
+    return events.filter((event) => {
+      const occurred = new Date(event.occurredAt).getTime();
+      const statusMatches = filter === "all" ||
+        (filter === "open" && event.eventType !== "RECOVERY" && !event.recoveredAt) ||
+        (filter === "recovered" && (event.eventType === "RECOVERY" || !!event.recoveredAt)) ||
+        (filter === "unacknowledged" && !event.acknowledgedAt) ||
+        (filter === "failed" && event.deliveryStatus === "FAILED");
+      const queryMatches = !keyword || `${event.siteName ?? ""} ${event.siteId} ${event.message} ${event.metricKey}`.toLowerCase().includes(keyword);
+      return statusMatches && (!siteId || event.siteId === siteId) && queryMatches &&
+        (from == null || occurred >= from) && (to == null || occurred <= to);
+    });
+  }, [events, filter, query, siteId, fromDate, toDate]);
   const openCount = events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length;
+  const selectableIds = filtered.filter((event) => !event.acknowledgedAt).map((event) => event.id);
 
   async function acknowledge(eventId: number) {
     setAcknowledging(eventId); setError(null);
@@ -188,30 +223,57 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge }: { events: 
     finally { setAcknowledging(null); }
   }
 
+  async function acknowledgeSelected(ids: number[]) {
+    if (ids.length === 0) return;
+    setBulkSaving(true); setError(null);
+    try { await onAcknowledgeMany(ids); setSelected((current) => current.filter((id) => !ids.includes(id))); }
+    catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 일괄 확인 처리하지 못했습니다."); }
+    finally { setBulkSaving(false); }
+  }
+
+  async function retry(eventId: number) {
+    setRetrying(eventId); setError(null);
+    try { await onRetryDelivery(eventId); }
+    catch (retryError) { setError(retryError instanceof Error ? retryError.message : "알림을 재전송하지 못했습니다."); }
+    finally { setRetrying(null); }
+  }
+
   if (loading) return <div className="text-text-secondary py-16 text-center text-sm">알림 이력을 불러오는 중…</div>;
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-lg font-extrabold">발생·복구 이력</h2><p className="text-text-secondary mt-1 text-sm">동일한 이상 상태는 한 번만 기록되고 정상 복귀 시 복구 이력이 추가됩니다.</p></div>
-        <div className="flex rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "recovered"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : "복구"}</button>)}</div>
+        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "unacknowledged", "failed", "recovered"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : value === "unacknowledged" ? "미확인" : value === "failed" ? "전송 실패" : "복구"}</button>)}</div>
+      </div>
+      <div className="mb-3 grid gap-2 rounded-2xl border border-slate-200/80 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(9rem,.5fr)_auto_auto] dark:border-white/8 dark:bg-background-dark-card">
+        <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원명·측정항목·내용 검색" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-sky-400 dark:border-white/10 dark:bg-white/5" />
+        <select value={siteId} onChange={(event) => setSiteId(event.target.value)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm dark:border-white/10 dark:bg-white/5"><option value="">모든 사업장</option>{sites.map(([id, name]) => <option key={id} value={id}>{name} · {id}</option>)}</select>
+        <label className="text-text-secondary text-[11px] font-bold">시작일<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" /></label>
+        <label className="text-text-secondary text-[11px] font-bold">종료일<input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" /></label>
+      </div>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))} onChange={(event) => setSelected(event.target.checked ? Array.from(new Set([...selected, ...selectableIds])) : selected.filter((id) => !selectableIds.includes(id)))} className="h-4 w-4 accent-sky-700" />검색 결과의 미확인 알림 선택</label>
+        <button type="button" disabled={bulkSaving || selected.length === 0} onClick={() => acknowledgeSelected(selected)} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">선택 확인 ({selected.length})</button>
+        <button type="button" disabled={bulkSaving || selectableIds.length === 0} onClick={() => acknowledgeSelected(selectableIds)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">현재 결과 전체 확인</button>
+        <span className="text-text-secondary ml-auto text-xs">검색 결과 {filtered.length}건</span>
       </div>
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다.</p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      {filtered.length === 0 ? <EmptyState /> : <div className="space-y-2">{filtered.map((event) => <AlertEventRow key={event.id} event={event} acknowledging={acknowledging === event.id} onAcknowledge={() => acknowledge(event.id)} />)}</div>}
+      {filtered.length === 0 ? <EmptyState /> : <div className="space-y-2">{filtered.map((event) => <AlertEventRow key={event.id} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={acknowledging === event.id} retrying={retrying === event.id} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} />)}</div>}
     </section>
   );
 }
 
-function AlertEventRow({ event, acknowledging, onAcknowledge }: { event: AlertEventSummary; acknowledging: boolean; onAcknowledge: () => void }) {
+function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onAcknowledge, onRetry }: { event: AlertEventSummary; selected: boolean; onSelect: (checked: boolean) => void; acknowledging: boolean; retrying: boolean; onAcknowledge: () => void; onRetry: () => void }) {
   const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
   const metric = METRICS.find((item) => item.key === event.metricKey);
   const isNoData = event.metricKey === "__data__";
   return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_5px_20px_rgba(22,58,82,0.05)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3"><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatValue(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
+      <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={!!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatValue(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
     </div>
-    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "복구됨" : "진행 중"}</span>{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인 처리"}</button>}</div>
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "복구됨" : "진행 중"}</span><div className="flex items-center gap-2">{event.deliveryStatus === "FAILED" && <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인 처리"}</button>}</div></div>
   </article>;
 }
 
@@ -232,6 +294,15 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   const [thresholds, setThresholds] = useState(entry.thresholds);
   const [noDataMinutes, setNoDataMinutes] = useState(entry.noDataMinutes);
   const [noDataActive, setNoDataActive] = useState(entry.noDataActive);
+  const [alertsEnabled, setAlertsEnabled] = useState(entry.alertsEnabled);
+  const [triggerAfterMinutes, setTriggerAfterMinutes] = useState(entry.triggerAfterMinutes);
+  const [repeatMinutes, setRepeatMinutes] = useState(entry.repeatMinutes);
+  const [quietEnabled, setQuietEnabled] = useState(Boolean(entry.quietStart && entry.quietEnd));
+  const [quietStart, setQuietStart] = useState(entry.quietStart?.slice(0, 5) ?? "22:00");
+  const [quietEnd, setQuietEnd] = useState(entry.quietEnd?.slice(0, 5) ?? "08:00");
+  const [suppressWeekends, setSuppressWeekends] = useState(entry.suppressWeekends);
+  const [holidayDates, setHolidayDates] = useState(entry.holidayDates);
+  const [holidayDate, setHolidayDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -257,8 +328,14 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     if (!Number.isInteger(noDataMinutes) || noDataMinutes < 5 || noDataMinutes > 1440) {
       setError("수신 중단 기준은 5분에서 1440분 사이의 정수여야 합니다."); return;
     }
+    if (!Number.isInteger(triggerAfterMinutes) || triggerAfterMinutes < 0 || triggerAfterMinutes > 1440) {
+      setError("이상 지속 기준은 0분에서 1440분 사이의 정수여야 합니다."); return;
+    }
+    if (!Number.isInteger(repeatMinutes) || repeatMinutes < 0 || repeatMinutes > 10080 || (repeatMinutes > 0 && repeatMinutes < 5)) {
+      setError("반복 알림은 0(사용 안 함) 또는 5분에서 10080분 사이여야 합니다."); return;
+    }
     setSaving(true); setError(null);
-    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive }); onClose(); }
+    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
     finally { setSaving(false); }
   }
@@ -271,6 +348,16 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <section className={`mb-4 rounded-2xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 한 번에 관리합니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <label className="text-text-secondary text-xs font-bold">이상 지속 후 알림 (분)<input type="number" min="0" max="1440" step="1" required value={triggerAfterMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setTriggerAfterMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 이상 감지 즉시 알립니다.</span></label>
+              <label className="text-text-secondary text-xs font-bold">반복 알림 주기 (분)<input type="number" min="0" max="10080" step="1" required value={repeatMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setRepeatMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 최초 발생과 복구 시에만 알립니다.</span></label>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2"><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={quietEnabled} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-4 w-4 accent-sky-700" />야간 발송 제외</label><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={suppressWeekends} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setSuppressWeekends(event.target.checked)} className="h-4 w-4 accent-sky-700" />주말 발송 제외</label></div>
+            {quietEnabled && <div className="mt-3 grid max-w-md grid-cols-2 gap-2"><TimeField label="제외 시작" value={quietStart} onChange={setQuietStart} /><TimeField label="제외 종료" value={quietEnd} onChange={setQuietEnd} /></div>}
+            <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!holidayDate || !canEdit || saving || holidayDates.includes(holidayDate)} onClick={() => { setHolidayDates((current) => [...current, holidayDate].sort()); setHolidayDate(""); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
+          </section>
           <section className={`mb-4 rounded-2xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">마지막 데이터 이후 설정 시간을 넘기면 한 번 알리고, 수신 재개 시 복구 알림을 보냅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
             <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>

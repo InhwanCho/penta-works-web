@@ -4,6 +4,7 @@ import com.pentaworks.monitoring.dashboard.DashboardResponse.CtrlRange;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.Meta;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.Stats;
+import com.pentaworks.monitoring.dashboard.DashboardResponse.AlertIssue;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Duration;
@@ -53,12 +54,17 @@ public class DashboardService {
         int active1h = (int) rows.stream().filter(row -> after(row.lastAt(), since1h)).count();
         int active24h = (int) rows.stream().filter(row -> after(row.lastAt(), since24h)).count();
         int total24h = rows.stream().mapToInt(DashboardRow::count24h).sum();
+        int normalSites = (int) rows.stream().filter(row -> "NORMAL".equals(row.alertStatus())).count();
+        int warningSites = (int) rows.stream().filter(row -> "WARNING".equals(row.alertStatus())).count();
+        int noDataSites = (int) rows.stream().filter(row -> "NO_DATA".equals(row.alertStatus())).count();
+        int openAlerts = rows.stream().mapToInt(DashboardRow::openAlertCount).sum();
         Map<String, CtrlRange> ctrl = all.ctrl().entrySet().stream()
             .filter(entry -> "000".equals(entry.getKey()) || allowedSiteIds.contains(entry.getKey()))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                 (left, right) -> left, LinkedHashMap::new));
         return new DashboardResponse(all.meta(),
-            new Stats(rows.size(), active1h, rows.size() - active24h, total24h), rows, ctrl, all.ctrlDefault());
+            new Stats(rows.size(), active1h, rows.size() - active24h, total24h,
+                normalSites, warningSites, noDataSites, openAlerts), rows, ctrl, all.ctrlDefault());
     }
 
     public void invalidateCache() {
@@ -109,6 +115,17 @@ public class DashboardService {
             """, (RowCallbackHandler) rs -> latestBySite.put(rs.getString("siteid"),
                 new Latest(rs.getTimestamp("date").toInstant(), metricMap(rs))));
 
+        Map<String, List<AlertIssue>> issuesBySite = new HashMap<>();
+        jdbcTemplate.query("""
+            SELECT id,site_id,metric_key,event_type,message,occurred_at,acknowledged_at
+              FROM alert_event
+             WHERE recovered_at IS NULL AND event_type IN ('LOW','HIGH','NO_DATA')
+             ORDER BY occurred_at DESC,id DESC
+            """, (RowCallbackHandler) rs -> issuesBySite.computeIfAbsent(rs.getString("site_id"), ignored -> new ArrayList<>())
+                .add(new AlertIssue(rs.getLong("id"), rs.getString("metric_key"), rs.getString("event_type"),
+                    rs.getString("message"), rs.getTimestamp("occurred_at").toInstant().toString(),
+                    rs.getTimestamp("acknowledged_at") != null)));
+
         Map<String, CtrlRange> ctrl = new LinkedHashMap<>();
         jdbcTemplate.query("""
             SELECT s.site,
@@ -133,17 +150,27 @@ public class DashboardService {
             Latest latest = latestBySite.get(site.id());
             Instant lastAt = latest == null ? null : latest.lastAt();
             Map<String, Double> values = latest == null ? emptyMetrics() : latest.metrics();
+            List<AlertIssue> issues = issuesBySite.getOrDefault(site.id(), List.of());
+            String alertStatus = issues.stream().anyMatch(issue -> "NO_DATA".equals(issue.eventType()))
+                ? "NO_DATA" : issues.isEmpty() ? "NORMAL" : "WARNING";
+            int unacknowledged = (int) issues.stream().filter(issue -> !issue.acknowledged()).count();
             rows.add(new DashboardRow(site.id(), siteSlug(site.id()), site.name(), lastAt == null ? null : lastAt.toString(),
                 lastAt == null ? null : Math.max(0, Duration.between(lastAt, now).toMinutes()),
-                count == null ? 0 : count.count1h(), count == null ? 0 : count.count24h(), values.get("hepres"), values.get("heleve"), values));
+                count == null ? 0 : count.count1h(), count == null ? 0 : count.count24h(), values.get("hepres"), values.get("heleve"), values,
+                alertStatus, issues.size(), unacknowledged, issues));
         }
         rows.sort(Comparator.comparingLong((DashboardRow row) ->
             row.lastAt() == null ? 0L : Instant.parse(row.lastAt()).toEpochMilli()).reversed());
         int active1h = (int) rows.stream().filter(row -> row.lastAt() != null && Instant.parse(row.lastAt()).isAfter(since1h)).count();
         int active24h = (int) rows.stream().filter(row -> row.lastAt() != null && Instant.parse(row.lastAt()).isAfter(since24h)).count();
         int total24h = rows.stream().mapToInt(DashboardRow::count24h).sum();
+        int normalSites = (int) rows.stream().filter(row -> "NORMAL".equals(row.alertStatus())).count();
+        int warningSites = (int) rows.stream().filter(row -> "WARNING".equals(row.alertStatus())).count();
+        int noDataSites = (int) rows.stream().filter(row -> "NO_DATA".equals(row.alertStatus())).count();
+        int openAlerts = rows.stream().mapToInt(DashboardRow::openAlertCount).sum();
         return new DashboardResponse(new Meta(now.toEpochMilli(), since1h.toEpochMilli(), since24h.toEpochMilli()),
-            new Stats(rows.size(), active1h, rows.size() - active24h, total24h), rows, ctrl, ctrl.get("000"));
+            new Stats(rows.size(), active1h, rows.size() - active24h, total24h,
+                normalSites, warningSites, noDataSites, openAlerts), rows, ctrl, ctrl.get("000"));
     }
 
     private Map<String, Double> metricMap(ResultSet rs) throws SQLException {

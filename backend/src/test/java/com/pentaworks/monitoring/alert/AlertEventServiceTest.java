@@ -16,9 +16,25 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
+    @Test
+    void disabledSiteDoesNotEvaluateMetrics() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        AlertEventService service = new AlertEventService(jdbcTemplate,
+            mock(CurrentUserService.class), mock(AuditService.class));
+        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
+            false, 0, 0, null, null, false);
+
+        assertNull(service.evaluate(site,
+            new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0));
+        assertNull(service.evaluateNoData(site, 31L));
+
+        verifyNoInteractions(jdbcTemplate);
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void doesNotCreateDuplicateEventForSameOpenDirection() throws Exception {
@@ -34,7 +50,8 @@ class AlertEventServiceTest {
             ResultSetExtractor<?> extractor = invocation.getArgument(1);
             return extractor.extractData(resultSet);
         });
-        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false);
+        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false,
+            true, 0, 0, null, null, false);
         AlertThreshold threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
 
         assertNull(service.evaluate(site, threshold, 31.0));
@@ -57,7 +74,8 @@ class AlertEventServiceTest {
                 return extractor.extractData(resultSet);
             });
         when(jdbcTemplate.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(12L);
-        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, true);
+        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
+            true, 0, 0, null, null, false);
 
         AlertEventService.Transition transition = service.evaluateNoData(site, 31L);
 

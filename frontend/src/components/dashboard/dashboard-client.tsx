@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 /** 기본 뷰 / 관리자 뷰(엑셀형 전체 지표) */
 type ViewMode = "basic" | "grid";
+type StatusFilter = "all" | "issues" | "warning" | "no-data" | "normal";
 
 const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
 
@@ -86,6 +87,7 @@ export default function DashboardClient() {
 
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -103,11 +105,18 @@ export default function DashboardClient() {
 
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
-    return currentRows.filter((r) => !!r.lastAt);
-  }, [data?.rows]);
+    return currentRows.filter((row) => statusFilter === "all" ||
+      (statusFilter === "issues" && row.alertStatus !== "NORMAL") ||
+      (statusFilter === "warning" && row.alertStatus === "WARNING") ||
+      (statusFilter === "no-data" && row.alertStatus === "NO_DATA") ||
+      (statusFilter === "normal" && row.alertStatus === "NORMAL"));
+  }, [data?.rows, statusFilter]);
 
   const sortedRows = useMemo(
-    () => filteredRows.slice().sort(compareSite),
+    () => filteredRows.slice().sort((a, b) => {
+      const rank = { NO_DATA: 0, WARNING: 1, NORMAL: 2 } as const;
+      return rank[a.alertStatus] - rank[b.alertStatus] || b.unacknowledgedAlertCount - a.unacknowledgedAlertCount || compareSite(a, b);
+    }),
     [filteredRows],
   );
 
@@ -152,7 +161,7 @@ export default function DashboardClient() {
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 text-[0.8125rem] font-medium">
               마지막 갱신{" "}
-              <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>
+              <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>{data.stats.openAlerts > 0 && <span className="ml-2 font-bold text-rose-600 dark:text-rose-300">· 진행 중 알림 {data.stats.openAlerts}건</span>}
             </p>
             </div>
           </div>
@@ -162,6 +171,14 @@ export default function DashboardClient() {
             onChange={changeViewMode}
           />
         </header>
+
+        <section className="mb-3 grid grid-cols-2 gap-2 sm:mb-5 sm:grid-cols-5">
+          <StatusFilterButton active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
+          <StatusFilterButton active={statusFilter === "issues"} onClick={() => setStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
+          <StatusFilterButton active={statusFilter === "warning"} onClick={() => setStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
+          <StatusFilterButton active={statusFilter === "no-data"} onClick={() => setStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
+          <StatusFilterButton active={statusFilter === "normal"} onClick={() => setStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
+        </section>
 
         {viewMode === "grid" ? (
           <DashboardExcelView
@@ -231,7 +248,8 @@ export default function DashboardClient() {
                             className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 scroll-mt-[120px] border-b transition-colors last:border-b-0"
                           >
                             <Td className="text-text-major dark:text-text-dark-primary font-medium">
-                              {r.name ?? "-"}
+                              <div className="flex items-center gap-2"><span>{r.name ?? "-"}</span><AlertStatusBadge row={r} /></div>
+                              {r.alertIssues[0] && <p className="text-text-secondary mt-1 max-w-72 truncate text-[11px]" title={r.alertIssues.map((issue) => issue.message).join("\n")}>{r.alertIssues[0].message}</p>}
                             </Td>
 
                             <Td className="text-text-secondary dark:text-text-dark-primary/70 whitespace-nowrap tabular-nums">
@@ -318,6 +336,11 @@ function ViewModeTabs({
   );
 }
 
+function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number; tone: "slate" | "rose" | "amber" | "emerald" }) {
+  const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
+  return <button type="button" onClick={onClick} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-400 ring-2 ring-sky-100 dark:border-sky-500 dark:ring-sky-950" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-xl font-extrabold tabular-nums ${colors[tone]}`}>{value}</span></button>;
+}
+
 function ViewModeTab({
   active,
   onClick,
@@ -367,7 +390,7 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
     range?.mrlevh ?? null,
   );
 
-  const anyAlert = hePsiAlert || hePctAlert;
+  const anyAlert = row.alertStatus !== "NORMAL" || hePsiAlert || hePctAlert;
   const d = parseIso(row.lastAt);
 
   return (
@@ -392,9 +415,12 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <AlertStatusBadge row={row} />
           <ChevronRightIcon className="text-text-secondary/60 dark:text-text-dark-primary/40 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
+
+      {row.alertIssues.length > 0 && <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 dark:bg-rose-950/25"><p className="line-clamp-2 text-xs font-semibold text-rose-700 dark:text-rose-300">{row.alertIssues.slice(0, 2).map((issue) => issue.message).join(" · ")}</p>{row.alertIssues.length > 2 && <p className="mt-1 text-[10px] font-bold text-rose-500">외 {row.alertIssues.length - 2}건</p>}</div>}
 
       {/* Divider */}
       <div className="bg-border/50 dark:bg-background-dark-secondary/60 my-3 h-px" />
@@ -445,6 +471,12 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
       </div>
     </Link>
   );
+}
+
+function AlertStatusBadge({ row }: { row: SiteRow }) {
+  if (row.alertStatus === "NO_DATA") return <span className="rounded-full bg-rose-100 px-2 py-1 text-[10px] font-extrabold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">수신 중단 {row.openAlertCount}</span>;
+  if (row.alertStatus === "WARNING") return <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-extrabold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">기준 이탈 {row.openAlertCount}</span>;
+  return <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">정상</span>;
 }
 
 function MetricCol({

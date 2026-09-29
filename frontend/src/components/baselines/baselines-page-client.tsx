@@ -14,7 +14,7 @@ export default function BaselinesPageClient() {
   });
   const events = useQuery({
     queryKey: ["alert-events"],
-    queryFn: () => apiFetch<AlertEventSummary[]>("/alerts/events?limit=200"),
+    queryFn: () => apiFetch<AlertEventSummary[]>("/alerts/events?limit=500"),
     refetchInterval: 60_000,
   });
   const recipients = useQuery({
@@ -30,6 +30,13 @@ export default function BaselinesPageClient() {
           thresholds: entry.thresholds.map(({ key, min, max, active }) => ({ key, min, max, active })),
           noDataMinutes: entry.noDataMinutes,
           noDataActive: entry.noDataActive,
+          alertsEnabled: entry.alertsEnabled,
+          triggerAfterMinutes: entry.triggerAfterMinutes,
+          repeatMinutes: entry.repeatMinutes,
+          quietStart: entry.quietStart,
+          quietEnd: entry.quietEnd,
+          suppressWeekends: entry.suppressWeekends,
+          holidayDates: entry.holidayDates,
         }),
       }),
     onSuccess: (saved) => {
@@ -44,6 +51,23 @@ export default function BaselinesPageClient() {
     onSuccess: (saved) => queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
       current.map((event) => event.id === saved.id ? saved : event),
     ),
+  });
+  const acknowledgeMany = useMutation({
+    mutationFn: (eventIds: number[]) => apiFetch<{ ok: boolean; count: number }>("/alerts/events/acknowledge", {
+      method: "PATCH",
+      body: JSON.stringify({ eventIds }),
+    }),
+    onSuccess: (_, eventIds) => {
+      const acknowledgedAt = new Date().toISOString();
+      queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
+        current.map((event) => eventIds.includes(event.id) ? { ...event, acknowledgedAt: event.acknowledgedAt ?? acknowledgedAt } : event),
+      );
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
+  });
+  const retryDelivery = useMutation({
+    mutationFn: (eventId: number) => apiFetch<{ ok: boolean; eventId: number }>(`/alerts/events/${eventId}/retry`, { method: "POST" }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-events"] }),
   });
   const createRecipient = useMutation({
     mutationFn: (request: { siteId: string; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
@@ -74,6 +98,8 @@ export default function BaselinesPageClient() {
       eventsLoading={events.isLoading}
       eventsFailed={events.isError}
       onAcknowledge={(eventId) => acknowledge.mutateAsync(eventId)}
+      onAcknowledgeMany={(eventIds) => acknowledgeMany.mutateAsync(eventIds)}
+      onRetryDelivery={(eventId) => retryDelivery.mutateAsync(eventId)}
       recipients={recipients.data ?? []}
       recipientsLoading={recipients.isLoading}
       recipientsFailed={recipients.isError}

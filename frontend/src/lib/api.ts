@@ -49,6 +49,13 @@ export type SiteAlertSettings = {
   thresholds: AlertThreshold[];
   noDataMinutes: number;
   noDataActive: boolean;
+  alertsEnabled: boolean;
+  triggerAfterMinutes: number;
+  repeatMinutes: number;
+  quietStart: string | null;
+  quietEnd: string | null;
+  suppressWeekends: boolean;
+  holidayDates: string[];
 };
 
 export type AlertEventSummary = {

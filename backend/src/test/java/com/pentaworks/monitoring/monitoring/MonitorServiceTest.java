@@ -10,9 +10,15 @@ import com.pentaworks.monitoring.dashboard.DashboardResponse;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -28,14 +34,14 @@ class MonitorServiceTest {
         AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
         DashboardResponse.DashboardRow row = new DashboardResponse.DashboardRow(
             "001", "1", "병원", "2026-09-28T00:00:00Z", 0L, 1, 1, 1.0, 70.0,
-            Map.of("actemp", 31.0, "hepres", 1.0));
+            Map.of("actemp", 31.0, "hepres", 1.0), "NORMAL", 0, 0, List.of());
         when(dashboard.getDashboard()).thenReturn(new DashboardResponse(
-            new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1),
+            new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1, 1, 0, 0, 0),
             List.of(row), Map.of(), null));
         when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true, List.of(
             new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true),
             new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)
-        ), 30, false)));
+        ), 30, false, true, 0, 0, null, null, false)));
         when(recipients.hasConfiguredWebhooks("001")).thenReturn(true);
         AlertEventService.Transition transition = new AlertEventService.Transition(
             10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0,
@@ -51,5 +57,25 @@ class MonitorServiceTest {
         assertEquals("actemp", rows.get(0).metricKey());
         assertEquals("HIGH", rows.get(0).eventType());
         verify(alertEvents).markDelivery(List.of(10L), "SKIPPED", null, 0);
+    }
+
+    @Test
+    void appliesOvernightWeekendAndCustomHolidayWindows() {
+        SiteAlertSettings overnight = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
+            true, 0, 0, LocalTime.of(22, 0), LocalTime.of(8, 0), false, List.of());
+        ZoneId seoul = ZoneId.of("Asia/Seoul");
+        assertFalse(MonitorService.deliveryAllowed(overnight,
+            ZonedDateTime.of(2026, 9, 29, 23, 0, 0, 0, seoul)));
+        assertTrue(MonitorService.deliveryAllowed(overnight,
+            ZonedDateTime.of(2026, 9, 29, 12, 0, 0, 0, seoul)));
+
+        SiteAlertSettings holidays = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
+            true, 0, 0, null, null, true, List.of(LocalDate.of(2026, 9, 30)));
+        assertFalse(MonitorService.deliveryAllowed(holidays,
+            ZonedDateTime.of(2026, 10, 3, 12, 0, 0, 0, seoul)));
+        assertFalse(MonitorService.deliveryAllowed(holidays,
+            ZonedDateTime.of(2026, 9, 30, 12, 0, 0, 0, seoul)));
+        assertTrue(MonitorService.deliveryAllowed(holidays,
+            ZonedDateTime.of(2026, 10, 1, 12, 0, 0, 0, seoul)));
     }
 }

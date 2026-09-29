@@ -47,6 +47,8 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health", "/api/v1/monitor").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/events/*/acknowledge")
                     .authenticated()
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/events/acknowledge")
+                    .authenticated()
                 .requestMatchers("/api/v1/alerts/recipients", "/api/v1/alerts/recipients/**")
                     .hasAnyRole("SUPER_ADMIN", "ADMIN")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/**")

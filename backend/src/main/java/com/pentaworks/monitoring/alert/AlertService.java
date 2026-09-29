@@ -7,6 +7,9 @@ import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ForbiddenException;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.sql.SQLException;
+import java.sql.Time;
+import java.time.LocalTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.LinkedHashMap;
@@ -67,17 +70,27 @@ public class AlertService {
     }
 
     public List<SiteAlertSettings> alertSettings() {
+        Map<String, List<LocalDate>> holidays = holidayDates();
         return jdbcTemplate.query("""
             SELECT a.*, s.site AS registered_site, s.name,
-                   nd.no_data_minutes,nd.is_enabled AS no_data_active
+                   nd.no_data_minutes,nd.is_enabled AS no_data_active,
+                   p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
+                   p.quiet_start,p.quiet_end,p.suppress_weekends
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
+              LEFT JOIN site_alert_policy p ON p.site_id=s.site
              ORDER BY s.site
             """, (rs, row) -> settings(rs.getString("registered_site"), rs.getString("name"),
                 rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field),
                 rs.getObject("no_data_minutes") == null ? 30 : rs.getInt("no_data_minutes"),
-                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active")));
+                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active"),
+                rs.getObject("alerts_enabled") == null || rs.getBoolean("alerts_enabled"),
+                rs.getObject("trigger_after_minutes") == null ? 0 : rs.getInt("trigger_after_minutes"),
+                rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
+                localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
+                rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
+                holidays.getOrDefault(rs.getString("registered_site"), List.of())));
     }
 
     @Transactional
@@ -91,12 +104,19 @@ public class AlertService {
 
     @Transactional
     public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates) {
-        return updateAlertSettings(actor, siteId, updates, null, null);
+        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        SiteAlertSettings current = settings(siteId);
+        return updateAlertSettings(actor, siteId, updates, current.noDataMinutes(), current.noDataActive(),
+            current.alertsEnabled(), current.triggerAfterMinutes(), current.repeatMinutes(),
+            current.quietStart(), current.quietEnd(), current.suppressWeekends(), current.holidayDates());
     }
 
     @Transactional
     public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates,
-                                                 Integer noDataMinutes, Boolean noDataActive) {
+                                                 Integer noDataMinutes, Boolean noDataActive,
+                                                 Boolean alertsEnabled, Integer triggerAfterMinutes,
+                                                 Integer repeatMinutes, LocalTime quietStart, LocalTime quietEnd,
+                                                 Boolean suppressWeekends, List<LocalDate> holidayDates) {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         if (updates == null || updates.isEmpty()) throw new BadRequestException("변경할 기준값이 없습니다.");
@@ -105,6 +125,21 @@ public class AlertService {
         }
         if (noDataMinutes != null && (noDataMinutes < 5 || noDataMinutes > 1440)) {
             throw new BadRequestException("수신 중단 기준은 5분에서 1440분 사이여야 합니다.");
+        }
+        if (alertsEnabled == null || triggerAfterMinutes == null || repeatMinutes == null || suppressWeekends == null) {
+            throw new BadRequestException("알림 운영 설정을 확인해주세요.");
+        }
+        if (triggerAfterMinutes < 0 || triggerAfterMinutes > 1440) {
+            throw new BadRequestException("이상 지속 기준은 0분에서 1440분 사이여야 합니다.");
+        }
+        if (repeatMinutes < 0 || repeatMinutes > 10080 || (repeatMinutes > 0 && repeatMinutes < 5)) {
+            throw new BadRequestException("반복 알림은 사용 안 함(0) 또는 5분에서 10080분 사이여야 합니다.");
+        }
+        if ((quietStart == null) != (quietEnd == null)) {
+            throw new BadRequestException("알림 제외 시간의 시작과 종료를 모두 입력해주세요.");
+        }
+        if (holidayDates == null || holidayDates.size() > 100 || holidayDates.stream().anyMatch(java.util.Objects::isNull)) {
+            throw new BadRequestException("휴일은 사업장별 최대 100일까지 등록할 수 있습니다.");
         }
         Set<String> seen = new LinkedHashSet<>();
         for (ThresholdUpdate update : updates) {
@@ -132,11 +167,32 @@ public class AlertService {
                 """, siteId, noDataMinutes, noDataActive);
             if (!noDataActive) alertEvents.disableNoDataRule(siteId);
         }
+        jdbcTemplate.update("""
+            INSERT INTO site_alert_policy
+                (site_id,is_enabled,trigger_after_minutes,repeat_minutes,quiet_start,quiet_end,
+                 suppress_weekends,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE is_enabled=VALUES(is_enabled),
+                trigger_after_minutes=VALUES(trigger_after_minutes),repeat_minutes=VALUES(repeat_minutes),
+                quiet_start=VALUES(quiet_start),quiet_end=VALUES(quiet_end),
+                suppress_weekends=VALUES(suppress_weekends),updated_at=CURRENT_TIMESTAMP(6)
+            """, siteId, alertsEnabled, triggerAfterMinutes, repeatMinutes, time(quietStart), time(quietEnd),
+            suppressWeekends);
+        if (!alertsEnabled) alertEvents.disableSite(siteId);
+        jdbcTemplate.update("DELETE FROM site_alert_holiday WHERE site_id=?", siteId);
+        holidayDates.stream().distinct().sorted().forEach(date -> jdbcTemplate.update(
+            "INSERT INTO site_alert_holiday (site_id,holiday_date,created_at) VALUES (?,?,CURRENT_TIMESTAMP(6))",
+            siteId, java.sql.Date.valueOf(date)));
         audit.record(actor, "ALERT_THRESHOLDS_UPDATED", "SITE", siteId,
             Map.of("thresholds", updates.stream().map(update -> Map.of(
                     "key", update.key(), "min", update.min(), "max", update.max(), "active", update.active())).toList(),
                 "noDataMinutes", noDataMinutes == null ? 30 : noDataMinutes,
-                "noDataActive", noDataActive != null && noDataActive));
+                "noDataActive", noDataActive != null && noDataActive,
+                "alertsEnabled", alertsEnabled,
+                "triggerAfterMinutes", triggerAfterMinutes,
+                "repeatMinutes", repeatMinutes,
+                "suppressWeekends", suppressWeekends,
+                "holidayCount", holidayDates.size()));
         dashboardService.invalidateCache();
         return settings(siteId);
     }
@@ -152,21 +208,33 @@ public class AlertService {
     private SiteAlertSettings settings(String siteId) {
         return jdbcTemplate.queryForObject("""
             SELECT a.*, s.site AS registered_site, s.name,
-                   nd.no_data_minutes,nd.is_enabled AS no_data_active
+                   nd.no_data_minutes,nd.is_enabled AS no_data_active,
+                   p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
+                   p.quiet_start,p.quiet_end,p.suppress_weekends
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
+              LEFT JOIN site_alert_policy p ON p.site_id=s.site
              WHERE s.site=?
             """, (rs, row) -> settings(rs.getString("registered_site"), rs.getString("name"),
                 rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field),
                 rs.getObject("no_data_minutes") == null ? 30 : rs.getInt("no_data_minutes"),
-                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active")),
+                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active"),
+                rs.getObject("alerts_enabled") == null || rs.getBoolean("alerts_enabled"),
+                rs.getObject("trigger_after_minutes") == null ? 0 : rs.getInt("trigger_after_minutes"),
+                rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
+                localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
+                rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
+                holidayDates(siteId)),
             siteId);
     }
 
     private SiteAlertSettings settings(String siteId, String name, boolean exists,
                                        SqlStringValue strings, SqlObjectValue objects,
-                                       int noDataMinutes, boolean noDataActive) throws SQLException {
+                                       int noDataMinutes, boolean noDataActive,
+                                       boolean alertsEnabled, int triggerAfterMinutes, int repeatMinutes,
+                                       LocalTime quietStart, LocalTime quietEnd,
+                                       boolean suppressWeekends, List<LocalDate> holidayDates) throws SQLException {
         List<AlertThreshold> thresholds = new ArrayList<>();
         for (Metric metric : METRICS) {
             String prefix = metric.storagePrefix();
@@ -178,13 +246,33 @@ public class AlertService {
                 || !"0".equals(strings.get(prefix + "_active")));
             thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active));
         }
-        return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive);
+        return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive,
+            alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,
+            holidayDates);
     }
 
     private static Map<String, Metric> metricMap() {
         Map<String, Metric> result = new LinkedHashMap<>();
         METRICS.forEach(metric -> result.put(metric.key(), metric));
         return Map.copyOf(result);
+    }
+
+    private static Time time(LocalTime value) { return value == null ? null : Time.valueOf(value); }
+    private static LocalTime localTime(Time value) { return value == null ? null : value.toLocalTime(); }
+
+    private Map<String, List<LocalDate>> holidayDates() {
+        Map<String, List<LocalDate>> result = new LinkedHashMap<>();
+        jdbcTemplate.query("SELECT site_id,holiday_date FROM site_alert_holiday ORDER BY site_id,holiday_date",
+            (org.springframework.jdbc.core.RowCallbackHandler) rs -> result
+                .computeIfAbsent(rs.getString("site_id"), ignored -> new ArrayList<>())
+                .add(rs.getDate("holiday_date").toLocalDate()));
+        return result;
+    }
+
+    private List<LocalDate> holidayDates(String siteId) {
+        List<LocalDate> result = jdbcTemplate.query("SELECT holiday_date FROM site_alert_holiday WHERE site_id=? ORDER BY holiday_date",
+            (rs, row) -> rs.getDate(1).toLocalDate(), siteId);
+        return result == null ? List.of() : result;
     }
 
     @FunctionalInterface private interface SqlStringValue { String get(String field) throws SQLException; }
