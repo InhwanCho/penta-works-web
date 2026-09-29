@@ -5,7 +5,9 @@ import { useAuth } from "@/components/provider/auth-provider";
 import type { Role, Session } from "@/lib/auth";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { type FormEvent, useCallback, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+
+const REMEMBERED_EMAIL_KEY = "mreyes_remembered_email";
 
 const CARD_CLASS =
   "rounded-3xl border border-slate-200/70 bg-white shadow-[0_20px_60px_rgba(22,58,82,0.12)] dark:border-white/8 dark:bg-background-dark-card";
@@ -41,9 +43,16 @@ export default function LoginForm() {
   const { session, isLoading, isAdmin, login, logout } = useAuth();
 
   const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
+  const [rememberEmail, setRememberEmail] = useState(false);
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const remembered = window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "";
+    setRememberEmail(Boolean(remembered));
+    if (!searchParams.get("email") && remembered) setEmail(remembered);
+  }, [searchParams]);
 
   const nextPath = useMemo(
     () => safeNextPath(searchParams.get("next")),
@@ -73,6 +82,8 @@ export default function LoginForm() {
 
       try {
         await login(email, password);
+        if (rememberEmail) window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim().toLowerCase());
+        else window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
         setError(null);
         goAfterLogin();
       } catch (error) {
@@ -81,12 +92,12 @@ export default function LoginForm() {
         );
       }
     },
-    [canSubmit, email, goAfterLogin, login, password],
+    [canSubmit, email, goAfterLogin, login, password, rememberEmail],
   );
 
   const handleLogout = useCallback(async () => {
     await logout();
-    setEmail("");
+    setEmail(window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "");
     setPassword("");
     setError(null);
   }, [logout]);
@@ -191,6 +202,19 @@ export default function LoginForm() {
                       </button>
                     </div>
                   </div>
+
+                  <label className="text-text-secondary dark:text-text-dark-primary/70 flex cursor-pointer items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={rememberEmail}
+                      onChange={(event) => {
+                        setRememberEmail(event.target.checked);
+                        if (!event.target.checked) window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+                      }}
+                      className="h-4 w-4 cursor-pointer accent-sky-700"
+                    />
+                    아이디 저장
+                  </label>
                 </div>
 
                 {/* 에러 영역 */}
