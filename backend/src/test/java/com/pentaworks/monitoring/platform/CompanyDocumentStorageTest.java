@@ -27,4 +27,12 @@ class CompanyDocumentStorageTest {
         assertThrows(BadRequestException.class, () -> storage.store(
             new MockMultipartFile("file", "registration.exe", "application/octet-stream", new byte[] {1})));
     }
+
+    @Test
+    void rejectsDocumentLargerThanTenMegabytes() {
+        CompanyDocumentStorage storage = new CompanyDocumentStorage(directory.toString());
+        assertThrows(BadRequestException.class, () -> storage.store(
+            new MockMultipartFile("file", "registration.jpg", "image/jpeg",
+                new byte[10 * 1024 * 1024 + 1])));
+    }
 }

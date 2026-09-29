@@ -62,6 +62,13 @@ public class PlatformCompanyController {
         return service.verifyRegistration(currentUsers.require(authentication), companyId);
     }
 
+    @PostMapping(value = "/{companyId}/business-registration", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public CompanySummary uploadRegistration(@PathVariable long companyId,
+                                             @Valid @ModelAttribute UploadRegistrationRequest request,
+                                             Authentication authentication) {
+        return service.uploadRegistration(currentUsers.require(authentication), companyId, request);
+    }
+
     @GetMapping("/{companyId}/business-registration")
     public ResponseEntity<byte[]> registration(@PathVariable long companyId, Authentication authentication) {
         CompanyDocument document = service.registration(currentUsers.require(authentication), companyId);
@@ -80,6 +87,9 @@ public class PlatformCompanyController {
         @NotBlank @Size(max = 80) String adminName,
         MultipartFile businessRegistration) {}
     public record UpdateStatusRequest(@NotBlank String status) {}
+    public record UploadRegistrationRequest(
+        @NotBlank @Pattern(regexp = "[0-9-]{10,12}") String businessRegistrationNumber,
+        MultipartFile businessRegistration) {}
     public record CompanySummary(long id, String code, String name, String businessRegistrationNumber,
                                  String businessRegistrationUrl, String status, Instant createdAt,
                                  Instant businessRegistrationUploadedAt, Instant businessRegistrationVerifiedAt,

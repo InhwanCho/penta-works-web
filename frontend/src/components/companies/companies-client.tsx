@@ -108,7 +108,7 @@ function CreateCompany() {
     <label className="text-text-secondary block text-xs font-bold">사업자등록번호<input className={`${INPUT} mt-1.5`} required inputMode="numeric" placeholder="000-00-00000" value={number} onChange={(event) => setNumber(event.target.value)} /></label>
     <label className="text-text-secondary block text-xs font-bold">최초 최고관리자 이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={adminName} onChange={(event) => setAdminName(event.target.value)} /></label>
     <label className="text-text-secondary block text-xs font-bold">최초 최고관리자 이메일<input className={`${INPUT} mt-1.5`} type="email" required value={adminEmail} onChange={(event) => setAdminEmail(event.target.value)} /></label>
-    <label className="text-text-secondary block text-xs font-bold">사업자등록증 파일<input id="registration-file" className={`${INPUT} mt-1.5 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700`} type="file" required accept="application/pdf,image/jpeg,image/png" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="mt-1 block font-medium">PDF, JPG, PNG · 최대 900KB</span></label>
+    <label className="text-text-secondary block text-xs font-bold">사업자등록증 파일<input id="registration-file" className={`${INPUT} mt-1.5 file:mr-3 file:rounded-lg file:border-0 file:bg-sky-50 file:px-3 file:py-1.5 file:text-xs file:font-bold file:text-sky-700`} type="file" required accept="application/pdf,image/jpeg,image/png" onChange={(event) => setFile(event.target.files?.[0] ?? null)} /><span className="mt-1 block font-medium">PDF, JPG, PNG · 최대 10MB</span></label>
     {message && <p className="rounded-lg bg-slate-50 p-3 text-xs font-semibold dark:bg-white/5">{message}</p>}
     {inviteLink && <div className="rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 text-xs dark:border-emerald-900/50 dark:bg-emerald-950/20"><p className="mb-2 font-bold">7일 초대 링크</p><textarea className={`${INPUT} min-h-20`} readOnly value={inviteLink} /><button type="button" className="mt-2 font-bold underline" onClick={() => navigator.clipboard.writeText(inviteLink)}>링크 복사</button></div>}
     <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{saving ? "등록 중…" : "회사 생성 및 초대"}</button>
@@ -120,15 +120,39 @@ function CompanyCard({ company }: { company: Company }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
+  const [registrationNumber, setRegistrationNumber] = useState(company.businessRegistrationNumber ?? "");
+  const [registrationFile, setRegistrationFile] = useState<File | null>(null);
   async function refresh() { await queryClient.invalidateQueries({ queryKey: ["platform-companies"] }); }
   async function resend() { setBusy(true); setMessage(null); try { const result = await apiFetch<InvitationResult>(`/platform/companies/${company.id}/invitation/resend`, { method: "POST" }); setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`); setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 다시 발송했습니다." : "새 수동 초대 링크를 만들었습니다."); await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "재발송하지 못했습니다."); } finally { setBusy(false); } }
   async function verify() { setBusy(true); try { await apiFetch(`/platform/companies/${company.id}/business-registration/verify`, { method: "PATCH" }); setMessage("사업자등록증을 확인 처리했습니다."); await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "확인 처리하지 못했습니다."); } finally { setBusy(false); } }
   async function status() { setBusy(true); try { const next = company.status === "ACTIVE" ? "SUSPENDED" : "ACTIVE"; await apiFetch(`/platform/companies/${company.id}/status`, { method: "PATCH", body: JSON.stringify({ status: next }) }); setMessage(next === "ACTIVE" ? "회사를 활성화했습니다." : "회사를 중지하고 모든 세션을 종료했습니다."); await refresh(); } catch (error) { setMessage(error instanceof Error ? error.message : "상태를 변경하지 못했습니다."); } finally { setBusy(false); } }
   async function openDocument() { setBusy(true); try { const blob = await apiFetchBlob(`/platform/companies/${company.id}/business-registration`); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.target = "_blank"; anchor.rel = "noopener noreferrer"; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 60_000); } catch (error) { setMessage(error instanceof Error ? error.message : "문서를 열지 못했습니다."); } finally { setBusy(false); } }
+  async function uploadRegistration(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!registrationFile) { setMessage("사업자등록증 파일을 선택해주세요."); return; }
+    setBusy(true); setMessage(null);
+    const body = new FormData();
+    body.set("businessRegistrationNumber", registrationNumber);
+    body.set("businessRegistration", registrationFile);
+    try {
+      await apiFetch(`/platform/companies/${company.id}/business-registration`, { method: "POST", body });
+      setMessage(company.businessRegistrationUrl ? "사업자등록증을 교체했습니다. 다시 확인해주세요." : "사업자등록증을 등록했습니다.");
+      setRegistrationFile(null);
+      const input = document.getElementById(`registration-file-${company.id}`) as HTMLInputElement | null;
+      if (input) input.value = "";
+      await refresh();
+    } catch (error) { setMessage(error instanceof Error ? error.message : "사업자등록증을 등록하지 못했습니다."); }
+    finally { setBusy(false); }
+  }
 
   return <article className={`${CARD} p-5`}>
     <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-extrabold">{company.name}</h3><Status status={company.status} /></div><p className="text-text-secondary mt-1 text-xs">{company.code} · 사업자번호 {formatBusinessNumber(company.businessRegistrationNumber)}</p></div>{company.businessRegistrationUrl && <div className="flex gap-2"><button type="button" disabled={busy} onClick={openDocument} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">등록증 보기</button>{!company.businessRegistrationVerifiedAt && <button type="button" disabled={busy} onClick={verify} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">확인 완료</button>}</div>}</div>
     <dl className="mt-4 grid grid-cols-3 gap-2"><Metric label="사업장" value={company.siteCount} /><Metric label="사용자" value={company.userCount} /><Metric label="최고관리자" value={company.superAdminCount} danger={company.status !== "PENDING" && company.superAdminCount < 1} /></dl>
+    <form onSubmit={uploadRegistration} className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end dark:bg-white/4">
+      <label className="text-text-secondary text-[11px] font-bold">사업자등록번호<input className={`${INPUT} mt-1`} required inputMode="numeric" placeholder="000-00-00000" value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} /></label>
+      <label className="text-text-secondary text-[11px] font-bold">등록증 파일 · 최대 10MB<input id={`registration-file-${company.id}`} className={`${INPUT} mt-1 py-2 file:mr-2 file:border-0 file:bg-transparent file:text-xs file:font-bold`} type="file" required accept="application/pdf,image/jpeg,image/png" onChange={(event) => setRegistrationFile(event.target.files?.[0] ?? null)} /></label>
+      <button type="submit" disabled={busy} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5">{company.businessRegistrationUrl ? "등록증 교체" : "등록증 등록"}</button>
+    </form>
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-white/7"><div className="text-xs"><p className="font-bold">{!company.businessRegistrationUrl ? "등록증 미등록" : company.businessRegistrationVerifiedAt ? `등록증 확인 · ${formatDate(company.businessRegistrationVerifiedAt)}` : "등록증 확인 대기"}</p>{company.pendingAdminEmail && <p className="text-text-secondary mt-1">최초 관리자 초대: {company.pendingAdminEmail} · {formatDate(company.pendingInvitationExpiresAt)}</p>}{message && <p className="mt-1 font-semibold text-sky-700 dark:text-sky-300">{message}</p>}</div><div className="flex gap-2">{company.status === "PENDING" && <button type="button" disabled={busy} onClick={resend} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold dark:border-white/10">초대 재발송</button>}{company.status !== "PENDING" && company.code !== "PENTAWORKS" && <button type="button" disabled={busy} onClick={status} className={`rounded-lg px-3 py-2 text-xs font-bold ${company.status === "ACTIVE" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"}`}>{company.status === "ACTIVE" ? "회사 중지" : "회사 활성화"}</button>}</div></div>
     {link && <div className="mt-3 rounded-lg bg-emerald-50/60 p-3 text-xs dark:bg-emerald-950/20"><textarea className={`${INPUT} min-h-16`} readOnly value={link} /><button type="button" className="mt-1 font-bold underline" onClick={() => navigator.clipboard.writeText(link)}>새 링크 복사</button></div>}
   </article>;

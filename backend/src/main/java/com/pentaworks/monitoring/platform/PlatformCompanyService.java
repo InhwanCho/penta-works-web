@@ -15,6 +15,7 @@ import com.pentaworks.monitoring.platform.PlatformCompanyController.CompanyDocum
 import com.pentaworks.monitoring.platform.PlatformCompanyController.CompanySummary;
 import com.pentaworks.monitoring.platform.PlatformCompanyController.CreateCompanyRequest;
 import com.pentaworks.monitoring.platform.PlatformCompanyController.InvitationCreated;
+import com.pentaworks.monitoring.platform.PlatformCompanyController.UploadRegistrationRequest;
 import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +27,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 @Service
 public class PlatformCompanyService {
@@ -191,6 +194,44 @@ public class PlatformCompanyService {
         audit.recordForCompany(companyId, actor, "BUSINESS_REGISTRATION_VERIFIED", "COMPANY",
             Long.toString(companyId), Map.of());
         return findCompany(actor, companyId);
+    }
+
+    @Transactional
+    public CompanySummary uploadRegistration(CurrentUser actor, long companyId, UploadRegistrationRequest request) {
+        requirePlatformAdmin(actor);
+        PendingCompany company = company(companyId, true);
+        String number = request.businessRegistrationNumber().replaceAll("[^0-9]", "");
+        if (number.length() != 10) throw new BadRequestException("사업자등록번호 10자리를 입력해주세요.");
+        Integer duplicate = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM company WHERE business_registration_number=? AND id<>?",
+            Integer.class, number, companyId);
+        if (duplicate != null && duplicate > 0) throw new ConflictException("이미 등록된 사업자등록번호입니다.");
+
+        StoredDocument stored = documents.store(request.businessRegistration());
+        try {
+            String registrationUrl = "/api/v1/platform/companies/" + companyId + "/business-registration";
+            jdbcTemplate.update("""
+                UPDATE company SET business_registration_number=?,business_registration_url=?,
+                       business_registration_storage_key=?,business_registration_original_name=?,
+                       business_registration_content_type=?,business_registration_uploaded_at=CURRENT_TIMESTAMP(6),
+                       business_registration_verified_at=NULL,business_registration_verified_by=NULL,
+                       updated_at=CURRENT_TIMESTAMP(6) WHERE id=?
+                """, number, registrationUrl, stored.key(), stored.originalName(), stored.contentType(), companyId);
+            audit.recordForCompany(companyId, actor, "BUSINESS_REGISTRATION_UPLOADED", "COMPANY",
+                Long.toString(companyId), Map.of("businessRegistrationNumber", number));
+            if (company.storageKey() != null) {
+                TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                    @Override public void afterCommit() { documents.deleteQuietly(company.storageKey()); }
+                });
+            }
+            return findCompany(actor, companyId);
+        } catch (DuplicateKeyException error) {
+            documents.deleteQuietly(stored.key());
+            throw new ConflictException("이미 등록된 사업자등록번호입니다.");
+        } catch (RuntimeException error) {
+            documents.deleteQuietly(stored.key());
+            throw error;
+        }
     }
 
     public CompanyDocument registration(CurrentUser actor, long companyId) {

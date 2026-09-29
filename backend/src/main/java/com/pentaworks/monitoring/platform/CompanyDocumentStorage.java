@@ -13,7 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class CompanyDocumentStorage {
-    private static final long MAX_SIZE = 900 * 1024;
+    private static final long MAX_SIZE = 10 * 1024 * 1024;
     private static final Map<String, String> EXTENSIONS = Map.of(
         "application/pdf", ".pdf",
         "image/jpeg", ".jpg",
@@ -26,7 +26,7 @@ public class CompanyDocumentStorage {
 
     public StoredDocument store(MultipartFile file) {
         if (file == null || file.isEmpty()) throw new BadRequestException("사업자등록증 파일을 첨부해주세요.");
-        if (file.getSize() > MAX_SIZE) throw new BadRequestException("사업자등록증 파일은 900KB 이하여야 합니다.");
+        if (file.getSize() > MAX_SIZE) throw new BadRequestException("사업자등록증 파일은 10MB 이하여야 합니다.");
         String contentType = file.getContentType() == null ? "" : file.getContentType().toLowerCase();
         String extension = EXTENSIONS.get(contentType);
         if (extension == null) throw new BadRequestException("사업자등록증은 PDF, JPG, PNG 파일만 등록할 수 있습니다.");
