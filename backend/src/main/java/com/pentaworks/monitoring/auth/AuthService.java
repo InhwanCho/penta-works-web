@@ -77,6 +77,7 @@ public class AuthService {
               FROM user_session s
               JOIN app_user u ON u.id = s.user_id
               JOIN company c ON c.id = u.company_id AND c.status='ACTIVE'
+                            AND (u.role<>'PLATFORM_ADMIN' OR c.code='PENTAWORKS')
              WHERE s.refresh_token_hash=? AND s.revoked_at IS NULL
                AND s.expires_at > CURRENT_TIMESTAMP(6) AND u.status='ACTIVE'
             """, rs -> rs.next() ? new SessionRow(rs.getString("session_id"), userRow(rs)) : null, oldHash);
@@ -210,6 +211,7 @@ public class AuthService {
                    u.failed_login_count,u.locked_until
               FROM app_user u JOIN company c ON c.id=u.company_id
              WHERE u.email=? AND c.status='ACTIVE'
+               AND (u.role<>'PLATFORM_ADMIN' OR c.code='PENTAWORKS')
             """, rs -> rs.next() ? userRow(rs) : null, email);
     }
 

@@ -2,6 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  ApiError,
   login as requestLogin,
   logout as requestLogout,
   refreshAccessToken,
@@ -72,11 +73,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           role: refreshed.role,
         });
       })
-      .catch(() => {
-        if (!stored) setSession(null);
+      .catch((error) => {
+        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+          clearStoredSession();
+          queryClient.clear();
+          setSession(null);
+        } else if (!stored) setSession(null);
       })
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [queryClient]);
 
   const login = useCallback(
     async (email: string, password: string) => {

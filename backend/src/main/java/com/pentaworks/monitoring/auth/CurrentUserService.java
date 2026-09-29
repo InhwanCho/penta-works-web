@@ -24,6 +24,7 @@ public class CurrentUserService {
             SELECT u.id,u.company_id,u.email,u.name,u.role,u.status
               FROM app_user u JOIN company c ON c.id=u.company_id
              WHERE u.email=? AND c.status='ACTIVE'
+               AND (u.role<>'PLATFORM_ADMIN' OR c.code='PENTAWORKS')
             """, rs -> rs.next() ? new CurrentUser(rs.getLong("id"), rs.getLong("company_id"),
                 rs.getString("email"), rs.getString("name"), rs.getString("role"), rs.getString("status")) : null,
             authentication.getName());

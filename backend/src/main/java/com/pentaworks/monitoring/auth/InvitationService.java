@@ -75,10 +75,13 @@ public class InvitationService {
         if (token == null || token.isBlank()) throw new NotFoundException("유효한 초대를 찾을 수 없습니다.");
         String suffix = forUpdate ? " FOR UPDATE" : "";
         Invitation result = jdbcTemplate.query("""
-            SELECT id,company_id,email,name,role,expires_at
-              FROM account_invitation
-             WHERE token_hash=? AND accepted_at IS NULL AND revoked_at IS NULL
-               AND expires_at>CURRENT_TIMESTAMP(6)
+            SELECT i.id,i.company_id,i.email,i.name,i.role,i.expires_at
+              FROM account_invitation i JOIN company c ON c.id=i.company_id
+             WHERE i.token_hash=? AND i.accepted_at IS NULL AND i.revoked_at IS NULL
+               AND i.role IN ('SUPER_ADMIN','ADMIN','USER') AND c.status<>'SUSPENDED'
+               AND (i.role<>'SUPER_ADMIN' OR c.status<>'PENDING'
+                    OR c.business_registration_verified_at IS NOT NULL)
+               AND i.expires_at>CURRENT_TIMESTAMP(6)
             """ + suffix, rs -> rs.next() ? new Invitation(rs.getString("id"), rs.getLong("company_id"),
                 rs.getString("email"), rs.getString("name"), rs.getString("role"),
                 rs.getTimestamp("expires_at").toInstant()) : null, secureTokens.hash(token));

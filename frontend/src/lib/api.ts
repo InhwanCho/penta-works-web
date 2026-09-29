@@ -95,11 +95,15 @@ function isPublicAuthPath(path: string) {
     path.startsWith("/auth/invitations/") || path.startsWith("/auth/password-resets/");
 }
 
-async function errorFrom(response: Response): Promise<Error> {
+export class ApiError extends Error {
+  constructor(message: string, readonly status: number) { super(message); }
+}
+
+async function errorFrom(response: Response): Promise<ApiError> {
   const body = (await response.json().catch(() => null)) as {
     message?: string;
   } | null;
-  return new Error(body?.message ?? `API request failed (${response.status})`);
+  return new ApiError(body?.message ?? `API request failed (${response.status})`, response.status);
 }
 
 function storeAuthResponse(result: AuthResponse): StoredSession {

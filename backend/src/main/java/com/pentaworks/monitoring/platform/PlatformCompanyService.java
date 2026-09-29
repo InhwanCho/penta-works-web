@@ -15,6 +15,10 @@ import com.pentaworks.monitoring.platform.PlatformCompanyController.CompanyDocum
 import com.pentaworks.monitoring.platform.PlatformCompanyController.CompanySummary;
 import com.pentaworks.monitoring.platform.PlatformCompanyController.CreateCompanyRequest;
 import com.pentaworks.monitoring.platform.PlatformCompanyController.InvitationCreated;
+import com.pentaworks.monitoring.platform.PlatformCompanyController.InviteCompanyAdminRequest;
+import com.pentaworks.monitoring.platform.PlatformCompanyController.AssignSiteRequest;
+import com.pentaworks.monitoring.platform.PlatformCompanyController.SiteAssignment;
+import com.pentaworks.monitoring.platform.PlatformCompanyController.CompanyActivity;
 import com.pentaworks.monitoring.platform.PlatformCompanyController.UploadRegistrationRequest;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -63,7 +67,7 @@ public class PlatformCompanyService {
               LEFT JOIN account_invitation i ON i.id=(
                    SELECT ai.id FROM account_invitation ai
                     WHERE ai.company_id=c.id AND ai.role='SUPER_ADMIN' AND ai.accepted_at IS NULL
-                      AND ai.revoked_at IS NULL AND ai.expires_at>CURRENT_TIMESTAMP(6)
+                      AND ai.revoked_at IS NULL
                     ORDER BY ai.created_at DESC LIMIT 1)
              ORDER BY CASE c.status WHEN 'PENDING' THEN 0 WHEN 'ACTIVE' THEN 1 ELSE 2 END,c.name,c.id
             """, (rs, row) -> new CompanySummary(rs.getLong("id"), rs.getString("code"), rs.getString("name"),
@@ -73,6 +77,75 @@ public class PlatformCompanyService {
                 instant(rs.getTimestamp("business_registration_verified_at")), rs.getInt("site_count"),
                 rs.getInt("user_count"), rs.getInt("super_admin_count"), rs.getString("invitation_id"),
                 rs.getString("invitation_email"), instant(rs.getTimestamp("invitation_expires_at"))));
+    }
+
+    public List<SiteAssignment> sites(CurrentUser actor) {
+        requirePlatformAdmin(actor);
+        return jdbcTemplate.query("""
+            SELECT s.site,s.name,cs.company_id,c.name AS company_name
+              FROM site s LEFT JOIN company_site cs ON cs.site_id=s.site
+              LEFT JOIN company c ON c.id=cs.company_id
+             WHERE s.site<>'040' ORDER BY s.site
+            """, (rs, row) -> new SiteAssignment(rs.getString("site"), rs.getString("name"),
+                rs.getObject("company_id", Long.class), rs.getString("company_name")));
+    }
+
+    public List<CompanyActivity> activity(CurrentUser actor, long companyId) {
+        requirePlatformAdmin(actor);
+        company(companyId, false);
+        return jdbcTemplate.query("""
+            SELECT id,action,actor_name,created_at FROM audit_log
+             WHERE company_id=? AND (target_type='COMPANY'
+                 OR action IN ('SITE_ASSIGNED','SITE_TRANSFERRED_OUT'))
+             ORDER BY created_at DESC,id DESC LIMIT 30
+            """, (rs, row) -> new CompanyActivity(rs.getLong("id"), rs.getString("action"),
+                rs.getString("actor_name"), instant(rs.getTimestamp("created_at"))), companyId);
+    }
+
+    @Transactional
+    public SiteAssignment assignSite(CurrentUser actor, String siteId, AssignSiteRequest request) {
+        requirePlatformAdmin(actor);
+        if (siteId == null || !siteId.matches("[A-Za-z0-9_-]{1,32}") || "040".equals(siteId)) {
+            throw new BadRequestException("올바르지 않은 사업장 코드입니다.");
+        }
+        String existingSite = jdbcTemplate.query("SELECT site FROM site WHERE site=? FOR UPDATE",
+            rs -> rs.next() ? rs.getString(1) : null, siteId);
+        if (existingSite == null) throw new NotFoundException("사업장을 찾을 수 없습니다.");
+        Integer destination = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM company WHERE id=? AND status IN ('PENDING','ACTIVE')",
+            Integer.class, request.companyId());
+        if (destination == null || destination != 1) throw new BadRequestException("배정할 회사를 선택해주세요.");
+        Long previousCompanyId = jdbcTemplate.query("SELECT company_id FROM company_site WHERE site_id=? FOR UPDATE",
+            rs -> rs.next() ? rs.getLong(1) : null, siteId);
+        if (previousCompanyId != null && previousCompanyId == request.companyId()) {
+            throw new BadRequestException("이미 해당 회사에 배정된 사업장입니다.");
+        }
+        if (previousCompanyId != null && !request.confirmHistoryTransfer()) {
+            throw new BadRequestException("기존 회사의 사업장을 이동하려면 과거 데이터 이전을 확인해주세요.");
+        }
+        if (previousCompanyId != null) {
+            Integer assetSyncs = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM office_asset_sync_state WHERE site_id=?", Integer.class, siteId);
+            if (assetSyncs != null && assetSyncs > 0) {
+                throw new BadRequestException("사무실 자산 연동 이력이 있는 사업장은 연동을 정리한 후 이동할 수 있습니다.");
+            }
+        }
+        if (previousCompanyId == null) {
+            jdbcTemplate.update("INSERT INTO company_site (company_id,site_id) VALUES (?,?)",
+                request.companyId(), siteId);
+        } else {
+            jdbcTemplate.update("DELETE FROM user_site WHERE site_id=?", siteId);
+            jdbcTemplate.update("DELETE FROM account_invitation_site WHERE site_id=?", siteId);
+            jdbcTemplate.update("DELETE FROM site_alert_recipient WHERE site_id=?", siteId);
+            jdbcTemplate.update("UPDATE company_site SET company_id=? WHERE site_id=?",
+                request.companyId(), siteId);
+            audit.recordForCompany(previousCompanyId, actor, "SITE_TRANSFERRED_OUT", "SITE", siteId,
+                Map.of("toCompanyId", request.companyId()));
+        }
+        audit.recordForCompany(request.companyId(), actor, "SITE_ASSIGNED", "SITE", siteId,
+            Map.of("fromCompanyId", previousCompanyId == null ? "unassigned" : previousCompanyId.toString()));
+        return sites(actor).stream().filter(site -> site.id().equals(siteId)).findFirst()
+            .orElseThrow(() -> new NotFoundException("사업장을 찾을 수 없습니다."));
     }
 
     @Transactional
@@ -114,13 +187,11 @@ public class PlatformCompanyService {
             if (companyId == null) throw new IllegalStateException("회사를 생성하지 못했습니다.");
             String registrationUrl = "/api/v1/platform/companies/" + companyId + "/business-registration";
             jdbcTemplate.update("UPDATE company SET business_registration_url=? WHERE id=?", registrationUrl, companyId);
-            InvitationData invitation = createInvitation(companyId, email, adminName, actor.id());
+            reserveInvitation(companyId, email, adminName, actor.id());
             audit.recordForCompany(companyId, actor, "COMPANY_CREATED", "COMPANY", Long.toString(companyId),
                 Map.of("code", code, "name", name, "businessRegistrationNumber", number,
                     "initialSuperAdmin", email));
-            CompanySummary company = findCompany(actor, companyId);
-            return new CompanyCreated(company, invitation.token(), email, invitation.expiresAt(),
-                invitation.deliveryStatus());
+            return new CompanyCreated(findCompany(actor, companyId));
         } catch (DuplicateKeyException error) {
             documents.deleteQuietly(stored.key());
             throw new ConflictException("회사 코드, 사업자등록번호 또는 관리자 이메일이 이미 등록되어 있습니다.");
@@ -134,6 +205,9 @@ public class PlatformCompanyService {
     public InvitationCreated resend(CurrentUser actor, long companyId) {
         requirePlatformAdmin(actor);
         PendingCompany company = pendingCompany(companyId, true);
+        if (!company.registrationVerified()) {
+            throw new BadRequestException("사업자등록증 확인 후 초대할 수 있습니다.");
+        }
         PendingInvitation invitation = jdbcTemplate.query("""
             SELECT id,email,name FROM account_invitation
              WHERE company_id=? AND role='SUPER_ADMIN' AND accepted_at IS NULL AND revoked_at IS NULL
@@ -150,6 +224,53 @@ public class PlatformCompanyService {
         audit.recordForCompany(companyId, actor, "COMPANY_ADMIN_INVITATION_RESENT", "COMPANY", Long.toString(companyId),
             Map.of("email", invitation.email(), "deliveryStatus", delivery));
         return new InvitationCreated(token, invitation.email(), expiresAt, delivery);
+    }
+
+    @Transactional
+    public void revokeInvitation(CurrentUser actor, long companyId) {
+        requirePlatformAdmin(actor);
+        pendingCompany(companyId, true);
+        int changed = jdbcTemplate.update("""
+            UPDATE account_invitation SET revoked_at=CURRENT_TIMESTAMP(6)
+             WHERE company_id=? AND role='SUPER_ADMIN' AND accepted_at IS NULL AND revoked_at IS NULL
+            """, companyId);
+        if (changed == 0) throw new NotFoundException("취소할 초대를 찾을 수 없습니다.");
+        audit.recordForCompany(companyId, actor, "COMPANY_ADMIN_INVITATION_REVOKED", "COMPANY",
+            Long.toString(companyId), Map.of());
+    }
+
+    @Transactional
+    public InvitationCreated invite(CurrentUser actor, long companyId, InviteCompanyAdminRequest request) {
+        requirePlatformAdmin(actor);
+        PendingCompany company = pendingCompany(companyId, true);
+        if (!company.registrationVerified()) {
+            throw new BadRequestException("사업자등록증 확인 후 초대할 수 있습니다.");
+        }
+        Integer pending = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM account_invitation WHERE company_id=? AND role='SUPER_ADMIN'
+             AND accepted_at IS NULL AND revoked_at IS NULL
+            """, Integer.class, companyId);
+        if (pending != null && pending > 0) throw new ConflictException("기존 초대를 먼저 취소해주세요.");
+        String email = normalizeEmail(request.email());
+        String name = required(request.name(), 80, "최초 최고관리자 이름");
+        Integer account = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM app_user WHERE email=?",
+            Integer.class, email);
+        if (account != null && account > 0) throw new ConflictException("이미 가입된 이메일입니다.");
+        Integer otherInvitation = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM account_invitation WHERE email=? AND accepted_at IS NULL
+             AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
+            """, Integer.class, email);
+        if (otherInvitation != null && otherInvitation > 0) throw new ConflictException("이미 유효한 초대가 있는 이메일입니다.");
+        PendingInvitation invitation = reserveInvitation(companyId, email, name, actor.id());
+        String token = secureTokens.create();
+        Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
+        jdbcTemplate.update("""
+            UPDATE account_invitation SET token_hash=?,expires_at=?,created_at=CURRENT_TIMESTAMP(6) WHERE id=?
+            """, secureTokens.hash(token), Timestamp.from(expiresAt), invitation.id());
+        String delivery = mail.sendInvitation(email, name, token).name();
+        audit.recordForCompany(companyId, actor, "COMPANY_ADMIN_INVITED", "COMPANY", Long.toString(companyId),
+            Map.of("email", email, "deliveryStatus", delivery));
+        return new InvitationCreated(token, email, expiresAt, delivery);
     }
 
     @Transactional
@@ -179,6 +300,19 @@ public class PlatformCompanyService {
         }
         audit.recordForCompany(companyId, actor, "COMPANY_STATUS_CHANGED", "COMPANY", Long.toString(companyId),
             Map.of("before", company.status(), "after", status));
+        return findCompany(actor, companyId);
+    }
+
+    @Transactional
+    public CompanySummary updateProfile(CurrentUser actor, long companyId, String rawName) {
+        requirePlatformAdmin(actor);
+        company(companyId, true);
+        String name = required(rawName, 120, "회사명");
+        String previous = jdbcTemplate.queryForObject("SELECT name FROM company WHERE id=?", String.class, companyId);
+        if (name.equals(previous)) return findCompany(actor, companyId);
+        jdbcTemplate.update("UPDATE company SET name=?,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?", name, companyId);
+        audit.recordForCompany(companyId, actor, "COMPANY_PROFILE_UPDATED", "COMPANY", Long.toString(companyId),
+            Map.of("name", previous), Map.of("name", name));
         return findCompany(actor, companyId);
     }
 
@@ -241,7 +375,7 @@ public class PlatformCompanyService {
         return new CompanyDocument(documents.read(company.storageKey()), company.originalName(), company.contentType());
     }
 
-    private InvitationData createInvitation(long companyId, String email, String name, long actorId) {
+    private PendingInvitation reserveInvitation(long companyId, String email, String name, long actorId) {
         String id = UUID.randomUUID().toString();
         String token = secureTokens.create();
         Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
@@ -250,8 +384,7 @@ public class PlatformCompanyService {
                 (id,company_id,email,name,role,token_hash,invited_by,expires_at,created_at)
             VALUES (?,?,?,?,'SUPER_ADMIN',?,?,?,CURRENT_TIMESTAMP(6))
             """, id, companyId, email, name, secureTokens.hash(token), actorId, Timestamp.from(expiresAt));
-        String delivery = mail.sendInvitation(email, name, token).name();
-        return new InvitationData(token, expiresAt, delivery);
+        return new PendingInvitation(id, email, name);
     }
 
     private CompanySummary findCompany(CurrentUser actor, long companyId) {
@@ -268,9 +401,10 @@ public class PlatformCompanyService {
     private PendingCompany company(long companyId, boolean forUpdate) {
         String suffix = forUpdate ? " FOR UPDATE" : "";
         PendingCompany value = jdbcTemplate.query("""
-            SELECT id,status,business_registration_storage_key,business_registration_original_name,
+            SELECT id,status,business_registration_verified_at,business_registration_storage_key,business_registration_original_name,
                    business_registration_content_type FROM company WHERE id=?
             """ + suffix, rs -> rs.next() ? new PendingCompany(rs.getLong("id"), rs.getString("status"),
+                rs.getTimestamp("business_registration_verified_at") != null,
                 rs.getString("business_registration_storage_key"),
                 rs.getString("business_registration_original_name"),
                 rs.getString("business_registration_content_type")) : null, companyId);
@@ -280,6 +414,12 @@ public class PlatformCompanyService {
 
     private void requirePlatformAdmin(CurrentUser actor) {
         if (!actor.isPlatformAdmin()) throw new ForbiddenException("플랫폼 관리자 권한이 필요합니다.");
+        Integer company = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM company WHERE id=? AND code='PENTAWORKS' AND status='ACTIVE'",
+            Integer.class, actor.companyId());
+        if (company == null || company != 1) {
+            throw new ForbiddenException("펜타웍스 플랫폼 관리자만 사용할 수 있습니다.");
+        }
     }
 
     private String required(String value, int maxLength, String label) {
@@ -297,8 +437,7 @@ public class PlatformCompanyService {
     }
 
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
-    private record InvitationData(String token, Instant expiresAt, String deliveryStatus) {}
     private record PendingInvitation(String id, String email, String name) {}
-    private record PendingCompany(long id, String status, String storageKey, String originalName,
+    private record PendingCompany(long id, String status, boolean registrationVerified, String storageKey, String originalName,
                                   String contentType) {}
 }
