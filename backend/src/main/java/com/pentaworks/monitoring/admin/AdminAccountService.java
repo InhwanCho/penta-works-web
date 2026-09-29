@@ -4,7 +4,9 @@ import com.pentaworks.monitoring.admin.AdminAccountController.InvitationCreated;
 import com.pentaworks.monitoring.admin.AdminAccountController.AuditSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.InvitationSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.InviteRequest;
+import com.pentaworks.monitoring.admin.AdminAccountController.CreateSiteRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.SiteOption;
+import com.pentaworks.monitoring.admin.AdminAccountController.UpdateSiteRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.UpdateUserRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.UserSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.PasswordResetCreated;
@@ -14,8 +16,11 @@ import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ConflictException;
 import com.pentaworks.monitoring.common.ForbiddenException;
 import com.pentaworks.monitoring.common.NotFoundException;
+import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.DateTimeException;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -36,11 +41,14 @@ public class AdminAccountService {
     private final JdbcTemplate jdbcTemplate;
     private final SecureTokens secureTokens;
     private final AuditService audit;
+    private final DashboardService dashboard;
 
-    public AdminAccountService(JdbcTemplate jdbcTemplate, SecureTokens secureTokens, AuditService audit) {
+    public AdminAccountService(JdbcTemplate jdbcTemplate, SecureTokens secureTokens, AuditService audit,
+                               DashboardService dashboard) {
         this.jdbcTemplate = jdbcTemplate;
         this.secureTokens = secureTokens;
         this.audit = audit;
+        this.dashboard = dashboard;
     }
 
     public List<UserSummary> users(CurrentUser actor) {
@@ -57,10 +65,63 @@ public class AdminAccountService {
     public List<SiteOption> sites(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
-            SELECT cs.site_id,s.name FROM company_site cs
+            SELECT cs.site_id,s.name,p.address,p.contact_name,p.contact_phone,
+                   COALESCE(p.timezone,'Asia/Seoul') AS timezone
+              FROM company_site cs
             LEFT JOIN site s ON s.site=cs.site_id
+            LEFT JOIN site_profile p ON p.site_id=cs.site_id
             WHERE cs.company_id=? ORDER BY cs.site_id
-            """, (rs, row) -> new SiteOption(rs.getString(1), rs.getString(2)), actor.companyId());
+            """, (rs, row) -> new SiteOption(rs.getString("site_id"), rs.getString("name"),
+                rs.getString("address"), rs.getString("contact_name"), rs.getString("contact_phone"),
+                rs.getString("timezone")), actor.companyId());
+    }
+
+    @Transactional
+    public SiteOption createSite(CurrentUser actor, CreateSiteRequest request) {
+        requireAdmin(actor);
+        String siteId = request.id().trim();
+        if (!siteId.matches("[A-Za-z0-9_-]{1,32}")) {
+            throw new BadRequestException("사업장 코드는 영문, 숫자, 밑줄, 하이픈만 사용할 수 있습니다.");
+        }
+        if ("040".equals(siteId)) {
+            throw new BadRequestException("040은 테스트 데이터 코드이므로 사업장으로 등록할 수 없습니다.");
+        }
+        SiteFields fields = validateSiteFields(request.name(), request.address(), request.contactName(),
+            request.contactPhone(), request.timezone());
+        Integer existing = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM site WHERE site=?", Integer.class, siteId);
+        if (existing != null && existing > 0) throw new ConflictException("이미 등록된 사업장 코드입니다.");
+        jdbcTemplate.update("INSERT INTO site (site,name) VALUES (?,?)", siteId, fields.name());
+        jdbcTemplate.update("INSERT INTO company_site (company_id,site_id) VALUES (?,?)", actor.companyId(), siteId);
+        jdbcTemplate.update("""
+            INSERT INTO site_profile
+                (site_id,display_name,address,contact_name,contact_phone,timezone,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            """, siteId, fields.name(), fields.address(), fields.contactName(), fields.contactPhone(), fields.timezone());
+        audit.record(actor, "SITE_CREATED", "SITE", siteId,
+            Map.of("name", fields.name(), "timezone", fields.timezone()));
+        dashboard.invalidateCache();
+        return site(actor, siteId);
+    }
+
+    @Transactional
+    public SiteOption updateSite(CurrentUser actor, String siteId, UpdateSiteRequest request) {
+        requireAdmin(actor);
+        requireManagedSite(actor, siteId);
+        SiteFields fields = validateSiteFields(request.name(), request.address(), request.contactName(),
+            request.contactPhone(), request.timezone());
+        jdbcTemplate.update("UPDATE site SET name=? WHERE site=?", fields.name(), siteId);
+        jdbcTemplate.update("""
+            INSERT INTO site_profile
+                (site_id,display_name,address,contact_name,contact_phone,timezone,created_at,updated_at)
+            VALUES (?,?,?,?,?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE display_name=VALUES(display_name),address=VALUES(address),
+                contact_name=VALUES(contact_name),contact_phone=VALUES(contact_phone),
+                timezone=VALUES(timezone),updated_at=CURRENT_TIMESTAMP(6)
+            """, siteId, fields.name(), fields.address(), fields.contactName(), fields.contactPhone(), fields.timezone());
+        audit.record(actor, "SITE_UPDATED", "SITE", siteId,
+            Map.of("name", fields.name(), "timezone", fields.timezone()));
+        dashboard.invalidateCache();
+        return site(actor, siteId);
     }
 
     public List<InvitationSummary> invitations(CurrentUser actor) {
@@ -197,6 +258,38 @@ public class AdminAccountService {
         return normalized;
     }
 
+    private SiteOption site(CurrentUser actor, String siteId) {
+        return sites(actor).stream().filter(site -> site.id().equals(siteId)).findFirst()
+            .orElseThrow(() -> new NotFoundException("사업장을 찾을 수 없습니다."));
+    }
+
+    private void requireManagedSite(CurrentUser actor, String siteId) {
+        Integer count = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM company_site WHERE company_id=? AND site_id=?", Integer.class,
+            actor.companyId(), siteId);
+        if (count == null || count == 0) throw new NotFoundException("사업장을 찾을 수 없습니다.");
+    }
+
+    private SiteFields validateSiteFields(String rawName, String address, String contactName,
+                                          String contactPhone, String rawTimezone) {
+        String name = rawName == null ? "" : rawName.trim();
+        if (name.isEmpty() || name.length() > 20) throw new BadRequestException("사업장 이름은 20자 이하여야 합니다.");
+        String timezone = rawTimezone == null || rawTimezone.isBlank() ? "Asia/Seoul" : rawTimezone.trim();
+        if (timezone.length() > 40) throw new BadRequestException("시간대 값을 확인해주세요.");
+        try { ZoneId.of(timezone); } catch (DateTimeException error) {
+            throw new BadRequestException("올바른 시간대를 입력해주세요.");
+        }
+        return new SiteFields(name, optional(address, 255, "주소"), optional(contactName, 80, "담당자 이름"),
+            optional(contactPhone, 30, "담당자 연락처"), timezone);
+    }
+
+    private String optional(String value, int maxLength, String label) {
+        if (value == null || value.isBlank()) return null;
+        String normalized = value.trim();
+        if (normalized.length() > maxLength) throw new BadRequestException(label + "이 너무 깁니다.");
+        return normalized;
+    }
+
     private String normalizeRole(String value) {
         String role = value.trim().toUpperCase(Locale.ROOT);
         if (!MANAGED_ROLES.contains(role)) throw new BadRequestException("올바르지 않은 권한입니다.");
@@ -219,4 +312,6 @@ public class AdminAccountService {
 
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
     private record ManagedUser(long id, long companyId, String email, String role) {}
+    private record SiteFields(String name, String address, String contactName, String contactPhone,
+                              String timezone) {}
 }

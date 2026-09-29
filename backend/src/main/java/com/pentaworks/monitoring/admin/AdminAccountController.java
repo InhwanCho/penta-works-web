@@ -38,6 +38,18 @@ public class AdminAccountController {
         return service.sites(currentUsers.require(authentication));
     }
 
+    @PostMapping("/sites")
+    public SiteOption createSite(@Valid @RequestBody CreateSiteRequest request,
+                                 Authentication authentication) {
+        return service.createSite(currentUsers.require(authentication), request);
+    }
+
+    @PatchMapping("/sites/{siteId}")
+    public SiteOption updateSite(@PathVariable String siteId, @Valid @RequestBody UpdateSiteRequest request,
+                                 Authentication authentication) {
+        return service.updateSite(currentUsers.require(authentication), siteId, request);
+    }
+
     @GetMapping("/invitations")
     public List<InvitationSummary> invitations(Authentication authentication) {
         return service.invitations(currentUsers.require(authentication));
@@ -75,7 +87,12 @@ public class AdminAccountController {
     public record UpdateUserRequest(@NotBlank String role, @NotBlank String status, List<String> siteIds) {}
     public record UserSummary(long id, String email, String name, String role, String status,
                               Instant lastLoginAt, Instant createdAt, List<String> siteIds) {}
-    public record SiteOption(String id, String name) {}
+    public record CreateSiteRequest(@NotBlank String id, @NotBlank String name, String address,
+                                    String contactName, String contactPhone, String timezone) {}
+    public record UpdateSiteRequest(@NotBlank String name, String address, String contactName,
+                                    String contactPhone, String timezone) {}
+    public record SiteOption(String id, String name, String address, String contactName,
+                             String contactPhone, String timezone) {}
     public record InvitationSummary(String id, String email, String name, String role,
                                     Instant expiresAt, Instant createdAt, List<String> siteIds) {}
     public record InvitationCreated(String id, String token, String email, Instant expiresAt) {}

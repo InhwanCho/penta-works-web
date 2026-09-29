@@ -3,8 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "관리자",
-  description:
-    "알림 임계값, 발송 이력, 사용자 목록을 확인합니다. (목업 데이터)",
+  description: "사용자, 권한, 사업장과 감사 로그를 관리합니다.",
   robots: { index: false, follow: false },
 };
 
