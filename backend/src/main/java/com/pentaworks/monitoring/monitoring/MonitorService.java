@@ -46,6 +46,9 @@ public class MonitorService {
         for (DashboardResponse.DashboardRow row : dashboardService.getDashboard().rows()) {
             SiteAlertSettings site = settings.get(row.siteDb());
             if (row.name() == null || site == null) continue;
+            Transition noData = alertEvents.evaluateNoData(site, row.lagMin());
+            if (noData != null) transitions.add(noData);
+            if (site.noDataActive() && (row.lagMin() == null || row.lagMin() > site.noDataMinutes())) continue;
             for (AlertThreshold threshold : site.thresholds()) {
                 Double value = row.metrics().get(threshold.key());
                 if (!threshold.active()) continue;

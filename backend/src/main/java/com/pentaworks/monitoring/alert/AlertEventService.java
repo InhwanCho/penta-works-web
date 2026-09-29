@@ -34,7 +34,8 @@ public class AlertEventService {
         args.add(limit);
         return jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.severity,e.measured_value,
-                   r.min_value,r.max_value,e.message,e.delivery_status,e.occurred_at,
+                   r.min_value,COALESCE(r.max_value,r.no_data_minutes) AS max_value,
+                   e.message,e.delivery_status,e.occurred_at,
                    e.acknowledged_at,e.recovered_at
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
@@ -85,6 +86,41 @@ public class AlertEventService {
             threshold.unit(), eventType, value, threshold.min(), threshold.max(), message);
     }
 
+    @Transactional
+    public Transition evaluateNoData(SiteAlertSettings site, Long lagMinutes) {
+        if (!site.noDataActive()) return null;
+        jdbcTemplate.update("""
+            INSERT INTO alert_rule
+                (site_id,metric_key,rule_type,no_data_minutes,severity,is_enabled,created_at,updated_at)
+            VALUES (?,'__data__','NO_DATA',?,'WARNING',TRUE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE no_data_minutes=VALUES(no_data_minutes),severity=VALUES(severity),
+                                    is_enabled=TRUE,updated_at=CURRENT_TIMESTAMP(6)
+            """, site.siteid(), site.noDataMinutes());
+        long ruleId = jdbcTemplate.queryForObject("""
+            SELECT id FROM alert_rule WHERE site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' FOR UPDATE
+            """, Long.class, site.siteid());
+        OpenEvent open = openEvent(ruleId, "NO_DATA");
+        boolean stale = lagMinutes == null || lagMinutes > site.noDataMinutes();
+        Double measured = lagMinutes == null ? null : lagMinutes.doubleValue();
+        if (!stale) {
+            if (open == null) return null;
+            Instant now = Instant.now();
+            jdbcTemplate.update("UPDATE alert_event SET recovered_at=? WHERE id=?", Timestamp.from(now), open.id());
+            String message = site.name() + " · 데이터 수신이 정상화되었습니다.";
+            long eventId = insertEvent(ruleId, site.siteid(), "RECOVERY", measured, message, now, now);
+            return new Transition(eventId, site.siteid(), site.name(), "__data__", "데이터 수신", "분",
+                "RECOVERY", measured, null, (double) site.noDataMinutes(), message);
+        }
+        if (open != null) return null;
+        Instant now = Instant.now();
+        String message = lagMinutes == null
+            ? site.name() + " · 수신된 데이터가 없습니다."
+            : site.name() + " · 마지막 데이터 수신 후 " + lagMinutes + "분이 지났습니다.";
+        long eventId = insertEvent(ruleId, site.siteid(), "NO_DATA", measured, message, now, null);
+        return new Transition(eventId, site.siteid(), site.name(), "__data__", "데이터 수신", "분",
+            "NO_DATA", measured, null, (double) site.noDataMinutes(), message);
+    }
+
     public void markDelivery(List<Long> eventIds, String status, String error) {
         markDelivery(eventIds, status, error, 0);
     }
@@ -127,12 +163,36 @@ public class AlertEventService {
             """, siteId, metricKey);
     }
 
+    @Transactional
+    public void disableNoDataRule(String siteId) {
+        jdbcTemplate.update("""
+            UPDATE alert_rule SET is_enabled=FALSE,updated_at=CURRENT_TIMESTAMP(6)
+             WHERE site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' AND is_enabled=TRUE
+            """, siteId);
+        jdbcTemplate.update("""
+            UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id
+               SET e.recovered_at=CURRENT_TIMESTAMP(6)
+             WHERE r.site_id=? AND r.metric_key='__data__' AND r.rule_type='NO_DATA'
+               AND e.recovered_at IS NULL AND e.event_type='NO_DATA'
+            """, siteId);
+    }
+
     private OpenEvent openEvent(long ruleId) {
+        return openEvent(ruleId, "LOW", "HIGH");
+    }
+
+    private OpenEvent openEvent(long ruleId, String... eventTypes) {
+        String placeholders = String.join(",", Collections.nCopies(eventTypes.length, "?"));
+        List<Object> args = new ArrayList<>();
+        args.add(ruleId);
+        args.addAll(List.of(eventTypes));
         return jdbcTemplate.query("""
             SELECT id,event_type FROM alert_event
-             WHERE rule_id=? AND recovered_at IS NULL AND event_type IN ('LOW','HIGH')
+             WHERE rule_id=? AND recovered_at IS NULL AND event_type IN (%s)
              ORDER BY id DESC LIMIT 1 FOR UPDATE
-            """, rs -> rs.next() ? new OpenEvent(rs.getLong("id"), rs.getString("event_type")) : null, ruleId);
+            """.formatted(placeholders),
+            rs -> rs.next() ? new OpenEvent(rs.getLong("id"), rs.getString("event_type")) : null,
+            args.toArray());
     }
 
     private long insertEvent(long ruleId, String siteId, String eventType, Double value, String message,

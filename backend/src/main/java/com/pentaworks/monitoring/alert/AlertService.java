@@ -68,11 +68,16 @@ public class AlertService {
 
     public List<SiteAlertSettings> alertSettings() {
         return jdbcTemplate.query("""
-            SELECT a.*, s.site AS registered_site, s.name
+            SELECT a.*, s.site AS registered_site, s.name,
+                   nd.no_data_minutes,nd.is_enabled AS no_data_active
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
+              LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
+                                      AND nd.rule_type='NO_DATA'
              ORDER BY s.site
             """, (rs, row) -> settings(rs.getString("registered_site"), rs.getString("name"),
-                rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field)));
+                rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field),
+                rs.getObject("no_data_minutes") == null ? 30 : rs.getInt("no_data_minutes"),
+                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active")));
     }
 
     @Transactional
@@ -86,9 +91,21 @@ public class AlertService {
 
     @Transactional
     public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates) {
+        return updateAlertSettings(actor, siteId, updates, null, null);
+    }
+
+    @Transactional
+    public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates,
+                                                 Integer noDataMinutes, Boolean noDataActive) {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         if (updates == null || updates.isEmpty()) throw new BadRequestException("변경할 기준값이 없습니다.");
+        if ((noDataMinutes == null) != (noDataActive == null)) {
+            throw new BadRequestException("수신 중단 알림 설정을 확인해주세요.");
+        }
+        if (noDataMinutes != null && (noDataMinutes < 5 || noDataMinutes > 1440)) {
+            throw new BadRequestException("수신 중단 기준은 5분에서 1440분 사이여야 합니다.");
+        }
         Set<String> seen = new LinkedHashSet<>();
         for (ThresholdUpdate update : updates) {
             Metric metric = METRIC_BY_KEY.get(update.key());
@@ -105,9 +122,21 @@ public class AlertService {
                 update.min(), update.max(), update.active(), siteId);
             if (!update.active()) alertEvents.disableRule(siteId, update.key());
         }
+        if (noDataMinutes != null) {
+            jdbcTemplate.update("""
+                INSERT INTO alert_rule
+                    (site_id,metric_key,rule_type,no_data_minutes,severity,is_enabled,created_at,updated_at)
+                VALUES (?,'__data__','NO_DATA',?,'WARNING',?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+                ON DUPLICATE KEY UPDATE no_data_minutes=VALUES(no_data_minutes),
+                    severity=VALUES(severity),is_enabled=VALUES(is_enabled),updated_at=CURRENT_TIMESTAMP(6)
+                """, siteId, noDataMinutes, noDataActive);
+            if (!noDataActive) alertEvents.disableNoDataRule(siteId);
+        }
         audit.record(actor, "ALERT_THRESHOLDS_UPDATED", "SITE", siteId,
             Map.of("thresholds", updates.stream().map(update -> Map.of(
-                "key", update.key(), "min", update.min(), "max", update.max(), "active", update.active())).toList()));
+                    "key", update.key(), "min", update.min(), "max", update.max(), "active", update.active())).toList(),
+                "noDataMinutes", noDataMinutes == null ? 30 : noDataMinutes,
+                "noDataActive", noDataActive != null && noDataActive));
         dashboardService.invalidateCache();
         return settings(siteId);
     }
@@ -122,16 +151,22 @@ public class AlertService {
 
     private SiteAlertSettings settings(String siteId) {
         return jdbcTemplate.queryForObject("""
-            SELECT a.*, s.site AS registered_site, s.name
+            SELECT a.*, s.site AS registered_site, s.name,
+                   nd.no_data_minutes,nd.is_enabled AS no_data_active
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
+              LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
+                                      AND nd.rule_type='NO_DATA'
              WHERE s.site=?
             """, (rs, row) -> settings(rs.getString("registered_site"), rs.getString("name"),
-                rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field)),
+                rs.getObject("id") != null, field -> rs.getString(field), field -> rs.getObject(field),
+                rs.getObject("no_data_minutes") == null ? 30 : rs.getInt("no_data_minutes"),
+                rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active")),
             siteId);
     }
 
     private SiteAlertSettings settings(String siteId, String name, boolean exists,
-                                       SqlStringValue strings, SqlObjectValue objects) throws SQLException {
+                                       SqlStringValue strings, SqlObjectValue objects,
+                                       int noDataMinutes, boolean noDataActive) throws SQLException {
         List<AlertThreshold> thresholds = new ArrayList<>();
         for (Metric metric : METRICS) {
             String prefix = metric.storagePrefix();
@@ -143,7 +178,7 @@ public class AlertService {
                 || !"0".equals(strings.get(prefix + "_active")));
             thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active));
         }
-        return new SiteAlertSettings(siteId, name, exists, thresholds);
+        return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive);
     }
 
     private static Map<String, Metric> metricMap() {

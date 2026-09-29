@@ -26,7 +26,11 @@ export default function BaselinesPageClient() {
     mutationFn: (entry: SiteAlertSettings) =>
       apiFetch<SiteAlertSettings>(`/alerts/thresholds/${encodeURIComponent(entry.siteid)}`, {
         method: "PATCH",
-        body: JSON.stringify({ thresholds: entry.thresholds.map(({ key, min, max, active }) => ({ key, min, max, active })) }),
+        body: JSON.stringify({
+          thresholds: entry.thresholds.map(({ key, min, max, active }) => ({ key, min, max, active })),
+          noDataMinutes: entry.noDataMinutes,
+          noDataActive: entry.noDataActive,
+        }),
       }),
     onSuccess: (saved) => {
       queryClient.setQueryData<SiteAlertSettings[]>(["alert-thresholds"], (current = []) =>

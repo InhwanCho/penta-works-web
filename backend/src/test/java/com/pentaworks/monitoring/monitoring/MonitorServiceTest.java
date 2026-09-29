@@ -35,7 +35,7 @@ class MonitorServiceTest {
         when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true, List.of(
             new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true),
             new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)
-        ))));
+        ), 30, false)));
         when(recipients.hasConfiguredWebhooks("001")).thenReturn(true);
         AlertEventService.Transition transition = new AlertEventService.Transition(
             10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0,

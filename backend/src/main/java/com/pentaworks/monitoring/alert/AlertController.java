@@ -45,7 +45,8 @@ public class AlertController {
         List<AlertService.ThresholdUpdate> updates = request.thresholds().stream()
             .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(), value.active()))
             .toList();
-        return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates);
+        return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates,
+            request.noDataMinutes(), request.noDataActive());
     }
 
     @GetMapping("/events")
@@ -70,7 +71,9 @@ public class AlertController {
 
     public record UpdatePsiThresholdRequest(@NotNull Double min, @NotNull Double max,
                                             @NotNull Boolean active) {}
-    public record UpdateAlertThresholdsRequest(@NotEmpty List<@Valid ThresholdUpdateRequest> thresholds) {}
+    public record UpdateAlertThresholdsRequest(@NotEmpty List<@Valid ThresholdUpdateRequest> thresholds,
+                                               @NotNull Integer noDataMinutes,
+                                               @NotNull Boolean noDataActive) {}
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
                                          @NotNull Boolean active) {}
 }

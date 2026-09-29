@@ -47,14 +47,16 @@ export type SiteAlertSettings = {
   name: string | null;
   configured: boolean;
   thresholds: AlertThreshold[];
+  noDataMinutes: number;
+  noDataActive: boolean;
 };
 
 export type AlertEventSummary = {
   id: number;
   siteId: string;
   siteName: string | null;
-  metricKey: MetricKey;
-  eventType: "LOW" | "HIGH" | "RECOVERY";
+  metricKey: MetricKey | "__data__";
+  eventType: "LOW" | "HIGH" | "NO_DATA" | "RECOVERY";
   severity: string;
   measuredValue: number | null;
   min: number | null;

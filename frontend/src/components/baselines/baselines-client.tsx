@@ -50,7 +50,7 @@ export default function BaselinesClient({
     );
   }, [entries, query]);
   const activeCount = useMemo(
-    () => entries.reduce((count, entry) => count + entry.thresholds.filter((threshold) => threshold.active).length, 0),
+    () => entries.reduce((count, entry) => count + entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0), 0),
     [entries],
   );
 
@@ -66,7 +66,7 @@ export default function BaselinesClient({
         <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">알림 관리</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-white/70">
-          11개 측정항목의 허용범위와 알림 사용 여부를 관리합니다. 같은 범위가 대시보드 이상 표시에 적용됩니다.
+          11개 측정항목의 허용범위와 데이터 수신 중단 알림을 관리합니다. 같은 범위가 대시보드 이상 표시에 적용됩니다.
         </p>
       </header>
 
@@ -90,16 +90,17 @@ export default function BaselinesClient({
           {filtered.map((entry) => {
             const pressure = entry.thresholds.find((threshold) => threshold.key === "hepres");
             const level = entry.thresholds.find((threshold) => threshold.key === "heleve");
-            const enabled = entry.thresholds.filter((threshold) => threshold.active).length;
+            const enabled = entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0);
             return (
               <article key={entry.siteid} className="group rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:border-white/8 dark:bg-background-dark-card">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><h2 className="truncate font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-0.5 text-xs">사업장 {entry.siteid}</p></div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{enabled}/11 사용</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{enabled}/12 사용</span>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-2">
+                <div className="mt-4 grid grid-cols-3 gap-2">
                   <RangePreview label="He Pressure" threshold={pressure} />
                   <RangePreview label="He Level" threshold={level} />
+                  <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">수신 중단</p><p className="mt-1 text-sm font-extrabold tabular-nums">{entry.noDataActive ? `${entry.noDataMinutes}분` : "사용 안 함"}</p></div>
                 </div>
                 {!entry.configured && <p className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-700 dark:bg-amber-950/30 dark:text-amber-300">아직 저장된 기준값이 없습니다.</p>}
                 <button type="button" onClick={() => setSelected(entry)} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-sm font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:text-sky-200 dark:hover:bg-sky-950/30">{canEdit ? "전체 기준값 관리" : "전체 기준값 보기"}</button>
@@ -204,9 +205,10 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge }: { events: 
 function AlertEventRow({ event, acknowledging, onAcknowledge }: { event: AlertEventSummary; acknowledging: boolean; onAcknowledge: () => void }) {
   const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
   const metric = METRICS.find((item) => item.key === event.metricKey);
+  const isNoData = event.metricKey === "__data__";
   return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_5px_20px_rgba(22,58,82,0.05)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3"><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">측정 {formatValue(event.measuredValue, metric?.unit)} · 범위 {formatValue(event.min, metric?.unit)} – {formatValue(event.max, metric?.unit)}</p></div></div>
+      <div className="flex min-w-0 items-start gap-3"><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatValue(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
     </div>
     <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "복구됨" : "진행 중"}</span>{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인 처리"}</button>}</div>
@@ -215,7 +217,7 @@ function AlertEventRow({ event, acknowledging, onAcknowledge }: { event: AlertEv
 
 function EventBadge({ type }: { type: AlertEventSummary["eventType"] }) {
   const style = type === "RECOVERY" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : type === "LOW" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300";
-  return <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold ${style}`}>{type === "RECOVERY" ? "복구" : type === "LOW" ? "낮음" : "높음"}</span>;
+  return <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold ${style}`}>{type === "RECOVERY" ? "복구" : type === "LOW" ? "낮음" : type === "NO_DATA" ? "수신 중단" : "높음"}</span>;
 }
 
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
@@ -228,6 +230,8 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
   const [thresholds, setThresholds] = useState(entry.thresholds);
+  const [noDataMinutes, setNoDataMinutes] = useState(entry.noDataMinutes);
+  const [noDataActive, setNoDataActive] = useState(entry.noDataActive);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -250,8 +254,11 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
       }
       if (threshold.min > threshold.max) { setError(`${threshold.label}: 최소값이 최대값보다 큽니다.`); return; }
     }
+    if (!Number.isInteger(noDataMinutes) || noDataMinutes < 5 || noDataMinutes > 1440) {
+      setError("수신 중단 기준은 5분에서 1440분 사이의 정수여야 합니다."); return;
+    }
     setSaving(true); setError(null);
-    try { await onSave({ ...entry, thresholds }); onClose(); }
+    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
     finally { setSaving(false); }
   }
@@ -264,6 +271,10 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <section className={`mb-4 rounded-2xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">마지막 데이터 이후 설정 시간을 넘기면 한 번 알리고, 수신 재개 시 복구 알림을 보냅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
+            <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
+          </section>
           <div className="grid gap-3 md:grid-cols-2">
             {thresholds.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => update(threshold.key, patch)} />)}
           </div>

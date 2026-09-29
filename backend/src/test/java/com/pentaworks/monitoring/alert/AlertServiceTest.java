@@ -57,7 +57,7 @@ class AlertServiceTest {
         AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
         SiteAlertSettings savedSettings = new SiteAlertSettings("001", "병원", true,
-            List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)));
+            List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)), 30, false);
         when(jdbcTemplate.queryForObject(any(String.class), any(RowMapper.class), eq("001"))).thenReturn(savedSettings);
 
         assertEquals(new PsiThreshold("001", "병원", 0.8, 1.3, true),
