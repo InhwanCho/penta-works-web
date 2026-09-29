@@ -267,7 +267,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[92dvh] w-full flex-col rounded-t-3xl border border-slate-200 bg-white shadow-[0_24px_80px_rgba(12,37,54,0.28)] sm:max-w-4xl sm:rounded-3xl dark:border-white/10 dark:bg-background-dark-card">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소값 미만 또는 최대값 초과 시 이상으로 판단합니다.</p></div>
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다.</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -290,13 +290,30 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
 }
 
 function MetricEditor({ threshold, disabled, onChange }: { threshold: AlertThreshold; disabled: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {
+  const center = roundThreshold((threshold.min + threshold.max) / 2);
+  const tolerance = roundThreshold((threshold.max - threshold.min) / 2);
+  function changeCenter(value: number) {
+    const appliedTolerance = Number.isFinite(value) ? Math.min(tolerance, value) : tolerance;
+    onChange({ min: roundThreshold(value - appliedTolerance), max: roundThreshold(value + appliedTolerance) });
+  }
+  function changeTolerance(value: number) {
+    const appliedTolerance = Number.isFinite(value) ? Math.min(value, center) : value;
+    onChange({ min: roundThreshold(center - appliedTolerance), max: roundThreshold(center + appliedTolerance) });
+  }
   return (
     <section className={`rounded-2xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50/45 dark:border-sky-900/70 dark:bg-sky-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="font-extrabold">{threshold.label}{threshold.unit && <span className="text-text-secondary ml-1 text-xs font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-xs">{METRIC_DESCRIPTION.get(threshold.key)}</p><code className="mt-1 block text-[10px] text-slate-400">{threshold.key}</code></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
+        <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">기준값 ± 허용편차</p>
+        <div className="grid grid-cols-2 gap-2">
+          <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />
+          <NumberField label="± 편차" value={tolerance} disabled={disabled} ignoreBlank onChange={changeTolerance} />
+        </div>
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
         <NumberField label="최소" value={threshold.min} disabled={disabled} onChange={(min) => onChange({ min })} />
         <NumberField label="최대" value={threshold.max} disabled={disabled} onChange={(max) => onChange({ max })} />
       </div>
@@ -304,8 +321,12 @@ function MetricEditor({ threshold, disabled, onChange }: { threshold: AlertThres
   );
 }
 
-function NumberField({ label, value, disabled, onChange }: { label: string; value: number; disabled: boolean; onChange: (value: number) => void }) {
-  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min="0" step="any" required value={Number.isFinite(value) ? value : ""} disabled={disabled} onChange={(event) => onChange(event.target.value === "" ? Number.NaN : Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
+function roundThreshold(value: number) {
+  return Number.isFinite(value) ? Math.round(value * 1_000_000) / 1_000_000 : value;
+}
+
+function NumberField({ label, value, disabled, ignoreBlank = false, onChange }: { label: string; value: number; disabled: boolean; ignoreBlank?: boolean; onChange: (value: number) => void }) {
+  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min="0" step="any" required value={Number.isFinite(value) ? value : ""} disabled={disabled} onChange={(event) => { if (ignoreBlank && event.target.value === "") return; onChange(event.target.value === "" ? Number.NaN : Number(event.target.value)); }} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
 }
 
 function RangePreview({ label, threshold }: { label: string; threshold?: AlertThreshold }) {
