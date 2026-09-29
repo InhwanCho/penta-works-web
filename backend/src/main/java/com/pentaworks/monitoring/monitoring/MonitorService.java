@@ -18,12 +18,15 @@ import java.time.LocalTime;
 import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 @Service
 public class MonitorService {
+    private static final Logger log = LoggerFactory.getLogger(MonitorService.class);
     private final DashboardService dashboardService;
     private final AlertService alertService;
     private final AlertEventService alertEvents;
@@ -101,7 +104,8 @@ public class MonitorService {
                 String message = error.getMessage() == null ? "Slack delivery failed" : error.getMessage();
                 alertEvents.markDelivery(eventIds, "FAILED",
                     message.substring(0, Math.min(message.length(), 1000)), webhooks.size());
-                throw error;
+                log.error("Alert delivery failed for site {}", entry.getKey(), error);
+                if (manual) throw error;
             }
         }
     }

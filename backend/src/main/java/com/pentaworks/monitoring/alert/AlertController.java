@@ -80,7 +80,8 @@ public class AlertController {
                                               @Valid @RequestBody UpdateAlertThresholdsRequest request,
                                               Authentication authentication) {
         List<AlertService.ThresholdUpdate> updates = request.thresholds().stream()
-            .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(), value.active()))
+            .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(),
+                value.active(), value.useAverage(), value.tolerancePercent()))
             .toList();
         return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates,
             request.noDataMinutes(), request.noDataActive(), request.alertsEnabled(),
@@ -134,7 +135,8 @@ public class AlertController {
                                                @NotNull Boolean suppressWeekends,
                                                @NotNull List<@NotNull LocalDate> holidayDates) {}
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
-                                         @NotNull Boolean active) {}
+                                         @NotNull Boolean active, Boolean useAverage,
+                                         Double tolerancePercent) {}
     public record UpdatePolicyRequest(@NotNull Boolean enabled) {}
     public record AcknowledgeEventsRequest(@NotEmpty List<@NotNull Long> eventIds) {}
 }

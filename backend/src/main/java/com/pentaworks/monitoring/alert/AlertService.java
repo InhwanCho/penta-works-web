@@ -42,14 +42,17 @@ public class AlertService {
     private final AuditService audit;
     private final DashboardService dashboardService;
     private final AlertEventService alertEvents;
+    private final RollingAverageService averages;
 
     public AlertService(JdbcTemplate jdbcTemplate, CurrentUserService currentUsers, AuditService audit,
-                        DashboardService dashboardService, AlertEventService alertEvents) {
+                        DashboardService dashboardService, AlertEventService alertEvents,
+                        RollingAverageService averages) {
         this.jdbcTemplate = jdbcTemplate;
         this.currentUsers = currentUsers;
         this.audit = audit;
         this.dashboardService = dashboardService;
         this.alertEvents = alertEvents;
+        this.averages = averages;
     }
 
     public List<PsiThreshold> psiThresholds(Set<String> allowedSiteIds) {
@@ -61,7 +64,8 @@ public class AlertService {
         return alertSettings().stream().map(site -> {
             AlertThreshold pressure = site.thresholds().stream()
                 .filter(threshold -> "hepres".equals(threshold.key())).findFirst().orElseThrow();
-            return new PsiThreshold(site.siteid(), site.name(), pressure.min(), pressure.max(), pressure.active());
+            return new PsiThreshold(site.siteid(), site.name(), pressure.effectiveMin(),
+                pressure.effectiveMax(), pressure.active());
         }).toList();
     }
 
@@ -72,6 +76,7 @@ public class AlertService {
     public List<SiteAlertSettings> alertSettings() {
         Map<String, List<LocalDate>> holidays = holidayDates();
         Map<Long, Map<String, AlertThreshold>> companyDefaults = companyDefaults();
+        Map<String, Map<String, RollingAverageService.AverageState>> averageStates = averages.states();
         return jdbcTemplate.query("""
             SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
@@ -94,7 +99,8 @@ public class AlertService {
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
                 holidays.getOrDefault(rs.getString("registered_site"), List.of()),
                 rs.getObject("is_dashboard_visible") != null && rs.getBoolean("is_dashboard_visible"),
-                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of())));
+                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
+                averageStates.getOrDefault(rs.getString("registered_site"), Map.of())));
     }
 
     public List<AlertThreshold> companyThresholds(CurrentUser actor) {
@@ -159,6 +165,7 @@ public class AlertService {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         jdbcTemplate.update("DELETE FROM alert_settings WHERE siteid=?", siteId);
+        jdbcTemplate.update("DELETE FROM site_metric_average_policy WHERE site_id=?", siteId);
         METRICS.forEach(metric -> alertEvents.disableRule(siteId, metric.key()));
         audit.record(actor, "SITE_THRESHOLDS_RESTORED", "SITE", siteId,
             Map.of("source", "COMPANY"));
@@ -172,7 +179,8 @@ public class AlertService {
             List.of(new ThresholdUpdate("hepres", min, max, active)));
         AlertThreshold pressure = saved.thresholds().stream()
             .filter(threshold -> "hepres".equals(threshold.key())).findFirst().orElseThrow();
-        return new PsiThreshold(saved.siteid(), saved.name(), pressure.min(), pressure.max(), pressure.active());
+        return new PsiThreshold(saved.siteid(), saved.name(), pressure.effectiveMin(),
+            pressure.effectiveMax(), pressure.active());
     }
 
     @Transactional
@@ -223,6 +231,11 @@ public class AlertService {
             if (metric == null) throw new BadRequestException("지원하지 않는 측정항목입니다: " + update.key());
             if (!seen.add(update.key())) throw new BadRequestException("중복된 측정항목입니다: " + update.key());
             validateThreshold(update.min(), update.max());
+            if ((update.useAverage() == null) != (update.tolerancePercent() == null) ||
+                (update.tolerancePercent() != null && (!Double.isFinite(update.tolerancePercent()) ||
+                    update.tolerancePercent() < 0.1 || update.tolerancePercent() > 100))) {
+                throw new BadRequestException("자동 평균의 허용편차는 0.1%에서 100% 사이여야 합니다.");
+            }
         }
         jdbcTemplate.update("INSERT IGNORE INTO alert_settings (siteid) VALUES (?)", siteId);
         for (ThresholdUpdate update : updates) {
@@ -231,6 +244,13 @@ public class AlertService {
             jdbcTemplate.update("UPDATE alert_settings SET " + prefix + "_min=?," + prefix + "_max=?," +
                     prefix + "_active=?,updated_at=CURRENT_TIMESTAMP WHERE siteid=?",
                 update.min(), update.max(), update.active(), siteId);
+            if (update.useAverage() != null) {
+                jdbcTemplate.update("""
+                    INSERT INTO site_metric_average_policy (site_id,metric_key,use_average,tolerance_percent)
+                    VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE use_average=VALUES(use_average),
+                        tolerance_percent=VALUES(tolerance_percent),updated_at=CURRENT_TIMESTAMP(6)
+                    """, siteId, update.key(), update.useAverage(), update.tolerancePercent());
+            }
             if (!update.active()) alertEvents.disableRule(siteId, update.key());
         }
         if (noDataMinutes != null) {
@@ -283,6 +303,7 @@ public class AlertService {
 
     private SiteAlertSettings settings(String siteId) {
         Map<Long, Map<String, AlertThreshold>> companyDefaults = companyDefaults();
+        Map<String, Map<String, RollingAverageService.AverageState>> averageStates = averages.states();
         return jdbcTemplate.queryForObject("""
             SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
@@ -305,7 +326,8 @@ public class AlertService {
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
                 holidayDates(siteId), rs.getObject("is_dashboard_visible") != null &&
                     rs.getBoolean("is_dashboard_visible"),
-                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of())),
+                companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
+                averageStates.getOrDefault(siteId, Map.of())),
             siteId);
     }
 
@@ -316,7 +338,8 @@ public class AlertService {
                                        LocalTime quietStart, LocalTime quietEnd,
                                        boolean suppressWeekends, List<LocalDate> holidayDates,
                                        boolean dashboardVisible,
-                                       Map<String, AlertThreshold> companyDefaults) throws SQLException {
+                                       Map<String, AlertThreshold> companyDefaults,
+                                       Map<String, RollingAverageService.AverageState> averageStates) throws SQLException {
         List<AlertThreshold> thresholds = new ArrayList<>();
         for (Metric metric : METRICS) {
             String prefix = metric.storagePrefix();
@@ -327,7 +350,14 @@ public class AlertService {
             if (max == null) max = inherited == null ? metric.defaultMax() : inherited.max();
             boolean active = exists ? (objects.get(prefix + "_active") == null
                 || !"0".equals(strings.get(prefix + "_active"))) : inherited != null && inherited.active();
-            thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active));
+            RollingAverageService.AverageState average = averageStates.getOrDefault(metric.key(),
+                RollingAverageService.AverageState.DEFAULT);
+            RollingAverageService.Range range = RollingAverageService.effectiveRange(
+                average, RollingAverageService.now());
+            thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active,
+                range == null ? min : range.min(), range == null ? max : range.max(),
+                average.useAverage(), average.tolerancePercent(), average.averageValue(),
+                average.sampleCount(), average.zeroCount(), average.capturedAt(), range != null));
         }
         return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive,
             alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,
@@ -375,5 +405,10 @@ public class AlertService {
     @FunctionalInterface private interface SqlObjectValue { Object get(String field) throws SQLException; }
     private record Metric(String key, String storagePrefix, String label, String unit,
                           double defaultMin, double defaultMax) {}
-    public record ThresholdUpdate(String key, Double min, Double max, boolean active) {}
+    public record ThresholdUpdate(String key, Double min, Double max, boolean active,
+                                  Boolean useAverage, Double tolerancePercent) {
+        public ThresholdUpdate(String key, Double min, Double max, boolean active) {
+            this(key, min, max, active, null, null);
+        }
+    }
 }

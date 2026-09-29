@@ -36,6 +36,12 @@ class AlertEventServiceTest {
     }
 
     @Test
+    void zeroIsAnErrorEvenWhenStaticLowerBoundIsZero() {
+        assertEquals("low", AlertEventService.direction(0.0, 0.0, 999.0));
+        assertNull(AlertEventService.direction(1.0, 0.0, 999.0));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void doesNotCreateDuplicateEventForSameOpenDirection() throws Exception {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);

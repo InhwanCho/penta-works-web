@@ -57,18 +57,20 @@ public class AlertEventService {
     @Transactional
     public Transition evaluate(SiteAlertSettings site, AlertThreshold threshold, Double value) {
         if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active()) return null;
+        Double min = threshold.effectiveMin();
+        Double max = threshold.effectiveMax();
         jdbcTemplate.update("""
             INSERT INTO alert_rule
                 (site_id,metric_key,rule_type,min_value,max_value,severity,is_enabled,created_at,updated_at)
             VALUES (?,?, 'RANGE', ?,?, 'WARNING', TRUE, CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
             ON DUPLICATE KEY UPDATE min_value=VALUES(min_value),max_value=VALUES(max_value),
                                     severity=VALUES(severity),is_enabled=TRUE,updated_at=CURRENT_TIMESTAMP(6)
-            """, site.siteid(), threshold.key(), threshold.min(), threshold.max());
+            """, site.siteid(), threshold.key(), min, max);
         long ruleId = jdbcTemplate.queryForObject("""
             SELECT id FROM alert_rule WHERE site_id=? AND metric_key=? AND rule_type='RANGE' FOR UPDATE
             """, Long.class, site.siteid(), threshold.key());
         OpenEvent open = openEvent(ruleId);
-        String direction = direction(value, threshold.min(), threshold.max());
+        String direction = direction(value, min, max);
         if (direction == null) {
             clearPending(ruleId);
             if (open == null) return null;
@@ -77,15 +79,16 @@ public class AlertEventService {
             String message = site.name() + " · " + threshold.label() + " 값이 정상 범위로 복구되었습니다.";
             long eventId = insertEvent(ruleId, site.siteid(), "RECOVERY", value, message, now, now);
             return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
-                threshold.unit(), "RECOVERY", value, threshold.min(), threshold.max(), message);
+                threshold.unit(), "RECOVERY", value, min, max, message);
         }
         String eventType = direction.toUpperCase();
         if (open != null && eventType.equals(open.eventType())) {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
-                ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+                (value == 0.0 ? "0으로 수집 오류가 의심됩니다." :
+                    "LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
             return new Transition(open.id(), site.siteid(), site.name(), threshold.key(), threshold.label(),
-                threshold.unit(), eventType, value, threshold.min(), threshold.max(), message);
+                threshold.unit(), eventType, value, min, max, message);
         }
         Instant now = Instant.now();
         if (open != null) {
@@ -95,10 +98,11 @@ public class AlertEventService {
         if (!sustained(ruleId, eventType, site.triggerAfterMinutes(), now)) return null;
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
-            ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+            (value == 0.0 ? "0으로 수집 오류가 의심됩니다." :
+                "LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
         long eventId = insertEvent(ruleId, site.siteid(), eventType, value, message, now, null);
         return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
-            threshold.unit(), eventType, value, threshold.min(), threshold.max(), message);
+            threshold.unit(), eventType, value, min, max, message);
     }
 
     @Transactional
@@ -307,8 +311,9 @@ public class AlertEventService {
         return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 
-    private static String direction(Double value, Double min, Double max) {
+    static String direction(Double value, Double min, Double max) {
         if (value == null) return null;
+        if (value == 0.0) return "low";
         if (min != null && value < min) return "low";
         if (max != null && value > max) return "high";
         return null;

@@ -419,6 +419,11 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     if (!Number.isInteger(repeatMinutes) || repeatMinutes < 0 || repeatMinutes > 10080 || (repeatMinutes > 0 && repeatMinutes < 5)) {
       setError("반복 알림은 0(사용 안 함) 또는 5분에서 10080분 사이여야 합니다."); return;
     }
+    for (const threshold of thresholds) {
+      if (!Number.isFinite(threshold.tolerancePercent) || threshold.tolerancePercent < 0.1 || threshold.tolerancePercent > 100) {
+        setError(`${threshold.label}: 자동 평균 허용편차는 0.1%에서 100% 사이여야 합니다.`); return;
+      }
+    }
     setSaving(true); setError(null);
     try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
@@ -448,7 +453,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
             <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
           </section>
           <div className="grid gap-3 md:grid-cols-2">
-            {thresholds.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => update(threshold.key, patch)} />)}
+            {thresholds.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={(patch) => update(threshold.key, patch)} />)}
           </div>
           {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
         </div>
@@ -461,7 +466,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   );
 }
 
-function MetricEditor({ threshold, disabled, onChange }: { threshold: AlertThreshold; disabled: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {
+function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: { threshold: AlertThreshold; disabled: boolean; allowAverage?: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {
   const center = roundThreshold((threshold.min + threshold.max) / 2);
   const tolerance = roundThreshold((threshold.max - threshold.min) / 2);
   function changeCenter(value: number) {
@@ -478,8 +483,14 @@ function MetricEditor({ threshold, disabled, onChange }: { threshold: AlertThres
         <div className="min-w-0"><h3 className="font-extrabold">{threshold.label}{threshold.unit && <span className="text-text-secondary ml-1 text-xs font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-xs">{METRIC_DESCRIPTION.get(threshold.key)}</p><code className="mt-1 block text-[10px] text-slate-400">{threshold.key}</code></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
+      {allowAverage && <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={(event) => onChange({ useAverage: event.target.checked })} className="h-4 w-4 accent-emerald-700" />최근 24시간 평균을 기준값으로 사용</label>
+        <p className="text-text-secondary mt-1 text-[11px]">0은 평균에서 제외합니다. 매시간 갱신하며 유효 표본 12개 이상이 필요합니다.</p>
+        <p className="mt-2 text-xs font-semibold tabular-nums">현재 평균 {threshold.averageValue == null ? "없음" : `${roundThreshold(threshold.averageValue)}${threshold.unit ? ` ${threshold.unit}` : ""}`} · 유효 {threshold.averageSampleCount}개 · 0 제외 {threshold.excludedZeroCount}개</p>
+        {threshold.useAverage && <div className="mt-2"><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageApplied ? `적용 범위 ${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}` : "평균을 적용할 수 없으면 아래 고정 범위를 사용합니다."}</p></div>}
+      </div>}
       <div className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
-        <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">기준값 ± 허용편차</p>
+        <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">{allowAverage ? "고정 기준값 (평균 사용 불가 시 대체) ± 허용편차" : "기준값 ± 허용편차"}</p>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />
           <NumberField label="± 편차" value={tolerance} disabled={disabled} ignoreBlank onChange={changeTolerance} />
@@ -497,12 +508,12 @@ function roundThreshold(value: number) {
   return Number.isFinite(value) ? Math.round(value * 1_000_000) / 1_000_000 : value;
 }
 
-function NumberField({ label, value, disabled, ignoreBlank = false, onChange }: { label: string; value: number; disabled: boolean; ignoreBlank?: boolean; onChange: (value: number) => void }) {
-  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min="0" step="any" required value={Number.isFinite(value) ? value : ""} disabled={disabled} onChange={(event) => { if (ignoreBlank && event.target.value === "") return; onChange(event.target.value === "" ? Number.NaN : Number(event.target.value)); }} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
+function NumberField({ label, value, disabled, ignoreBlank = false, min = 0, max, onChange }: { label: string; value: number; disabled: boolean; ignoreBlank?: boolean; min?: number; max?: number; onChange: (value: number) => void }) {
+  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min={min} max={max} step="any" required value={Number.isFinite(value) ? value : ""} disabled={disabled} onChange={(event) => { if (ignoreBlank && event.target.value === "") return; onChange(event.target.value === "" ? Number.NaN : Number(event.target.value)); }} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
 }
 
 function RangePreview({ label, threshold }: { label: string; threshold?: AlertThreshold }) {
-  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${threshold.min} – ${threshold.max}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
+  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}{threshold?.averageApplied ? " · 24h 평균" : ""}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
 }
 
 function StatChip({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {

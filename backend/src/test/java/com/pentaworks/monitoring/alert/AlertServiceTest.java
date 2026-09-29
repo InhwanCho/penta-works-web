@@ -36,7 +36,8 @@ class AlertServiceTest {
     void companyDefaultsStartDisabledWithoutChangingExistingSiteSettings() {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         AlertService service = new AlertService(jdbcTemplate, mock(CurrentUserService.class),
-            mock(AuditService.class), mock(DashboardService.class), mock(AlertEventService.class));
+            mock(AuditService.class), mock(DashboardService.class), mock(AlertEventService.class),
+            mock(RollingAverageService.class));
         CurrentUser admin = new CurrentUser(1, 42, "admin@example.com", "Admin", "SUPER_ADMIN", "ACTIVE");
 
         List<AlertThreshold> defaults = service.companyThresholds(admin);
@@ -51,7 +52,8 @@ class AlertServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         CurrentUserService currentUsers = mock(CurrentUserService.class);
         AlertService service = new AlertService(jdbcTemplate, currentUsers,
-            mock(AuditService.class), mock(DashboardService.class), mock(AlertEventService.class));
+            mock(AuditService.class), mock(DashboardService.class), mock(AlertEventService.class),
+            mock(RollingAverageService.class));
         CurrentUser admin = new CurrentUser(1, 42, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
         when(currentUsers.visibleSiteIds(admin)).thenReturn(Set.of());
 
@@ -66,7 +68,8 @@ class AlertServiceTest {
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
         AlertEventService alertEvents = mock(AlertEventService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents,
+            mock(RollingAverageService.class));
         CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
 
         assertThrows(ForbiddenException.class,
@@ -82,7 +85,9 @@ class AlertServiceTest {
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
         AlertEventService alertEvents = mock(AlertEventService.class);
-        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents);
+        RollingAverageService averages = mock(RollingAverageService.class);
+        when(averages.states()).thenReturn(java.util.Map.of());
+        AlertService service = new AlertService(jdbcTemplate, currentUsers, audit, dashboard, alertEvents, averages);
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
         SiteAlertSettings savedSettings = new SiteAlertSettings("001", "병원", true,
             List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)), 30, false,

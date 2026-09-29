@@ -40,6 +40,15 @@ export type AlertThreshold = {
   min: number;
   max: number;
   active: boolean;
+  effectiveMin: number;
+  effectiveMax: number;
+  useAverage: boolean;
+  tolerancePercent: number;
+  averageValue: number | null;
+  averageSampleCount: number;
+  excludedZeroCount: number;
+  averageCapturedAt: string | null;
+  averageApplied: boolean;
 };
 
 export type SiteAlertSettings = {

@@ -63,6 +63,9 @@ app:
   monitor:
     cron-secret: ${CRON_SECRET:}
     slack-webhook-url: ${SLACK_WEBHOOK_URL:}
+    scheduler-enabled: ${MONITOR_SCHEDULER_ENABLED:false}
+    interval-ms: ${MONITOR_INTERVAL_MS:60000}
+    initial-delay-ms: ${MONITOR_INITIAL_DELAY_MS:60000}
   office-integration:
     enabled: ${OFFICE_INTEGRATION_ENABLED:false}
     base-url: ${OFFICE_BASE_URL:http://office-backend:8080}

@@ -1,5 +1,6 @@
 package com.pentaworks.monitoring.dashboard;
 
+import com.pentaworks.monitoring.alert.RollingAverageService;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.CtrlRange;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow;
 import com.pentaworks.monitoring.dashboard.DashboardResponse.Meta;
@@ -31,9 +32,13 @@ public class DashboardService {
     private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
     private static final List<String> METRICS = List.of("recosi", "coldtp", "recoru", "hepres", "heleve", "actemp", "achumi", "gctemp", "gcflow", "cctemp", "ccflow");
     private final JdbcTemplate jdbcTemplate;
+    private final RollingAverageService averages;
     private volatile DashboardResponse cachedDashboard;
 
-    public DashboardService(JdbcTemplate jdbcTemplate) { this.jdbcTemplate = jdbcTemplate; }
+    public DashboardService(JdbcTemplate jdbcTemplate, RollingAverageService averages) {
+        this.jdbcTemplate = jdbcTemplate;
+        this.averages = averages;
+    }
 
     public DashboardResponse getDashboard() {
         DashboardResponse cached = cachedDashboard;
@@ -129,6 +134,7 @@ public class DashboardService {
                     rs.getTimestamp("acknowledged_at") != null)));
 
         Map<String, CtrlRange> ctrl = new LinkedHashMap<>();
+        Map<String, Map<String, RollingAverageService.AverageState>> averageStates = averages.states();
         Map<String, Map<String, double[]>> inheritedRanges = new HashMap<>();
         jdbcTemplate.query("""
             SELECT cs.site_id,t.metric_key,t.min_value,t.max_value
@@ -153,7 +159,8 @@ public class DashboardService {
               LEFT JOIN alert_settings a ON a.siteid=s.site
              ORDER BY s.site
             """, (RowCallbackHandler) rs -> ctrl.put(rs.getString("site"),
-                ctrlRange(rs, inheritedRanges.getOrDefault(rs.getString("site"), Map.of()))));
+                ctrlRange(rs, inheritedRanges.getOrDefault(rs.getString("site"), Map.of()),
+                    averageStates.getOrDefault(rs.getString("site"), Map.of()))));
         List<DashboardRow> rows = new ArrayList<>();
         for (Site site : sites) {
             Counts count = counts.get(site.id());
@@ -195,22 +202,27 @@ public class DashboardService {
         return result;
     }
 
-    private CtrlRange ctrlRange(ResultSet rs, Map<String, double[]> inherited) throws SQLException {
-        return new CtrlRange(number(rs, "recosil", inherited, "recosi", 0), number(rs, "recosih", inherited, "recosi", 1),
-            number(rs, "coldtpl", inherited, "coldtp", 0), number(rs, "coldtph", inherited, "coldtp", 1),
-            number(rs, "recorul", inherited, "recoru", 0), number(rs, "recoruh", inherited, "recoru", 1),
-            number(rs, "mrplel", inherited, "hepres", 0), number(rs, "mrpleh", inherited, "hepres", 1),
-            number(rs, "mrlevl", inherited, "heleve", 0), number(rs, "mrlevh", inherited, "heleve", 1),
-            number(rs, "actmpl", inherited, "actemp", 0), number(rs, "actmph", inherited, "actemp", 1),
-            number(rs, "achuml", inherited, "achumi", 0), number(rs, "achumh", inherited, "achumi", 1),
-            number(rs, "gctmpl", inherited, "gctemp", 0), number(rs, "gctmph", inherited, "gctemp", 1),
-            number(rs, "gcflol", inherited, "gcflow", 0), number(rs, "gcfloh", inherited, "gcflow", 1),
-            number(rs, "cctmpl", inherited, "cctemp", 0), number(rs, "cctmph", inherited, "cctemp", 1),
-            number(rs, "ccflol", inherited, "ccflow", 0), number(rs, "ccfloh", inherited, "ccflow", 1));
+    private CtrlRange ctrlRange(ResultSet rs, Map<String, double[]> inherited,
+                                Map<String, RollingAverageService.AverageState> averageStates) throws SQLException {
+        return new CtrlRange(number(rs, "recosil", inherited, averageStates, "recosi", 0), number(rs, "recosih", inherited, averageStates, "recosi", 1),
+            number(rs, "coldtpl", inherited, averageStates, "coldtp", 0), number(rs, "coldtph", inherited, averageStates, "coldtp", 1),
+            number(rs, "recorul", inherited, averageStates, "recoru", 0), number(rs, "recoruh", inherited, averageStates, "recoru", 1),
+            number(rs, "mrplel", inherited, averageStates, "hepres", 0), number(rs, "mrpleh", inherited, averageStates, "hepres", 1),
+            number(rs, "mrlevl", inherited, averageStates, "heleve", 0), number(rs, "mrlevh", inherited, averageStates, "heleve", 1),
+            number(rs, "actmpl", inherited, averageStates, "actemp", 0), number(rs, "actmph", inherited, averageStates, "actemp", 1),
+            number(rs, "achuml", inherited, averageStates, "achumi", 0), number(rs, "achumh", inherited, averageStates, "achumi", 1),
+            number(rs, "gctmpl", inherited, averageStates, "gctemp", 0), number(rs, "gctmph", inherited, averageStates, "gctemp", 1),
+            number(rs, "gcflol", inherited, averageStates, "gcflow", 0), number(rs, "gcfloh", inherited, averageStates, "gcflow", 1),
+            number(rs, "cctmpl", inherited, averageStates, "cctemp", 0), number(rs, "cctmph", inherited, averageStates, "cctemp", 1),
+            number(rs, "ccflol", inherited, averageStates, "ccflow", 0), number(rs, "ccfloh", inherited, averageStates, "ccflow", 1));
     }
 
     private Double number(ResultSet rs, String field, Map<String, double[]> inherited,
+                          Map<String, RollingAverageService.AverageState> averageStates,
                           String metric, int side) throws SQLException {
+        RollingAverageService.Range dynamic = RollingAverageService.effectiveRange(
+            averageStates.get(metric), RollingAverageService.now());
+        if (dynamic != null) return side == 0 ? dynamic.min() : dynamic.max();
         Double saved = parseNumber(rs.getString(field));
         if (saved != null) return saved;
         double[] range = inherited.get(metric);
