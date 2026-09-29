@@ -5,12 +5,13 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 type UserRow = {
   id: number;
   email: string;
   name: string;
+  phone: string | null;
   role: Role;
   status: "ACTIVE" | "SUSPENDED";
   lastLoginAt: string | null;
@@ -47,6 +48,9 @@ type AuditRow = {
   action: string;
   targetType: string;
   targetId: string | null;
+  beforeData: string | null;
+  afterData: string | null;
+  ipAddress: string | null;
   createdAt: string;
 };
 type PasswordResetCreated = { token: string; email: string; expiresAt: string; deliveryStatus: "SENT" | "FAILED" | "DISABLED" };
@@ -117,6 +121,7 @@ export default function AdminClient() {
           sites={sites.data ?? []}
           loading={users.isLoading || sites.isLoading}
           canManageAdmins={session.role === "SUPER_ADMIN"}
+          currentUserId={session.id}
         />
       )}
       {tab === "invitations" && (
@@ -132,36 +137,65 @@ export default function AdminClient() {
   );
 }
 
-function UserSection({ users, sites, loading, canManageAdmins }: {
+function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: {
   users: UserRow[];
   sites: SiteOption[];
   loading: boolean;
   canManageAdmins: boolean;
+  currentUserId: number;
 }) {
+  const [query, setQuery] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"ALL" | Role>("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [page, setPage] = useState(1);
+  const pageSize = 8;
+  const filtered = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    return users.filter((user) => (!keyword || `${user.name} ${user.email} ${user.phone ?? ""}`.toLowerCase().includes(keyword)) &&
+      (roleFilter === "ALL" || user.role === roleFilter) &&
+      (statusFilter === "ALL" || user.status === statusFilter));
+  }, [users, query, roleFilter, statusFilter]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  useEffect(() => setPage(1), [query, roleFilter, statusFilter]);
+  useEffect(() => setPage((current) => Math.min(current, pageCount)), [pageCount]);
   if (loading) return <Loading />;
   return (
-    <section className="grid gap-4 xl:grid-cols-2">
-      {users.map((user) => (
-        <UserEditor key={user.id} user={user} sites={sites} canManageAdmins={canManageAdmins} />
-      ))}
-      {users.length === 0 && <Empty>등록된 사용자가 없습니다.</Empty>}
+    <section>
+      <div className={`${CARD} mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto]`}>
+        <input type="search" className={INPUT} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름·이메일·전화번호 검색" />
+        <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
+        <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
+      </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        {filtered.slice((page - 1) * pageSize, page * pageSize).map((user) => (
+          <UserEditor key={user.id} user={user} sites={sites} canManageAdmins={canManageAdmins} currentUserId={currentUserId} />
+        ))}
+        {filtered.length === 0 && <Empty>조건에 맞는 사용자가 없습니다.</Empty>}
+      </div>
+      {filtered.length > 0 && <div className="mt-4 flex items-center justify-between"><span className="text-text-secondary text-xs">총 {filtered.length}명 · {page}/{pageCount} 페이지</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">이전</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">다음</button></div></div>}
     </section>
   );
 }
 
-function UserEditor({ user, sites, canManageAdmins }: {
+function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
   user: UserRow;
   sites: SiteOption[];
   canManageAdmins: boolean;
+  currentUserId: number;
 }) {
   const queryClient = useQueryClient();
   const [role, setRole] = useState<Role>(user.role);
   const [status, setStatus] = useState(user.status);
+  const [email, setEmail] = useState(user.email);
+  const [name, setName] = useState(user.name);
+  const [phone, setPhone] = useState(user.phone ?? "");
   const [siteIds, setSiteIds] = useState(user.siteIds);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [resetLink, setResetLink] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const immutable = user.role === "SUPER_ADMIN" || (user.role === "ADMIN" && !canManageAdmins);
+  const canDelete = user.id !== currentUserId && (user.role === "USER" || canManageAdmins);
 
   async function save() {
     setSaving(true);
@@ -169,7 +203,7 @@ function UserEditor({ user, sites, canManageAdmins }: {
     try {
       await apiFetch(`/admin/accounts/users/${user.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ role, status, siteIds }),
+        body: JSON.stringify({ email, name, phone: phone || null, role, status, siteIds }),
       });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
@@ -179,6 +213,18 @@ function UserEditor({ user, sites, canManageAdmins }: {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function remove() {
+    if (!confirmDelete) { setConfirmDelete(true); return; }
+    setSaving(true); setMessage(null);
+    try {
+      await apiFetch(`/admin/accounts/users/${user.id}`, { method: "DELETE" });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
+      ]);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "계정을 삭제하지 못했습니다."); setSaving(false); }
   }
 
   async function createPasswordReset() {
@@ -226,6 +272,7 @@ function UserEditor({ user, sites, canManageAdmins }: {
           </select>
         </div>
       </div>
+      {!immutable && <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-text-secondary text-xs font-bold">이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold">이메일<input className={`${INPUT} mt-1.5`} type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold sm:col-span-2">전화번호<input className={`${INPUT} mt-1.5`} type="tel" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="선택 입력" /></label></div>}
       {role === "USER" && !immutable && (
         <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />
       )}
@@ -240,8 +287,10 @@ function UserEditor({ user, sites, canManageAdmins }: {
             className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50">
             {saving ? "저장 중…" : "변경 저장"}
           </button>
+          {canDelete && <button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : "계정 삭제"}</button>}
         </div>
       )}
+      {immutable && canDelete && <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">{message && <span className="text-text-secondary text-xs">{message}</span>}<button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : user.role === "SUPER_ADMIN" ? "최고관리자 삭제" : "계정 삭제"}</button></div>}
       {resetLink && (
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
           <p className="mb-2 text-xs font-semibold">1시간 동안 유효한 비밀번호 재설정 링크</p>
@@ -261,7 +310,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "USER">("USER");
+  const [role, setRole] = useState<Role>("USER");
   const [siteIds, setSiteIds] = useState<string[]>([]);
   const [link, setLink] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -295,6 +344,20 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
     await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
   }
 
+  async function resend(id: string) {
+    setSaving(true); setMessage(null);
+    try {
+      const result = await apiFetch<InvitationCreated>(`/admin/accounts/invitations/${id}/resend`, { method: "POST" });
+      setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
+      setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 다시 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 새 수동 링크를 생성했습니다." : "메일이 비활성화되어 새 수동 링크를 생성했습니다.");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-invitations"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
+      ]);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "초대를 재발송하지 못했습니다."); }
+    finally { setSaving(false); }
+  }
+
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
       <form onSubmit={submit} className={`${CARD} space-y-4 p-5 sm:p-6`}>
@@ -304,9 +367,10 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
         <input className={INPUT} required placeholder="이름" value={name}
           onChange={(event) => setName(event.target.value)} />
         <select className={INPUT} value={role}
-          onChange={(event) => setRole(event.target.value as "ADMIN" | "USER")}>
+          onChange={(event) => setRole(event.target.value as Role)}>
           <option value="USER">일반 사용자</option>
           {canInviteAdmins && <option value="ADMIN">관리자</option>}
+          {canInviteAdmins && <option value="SUPER_ADMIN">최고관리자</option>}
         </select>
         {role === "USER" && <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />}
         {message && <p className="text-sm text-red-600">{message}</p>}
@@ -332,7 +396,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
                 <p className="truncate text-sm font-semibold">{invitation.name} · {invitation.email}</p>
                 <p className="text-text-secondary text-xs">{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
               </div>
-              <button type="button" onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button>
+              <div className="flex shrink-0 gap-1"><button type="button" disabled={saving || (!canInviteAdmins && invitation.role !== "USER")} onClick={() => resend(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30">재발송</button><button type="button" onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button></div>
             </div>
           ))}
           {invitations.length === 0 && <Empty>대기 중인 초대가 없습니다.</Empty>}
@@ -422,6 +486,7 @@ function SiteEditor({ site }: { site: SiteOption }) {
 }
 
 function AuditSection({ rows, loading }: { rows: AuditRow[]; loading: boolean }) {
+  const [expanded, setExpanded] = useState<number | null>(null);
   if (loading) return <Loading />;
   return (
     <section className={`${CARD} overflow-hidden`}>
@@ -429,19 +494,24 @@ function AuditSection({ rows, loading }: { rows: AuditRow[]; loading: boolean })
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-slate-50/80 dark:bg-white/4">
-            <tr><th className="p-3 text-left">시각</th><th className="p-3 text-left">작업자</th><th className="p-3 text-left">작업</th><th className="p-3 text-left">대상</th></tr>
+            <tr><th className="p-3 text-left">시각</th><th className="p-3 text-left">작업자</th><th className="p-3 text-left">작업</th><th className="p-3 text-left">대상</th><th className="p-3 text-right">상세</th></tr>
           </thead>
-          <tbody>{rows.map((row) => (
-            <tr key={row.id} className="border-t dark:border-background-dark-secondary">
-              <td className="p-3">{formatDateTime(row.createdAt)}</td><td className="p-3">{row.actorName}</td>
-              <td className="p-3 font-medium">{actionLabel(row.action)}</td><td className="p-3">{row.targetType} {row.targetId ?? ""}</td>
-            </tr>
-          ))}</tbody>
+          <tbody>{rows.map((row) => <AuditRows key={row.id} row={row} open={expanded === row.id} onToggle={() => setExpanded((current) => current === row.id ? null : row.id)} />)}</tbody>
         </table>
       </div>
       {rows.length === 0 && <Empty>기록된 변경이 없습니다.</Empty>}
     </section>
   );
+}
+
+function AuditRows({ row, open, onToggle }: { row: AuditRow; open: boolean; onToggle: () => void }) {
+  return <><tr className="border-t dark:border-background-dark-secondary"><td className="p-3">{formatDateTime(row.createdAt)}</td><td className="p-3">{row.actorName}</td><td className="p-3 font-medium">{actionLabel(row.action)}</td><td className="p-3">{row.targetType} {row.targetId ?? ""}</td><td className="p-3 text-right"><button type="button" onClick={onToggle} className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/30">{open ? "닫기" : "보기"}</button></td></tr>{open && <tr className="bg-slate-50/70 dark:bg-white/3"><td colSpan={5} className="p-4"><div className="grid gap-3 sm:grid-cols-2"><AuditData label="변경 전" value={row.beforeData} /><AuditData label="변경 후" value={row.afterData} /></div>{row.ipAddress && <p className="text-text-secondary mt-3 text-xs">IP {row.ipAddress}</p>}</td></tr>}</>;
+}
+
+function AuditData({ label, value }: { label: string; value: string | null }) {
+  let formatted = value ?? "기록 없음";
+  if (value) { try { formatted = JSON.stringify(JSON.parse(value), null, 2); } catch { /* 원문 표시 */ } }
+  return <div><p className="text-text-secondary mb-1 text-xs font-bold">{label}</p><pre className="max-h-52 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-5 whitespace-pre-wrap text-slate-100">{formatted}</pre></div>;
 }
 
 function SiteChecks({ sites, selected, onChange }: { sites: SiteOption[]; selected: string[]; onChange: (value: string[]) => void }) {
@@ -472,6 +542,6 @@ function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-cent
 function roleLabel(role: Role) { return role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
-function actionLabel(value: string) { return ({ ACCOUNT_INVITED: "사용자 초대", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
+function actionLabel(value: string) { return ({ ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
 function SummaryChip({ value, label }: { value: number; label: string }) { return <div className="rounded-2xl border border-white/10 bg-white/10 px-3.5 py-2 backdrop-blur-sm"><span className="text-base font-extrabold">{value}</span><span className="ml-1.5 text-xs font-medium text-white/65">{label}</span></div>; }
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) { return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"}`}><span className={`h-1.5 w-1.5 rounded-full ${status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"}`} />{status === "ACTIVE" ? "활성" : "정지"}</span>; }

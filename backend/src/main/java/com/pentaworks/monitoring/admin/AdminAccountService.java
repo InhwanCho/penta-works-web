@@ -12,6 +12,7 @@ import com.pentaworks.monitoring.admin.AdminAccountController.UpdateUserRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.UserSummary;
 import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
 import com.pentaworks.monitoring.auth.SecureTokens;
+import com.pentaworks.monitoring.auth.SessionRegistry;
 import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ConflictException;
 import com.pentaworks.monitoring.common.ForbiddenException;
@@ -35,7 +36,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminAccountService {
-    private static final Set<String> MANAGED_ROLES = Set.of("ADMIN", "USER");
+    private static final Set<String> MANAGED_ROLES = Set.of("SUPER_ADMIN", "ADMIN", "USER");
     private static final Set<String> STATUSES = Set.of("ACTIVE", "SUSPENDED");
 
     private final JdbcTemplate jdbcTemplate;
@@ -43,24 +44,26 @@ public class AdminAccountService {
     private final AuditService audit;
     private final DashboardService dashboard;
     private final AccountMailService mail;
+    private final SessionRegistry sessions;
 
     public AdminAccountService(JdbcTemplate jdbcTemplate, SecureTokens secureTokens, AuditService audit,
-                               DashboardService dashboard, AccountMailService mail) {
+                               DashboardService dashboard, AccountMailService mail, SessionRegistry sessions) {
         this.jdbcTemplate = jdbcTemplate;
         this.secureTokens = secureTokens;
         this.audit = audit;
         this.dashboard = dashboard;
         this.mail = mail;
+        this.sessions = sessions;
     }
 
     public List<UserSummary> users(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
-            SELECT id,email,name,role,status,last_login_at,created_at
-              FROM app_user WHERE company_id=? AND email IS NOT NULL
+            SELECT id,email,name,phone,role,status,last_login_at,created_at
+              FROM app_user WHERE company_id=? AND email IS NOT NULL AND status<>'DELETED'
              ORDER BY CASE role WHEN 'SUPER_ADMIN' THEN 0 WHEN 'ADMIN' THEN 1 ELSE 2 END, name, email
             """, (rs, row) -> new UserSummary(rs.getLong("id"), rs.getString("email"), rs.getString("name"),
-                rs.getString("role"), rs.getString("status"), instant(rs.getTimestamp("last_login_at")),
+                rs.getString("phone"), rs.getString("role"), rs.getString("status"), instant(rs.getTimestamp("last_login_at")),
                 instant(rs.getTimestamp("created_at")), userSites(rs.getLong("id"))), actor.companyId());
     }
 
@@ -141,10 +144,11 @@ public class AdminAccountService {
     public List<AuditSummary> auditLogs(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
-            SELECT id,actor_name,action,target_type,target_id,created_at
+            SELECT id,actor_name,action,target_type,target_id,before_data,after_data,ip_address,created_at
               FROM audit_log WHERE company_id=? ORDER BY created_at DESC LIMIT 200
             """, (rs, row) -> new AuditSummary(rs.getLong("id"), rs.getString("actor_name"),
                 rs.getString("action"), rs.getString("target_type"), rs.getString("target_id"),
+                rs.getString("before_data"), rs.getString("after_data"), rs.getString("ip_address"),
                 rs.getTimestamp("created_at").toInstant()), actor.companyId());
     }
 
@@ -153,8 +157,8 @@ public class AdminAccountService {
         requireAdmin(actor);
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         String role = normalizeRole(request.role());
-        if (!actor.isSuperAdmin() && "ADMIN".equals(role)) {
-            throw new ForbiddenException("관리자 초대는 최고관리자만 할 수 있습니다.");
+        if (!actor.isSuperAdmin() && !"USER".equals(role)) {
+            throw new ForbiddenException("관리자와 최고관리자 초대는 최고관리자만 할 수 있습니다.");
         }
         Integer existing = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM app_user WHERE email=?", Integer.class, email);
         if (existing != null && existing > 0) throw new ConflictException("이미 등록된 이메일입니다.");
@@ -183,6 +187,31 @@ public class AdminAccountService {
     }
 
     @Transactional
+    public InvitationCreated resendInvitation(CurrentUser actor, String id) {
+        requireAdmin(actor);
+        PendingInvitation invitation = jdbcTemplate.query("""
+            SELECT id,email,name,role FROM account_invitation
+             WHERE id=? AND company_id=? AND accepted_at IS NULL AND revoked_at IS NULL
+            """, rs -> rs.next() ? new PendingInvitation(rs.getString("id"), rs.getString("email"),
+                rs.getString("name"), rs.getString("role")) : null, id, actor.companyId());
+        if (invitation == null) throw new NotFoundException("초대를 찾을 수 없습니다.");
+        if (!actor.isSuperAdmin() && !"USER".equals(invitation.role())) {
+            throw new ForbiddenException("관리자와 최고관리자 초대는 최고관리자만 재발송할 수 있습니다.");
+        }
+        String token = secureTokens.create();
+        Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
+        jdbcTemplate.update("""
+            UPDATE account_invitation SET token_hash=?,expires_at=?,created_at=CURRENT_TIMESTAMP(6)
+             WHERE id=?
+            """, secureTokens.hash(token), Timestamp.from(expiresAt), id);
+        AccountMailService.DeliveryStatus delivery = mail.sendInvitation(
+            invitation.email(), invitation.name(), token);
+        audit.record(actor, "INVITATION_RESENT", "ACCOUNT_INVITATION", id,
+            Map.of("email", invitation.email(), "role", invitation.role(), "deliveryStatus", delivery.name()));
+        return new InvitationCreated(id, token, invitation.email(), expiresAt, delivery.name());
+    }
+
+    @Transactional
     public void revokeInvitation(CurrentUser actor, String id) {
         requireAdmin(actor);
         int changed = jdbcTemplate.update("""
@@ -197,23 +226,35 @@ public class AdminAccountService {
     public UserSummary updateUser(CurrentUser actor, long userId, UpdateUserRequest request) {
         requireAdmin(actor);
         ManagedUser target = jdbcTemplate.query("""
-            SELECT id,company_id,email,name,role FROM app_user WHERE id=? AND company_id=?
+            SELECT id,company_id,email,name,phone,role,status FROM app_user WHERE id=? AND company_id=? AND status<>'DELETED'
             """, rs -> rs.next() ? new ManagedUser(rs.getLong("id"), rs.getLong("company_id"),
-                rs.getString("email"), rs.getString("name"), rs.getString("role")) : null, userId, actor.companyId());
+                rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
+                rs.getString("status")) : null, userId, actor.companyId());
         if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) throw new ForbiddenException("최고관리자 계정은 변경할 수 없습니다.");
         if (!actor.isSuperAdmin() && "ADMIN".equals(target.role())) {
             throw new ForbiddenException("관리자 계정은 최고관리자만 변경할 수 있습니다.");
         }
         String role = normalizeRole(request.role());
+        if ("SUPER_ADMIN".equals(role)) {
+            throw new BadRequestException("최고관리자는 초대로만 추가할 수 있습니다.");
+        }
         if (!actor.isSuperAdmin() && "ADMIN".equals(role)) {
             throw new ForbiddenException("관리자 권한 부여는 최고관리자만 할 수 있습니다.");
         }
+        String email = normalizeEmail(request.email());
+        String name = required(request.name(), 80, "이름");
+        String phone = optional(request.phone(), 30, "전화번호");
+        Integer duplicate = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM app_user WHERE email=? AND id<>?", Integer.class, email, userId);
+        if (duplicate != null && duplicate > 0) throw new ConflictException("이미 등록된 이메일입니다.");
         String status = request.status().trim().toUpperCase(Locale.ROOT);
         if (!STATUSES.contains(status)) throw new BadRequestException("올바르지 않은 계정 상태입니다.");
         List<String> siteIds = validateSites(actor.companyId(), request.siteIds());
-        jdbcTemplate.update("UPDATE app_user SET role=?,status=?,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?",
-            role, status, userId);
+        jdbcTemplate.update("""
+            UPDATE app_user SET email=?,username=?,name=?,phone=?,role=?,status=?,updated_at=CURRENT_TIMESTAMP(6)
+             WHERE id=?
+            """, email, email, name, phone, role, status, userId);
         jdbcTemplate.update("DELETE FROM user_site WHERE user_id=?", userId);
         if ("USER".equals(role)) {
             for (String siteId : siteIds) {
@@ -222,18 +263,60 @@ public class AdminAccountService {
         }
         jdbcTemplate.update("UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6) WHERE user_id=? AND revoked_at IS NULL",
             userId);
+        sessions.invalidateUser(userId);
         audit.record(actor, "ACCOUNT_UPDATED", "APP_USER", Long.toString(userId),
-            Map.of("role", role, "status", status, "siteIds", siteIds));
+            Map.of("email", target.email(), "name", target.name(), "phone", target.phone() == null ? "" : target.phone(),
+                "role", target.role(), "status", target.status()),
+            Map.of("email", email, "name", name, "phone", phone == null ? "" : phone,
+                "role", role, "status", status, "siteIds", siteIds));
         return users(actor).stream().filter(user -> user.id() == userId).findFirst().orElseThrow();
+    }
+
+    @Transactional
+    public void deleteUser(CurrentUser actor, long userId) {
+        requireAdmin(actor);
+        ManagedUser target = jdbcTemplate.query("""
+            SELECT id,company_id,email,name,phone,role,status FROM app_user
+             WHERE id=? AND company_id=? AND status<>'DELETED' FOR UPDATE
+            """, rs -> rs.next() ? new ManagedUser(rs.getLong("id"), rs.getLong("company_id"),
+                rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
+                rs.getString("status")) : null,
+            userId, actor.companyId());
+        if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
+        if (target.id() == actor.id()) throw new BadRequestException("현재 로그인한 본인 계정은 삭제할 수 없습니다.");
+        if ("SUPER_ADMIN".equals(target.role())) {
+            if (!actor.isSuperAdmin()) throw new ForbiddenException("최고관리자 계정은 최고관리자만 삭제할 수 있습니다.");
+            Integer count = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM app_user
+                 WHERE company_id=? AND role='SUPER_ADMIN' AND status<>'DELETED'
+                """, Integer.class, actor.companyId());
+            if (count == null || count <= 1) throw new BadRequestException("마지막 최고관리자 계정은 삭제할 수 없습니다.");
+        } else if ("ADMIN".equals(target.role()) && !actor.isSuperAdmin()) {
+            throw new ForbiddenException("관리자 계정은 최고관리자만 삭제할 수 있습니다.");
+        }
+        audit.record(actor, "ACCOUNT_DELETED", "APP_USER", Long.toString(userId),
+            Map.of("email", target.email(), "name", target.name(), "role", target.role()));
+        jdbcTemplate.update("DELETE FROM user_site WHERE user_id=?", userId);
+        jdbcTemplate.update("DELETE FROM site_alert_recipient WHERE user_id=?", userId);
+        jdbcTemplate.update("UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6) WHERE user_id=? AND revoked_at IS NULL", userId);
+        sessions.invalidateUser(userId);
+        jdbcTemplate.update("UPDATE password_reset_token SET revoked_at=CURRENT_TIMESTAMP(6) WHERE user_id=? AND used_at IS NULL AND revoked_at IS NULL", userId);
+        String deletedIdentity = "deleted-" + userId + "-" + UUID.randomUUID() + "@deleted.invalid";
+        jdbcTemplate.update("""
+            UPDATE app_user SET email=?,username=?,name='삭제된 사용자',phone=NULL,role='USER',status='DELETED',
+                   password_hash=?,failed_login_count=0,locked_until=NULL,updated_at=CURRENT_TIMESTAMP(6)
+             WHERE id=?
+            """, deletedIdentity, deletedIdentity, secureTokens.hash(secureTokens.create()), userId);
     }
 
     @Transactional
     public PasswordResetCreated createPasswordReset(CurrentUser actor, long userId) {
         requireAdmin(actor);
         ManagedUser target = jdbcTemplate.query("""
-            SELECT id,company_id,email,name,role FROM app_user WHERE id=? AND company_id=?
+            SELECT id,company_id,email,name,phone,role,status FROM app_user WHERE id=? AND company_id=? AND status<>'DELETED'
             """, rs -> rs.next() ? new ManagedUser(rs.getLong("id"), rs.getLong("company_id"),
-                rs.getString("email"), rs.getString("name"), rs.getString("role")) : null, userId, actor.companyId());
+                rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
+                rs.getString("status")) : null, userId, actor.companyId());
         if (target == null || target.email() == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role()) && target.id() != actor.id()) {
             throw new ForbiddenException("다른 최고관리자의 비밀번호를 초기화할 수 없습니다.");
@@ -301,6 +384,22 @@ public class AdminAccountService {
         return role;
     }
 
+    private String normalizeEmail(String value) {
+        String email = value == null ? "" : value.trim().toLowerCase(Locale.ROOT);
+        if (email.isEmpty() || email.length() > 254 || !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new BadRequestException("올바른 이메일을 입력해주세요.");
+        }
+        return email;
+    }
+
+    private String required(String value, int maxLength, String label) {
+        String normalized = value == null ? "" : value.trim();
+        if (normalized.isEmpty() || normalized.length() > maxLength) {
+            throw new BadRequestException(label + "을(를) 확인해주세요.");
+        }
+        return normalized;
+    }
+
     private void requireAdmin(CurrentUser actor) {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
     }
@@ -316,7 +415,9 @@ public class AdminAccountService {
     }
 
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
-    private record ManagedUser(long id, long companyId, String email, String name, String role) {}
+    private record ManagedUser(long id, long companyId, String email, String name, String phone, String role,
+                               String status) {}
+    private record PendingInvitation(String id, String email, String name, String role) {}
     private record SiteFields(String name, String address, String contactName, String contactPhone,
                               String timezone) {}
 }

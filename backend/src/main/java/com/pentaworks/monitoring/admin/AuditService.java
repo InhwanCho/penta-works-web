@@ -19,11 +19,17 @@ public class AuditService {
 
     public void record(CurrentUser actor, String action, String targetType, String targetId,
                        Map<String, ?> afterData) {
+        record(actor, action, targetType, targetId, null, afterData);
+    }
+
+    public void record(CurrentUser actor, String action, String targetType, String targetId,
+                       Map<String, ?> beforeData, Map<String, ?> afterData) {
         jdbcTemplate.update("""
             INSERT INTO audit_log
-                (company_id,actor_user_id,actor_name,action,target_type,target_id,after_data,created_at)
-            VALUES (?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))
-            """, actor.companyId(), actor.id(), actor.name(), action, targetType, targetId, json(afterData));
+                (company_id,actor_user_id,actor_name,action,target_type,target_id,before_data,after_data,created_at)
+            VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))
+            """, actor.companyId(), actor.id(), actor.name(), action, targetType, targetId,
+            beforeData == null ? null : json(beforeData), afterData == null ? null : json(afterData));
     }
 
     private String json(Map<String, ?> value) {

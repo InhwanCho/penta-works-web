@@ -4,6 +4,7 @@ import com.pentaworks.monitoring.auth.CurrentUserService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
@@ -71,10 +72,21 @@ public class AdminAccountController {
         return ResponseEntity.noContent().build();
     }
 
+    @PostMapping("/invitations/{id}/resend")
+    public InvitationCreated resendInvitation(@PathVariable String id, Authentication authentication) {
+        return service.resendInvitation(currentUsers.require(authentication), id);
+    }
+
     @PatchMapping("/users/{id}")
     public UserSummary update(@PathVariable long id, @Valid @RequestBody UpdateUserRequest request,
                               Authentication authentication) {
         return service.updateUser(currentUsers.require(authentication), id, request);
+    }
+
+    @DeleteMapping("/users/{id}")
+    public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
+        service.deleteUser(currentUsers.require(authentication), id);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/users/{id}/password-reset")
@@ -82,10 +94,12 @@ public class AdminAccountController {
         return service.createPasswordReset(currentUsers.require(authentication), id);
     }
 
-    public record InviteRequest(@NotBlank @Email String email, @NotBlank String name,
+    public record InviteRequest(@NotBlank @Email String email, @NotBlank @Size(max = 80) String name,
                                 @NotBlank String role, List<String> siteIds) {}
-    public record UpdateUserRequest(@NotBlank String role, @NotBlank String status, List<String> siteIds) {}
-    public record UserSummary(long id, String email, String name, String role, String status,
+    public record UpdateUserRequest(@NotBlank @Email String email, @NotBlank @Size(max = 80) String name,
+                                    @Size(max = 30) String phone, @NotBlank String role,
+                                    @NotBlank String status, List<String> siteIds) {}
+    public record UserSummary(long id, String email, String name, String phone, String role, String status,
                               Instant lastLoginAt, Instant createdAt, List<String> siteIds) {}
     public record CreateSiteRequest(@NotBlank String id, @NotBlank String name, String address,
                                     String contactName, String contactPhone, String timezone) {}
@@ -98,7 +112,8 @@ public class AdminAccountController {
     public record InvitationCreated(String id, String token, String email, Instant expiresAt,
                                     String deliveryStatus) {}
     public record AuditSummary(long id, String actorName, String action, String targetType,
-                               String targetId, Instant createdAt) {}
+                               String targetId, String beforeData, String afterData,
+                               String ipAddress, Instant createdAt) {}
     public record PasswordResetCreated(String token, String email, Instant expiresAt,
                                        String deliveryStatus) {}
 }
