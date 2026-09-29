@@ -19,6 +19,17 @@ spring:
     locations: classpath:db/migration
   jackson:
     default-property-inclusion: non_null
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
 
 management:
   endpoints:
@@ -27,6 +38,10 @@ management:
         include: health,info
 
 app:
+  mail:
+    enabled: ${MAIL_ENABLED:false}
+    from: ${MAIL_FROM:}
+    public-base-url: ${PUBLIC_BASE_URL:http://localhost:3000}
   dashboard:
     refresh-ms: ${DASHBOARD_REFRESH_MS:10000}
   cors:

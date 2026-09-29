@@ -19,7 +19,8 @@ class AdminAccountServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
-        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard);
+        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
+            mock(AccountMailService.class));
         CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
 
         assertThrows(ForbiddenException.class, () -> service.createSite(user,
@@ -33,7 +34,8 @@ class AdminAccountServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
-        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard);
+        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
+            mock(AccountMailService.class));
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
 
         assertThrows(BadRequestException.class, () -> service.createSite(admin,
@@ -47,7 +49,8 @@ class AdminAccountServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AuditService audit = mock(AuditService.class);
         DashboardService dashboard = mock(DashboardService.class);
-        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard);
+        AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class), audit, dashboard,
+            mock(AccountMailService.class));
         CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
 
         assertThrows(BadRequestException.class, () -> service.createSite(admin,

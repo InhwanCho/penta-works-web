@@ -95,8 +95,10 @@ public class AdminAccountController {
                              String contactPhone, String timezone) {}
     public record InvitationSummary(String id, String email, String name, String role,
                                     Instant expiresAt, Instant createdAt, List<String> siteIds) {}
-    public record InvitationCreated(String id, String token, String email, Instant expiresAt) {}
+    public record InvitationCreated(String id, String token, String email, Instant expiresAt,
+                                    String deliveryStatus) {}
     public record AuditSummary(long id, String actorName, String action, String targetType,
                                String targetId, Instant createdAt) {}
-    public record PasswordResetCreated(String token, String email, Instant expiresAt) {}
+    public record PasswordResetCreated(String token, String email, Instant expiresAt,
+                                       String deliveryStatus) {}
 }

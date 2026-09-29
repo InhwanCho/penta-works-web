@@ -1,15 +1,15 @@
 package com.pentaworks.monitoring.admin;
 
-import com.pentaworks.monitoring.admin.AdminAccountController.InvitationCreated;
 import com.pentaworks.monitoring.admin.AdminAccountController.AuditSummary;
+import com.pentaworks.monitoring.admin.AdminAccountController.CreateSiteRequest;
+import com.pentaworks.monitoring.admin.AdminAccountController.InvitationCreated;
 import com.pentaworks.monitoring.admin.AdminAccountController.InvitationSummary;
 import com.pentaworks.monitoring.admin.AdminAccountController.InviteRequest;
-import com.pentaworks.monitoring.admin.AdminAccountController.CreateSiteRequest;
+import com.pentaworks.monitoring.admin.AdminAccountController.PasswordResetCreated;
 import com.pentaworks.monitoring.admin.AdminAccountController.SiteOption;
 import com.pentaworks.monitoring.admin.AdminAccountController.UpdateSiteRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.UpdateUserRequest;
 import com.pentaworks.monitoring.admin.AdminAccountController.UserSummary;
-import com.pentaworks.monitoring.admin.AdminAccountController.PasswordResetCreated;
 import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
 import com.pentaworks.monitoring.auth.SecureTokens;
 import com.pentaworks.monitoring.common.BadRequestException;
@@ -18,8 +18,8 @@ import com.pentaworks.monitoring.common.ForbiddenException;
 import com.pentaworks.monitoring.common.NotFoundException;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.time.DateTimeException;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -42,13 +42,15 @@ public class AdminAccountService {
     private final SecureTokens secureTokens;
     private final AuditService audit;
     private final DashboardService dashboard;
+    private final AccountMailService mail;
 
     public AdminAccountService(JdbcTemplate jdbcTemplate, SecureTokens secureTokens, AuditService audit,
-                               DashboardService dashboard) {
+                               DashboardService dashboard, AccountMailService mail) {
         this.jdbcTemplate = jdbcTemplate;
         this.secureTokens = secureTokens;
         this.audit = audit;
         this.dashboard = dashboard;
+        this.mail = mail;
     }
 
     public List<UserSummary> users(CurrentUser actor) {
@@ -174,9 +176,10 @@ public class AdminAccountService {
         for (String siteId : siteIds) {
             jdbcTemplate.update("INSERT INTO account_invitation_site (invitation_id,site_id) VALUES (?,?)", id, siteId);
         }
+        AccountMailService.DeliveryStatus delivery = mail.sendInvitation(email, request.name().trim(), token);
         audit.record(actor, "ACCOUNT_INVITED", "ACCOUNT_INVITATION", id,
-            Map.of("email", email, "role", role, "siteIds", siteIds));
-        return new InvitationCreated(id, token, email, expiresAt);
+            Map.of("email", email, "role", role, "siteIds", siteIds, "deliveryStatus", delivery.name()));
+        return new InvitationCreated(id, token, email, expiresAt, delivery.name());
     }
 
     @Transactional
@@ -194,9 +197,9 @@ public class AdminAccountService {
     public UserSummary updateUser(CurrentUser actor, long userId, UpdateUserRequest request) {
         requireAdmin(actor);
         ManagedUser target = jdbcTemplate.query("""
-            SELECT id,company_id,email,role FROM app_user WHERE id=? AND company_id=?
+            SELECT id,company_id,email,name,role FROM app_user WHERE id=? AND company_id=?
             """, rs -> rs.next() ? new ManagedUser(rs.getLong("id"), rs.getLong("company_id"),
-                rs.getString("email"), rs.getString("role")) : null, userId, actor.companyId());
+                rs.getString("email"), rs.getString("name"), rs.getString("role")) : null, userId, actor.companyId());
         if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) throw new ForbiddenException("최고관리자 계정은 변경할 수 없습니다.");
         if (!actor.isSuperAdmin() && "ADMIN".equals(target.role())) {
@@ -228,9 +231,9 @@ public class AdminAccountService {
     public PasswordResetCreated createPasswordReset(CurrentUser actor, long userId) {
         requireAdmin(actor);
         ManagedUser target = jdbcTemplate.query("""
-            SELECT id,company_id,email,role FROM app_user WHERE id=? AND company_id=?
+            SELECT id,company_id,email,name,role FROM app_user WHERE id=? AND company_id=?
             """, rs -> rs.next() ? new ManagedUser(rs.getLong("id"), rs.getLong("company_id"),
-                rs.getString("email"), rs.getString("role")) : null, userId, actor.companyId());
+                rs.getString("email"), rs.getString("name"), rs.getString("role")) : null, userId, actor.companyId());
         if (target == null || target.email() == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role()) && target.id() != actor.id()) {
             throw new ForbiddenException("다른 최고관리자의 비밀번호를 초기화할 수 없습니다.");
@@ -245,8 +248,10 @@ public class AdminAccountService {
             INSERT INTO password_reset_token (id,user_id,token_hash,created_by,expires_at,created_at)
             VALUES (?,?,?,?,?,CURRENT_TIMESTAMP(6))
             """, UUID.randomUUID().toString(), userId, secureTokens.hash(token), actor.id(), Timestamp.from(expiresAt));
-        audit.record(actor, "PASSWORD_RESET_CREATED", "APP_USER", Long.toString(userId), Map.of("email", target.email()));
-        return new PasswordResetCreated(token, target.email(), expiresAt);
+        AccountMailService.DeliveryStatus delivery = mail.sendPasswordReset(target.email(), target.name(), token);
+        audit.record(actor, "PASSWORD_RESET_CREATED", "APP_USER", Long.toString(userId),
+            Map.of("email", target.email(), "deliveryStatus", delivery.name()));
+        return new PasswordResetCreated(token, target.email(), expiresAt, delivery.name());
     }
 
     private List<String> validateSites(long companyId, List<String> requested) {
@@ -311,7 +316,7 @@ public class AdminAccountService {
     }
 
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
-    private record ManagedUser(long id, long companyId, String email, String role) {}
+    private record ManagedUser(long id, long companyId, String email, String name, String role) {}
     private record SiteFields(String name, String address, String contactName, String contactPhone,
                               String timezone) {}
 }

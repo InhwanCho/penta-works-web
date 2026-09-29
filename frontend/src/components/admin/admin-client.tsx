@@ -39,6 +39,7 @@ type InvitationCreated = {
   token: string;
   email: string;
   expiresAt: string;
+  deliveryStatus: "SENT" | "FAILED" | "DISABLED";
 };
 type AuditRow = {
   id: number;
@@ -48,7 +49,7 @@ type AuditRow = {
   targetId: string | null;
   createdAt: string;
 };
-type PasswordResetCreated = { token: string; email: string; expiresAt: string };
+type PasswordResetCreated = { token: string; email: string; expiresAt: string; deliveryStatus: "SENT" | "FAILED" | "DISABLED" };
 
 const CARD =
   "rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(22,58,82,0.06)] dark:border-white/8 dark:bg-background-dark-card";
@@ -186,6 +187,7 @@ function UserEditor({ user, sites, canManageAdmins }: {
     try {
       const result = await apiFetch<PasswordResetCreated>(`/admin/accounts/users/${user.id}/password-reset`, { method: "POST" });
       setResetLink(`${window.location.origin}/reset-password?token=${encodeURIComponent(result.token)}`);
+      setMessage(result.deliveryStatus === "SENT" ? "재설정 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
       await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "재설정 링크를 만들지 못했습니다.");
@@ -275,6 +277,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
         body: JSON.stringify({ email, name, role, siteIds }),
       });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
+      setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
       setEmail("");
       setName("");
       setSiteIds([]);
