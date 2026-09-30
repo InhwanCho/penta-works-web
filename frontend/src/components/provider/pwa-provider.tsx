@@ -6,7 +6,7 @@ export default function PwaProvider() {
   useEffect(() => {
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     const register = () => {
-      void navigator.serviceWorker.register("/sw.js", { scope: "/", updateViaCache: "none" }).catch(() => {
+      void navigator.serviceWorker.register("/sw.js?v=2", { scope: "/", updateViaCache: "none" }).catch(() => {
         // Browsers with unavailable storage can continue using the normal online app.
       });
     };

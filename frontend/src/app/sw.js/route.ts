@@ -1,9 +1,9 @@
-export const dynamic = "force-static";
+export const dynamic = "force-dynamic";
+const version = Date.now().toString(36);
 
 // Only the public, statically rendered dashboard shell and immutable assets are cached.
 // Authentication, APIs, RSC responses and all other navigations stay on the network.
 export function GET() {
-  const version = Date.now().toString(36);
   const worker = String.raw`
 const CACHE = "mreyes-shell-${version}";
 let warming;
@@ -62,5 +62,5 @@ self.addEventListener("fetch", event => {
   }
 });
 `;
-  return new Response(worker, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-cache", "Service-Worker-Allowed": "/" } });
+  return new Response(worker, { headers: { "Content-Type": "application/javascript; charset=utf-8", "Cache-Control": "no-store, max-age=0", "Service-Worker-Allowed": "/" } });
 }
