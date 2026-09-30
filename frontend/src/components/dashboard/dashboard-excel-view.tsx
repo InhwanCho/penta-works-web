@@ -184,7 +184,6 @@ export default function DashboardExcelView({
                       <span className="relative inline-block">
                         <button
                           type="button"
-                          title={m.description}
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
                           className="text-text-major dark:text-text-dark-primary cursor-help text-sm font-bold underline decoration-dotted underline-offset-4"
