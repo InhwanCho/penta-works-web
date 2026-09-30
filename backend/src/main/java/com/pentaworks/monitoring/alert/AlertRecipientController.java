@@ -40,7 +40,7 @@ public class AlertRecipientController {
     public RecipientSummary create(@Valid @RequestBody CreateRecipientRequest request,
                                    Authentication authentication) {
         return recipients.create(currentUsers.require(authentication), new CreateRecipient(
-            request.siteId(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled()));
+            request.siteId(), request.channel(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled()));
     }
 
     @PatchMapping("/{id}")
@@ -56,7 +56,7 @@ public class AlertRecipientController {
         return ResponseEntity.noContent().build();
     }
 
-    public record CreateRecipientRequest(@NotBlank String siteId, @NotBlank String destination,
+    public record CreateRecipientRequest(@NotBlank String siteId, String channel, @NotBlank String destination,
                                          LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled) {}
     public record UpdateRecipientRequest(LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled) {}
 }

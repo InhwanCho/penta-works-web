@@ -121,7 +121,7 @@ export default function BaselinesPageClient() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-events"] }),
   });
   const createRecipient = useMutation({
-    mutationFn: (request: { siteId: string; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
+    mutationFn: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
       apiFetch<AlertRecipient>("/alerts/recipients", { method: "POST", body: JSON.stringify(request) }),
     onSuccess: (saved) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) => [...current, saved]),
   });

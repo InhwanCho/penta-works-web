@@ -6,6 +6,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public record AppProperties(Cors cors, Jwt jwt, Monitor monitor, OfficeIntegration officeIntegration) {
     public record Cors(String allowedOrigins) {}
     public record Jwt(String secret, long accessExpirationMinutes, long refreshExpirationDays, boolean secureCookie) {}
-    public record Monitor(String cronSecret, String slackWebhookUrl) {}
+    public record Monitor(String cronSecret) {}
     public record OfficeIntegration(boolean enabled, String baseUrl, String apiKey) {}
 }

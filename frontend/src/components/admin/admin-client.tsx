@@ -163,6 +163,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
   const [query, setQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState<"ALL" | Role>("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "SUSPENDED">("ALL");
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [page, setPage] = useState(1);
   const pageSize = 8;
   const filtered = useMemo(() => {
@@ -172,22 +173,51 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
       (statusFilter === "ALL" || user.status === statusFilter));
   }, [users, query, roleFilter, statusFilter]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const pageUsers = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const editingUser = pageUsers.find((user) => user.id === editingId);
   useEffect(() => setPage(1), [query, roleFilter, statusFilter]);
   useEffect(() => setPage((current) => Math.min(current, pageCount)), [pageCount]);
   if (loading) return <Loading />;
   return (
     <section>
       <div className={`${CARD} mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto]`}>
-        <input type="search" className={INPUT} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름·이메일·전화번호 검색" />
+        <input type="search" className={INPUT} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름·이메일·휴대폰번호 검색" />
         <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
-        {filtered.slice((page - 1) * pageSize, page * pageSize).map((user) => (
-          <UserEditor key={user.id} user={user} sites={sites} canManageAdmins={canManageAdmins} currentUserId={currentUserId} />
-        ))}
+      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 사업장별 알림 설정에서 별도로 등록합니다.</p>
+      <div className={`${CARD} overflow-x-auto`}>
+        <table className="w-full min-w-[760px] text-left text-sm">
+          <thead className="border-b border-slate-200 bg-slate-50 text-xs text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary/70">
+            <tr>
+              <th scope="col" className="px-3 py-3 font-bold">이름</th>
+              <th scope="col" className="px-3 py-3 font-bold">이메일 (아이디)</th>
+              <th scope="col" className="px-3 py-3 font-bold">휴대폰번호</th>
+              <th scope="col" className="px-3 py-3 font-bold">권한</th>
+              <th scope="col" className="px-3 py-3 font-bold">상태</th>
+              <th scope="col" className="px-3 py-3 font-bold">사업장</th>
+              <th scope="col" className="px-3 py-3 font-bold">최근 로그인</th>
+              <th scope="col" className="px-3 py-3 font-bold">관리</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-white/7">
+            {pageUsers.map((user) => (
+              <tr key={user.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5">
+                <td className="px-3 py-3 font-bold">{user.name}</td>
+                <td className="px-3 py-3">{user.email}</td>
+                <td className="px-3 py-3 whitespace-nowrap">{user.phone || "미등록"}</td>
+                <td className="px-3 py-3 whitespace-nowrap">{roleLabel(user.role)}</td>
+                <td className="px-3 py-3"><StatusPill status={user.status} /></td>
+                <td className="px-3 py-3 whitespace-nowrap">{user.role === "USER" ? `${user.siteIds.length}곳` : "전체"}</td>
+                <td className="px-3 py-3 whitespace-nowrap">{formatDate(user.lastLoginAt)}</td>
+                <td className="px-3 py-3"><button type="button" onClick={() => setEditingId((current) => current === user.id ? null : user.id)} aria-expanded={editingId === user.id} className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-sky-700 dark:border-white/10 dark:text-sky-300">{editingId === user.id ? "닫기" : "관리"}</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
         {filtered.length === 0 && <Empty>조건에 맞는 사용자가 없습니다.</Empty>}
       </div>
+      {editingUser && <div className="mt-4"><UserEditor key={editingUser.id} user={editingUser} sites={sites} canManageAdmins={canManageAdmins} currentUserId={currentUserId} /></div>}
       {filtered.length > 0 && <div className="mt-4 flex items-center justify-between"><span className="text-text-secondary text-xs">총 {filtered.length}명 · {page}/{pageCount} 페이지</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">이전</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">다음</button></div></div>}
     </section>
   );
@@ -289,7 +319,7 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
           </select>
         </div>
       </div>
-      {!immutable && <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-text-secondary text-xs font-bold">이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold">이메일<input className={`${INPUT} mt-1.5`} type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold sm:col-span-2">전화번호<input className={`${INPUT} mt-1.5`} type="tel" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="선택 입력" /></label></div>}
+      {!immutable && <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-text-secondary text-xs font-bold">이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold">이메일 (아이디)<input className={`${INPUT} mt-1.5`} type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold sm:col-span-2">휴대폰번호<input className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label></div>}
       {role === "USER" && !immutable && (
         <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />
       )}

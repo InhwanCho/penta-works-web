@@ -1,7 +1,7 @@
 "use client";
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
-import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
+import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, type MetricDef } from "@/lib/metrics";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -13,8 +13,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * 모바일에서는 큰글씨 모드에서도 여백이 함께 커지지 않도록 px 단위를 씁니다.
  */
 const COL_NAME =
-  "w-[100px] min-w-[100px] max-w-[100px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
-const COL_NAME_INNER = "block w-[88px] truncate sm:w-[166px]";
+  "w-[80px] min-w-[80px] max-w-[80px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
+const COL_NAME_INNER = "block w-[74px] truncate sm:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -122,7 +122,7 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="dashboard-grid-height relative flex flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] dark:border-white/8 dark:bg-background-dark-card">
+    <section className="dashboard-grid-height relative flex flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
       <div className="hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
@@ -148,7 +148,7 @@ export default function DashboardExcelView({
           data-dashboard-scroll
           className="min-h-0 flex-1 overflow-auto overscroll-x-contain"
         >
-          <table className="w-full border-separate border-spacing-0 text-sm" style={{ minWidth: 230 + metrics.length * 96 }}>
+          <table className="w-full border-separate border-spacing-0 text-xs sm:text-sm" style={{ minWidth: 265 + metrics.length * 64 }}>
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
             </caption>
@@ -158,7 +158,7 @@ export default function DashboardExcelView({
                 <th
                   scope="col"
                   className={[
-                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[6px] py-[5px] text-left align-bottom text-sm leading-tight font-bold tracking-wide sm:px-3 sm:py-2.5",
+                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[3px] py-[5px] text-left align-bottom text-xs leading-tight font-bold tracking-wide sm:px-3 sm:py-2.5 sm:text-sm",
                     COL_NAME,
                     CELL_BORDER,
                     HEAD_BG,
@@ -174,7 +174,7 @@ export default function DashboardExcelView({
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[76px] px-[6px] py-[5px] text-right whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
+                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-right whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
                         sub ? "align-top" : "align-middle",
                         CELL_BORDER,
                         HEAD_BG,
@@ -186,7 +186,7 @@ export default function DashboardExcelView({
                           type="button"
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
-                          className="text-text-major dark:text-text-dark-primary cursor-help text-sm font-bold underline decoration-dotted underline-offset-4"
+                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 sm:text-sm"
                           onClick={() => showMetricHelp(m.key, true)}
                           onMouseEnter={() => showMetricHelp(m.key)}
                           onMouseLeave={hideMetricHelp}
@@ -217,14 +217,14 @@ export default function DashboardExcelView({
                   );
                 })}
 
-                <HeadCell className="w-[72px] min-w-[72px] text-right sm:w-[96px] sm:min-w-[96px]">
-                  1시간 건수
+                <HeadCell className="w-[50px] min-w-[50px] text-right sm:w-[96px] sm:min-w-[96px]">
+                  <span className="sm:hidden">1h</span><span className="hidden sm:inline">1시간 건수</span>
                 </HeadCell>
-                <HeadCell className="w-[72px] min-w-[72px] text-right sm:w-[96px] sm:min-w-[96px]">
-                  24시간 건수
+                <HeadCell className="w-[50px] min-w-[50px] text-right sm:w-[96px] sm:min-w-[96px]">
+                  <span className="sm:hidden">24h</span><span className="hidden sm:inline">24시간 건수</span>
                 </HeadCell>
-                <HeadCell className="w-[108px] min-w-[108px] text-left sm:w-[128px] sm:min-w-[128px]">
-                  최신 시각
+                <HeadCell className="w-[85px] min-w-[85px] text-left sm:w-[128px] sm:min-w-[128px]">
+                  <span className="sm:hidden">시각</span><span className="hidden sm:inline">최신 시각</span>
                 </HeadCell>
               </tr>
             </thead>
@@ -246,7 +246,7 @@ export default function DashboardExcelView({
                     {/* 고정열 1 — 병원명 */}
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary sticky left-0 px-[6px] py-[5px] font-medium sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary sticky left-0 px-[3px] py-[5px] font-medium sm:px-3 sm:py-2",
                         COL_NAME,
                         CELL_BORDER,
                         FIXED_BG,
@@ -262,7 +262,7 @@ export default function DashboardExcelView({
                           {row.name ?? "-"}
                         </span>
                       </Link>
-                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[88px] items-center rounded-full px-1.5 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
+                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[74px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
                     </td>
 
                     {metrics.map((m) => {
@@ -274,7 +274,7 @@ export default function DashboardExcelView({
                           key={m.key}
                           onClick={() => selectCell(row, m.code)}
                           tabIndex={0}
-                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${formatMetricMeasurement(value, null, row.lastAt != null)}`}
+                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${row.lastAt != null && (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) ? "측정 안됨" : formatMetricMeasurement(value, null, row.lastAt != null)}`}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
@@ -282,7 +282,7 @@ export default function DashboardExcelView({
                             }
                           }}
                           className={[
-                            "cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                            "cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                             CELL_BORDER,
                             selectedCell?.key === `${row.siteDb}:${m.code}`
                               ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
@@ -300,7 +300,7 @@ export default function DashboardExcelView({
                     <td
                       onClick={() => selectCell(row, "1시간 건수")}
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                         selectedCell?.key === `${row.siteDb}:1시간 건수`
                           ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
@@ -312,7 +312,7 @@ export default function DashboardExcelView({
                     <td
                       onClick={() => selectCell(row, "24시간 건수")}
                       className={[
-                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[6px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                         selectedCell?.key === `${row.siteDb}:24시간 건수`
                           ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
@@ -324,7 +324,7 @@ export default function DashboardExcelView({
 
                     <td
                       className={[
-                        "text-text-secondary dark:text-text-dark-primary/70 px-[6px] py-[5px] whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                        "text-text-secondary dark:text-text-dark-primary/70 px-[3px] py-[5px] whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
                         CELL_BORDER,
                       ].join(" ")}
                     >
@@ -360,7 +360,7 @@ export default function DashboardExcelView({
             빨간 값
           </span>
           은 허용 범위를 벗어난 값입니다.
-          <span className="sm:hidden"> 좌우로 밀어 확인하세요.</span>
+          <span className="sm:hidden"> ×는 측정 안 됨 · 좌우로 밀어 확인하세요.</span>
         </p>
       </div>
 
@@ -396,7 +396,7 @@ function HeadCell({
     <th
       scope="col"
       className={[
-        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[6px] py-[5px] align-bottom text-sm leading-tight font-bold tracking-wide whitespace-nowrap sm:px-3 sm:py-2.5",
+        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[3px] py-[5px] align-bottom text-xs leading-tight font-bold tracking-wide whitespace-nowrap sm:px-3 sm:py-2.5 sm:text-sm",
         CELL_BORDER,
         HEAD_BG,
         Z_HEAD,

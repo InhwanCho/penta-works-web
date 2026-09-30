@@ -19,6 +19,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 /** 기본 뷰 / 관리자 뷰(엑셀형 전체 지표) */
 type ViewMode = "basic" | "grid";
 type StatusFilter = "all" | "issues" | "warning" | "no-data" | "normal";
+const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
+  all: "전체",
+  issues: "이상 병원",
+  warning: "기준 이탈",
+  "no-data": "수신 중단",
+  normal: "정상",
+};
 
 const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
 
@@ -75,6 +82,7 @@ export default function DashboardClient() {
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
@@ -84,6 +92,11 @@ export default function DashboardClient() {
   const changeViewMode = useCallback((next: ViewMode) => {
     setViewMode(next);
     localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
+  }, []);
+
+  const changeStatusFilter = useCallback((next: StatusFilter) => {
+    setStatusFilter(next);
+    setShowMobileFilters(false);
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -139,7 +152,7 @@ export default function DashboardClient() {
       <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         <DashboardScrollTo offset={80} />
 
-        <header className="mb-3 flex flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-4 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:mb-5 sm:px-5 dark:border-white/8 dark:bg-background-dark-card/90">
+        <header className="mb-5 hidden flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-5 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -163,12 +176,26 @@ export default function DashboardClient() {
           />
         </header>
 
-        <section className="mb-3 grid grid-cols-2 gap-2 sm:mb-5 sm:grid-cols-5">
-          <StatusFilterButton active={statusFilter === "all"} onClick={() => setStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
-          <StatusFilterButton active={statusFilter === "issues"} onClick={() => setStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
-          <StatusFilterButton active={statusFilter === "warning"} onClick={() => setStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
-          <StatusFilterButton active={statusFilter === "no-data"} onClick={() => setStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
-          <StatusFilterButton active={statusFilter === "normal"} onClick={() => setStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
+        <div className="mb-2 flex items-center justify-between gap-2 sm:hidden">
+          <ViewModeTabs value={viewMode} onChange={changeViewMode} />
+          <button
+            type="button"
+            aria-controls="dashboard-status-filters"
+            aria-expanded={showMobileFilters}
+            onClick={() => setShowMobileFilters((open) => !open)}
+            className="min-h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-text-major dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary"
+          >
+            필터 · {STATUS_FILTER_LABEL[statusFilter]}
+          </button>
+        </div>
+        {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
+
+        <section id="dashboard-status-filters" className={`${showMobileFilters ? "grid" : "hidden"} mb-2 grid-cols-2 gap-2 sm:mb-5 sm:grid sm:grid-cols-5`} aria-label="상태별 병원 필터">
+          <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
+          <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
+          <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
+          <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
+          <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
         </section>
 
         {viewMode === "grid" ? (
@@ -267,6 +294,9 @@ export default function DashboardClient() {
             </section>
           </>
         )}
+        <p className="text-text-secondary mt-2 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
+          마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
+        </p>
       </main>
     </PullToRefresh>
   );

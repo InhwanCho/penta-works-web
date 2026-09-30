@@ -3,6 +3,7 @@ package com.pentaworks.monitoring.alert;
 import com.pentaworks.monitoring.auth.SecureTokens;
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -25,20 +26,27 @@ public class AlertDeliveryService {
         if (event == null || "SENDING".equals(event.status())) return null;
         if (!retry && event.lastNotifiedAt() != null && event.lastNotifiedAt().plusSeconds(60).isAfter(Instant.now())) return null;
         if (retry && !List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.status())) return null;
-        boolean reuse = retry && event.batchId() != null;
+        List<String> priorKeys = retry && event.batchId() != null ? jdbc.query("""
+            SELECT recipient_key FROM alert_delivery_result
+             WHERE event_id=? AND batch_id=? AND channel='KAKAO_ALIMTALK'
+            """, (rs, row) -> rs.getString(1), eventId, event.batchId()) : null;
+        Set<String> requestedKeys = destinations.stream().map(tokens::hash).collect(java.util.stream.Collectors.toSet());
+        boolean reuse = priorKeys != null && !priorKeys.isEmpty()
+            && priorKeys.size() == requestedKeys.size() && requestedKeys.equals(Set.copyOf(priorKeys));
         String batchId = reuse ? event.batchId() : UUID.randomUUID().toString();
         if (reuse) {
             // Successful destinations stay SENT; only known failures are eligible again.
             jdbc.update("""
                 UPDATE alert_delivery_result SET status='PENDING',error_message=NULL
-                 WHERE event_id=? AND batch_id=? AND status='FAILED'
+                 WHERE event_id=? AND batch_id=? AND channel='KAKAO_ALIMTALK' AND status='FAILED'
                 """, eventId, batchId);
         } else {
             for (int i = 0; i < destinations.size(); i++) jdbc.update("""
                 INSERT INTO alert_delivery_result
                     (event_id,batch_id,recipient_key,recipient_label,channel,status)
-                VALUES (?,?,?,?,'SLACK_WEBHOOK','PENDING')
-                """, eventId, batchId, tokens.hash(destinations.get(i)), "수신 채널 " + (i + 1));
+                VALUES (?,?,?,?,?,'PENDING')
+                """, eventId, batchId, tokens.hash(destinations.get(i)),
+                "휴대폰 수신처 " + (i + 1), "KAKAO_ALIMTALK");
         }
         jdbc.update("""
             UPDATE alert_event SET delivery_status='SENDING',delivery_error=NULL,
@@ -86,7 +94,7 @@ public class AlertDeliveryService {
                 notification_count=notification_count+?,recipient_snapshot=?
              WHERE id=? AND delivery_batch_id=? AND delivery_status IN ('SENDING','UNKNOWN')
             """, status, error, attempted, attempted ? 1 : 0,
-            "{\"channel\":\"SLACK_WEBHOOK\",\"count\":" + states.size() + ",\"sent\":" + sent + "}",
+            "{\"channel\":\"KAKAO_ALIMTALK\",\"count\":" + states.size() + ",\"sent\":" + sent + "}",
             batch.eventId(), batch.id());
     }
 
@@ -113,7 +121,7 @@ public class AlertDeliveryService {
             SELECT d.id,d.recipient_label,d.channel,d.status,d.attempt_count,d.error_message,d.started_at,d.finished_at,
                    d.batch_id=e.delivery_batch_id AS current_batch
               FROM alert_delivery_result d JOIN alert_event e ON e.id=d.event_id
-             WHERE d.event_id=? ORDER BY d.id DESC LIMIT 100
+             WHERE d.event_id=? AND d.channel='KAKAO_ALIMTALK' ORDER BY d.id DESC LIMIT 100
             """, (rs, row) -> new Result(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
                 rs.getInt(5), rs.getString(6), rs.getTimestamp(7) == null ? null : rs.getTimestamp(7).toInstant(),
                 rs.getTimestamp(8) == null ? null : rs.getTimestamp(8).toInstant(), rs.getBoolean(9)), eventId);

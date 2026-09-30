@@ -5,7 +5,6 @@ import com.pentaworks.monitoring.alert.AlertEventService;
 import com.pentaworks.monitoring.alert.AlertRecipientService;
 import com.pentaworks.monitoring.alert.AlertThreshold;
 import com.pentaworks.monitoring.alert.SiteAlertSettings;
-import com.pentaworks.monitoring.config.AppProperties;
 import com.pentaworks.monitoring.dashboard.DashboardResponse;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.util.List;
@@ -27,6 +26,39 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 class MonitorServiceTest {
     @Test
+    void deliversThresholdAlertToRegisteredKakaoPhone() {
+        DashboardService dashboard = mock(DashboardService.class);
+        AlertService alerts = mock(AlertService.class);
+        AlertEventService alertEvents = mock(AlertEventService.class);
+        AlertRecipientService recipients = mock(AlertRecipientService.class);
+        var deliveries = mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class);
+        var kakao = mock(com.pentaworks.monitoring.alert.BaroKakaoService.class);
+        var row = new DashboardResponse.DashboardRow("001", "1", "병원", "2026-09-30T00:00:00Z",
+            0L, 1, 1, 1.0, 70.0, Map.of("hepres", 3.25), "NORMAL", 0, 0, List.of());
+        when(dashboard.getDashboard()).thenReturn(new DashboardResponse(
+            new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1, 1, 0, 0, 0),
+            List.of(row), Map.of(), null));
+        var threshold = new AlertThreshold("hepres", "He Pressure", "psi", 0.5, 2.0, true);
+        when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true,
+            List.of(threshold), 30, false, true, 0, 0, null, null, false)));
+        var transition = new AlertEventService.Transition(10, "001", "병원", "hepres", "He Pressure",
+            "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
+        when(alertEvents.evaluate(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.eq(3.25))).thenReturn(transition);
+        when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(List.of("01012345678"));
+        var batch = new com.pentaworks.monitoring.alert.AlertDeliveryService.Batch(10, "batch");
+        when(deliveries.begin(10, List.of("KAKAO_ALIMTALK:01012345678"), false)).thenReturn(batch);
+        when(deliveries.claim(batch, "KAKAO_ALIMTALK:01012345678")).thenReturn(true);
+
+        new MonitorService(dashboard, alerts, alertEvents, recipients, deliveries, kakao).run();
+
+        verify(kakao).send("01012345678", transition);
+        verify(deliveries).complete(batch, "KAKAO_ALIMTALK:01012345678", "SENT", null);
+        verify(deliveries).finish(batch);
+    }
+
+    @Test
     void manualRetryDoesNotReportSuccessWhenAnotherWorkerOwnsTheBatch() {
         DashboardService dashboard = mock(DashboardService.class);
         AlertService alerts = mock(AlertService.class);
@@ -34,7 +66,6 @@ class MonitorServiceTest {
         AlertRecipientService recipients = mock(AlertRecipientService.class);
         com.pentaworks.monitoring.alert.AlertDeliveryService deliveries =
             mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class);
-        AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
         AlertEventService.Transition transition = new AlertEventService.Transition(
             10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0, "이상");
         SiteAlertSettings policy = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
@@ -42,14 +73,15 @@ class MonitorServiceTest {
         when(alertEvents.retryTransition(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(10L)))
             .thenReturn(transition);
         when(alerts.alertSettings()).thenReturn(List.of(policy));
-        when(recipients.activeWebhooks(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
-            .thenReturn(List.of("https://example.invalid/hook"));
-        when(deliveries.begin(10L, List.of("https://example.invalid/hook"), true)).thenReturn(null);
+        when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(List.of("01012345678"));
+        when(deliveries.begin(10L, List.of("KAKAO_ALIMTALK:01012345678"), true)).thenReturn(null);
         var actor = new com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser(
             1L, 1L, "admin@example.com", "관리자", "ADMIN", "ACTIVE");
 
         assertThrows(com.pentaworks.monitoring.common.BadRequestException.class,
-            () -> new MonitorService(dashboard, alerts, alertEvents, recipients, properties, deliveries).retry(actor, 10L));
+            () -> new MonitorService(dashboard, alerts, alertEvents, recipients, deliveries,
+                mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).retry(actor, 10L));
     }
 
     @Test
@@ -59,7 +91,6 @@ class MonitorServiceTest {
         AlertService alerts = mock(AlertService.class);
         AlertEventService alertEvents = mock(AlertEventService.class);
         AlertRecipientService recipients = mock(AlertRecipientService.class);
-        AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
         DashboardResponse.DashboardRow row = new DashboardResponse.DashboardRow(
             "001", "1", "병원", "2026-09-28T00:00:00Z", 0L, 1, 1, 1.0, 70.0,
             Map.of("actemp", 31.0, "hepres", 1.0), "NORMAL", 0, 0, List.of());
@@ -70,7 +101,7 @@ class MonitorServiceTest {
             new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true),
             new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)
         ), 30, false, true, 0, 0, null, null, false)));
-        when(recipients.hasConfiguredWebhooks("001")).thenReturn(true);
+        when(recipients.hasConfiguredPhones("001")).thenReturn(true);
         AlertEventService.Transition transition = new AlertEventService.Transition(
             10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0,
             "병원 · AC Temp 값이 최대값보다 높습니다.");
@@ -78,8 +109,9 @@ class MonitorServiceTest {
             org.mockito.ArgumentMatchers.argThat(threshold -> "actemp".equals(threshold.key())),
             org.mockito.ArgumentMatchers.eq(31.0))).thenReturn(transition);
 
-        Map<String, Object> result = new MonitorService(dashboard, alerts, alertEvents, recipients, properties,
-            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class)).run();
+        Map<String, Object> result = new MonitorService(dashboard, alerts, alertEvents, recipients,
+            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),
+            mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run();
 
         assertEquals(1, result.get("count"));
         List<AlertEventService.Transition> rows = (List<AlertEventService.Transition>) result.get("alerts");
@@ -95,7 +127,6 @@ class MonitorServiceTest {
         AlertService alerts = mock(AlertService.class);
         AlertEventService alertEvents = mock(AlertEventService.class);
         AlertRecipientService recipients = mock(AlertRecipientService.class);
-        AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
         DashboardResponse.DashboardRow row = new DashboardResponse.DashboardRow(
             "001", "1", "병원", "2026-09-28T00:00:00Z", 0L, 1, 1, 1.0, 70.0,
             Map.of("hepres", 1.0), "NORMAL", 0, 0, List.of());
@@ -106,8 +137,9 @@ class MonitorServiceTest {
             List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)),
             30, true, true, 0, 0, null, null, false, List.of(), false)));
 
-        assertEquals(0, new MonitorService(dashboard, alerts, alertEvents, recipients, properties,
-            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class)).run().get("count"));
+        assertEquals(0, new MonitorService(dashboard, alerts, alertEvents, recipients,
+            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),
+            mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run().get("count"));
         verifyNoInteractions(alertEvents, recipients);
     }
 

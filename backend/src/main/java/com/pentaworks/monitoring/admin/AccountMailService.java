@@ -1,13 +1,15 @@
 package com.pentaworks.monitoring.admin;
 
 import com.pentaworks.monitoring.config.MailProperties;
+import jakarta.mail.MessagingException;
+import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,14 +42,19 @@ public class AccountMailService {
             return DeliveryStatus.FAILED;
         }
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setFrom(properties.from().trim());
-            message.setTo(email);
-            message.setSubject(subject);
-            message.setText(text);
+            var message = sender.createMimeMessage();
+            var helper = new MimeMessageHelper(message, false, StandardCharsets.UTF_8.name());
+            if (blank(properties.fromName())) {
+                helper.setFrom(properties.from().trim());
+            } else {
+                helper.setFrom(properties.from().trim(), properties.fromName().trim());
+            }
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(text);
             sender.send(message);
             return DeliveryStatus.SENT;
-        } catch (MailException | IllegalArgumentException error) {
+        } catch (MailException | MessagingException | UnsupportedEncodingException | IllegalArgumentException error) {
             log.error("Account email delivery failed ({})", error.getClass().getSimpleName());
             return DeliveryStatus.FAILED;
         }

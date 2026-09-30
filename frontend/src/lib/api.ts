@@ -95,7 +95,7 @@ export type AlertRecipient = {
   siteName: string | null;
   userId: number;
   userName: string;
-  channel: "SLACK_WEBHOOK";
+  channel: "KAKAO_ALIMTALK";
   destinationMasked: string;
   quietStart: string | null;
   quietEnd: string | null;

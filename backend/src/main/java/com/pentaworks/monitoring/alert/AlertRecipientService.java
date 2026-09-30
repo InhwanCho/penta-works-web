@@ -7,8 +7,6 @@ import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ConflictException;
 import com.pentaworks.monitoring.common.ForbiddenException;
 import com.pentaworks.monitoring.common.NotFoundException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.sql.Time;
 import java.time.LocalTime;
 import java.util.Collections;
@@ -22,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AlertRecipientService {
-    private static final String CHANNEL = "SLACK_WEBHOOK";
+    private static final String KAKAO = "KAKAO_ALIMTALK";
     private final JdbcTemplate jdbcTemplate;
     private final CurrentUserService currentUsers;
     private final AuditService audit;
@@ -44,7 +42,7 @@ public class AlertRecipientService {
               FROM site_alert_recipient r
               LEFT JOIN site s ON s.site=r.site_id
               JOIN app_user u ON u.id=r.user_id
-             WHERE r.site_id IN (%s)
+             WHERE r.site_id IN (%s) AND r.channel='KAKAO_ALIMTALK'
              ORDER BY r.site_id,r.priority,r.id
             """.formatted(placeholders), (rs, row) -> new RecipientSummary(
                 rs.getLong("id"), rs.getString("site_id"), rs.getString("site_name"), rs.getLong("user_id"),
@@ -57,24 +55,26 @@ public class AlertRecipientService {
     public RecipientSummary create(CurrentUser actor, CreateRecipient request) {
         requireAdmin(actor);
         currentUsers.requireSiteAccess(actor, request.siteId());
-        String destination = validateWebhook(request.destination());
+        String channel = request.channel();
+        if (!KAKAO.equals(channel)) throw new BadRequestException("알림톡 수신처만 등록할 수 있습니다.");
+        String destination = validatePhone(request.destination());
         validateQuietHours(request.quietStart(), request.quietEnd());
         Integer existing = jdbcTemplate.queryForObject("""
             SELECT COUNT(*) FROM site_alert_recipient
              WHERE site_id=? AND channel=? AND destination=?
-            """, Integer.class, request.siteId(), CHANNEL, destination);
+            """, Integer.class, request.siteId(), channel, destination);
         if (existing != null && existing > 0) {
-            throw new ConflictException("이미 등록된 Slack 수신 채널입니다.");
+            throw new ConflictException("이미 등록된 수신 채널입니다.");
         }
         jdbcTemplate.update("""
             INSERT INTO site_alert_recipient
                 (site_id,user_id,channel,destination,priority,quiet_start,quiet_end,is_enabled,created_at,updated_at)
             VALUES (?,?,?, ?,0,?,?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
-            """, request.siteId(), actor.id(), CHANNEL, destination, time(request.quietStart()),
+            """, request.siteId(), actor.id(), channel, destination, time(request.quietStart()),
             time(request.quietEnd()), request.enabled());
         long id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         audit.record(actor, "ALERT_RECIPIENT_CREATED", "SITE_ALERT_RECIPIENT", Long.toString(id),
-            Map.of("siteId", request.siteId(), "channel", CHANNEL));
+            Map.of("siteId", request.siteId(), "channel", channel));
         return recipient(actor, id);
     }
 
@@ -104,31 +104,27 @@ public class AlertRecipientService {
             Map.of("siteId", target.siteId()));
     }
 
-    public List<String> activeWebhooks(String siteId, LocalTime now) {
-        List<WebhookWindow> rows = jdbcTemplate.query("""
+    public List<String> activePhones(String siteId, LocalTime now) {
+        return activeDestinations(siteId, now, KAKAO);
+    }
+
+    private List<String> activeDestinations(String siteId, LocalTime now, String channel) {
+        List<RecipientWindow> rows = jdbcTemplate.query("""
             SELECT destination,quiet_start,quiet_end
               FROM site_alert_recipient
              WHERE site_id=? AND channel=? AND is_enabled=TRUE
              ORDER BY priority,id
-            """, (rs, row) -> new WebhookWindow(rs.getString("destination"),
-                localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end"))), siteId, CHANNEL);
+            """, (rs, row) -> new RecipientWindow(rs.getString("destination"),
+                localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end"))), siteId, channel);
         LinkedHashSet<String> result = new LinkedHashSet<>();
         rows.stream().filter(row -> !isQuiet(now, row.start(), row.end())).forEach(row -> result.add(row.destination()));
         return List.copyOf(result);
     }
 
-    public boolean hasConfiguredWebhooks(String siteId) {
+    public boolean hasConfiguredPhones(String siteId) {
         Integer count = jdbcTemplate.queryForObject("""
             SELECT COUNT(*) FROM site_alert_recipient WHERE site_id=? AND channel=?
-            """, Integer.class, siteId, CHANNEL);
-        return count != null && count > 0;
-    }
-
-    public boolean allowsGlobalFallback(String siteId) {
-        Integer count = jdbcTemplate.queryForObject("""
-            SELECT COUNT(*) FROM company_site cs JOIN company c ON c.id=cs.company_id
-             WHERE cs.site_id=? AND c.code='PENTAWORKS' AND c.status='ACTIVE'
-            """, Integer.class, siteId);
+            """, Integer.class, siteId, KAKAO);
         return count != null && count > 0;
     }
 
@@ -138,26 +134,17 @@ public class AlertRecipientService {
     }
 
     private RecipientTarget target(long id) {
-        RecipientTarget target = jdbcTemplate.query("SELECT site_id FROM site_alert_recipient WHERE id=?",
+        RecipientTarget target = jdbcTemplate.query("SELECT site_id FROM site_alert_recipient WHERE id=? AND channel='KAKAO_ALIMTALK'",
             rs -> rs.next() ? new RecipientTarget(rs.getString(1)) : null, id);
         if (target == null) throw new NotFoundException("알림 수신자를 찾을 수 없습니다.");
         return target;
     }
 
-    private static String validateWebhook(String raw) {
-        if (raw == null || raw.isBlank()) throw new BadRequestException("Slack Webhook URL을 입력해주세요.");
-        String value = raw.trim();
-        try {
-            URI uri = new URI(value);
-            String host = uri.getHost();
-            if (!"https".equalsIgnoreCase(uri.getScheme()) || host == null ||
-                !(host.equals("hooks.slack.com") || host.endsWith(".hooks.slack.com") || host.equals("hooks.slack-gov.com"))) {
-                throw new BadRequestException("공식 Slack Webhook HTTPS 주소만 사용할 수 있습니다.");
-            }
-        } catch (URISyntaxException error) {
-            throw new BadRequestException("올바른 Slack Webhook URL을 입력해주세요.");
+    private static String validatePhone(String raw) {
+        String value = raw == null ? "" : raw.replaceAll("[-\\s]", "");
+        if (!value.matches("01[016789][0-9]{7,8}")) {
+            throw new BadRequestException("휴대폰 번호를 확인해주세요.");
         }
-        if (value.length() > 500) throw new BadRequestException("Slack Webhook URL이 너무 깁니다.");
         return value;
     }
 
@@ -181,11 +168,16 @@ public class AlertRecipientService {
     private void requireAdmin(CurrentUser actor) { if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다."); }
 
     private record RecipientTarget(String siteId) {}
-    private record WebhookWindow(String destination, LocalTime start, LocalTime end) {}
+    private record RecipientWindow(String destination, LocalTime start, LocalTime end) {}
     public record RecipientSummary(long id, String siteId, String siteName, long userId, String userName,
                                    String channel, String destinationMasked, LocalTime quietStart,
                                    LocalTime quietEnd, boolean enabled) {}
-    public record CreateRecipient(String siteId, String destination, LocalTime quietStart,
-                                  LocalTime quietEnd, boolean enabled) {}
+    public record CreateRecipient(String siteId, String channel, String destination, LocalTime quietStart,
+                                  LocalTime quietEnd, boolean enabled) {
+        public CreateRecipient(String siteId, String destination, LocalTime quietStart,
+                               LocalTime quietEnd, boolean enabled) {
+            this(siteId, KAKAO, destination, quietStart, quietEnd, enabled);
+        }
+    }
     public record UpdateRecipient(LocalTime quietStart, LocalTime quietEnd, boolean enabled) {}
 }

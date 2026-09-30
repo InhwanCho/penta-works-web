@@ -150,7 +150,8 @@ export function formatMetricMeasurement(
   hasSample = true,
 ): string {
   if (!hasSample) return "-";
-  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return "측정 안됨";
+  // 실제 샘플이 없는 "-"와 구분해, 측정 실패값은 좁은 모바일 표에서도 짧게 표시합니다.
+  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return "×";
   const number = value.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
   return unit ? `${number} ${unit}` : number;
 }

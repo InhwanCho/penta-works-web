@@ -7,9 +7,9 @@ import com.pentaworks.monitoring.alert.AlertEventService;
 import com.pentaworks.monitoring.alert.AlertEventService.Transition;
 import com.pentaworks.monitoring.alert.AlertRecipientService;
 import com.pentaworks.monitoring.alert.AlertDeliveryService;
+import com.pentaworks.monitoring.alert.BaroKakaoService;
 import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
-import com.pentaworks.monitoring.config.AppProperties;
 import com.pentaworks.monitoring.dashboard.DashboardResponse;
 import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.util.ArrayList;
@@ -22,11 +22,8 @@ import java.time.ZoneId;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 
 @Service
 public class MonitorService {
@@ -35,23 +32,18 @@ public class MonitorService {
     private final AlertService alertService;
     private final AlertEventService alertEvents;
     private final AlertRecipientService recipients;
-    private final AppProperties properties;
-    private final RestClient restClient;
     private final AlertDeliveryService deliveries;
+    private final BaroKakaoService kakao;
 
     public MonitorService(DashboardService dashboardService, AlertService alertService,
                           AlertEventService alertEvents, AlertRecipientService recipients,
-                          AppProperties properties, AlertDeliveryService deliveries) {
+                          AlertDeliveryService deliveries, BaroKakaoService kakao) {
         this.dashboardService = dashboardService;
         this.alertService = alertService;
         this.alertEvents = alertEvents;
         this.recipients = recipients;
-        this.properties = properties;
         this.deliveries = deliveries;
-        var factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(3000);
-        factory.setReadTimeout(10000);
-        this.restClient = RestClient.builder().requestFactory(factory).build();
+        this.kakao = kakao;
     }
 
     public Map<String, Object> run() {
@@ -72,7 +64,7 @@ public class MonitorService {
             }
         }
         if (!transitions.isEmpty()) dashboardService.invalidateCache();
-        sendSlack(transitions, settings, false);
+        sendNotifications(transitions, settings, false);
         return Map.of("ok", true, "count", transitions.size(), "alerts", transitions);
     }
 
@@ -82,13 +74,19 @@ public class MonitorService {
             .filter(site -> site.siteid().equals(transition.siteId())).findFirst()
             .orElseThrow(() -> new BadRequestException("사업장 알림 설정이 없습니다."));
         if (!policy.alertsEnabled()) throw new BadRequestException("알림 사용을 먼저 켜주세요.");
-        sendSlack(List.of(transition), Map.of(transition.siteId(), policy), true);
+        sendNotifications(List.of(transition), Map.of(transition.siteId(), policy), true);
         return Map.of("ok", true, "eventId", eventId);
     }
 
-    private void sendSlack(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual) {
+    private void sendNotifications(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual) {
         if (alerts.isEmpty()) return;
-        Map<String, List<Transition>> bySite = alerts.stream()
+        List<Transition> recoveries = alerts.stream().filter(alert -> "RECOVERY".equals(alert.eventType())).toList();
+        if (!recoveries.isEmpty()) {
+            if (manual) throw new BadRequestException("정상 복구 알림톡 템플릿은 아직 등록되지 않았습니다.");
+            alertEvents.markDelivery(recoveries.stream().map(Transition::eventId).toList(),
+                "SKIPPED", "정상 복구 알림톡 템플릿이 등록되지 않았습니다.", 0);
+        }
+        Map<String, List<Transition>> bySite = alerts.stream().filter(alert -> !"RECOVERY".equals(alert.eventType()))
             .collect(Collectors.groupingBy(Transition::siteId, LinkedHashMap::new, Collectors.toList()));
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         for (Map.Entry<String, List<Transition>> entry : bySite.entrySet()) {
@@ -100,13 +98,11 @@ public class MonitorService {
                 alertEvents.markDelivery(eventIds, "SKIPPED", "알림 제외 시간", 0);
                 continue;
             }
-            List<String> webhooks = recipients.activeWebhooks(entry.getKey(), now.toLocalTime());
-            String fallback = properties.monitor().slackWebhookUrl();
-            if (webhooks.isEmpty() && !recipients.hasConfiguredWebhooks(entry.getKey())
-                && recipients.allowsGlobalFallback(entry.getKey())
-                && fallback != null && !fallback.isBlank()) webhooks = List.of(fallback);
-            if (webhooks.isEmpty()) {
-                String reason = recipients.hasConfiguredWebhooks(entry.getKey())
+            List<String> phones = recipients.activePhones(entry.getKey(), now.toLocalTime());
+            List<String> destinations = new ArrayList<>();
+            phones.forEach(phone -> destinations.add("KAKAO_ALIMTALK:" + phone));
+            if (destinations.isEmpty()) {
+                String reason = recipients.hasConfiguredPhones(entry.getKey())
                     ? "사용 가능한 수신 채널이 없습니다. 채널 사용 여부와 제외 시간을 확인해주세요."
                     : "등록된 수신 채널이 없습니다.";
                 if (manual) throw new BadRequestException(reason);
@@ -115,31 +111,31 @@ public class MonitorService {
             }
             Map<Long, AlertDeliveryService.Batch> batches = new LinkedHashMap<>();
             for (Transition alert : siteAlerts) {
-                var batch = deliveries.begin(alert.eventId(), webhooks, manual);
+                var batch = deliveries.begin(alert.eventId(), destinations, manual);
                 if (batch != null) batches.put(alert.eventId(), batch);
             }
             if (manual && batches.size() != siteAlerts.size()) {
                 throw new BadRequestException("이미 처리 중이거나 현재 재시도할 수 없는 알림입니다.");
             }
-            for (String webhook : webhooks) {
-                List<Transition> pending = siteAlerts.stream().filter(alert ->
-                    batches.containsKey(alert.eventId()) && deliveries.claim(batches.get(alert.eventId()), webhook)).toList();
-                if (pending.isEmpty()) continue;
-                String status = "SENT";
-                String errorMessage = null;
-                try {
-                    String text = "[MREyes " + pending.get(0).siteName() + " 알림 " + pending.size() + "건]";
-                    restClient.post().uri(webhook).contentType(MediaType.APPLICATION_JSON)
-                        .body(Map.of("text", text, "alerts", pending)).retrieve().toBodilessEntity();
-                } catch (RestClientResponseException error) {
-                    status = "FAILED";
-                    errorMessage = "수신 채널이 전송을 거부했습니다 (HTTP " + error.getStatusCode().value() + ").";
-                } catch (RuntimeException error) {
-                    status = "UNKNOWN";
-                    errorMessage = "응답을 확인할 수 없습니다. 수신 채널에서 도착 여부를 확인해주세요.";
-                    log.warn("Alert delivery response unavailable for site {}", entry.getKey());
+            for (String phone : phones) {
+                String destination = "KAKAO_ALIMTALK:" + phone;
+                for (Transition alert : siteAlerts) {
+                    var batch = batches.get(alert.eventId());
+                    if (batch == null || !deliveries.claim(batch, destination)) continue;
+                    try {
+                        kakao.send(phone, alert);
+                        deliveries.complete(batch, destination, "SENT", null);
+                    } catch (IllegalStateException error) {
+                        deliveries.complete(batch, destination, "FAILED", error.getMessage());
+                    } catch (RestClientResponseException error) {
+                        deliveries.complete(batch, destination, "FAILED",
+                            "바로빌 접수 거부 (HTTP " + error.getStatusCode().value() + ")");
+                    } catch (RuntimeException error) {
+                        deliveries.complete(batch, destination, "UNKNOWN",
+                            "바로빌 응답을 확인할 수 없습니다. 중복 발송 방지를 위해 도착 여부를 확인해주세요.");
+                        log.warn("Kakao delivery response unavailable for site {}", entry.getKey());
+                    }
                 }
-                for (Transition alert : pending) deliveries.complete(batches.get(alert.eventId()), webhook, status, errorMessage);
             }
             batches.values().forEach(deliveries::finish);
         }

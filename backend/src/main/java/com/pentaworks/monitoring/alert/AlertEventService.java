@@ -164,7 +164,7 @@ public class AlertEventService {
     }
 
     public void markDelivery(List<Long> eventIds, String status, String error, int recipientCount) {
-        String snapshot = "{\"channel\":\"SLACK_WEBHOOK\",\"count\":" + recipientCount + "}";
+        String snapshot = "{\"channel\":\"KAKAO_ALIMTALK\",\"count\":" + recipientCount + "}";
         for (Long eventId : eventIds) {
             jdbcTemplate.update("""
                 UPDATE alert_event

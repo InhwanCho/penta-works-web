@@ -2,7 +2,6 @@
 
 import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
-import type { Role, Session } from "@/lib/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -29,20 +28,14 @@ function safeNextPath(raw: string | null): string | null {
   if (!raw) return null;
   if (!raw.startsWith("/")) return null;
   if (raw.startsWith("//")) return null;
+  if (raw === "/login" || raw.startsWith("/login?")) return null;
   return raw;
-}
-
-function roleLabel(role: Role | null | undefined): string {
-  if (role === "PLATFORM_ADMIN") return "플랫폼 관리자";
-  if (role === "SUPER_ADMIN") return "최고관리자";
-  if (role === "ADMIN") return "관리자";
-  return "일반 사용자";
 }
 
 export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { session, isLoading, login, logout } = useAuth();
+  const { session, isLoading, login } = useAuth();
 
   const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [rememberEmail, setRememberEmail] = useState(false);
@@ -64,17 +57,16 @@ export default function LoginForm() {
 
   const canSubmit = email.trim().length > 0 && password.length > 0 && !submitting;
 
-  // 이동 버튼 문구는 실제 이동 경로와 어긋나지 않게 맞춥니다.
-  const moveLabel = nextPath
-    ? "요청한 페이지로 이동"
-    : "대시보드로 이동";
-
   const goAfterLogin = useCallback(
     () => {
       router.replace(nextPath ?? "/");
     },
     [nextPath, router],
   );
+
+  useEffect(() => {
+    if (!isLoading && session) goAfterLogin();
+  }, [goAfterLogin, isLoading, session]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -86,22 +78,14 @@ export default function LoginForm() {
         if (rememberEmail) window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim().toLowerCase());
         else window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
         setError(null);
-        goAfterLogin();
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "로그인에 실패했습니다.",
         );
       } finally { setSubmitting(false); }
     },
-    [canSubmit, email, goAfterLogin, login, password, rememberEmail],
+    [canSubmit, email, login, password, rememberEmail],
   );
-
-  const handleLogout = useCallback(async () => {
-    await logout();
-    setEmail(window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? "");
-    setPassword("");
-    setError(null);
-  }, [logout]);
 
   return (
     <main className="mx-auto flex w-full max-w-7xl items-center justify-center px-3 py-6 sm:px-4 sm:py-8 lg:min-h-[calc(100dvh-3.5rem)] lg:px-6 lg:py-8">
@@ -126,17 +110,10 @@ export default function LoginForm() {
           </header>
 
           <div className="mt-6">
-            {isLoading ? (
+            {isLoading || session ? (
               <div className="flex min-h-[220px] items-center justify-center">
                 <CircleLoader size="xl" />
               </div>
-            ) : session ? (
-              <SignedInPanel
-                session={session}
-                moveLabel={moveLabel}
-                onMove={goAfterLogin}
-                onLogout={handleLogout}
-              />
             ) : (
               <form
                 onSubmit={handleSubmit}
@@ -244,89 +221,5 @@ export default function LoginForm() {
         </div>
       </div>
     </main>
-  );
-}
-
-/* ---- 이하 UI 컴포넌트 ---- */
-
-function SignedInPanel({
-  session,
-  moveLabel,
-  onMove,
-  onLogout,
-}: {
-  session: Session;
-  moveLabel: string;
-  onMove: () => void;
-  onLogout: () => void;
-}) {
-  return (
-    <div>
-      <div className="dark:border-background-dark-secondary dark:bg-background-dark-secondary/30 bg-background-primary/60 rounded-md border p-4">
-        <p className="text-text-major dark:text-text-dark-primary text-sm font-semibold">
-          이미 로그인되어 있습니다.
-        </p>
-
-        <dl className="mt-3 space-y-2 text-sm">
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-text-secondary dark:text-text-dark-primary/60 text-xs font-medium">
-              계정
-            </dt>
-            <dd className="text-text-major dark:text-text-dark-primary truncate font-medium">
-              {session.email}
-            </dd>
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <dt className="text-text-secondary dark:text-text-dark-primary/60 text-xs font-medium">
-              권한
-            </dt>
-            <dd>
-              <RoleBadge role={session.role} />
-            </dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="mt-4 space-y-2">
-        <button
-          type="button"
-          onClick={onMove}
-          className="bg-button-primary hover:bg-button-primary-hover inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-md text-sm font-semibold text-white transition-colors"
-        >
-          {moveLabel}
-        </button>
-        <button
-          type="button"
-          onClick={onLogout}
-          className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:border-background-dark-secondary dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-11 w-full cursor-pointer items-center justify-center rounded-md border bg-white text-sm font-medium transition-colors dark:bg-transparent"
-        >
-          로그아웃
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function RoleBadge({ role }: { role: Role }) {
-  const cls =
-    role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN" || role === "ADMIN"
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-      : "bg-slate-100 text-slate-600 dark:bg-slate-800/60 dark:text-slate-300";
-
-  const dotCls =
-    role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN" || role === "ADMIN"
-      ? "bg-emerald-500"
-      : "bg-slate-400";
-
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium",
-        cls,
-      ].join(" ")}
-    >
-      <span className={["h-1.5 w-1.5 rounded-full", dotCls].join(" ")} />
-      {roleLabel(role)}
-    </span>
   );
 }

@@ -54,7 +54,7 @@ export default function BaselinesClient({
   recipients: AlertRecipient[];
   recipientsLoading?: boolean;
   recipientsFailed?: boolean;
-  onCreateRecipient: (request: { siteId: string; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
+  onCreateRecipient: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
   onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDeleteRecipient: (id: number) => Promise<void>;
 }) {
@@ -214,7 +214,7 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
   recipients: AlertRecipient[];
   loading: boolean;
   failed: boolean;
-  onCreate: (request: { siteId: string; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
+  onCreate: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
   onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDelete: (id: number) => Promise<void>;
 }) {
@@ -229,7 +229,7 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
   async function submit(event: FormEvent) {
     event.preventDefault(); setSaving(true); setError(null);
     try {
-      await onCreate({ siteId, destination, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, enabled: true });
+      await onCreate({ siteId, channel: "KAKAO_ALIMTALK", destination, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, enabled: true });
       setDestination("");
     } catch (createError) { setError(createError instanceof Error ? createError.message : "수신 채널을 추가하지 못했습니다."); }
     finally { setSaving(false); }
@@ -237,15 +237,15 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
 
   return <section className="grid gap-4 xl:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
     <form onSubmit={submit} className="h-fit rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card">
-      <h2 className="text-lg font-extrabold">Slack 수신 채널 추가</h2><p className="text-text-secondary mt-1 text-sm leading-6">사업장별 Incoming Webhook으로 알림을 보냅니다. 주소는 저장 후 다시 노출되지 않습니다.</p>
+      <h2 className="text-lg font-extrabold">알림톡 수신처 추가</h2><p className="text-text-secondary mt-1 text-sm leading-6">사업장별 휴대폰 번호를 등록합니다. 알림톡 실패 시 90바이트 이하 문자로 대체됩니다.</p>
       <label className="mt-5 block text-sm font-bold">사업장<select required value={siteId} onChange={(event) => setSiteId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5">{sites.map((site) => <option key={site.siteid} value={site.siteid}>{site.name ?? site.siteid} · {site.siteid}</option>)}</select></label>
-      <label className="mt-4 block text-sm font-bold">Slack Webhook URL<input required type="url" autoComplete="off" placeholder="https://hooks.slack.com/services/..." value={destination} onChange={(event) => setDestination(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5" /></label>
+      <label className="mt-4 block text-sm font-bold">수신 휴대폰 번호<input required type="tel" inputMode="tel" autoComplete="off" placeholder="010-1234-5678" value={destination} onChange={(event) => setDestination(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5" /></label>
       <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={quietEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-5 w-5 accent-sky-700" />조용한 시간 사용</label>
       {quietEnabled && <div className="mt-3 grid grid-cols-2 gap-2"><TimeField label="시작" value={quietStart} onChange={setQuietStart} /><TimeField label="종료" value={quietEnd} onChange={setQuietEnd} /></div>}
       {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
       <button type="submit" disabled={saving || !siteId} className="bg-button-primary hover:bg-button-primary-hover mt-5 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-50">{saving ? "추가 중…" : "수신 채널 추가"}</button>
     </form>
-    <div><div className="mb-3"><h2 className="text-lg font-extrabold">등록된 채널</h2><p className="text-text-secondary mt-1 text-sm">등록 채널이 없으면 기존 전역 Slack 채널로 발송됩니다.</p></div>{failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">수신 채널을 불러오지 못했습니다.</p>}{loading ? <p className="text-text-secondary py-12 text-center text-sm">불러오는 중…</p> : recipients.length === 0 ? <EmptyState /> : <div className="space-y-2">{recipients.map((recipient) => <RecipientRow key={recipient.id} recipient={recipient} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</div>
+    <div><div className="mb-3"><h2 className="text-lg font-extrabold">등록된 수신처</h2><p className="text-text-secondary mt-1 text-sm">등록된 휴대폰 번호가 없으면 알림톡을 발송하지 않습니다.</p></div>{failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">수신처를 불러오지 못했습니다.</p>}{loading ? <p className="text-text-secondary py-12 text-center text-sm">불러오는 중…</p> : recipients.length === 0 ? <EmptyState /> : <div className="space-y-2">{recipients.map((recipient) => <RecipientRow key={recipient.id} recipient={recipient} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</div>
   </section>;
 }
 
@@ -257,7 +257,7 @@ function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecip
   const [error, setError] = useState<string | null>(null);
   async function update(patch: Partial<AlertRecipient> = {}) { setSaving(true); setError(null); try { await onUpdate({ ...recipient, quietStart: start || null, quietEnd: end || null, ...patch }); } catch (updateError) { setError(updateError instanceof Error ? updateError.message : "변경하지 못했습니다."); } finally { setSaving(false); } }
   async function remove() { if (!confirmDelete) { setConfirmDelete(true); return; } setSaving(true); try { await onDelete(recipient.id); } catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : "삭제하지 못했습니다."); setSaving(false); } }
-  return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-background-dark-card"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">{recipient.siteName ?? recipient.siteId} <span className="text-text-secondary text-xs font-medium">· {recipient.siteId}</span></h3><p className="text-text-secondary mt-1 text-xs">{recipient.destinationMasked} · 등록 {recipient.userName}</p></div><button type="button" disabled={saving} onClick={() => update({ enabled: !recipient.enabled })} className={`rounded-full px-3 py-1.5 text-xs font-bold ${recipient.enabled ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{recipient.enabled ? "사용 중" : "중지됨"}</button></div><div className="mt-3 flex flex-wrap items-end gap-2"><TimeField label="조용한 시간 시작" value={start} onChange={setStart} optional /><TimeField label="종료" value={end} onChange={setEnd} optional /><button type="button" disabled={saving || (!!start !== !!end)} onClick={() => update()} className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">시간 저장</button><button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : "삭제"}</button></div>{error && <p className="mt-3 text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}</article>;
+  return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-background-dark-card"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">{recipient.siteName ?? recipient.siteId} <span className="text-text-secondary text-xs font-medium">· {recipient.siteId}</span></h3><p className="text-text-secondary mt-1 text-xs">알림톡/SMS · {recipient.destinationMasked} · 등록 {recipient.userName}</p></div><button type="button" disabled={saving} onClick={() => update({ enabled: !recipient.enabled })} className={`rounded-full px-3 py-1.5 text-xs font-bold ${recipient.enabled ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{recipient.enabled ? "사용 중" : "중지됨"}</button></div><div className="mt-3 flex flex-wrap items-end gap-2"><TimeField label="조용한 시간 시작" value={start} onChange={setStart} optional /><TimeField label="종료" value={end} onChange={setEnd} optional /><button type="button" disabled={saving || (!!start !== !!end)} onClick={() => update()} className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">시간 저장</button><button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : "삭제"}</button></div>{error && <p className="mt-3 text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}</article>;
 }
 
 function TimeField({ label, value, onChange, optional = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-xs font-bold">{label}<input type="time" required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
