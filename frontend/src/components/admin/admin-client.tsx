@@ -63,7 +63,7 @@ type PasswordResetCreated = { token: string; email: string; expiresAt: string; d
 const CARD =
   "rounded-xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card";
 const INPUT =
-  "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:hover:border-white/20";
+  "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();

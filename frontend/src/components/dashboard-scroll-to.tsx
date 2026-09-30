@@ -33,7 +33,7 @@ export default function DashboardScrollTo({
         return;
       }
 
-      if (gridRow && window.matchMedia("(min-width: 640px)").matches) {
+      if (gridRow) {
         const scroller = gridRow.closest<HTMLElement>("[data-dashboard-scroll]");
         if (scroller) {
           const headHeight = scroller.querySelector("thead")?.getBoundingClientRect().height ?? 60;

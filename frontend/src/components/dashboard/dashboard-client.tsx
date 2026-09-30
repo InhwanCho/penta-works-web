@@ -28,7 +28,7 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
 };
 
 const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
-const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v1";
+const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v2";
 
 function isViewMode(v: unknown): v is ViewMode {
   return v === "basic" || v === "grid";
@@ -84,11 +84,9 @@ export default function DashboardClient() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const [search, setSearch] = useState("");
 
   useEffect(() => {
     const mobile = window.matchMedia("(max-width: 639px)").matches;
-    setViewMode(mobile ? "basic" : "grid");
     try {
       const saved = localStorage.getItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY);
       if (isViewMode(saved)) setViewMode(saved);
@@ -114,13 +112,12 @@ export default function DashboardClient() {
 
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
-    const query = search.trim().toLocaleLowerCase();
-    return currentRows.filter((row) => (!query || `${row.name ?? ""} ${row.siteDb}`.toLocaleLowerCase().includes(query)) && (statusFilter === "all" ||
+    return currentRows.filter((row) => statusFilter === "all" ||
       (statusFilter === "issues" && row.alertStatus !== "NORMAL") ||
       (statusFilter === "warning" && row.alertStatus === "WARNING") ||
       (statusFilter === "no-data" && row.alertStatus === "NO_DATA") ||
-      (statusFilter === "normal" && row.alertStatus === "NORMAL")));
-  }, [data?.rows, statusFilter, search]);
+      (statusFilter === "normal" && row.alertStatus === "NORMAL"));
+  }, [data?.rows, statusFilter]);
 
   const sortedRows = useMemo(
     () => filteredRows.slice().sort((a, b) => {
@@ -197,8 +194,7 @@ export default function DashboardClient() {
           </button>
         </div>
         <div className="mb-3 flex gap-2 sm:hidden">
-          <input type="search" aria-label="현재 대시보드 병원 검색" placeholder="병원명 검색" value={search} onChange={(event) => setSearch(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-base outline-none focus:border-sky-500 dark:border-white/10 dark:bg-background-dark-card" />
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold disabled:opacity-50 dark:border-white/10 dark:bg-background-dark-card">{isFetching ? "갱신 중" : "새로고침"}</button>
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold disabled:opacity-50 dark:border-white/10 dark:bg-background-dark-card">{isFetching ? "갱신 중" : "새로고침"}</button>
         </div>
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 

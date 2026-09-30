@@ -63,8 +63,8 @@ export default function Navbar() {
             {session ? (
               <div className="relative" ref={menuRef}>
                 <button type="button" aria-label="계정 및 메뉴" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}
-                  className="flex h-10 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pr-2 pl-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:pr-3">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
+                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
                     {initial}
                   </span>
                   <span className="hidden min-w-0 text-left sm:block">

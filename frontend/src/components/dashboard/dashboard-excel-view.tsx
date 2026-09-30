@@ -146,7 +146,7 @@ export default function DashboardExcelView({
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
         <div
           data-dashboard-scroll
-          className="overflow-x-auto overscroll-x-contain sm:min-h-0 sm:flex-1 sm:overflow-auto"
+          className="max-h-[calc(100dvh-11rem)] overflow-auto overscroll-contain sm:min-h-0 sm:max-h-none sm:flex-1"
         >
           <table className="w-full border-separate border-spacing-0 text-xs sm:text-sm" style={{ minWidth: 265 + metrics.length * 64 }}>
             <caption className="sr-only">
@@ -343,24 +343,12 @@ export default function DashboardExcelView({
         </div>
       )}
 
-      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:px-4 sm:py-2.5">
-        <div className="border-border/70 dark:border-background-dark-secondary mb-2 border-b pb-2 sm:hidden">
-          <p className="text-text-major dark:text-text-dark-primary font-extrabold">
-            전체 지표{" "}
-            <span className="font-medium opacity-70">
-              · {rows.length}개 병원
-            </span>
-          </p>
-          <p className="mt-0.5 text-xs font-medium">
-            병원명 → 상세 보기 · 수치 → 병원·항목 확인
-          </p>
-        </div>
+      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 sm:py-2.5">
         <p>
           <span className="font-semibold text-red-600 dark:text-red-400">
             빨간 값
           </span>
           은 허용 범위를 벗어난 값입니다.
-          <span className="sm:hidden"> - 표시는 측정 안 됨 · 좌우로 밀어 확인하세요.</span>
         </p>
       </div>
 

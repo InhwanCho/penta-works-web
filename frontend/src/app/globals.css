@@ -146,6 +146,17 @@
     font-size: max(16px, 1rem);
   }
 
+  html.dark :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), textarea, select) {
+    color-scheme: dark;
+    color: var(--color-text-dark-primary);
+    caret-color: var(--color-text-dark-primary);
+    background-color: var(--color-background-dark-card);
+  }
+
+  html.dark :where(input, textarea)::placeholder {
+    color: color-mix(in srgb, var(--color-text-dark-primary) 55%, transparent);
+  }
+
   /* 터치 타겟 최소 44px 확보 */
   button,
   a[role="button"],
