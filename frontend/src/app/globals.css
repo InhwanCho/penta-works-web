@@ -176,13 +176,6 @@
     padding-left: max(4px, env(safe-area-inset-left, 0px));
     padding-right: max(4px, env(safe-area-inset-right, 0px));
   }
-
-  .dashboard-grid-height {
-    max-height: calc(
-      100dvh - 160px - env(safe-area-inset-top, 0px) -
-        env(safe-area-inset-bottom, 0px)
-    );
-  }
 }
 
 @media (max-width: 420px) {

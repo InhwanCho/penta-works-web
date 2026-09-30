@@ -122,7 +122,7 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="dashboard-grid-height relative flex flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
+    <section className="relative flex flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
       <div className="hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
@@ -146,7 +146,7 @@ export default function DashboardExcelView({
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
         <div
           data-dashboard-scroll
-          className="min-h-0 flex-1 overflow-auto overscroll-x-contain"
+          className="overflow-x-auto overscroll-x-contain sm:min-h-0 sm:flex-1 sm:overflow-auto"
         >
           <table className="w-full border-separate border-spacing-0 text-xs sm:text-sm" style={{ minWidth: 265 + metrics.length * 64 }}>
             <caption className="sr-only">
