@@ -20,14 +20,16 @@ import static org.mockito.Mockito.when;
 
 class RollingAverageServiceTest {
     @Test
-    void excludesZeroFromHourlyRollingAverage() throws Exception {
+    void excludesUnmeasuredValuesFromHourlyRollingAverage() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ResultSet rs = mock(ResultSet.class);
         when(rs.getString("siteid")).thenReturn("001");
-        when(rs.getString("hepres")).thenReturn("0", "1.2", "1.4");
+        when(rs.getString("hepres")).thenReturn("0", "0.001", "0.01", "1.2", "1.4");
         when(rs.getTimestamp("date")).thenReturn(Timestamp.valueOf("2026-09-29 12:30:00"));
         doAnswer(invocation -> {
             RowCallbackHandler handler = invocation.getArgument(1);
+            handler.processRow(rs);
+            handler.processRow(rs);
             handler.processRow(rs);
             handler.processRow(rs);
             handler.processRow(rs);
@@ -41,7 +43,7 @@ class RollingAverageServiceTest {
         verify(jdbc).update(contains("INSERT INTO site_metric_average_hourly"), eq("001"), eq("hepres"),
             eq(Timestamp.valueOf(hour)), eq(Timestamp.valueOf("2026-09-29 12:30:00")),
             argThat((Double value) -> Math.abs(value - 1.3) < 0.000001),
-            eq(2), eq(1));
+            eq(2), eq(3));
     }
 
     @Test

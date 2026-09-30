@@ -3,6 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import type { MetricKey } from "@/lib/metrics";
+import type { CompanyMetric } from "@/lib/company-metrics";
 
 export type SiteDetailRow = Partial<Record<MetricKey, number | null>> & {
   index: number;
@@ -10,6 +11,7 @@ export type SiteDetailRow = Partial<Record<MetricKey, number | null>> & {
 };
 
 export type SiteDetailResponse = {
+  metricConfig?: CompanyMetric[];
   slug: string;
   site: { siteDb: string; name: string | null };
   take: number;

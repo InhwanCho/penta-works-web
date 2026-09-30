@@ -29,13 +29,13 @@ public class SiteService {
                 recosi, coldtp, recoru, gctemp, gcflow, cctemp, ccflow FROM mrtb
             WHERE siteid = ? AND date IS NOT NULL ORDER BY date DESC, `index` DESC LIMIT ?
             """, (rs, row) -> new SiteResponse.Measurement(rs.getInt("index"),
-                rs.getTimestamp("date").toInstant().toString(), DashboardService.parseNumber(rs.getString("hepres")),
-                DashboardService.parseNumber(rs.getString("heleve")), DashboardService.parseNumber(rs.getString("actemp")),
-                DashboardService.parseNumber(rs.getString("achumi")),
-                DashboardService.parseNumber(rs.getString("recosi")), DashboardService.parseNumber(rs.getString("coldtp")),
-                DashboardService.parseNumber(rs.getString("recoru")), DashboardService.parseNumber(rs.getString("gctemp")),
-                DashboardService.parseNumber(rs.getString("gcflow")), DashboardService.parseNumber(rs.getString("cctemp")),
-                DashboardService.parseNumber(rs.getString("ccflow"))), site.siteDb(), take);
+                rs.getTimestamp("date").toInstant().toString(), DashboardService.parseMeasurement(rs.getString("hepres")),
+                DashboardService.parseMeasurement(rs.getString("heleve")), DashboardService.parseMeasurement(rs.getString("actemp")),
+                DashboardService.parseMeasurement(rs.getString("achumi")),
+                DashboardService.parseMeasurement(rs.getString("recosi")), DashboardService.parseMeasurement(rs.getString("coldtp")),
+                DashboardService.parseMeasurement(rs.getString("recoru")), DashboardService.parseMeasurement(rs.getString("gctemp")),
+                DashboardService.parseMeasurement(rs.getString("gcflow")), DashboardService.parseMeasurement(rs.getString("cctemp")),
+                DashboardService.parseMeasurement(rs.getString("ccflow"))), site.siteDb(), take);
         return new SiteResponse(slug, site, take, rows.isEmpty() ? null : rows.get(0).date(), rows);
     }
 

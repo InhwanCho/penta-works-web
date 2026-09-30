@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api";
+import CircleLoader from "@/components/icons/circle-loader";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -41,10 +42,10 @@ export default function AcceptInviteClient() {
   }
 
   if (!token || invitation.isError) return <Message title="사용할 수 없는 초대입니다." />;
-  if (invitation.isLoading) return <Message title="초대를 확인하고 있습니다…" />;
+  if (invitation.isLoading) return <main className="flex min-h-[60vh] items-center justify-center lg:min-h-[calc(100dvh-3.5rem)]"><CircleLoader size="xl" /></main>;
   return (
-    <main className="mx-auto max-w-md px-4 py-10">
-      <form onSubmit={submit} className="rounded-xl border bg-white p-6 shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card">
+    <main className="mx-auto flex w-full items-center justify-center px-4 py-10 lg:min-h-[calc(100dvh-3.5rem)] lg:py-8">
+      <form onSubmit={submit} className="w-full max-w-md rounded-xl border bg-white p-6 shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card">
         <h1 className="text-xl font-bold">MrEyes 가입 완료</h1>
         <p className="text-text-secondary mt-2 text-sm">{invitation.data?.name} · {invitation.data?.email}</p>
         <p className="text-text-secondary mt-1 text-xs">비밀번호는 12자 이상이며 영문, 숫자, 특수문자를 포함해야 합니다.</p>

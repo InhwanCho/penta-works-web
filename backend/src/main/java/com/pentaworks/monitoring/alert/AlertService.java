@@ -23,9 +23,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AlertService {
     private static final List<Metric> METRICS = List.of(
-        new Metric("recosi", "si410", "리콘덴서 SI", null, 0, 999),
-        new Metric("coldtp", "chtemp", "coldtp", null, 0, 999),
-        new Metric("recoru", "rou", "리콘덴서 RU", null, 0, 999),
+        new Metric("recosi", "si410", "리콘덴서 Si410 온도", "K", 0, 999),
+        new Metric("coldtp", "chtemp", "콜드헤드 온도", "K", 0, 999),
+        new Metric("recoru", "rou", "리콘덴서 RuO 온도", "K", 0, 999),
         new Metric("hepres", "psi", "He Pressure", "psi", 1, 999),
         new Metric("heleve", "he", "He Level", "%", 70, 999),
         new Metric("actemp", "actemp", "AC Temp", "°C", 0, 999),

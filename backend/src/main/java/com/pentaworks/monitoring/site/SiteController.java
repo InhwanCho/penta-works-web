@@ -1,6 +1,7 @@
 package com.pentaworks.monitoring.site;
 
 import com.pentaworks.monitoring.auth.CurrentUserService;
+import com.pentaworks.monitoring.company.CompanyMetricService;
 import java.util.List;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SiteController {
     private final SiteService siteService;
     private final CurrentUserService currentUsers;
-    public SiteController(SiteService siteService, CurrentUserService currentUsers) {
+    private final CompanyMetricService metrics;
+    public SiteController(SiteService siteService, CurrentUserService currentUsers, CompanyMetricService metrics) {
         this.siteService = siteService;
         this.currentUsers = currentUsers;
+        this.metrics = metrics;
     }
 
     @GetMapping
@@ -30,6 +33,6 @@ public class SiteController {
                                Authentication authentication) {
         var user = currentUsers.require(authentication);
         currentUsers.requireVisibleSiteAccess(user, SiteService.normalizeSiteId(siteid));
-        return siteService.detail(siteid, take);
+        return siteService.detail(siteid, take).withMetrics(metrics.metrics(user.companyId()));
     }
 }

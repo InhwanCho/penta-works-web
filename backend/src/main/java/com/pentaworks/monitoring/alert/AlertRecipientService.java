@@ -124,6 +124,14 @@ public class AlertRecipientService {
         return count != null && count > 0;
     }
 
+    public boolean allowsGlobalFallback(String siteId) {
+        Integer count = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM company_site cs JOIN company c ON c.id=cs.company_id
+             WHERE cs.site_id=? AND c.code='PENTAWORKS' AND c.status='ACTIVE'
+            """, Integer.class, siteId);
+        return count != null && count > 0;
+    }
+
     private RecipientSummary recipient(CurrentUser actor, long id) {
         return recipients(actor).stream().filter(recipient -> recipient.id() == id).findFirst()
             .orElseThrow(() -> new NotFoundException("알림 수신자를 찾을 수 없습니다."));

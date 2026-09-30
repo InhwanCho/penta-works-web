@@ -49,26 +49,25 @@ export const METRICS: readonly MetricDef[] = [
   {
     key: "recosi",
     code: "recosi",
-    label: "리콘덴서 SI",
-    unit: null,
-    description: "리콘덴서 SI 값입니다.",
+    label: "리콘덴서 Si410 온도",
+    unit: "K",
+    description: "레거시 장비 화면의 Recon Si410 센서 온도입니다. 단위는 K(켈빈)입니다.",
     bound: "recosi",
   },
   {
     key: "coldtp",
     code: "coldtp",
-    label: null,
-    unit: null,
-    description:
-      "콜드헤드 또는 콜드칠러 온도로 추정됩니다. 정확한 의미는 확인이 필요합니다.",
+    label: "콜드헤드 온도",
+    unit: "K",
+    description: "레거시 장비 화면의 Coldhead Temp입니다. 단위는 K(켈빈)입니다.",
     bound: "coldtp",
   },
   {
     key: "recoru",
     code: "recoru",
-    label: "리콘덴서 RU",
-    unit: null,
-    description: "리콘덴서 RU 값입니다.",
+    label: "리콘덴서 RuO 온도",
+    unit: "K",
+    description: "레거시 장비 화면의 Recon RuO 센서 온도입니다. 단위는 K(켈빈)입니다.",
     bound: "recoru",
   },
   {
@@ -140,6 +139,22 @@ export const METRICS: readonly MetricDef[] = [
 
 export const METRIC_KEYS: readonly MetricKey[] = METRICS.map((m) => m.key);
 
+/** mrtb에서 측정 실패를 나타내는 값. 서버가 null로 내려주기 전 데이터도 방어합니다. */
+export function isUnmeasuredMetricValue(value: number | null | undefined): boolean {
+  return value === 0 || value === 0.001 || value === 0.01;
+}
+
+export function formatMetricMeasurement(
+  value: number | null | undefined,
+  unit?: string | null,
+  hasSample = true,
+): string {
+  if (!hasSample) return "-";
+  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return "측정 안됨";
+  const number = value.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
+  return unit ? `${number} ${unit}` : number;
+}
+
 /** ctrl 임계값 컬럼명 전체 (하한/상한 쌍) */
 export const CTRL_BOUNDS: readonly CtrlBound[] = [
   "recosi",
@@ -165,7 +180,7 @@ export function isMetricOutOfRange(
   bound: CtrlBound | null,
   range: CtrlRange | null,
 ): boolean {
-  if (value == null || Number.isNaN(value)) return false;
+  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return false;
   if (!bound || !range) return false;
 
   const low = range[`${bound}l`];

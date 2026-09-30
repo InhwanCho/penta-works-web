@@ -4,15 +4,16 @@ import PullToRefresh from "@/components/common/pull-to-refresh";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
-import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import CircleLoader from "@/components/icons/circle-loader";
 import {
   type CtrlRange,
   type SiteRow,
   useDashboardQuery,
-  RESTORED_DASHBOARD_UPDATED_AT,
 } from "@/hooks/use-dashboard-query";
 import Link from "next/link";
 import type React from "react";
+import { companyMetrics } from "@/lib/company-metrics";
+import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 /** 기본 뷰 / 관리자 뷰(엑셀형 전체 지표) */
@@ -62,29 +63,14 @@ function fmtHms(d: Date | null) {
   return `${hh}:${mi}:${ss}`;
 }
 
-function fmtNum(v: number | null, suffix?: string) {
-  if (v == null || Number.isNaN(v)) return "-";
-  return suffix ? `${v}${suffix}` : String(v);
-}
-
-function isOutOfRange(
-  v: number | null,
-  low: number | null,
-  high: number | null,
-) {
-  if (v == null || Number.isNaN(v)) return false;
-  if (low != null && v < low) return true;
-  if (high != null && v > high) return true;
-  return false;
-}
-
 function fmtYmdHms(ms: number) {
-  const d = new Date(ms);
-  return `${fmtYmd(d)} ${fmtHms(d)}`;
+  const date = new Date(ms);
+  if (Number.isNaN(date.getTime())) return "-";
+  return `${fmtYmd(date)} ${fmtHms(date)}`;
 }
 
 export default function DashboardClient() {
-  const { data, dataUpdatedAt, isLoading, isError, error, refetch } = useDashboardQuery();
+  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
 
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -124,7 +110,7 @@ export default function DashboardClient() {
   if (isLoading) {
     return (
       <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
-        <ThreeDotLoader size="xl" />
+        <CircleLoader size="xl" />
       </main>
     );
   }
@@ -141,6 +127,9 @@ export default function DashboardClient() {
   }
 
   const { meta, ctrl } = data;
+  const metrics = companyMetrics(data.metricConfig);
+  const helium = metrics.filter((metric) => metric.key === "hepres" || metric.key === "heleve");
+  const summaryMetrics = helium.length ? helium : metrics.slice(0, 2);
 
   return (
     <PullToRefresh
@@ -164,9 +153,7 @@ export default function DashboardClient() {
               마지막 갱신{" "}
               <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>{data.stats.openAlerts > 0 && <span className="ml-2 font-bold text-rose-600 dark:text-rose-300">· 진행 중 알림 {data.stats.openAlerts}건</span>}
             </p>
-            {dataUpdatedAt === RESTORED_DASHBOARD_UPDATED_AT ?
-              <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">저장된 화면 · {isError ? "연결 실패, 다시 시도해주세요" : "최신 정보 확인 중"}</p> :
-              isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
+            {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
 
@@ -188,6 +175,7 @@ export default function DashboardClient() {
           <DashboardExcelView
             rows={sortedRows}
             ctrl={ctrl}
+            metrics={metrics}
           />
         ) : (
           <>
@@ -203,6 +191,7 @@ export default function DashboardClient() {
                         key={r.siteDb}
                         row={r}
                         range={ctrl[r.siteDb] ?? null}
+                        metrics={summaryMetrics}
                       />
                     );
                   })}
@@ -223,8 +212,7 @@ export default function DashboardClient() {
                       <tr>
                         <Th>병원명</Th>
                         <Th>최신 시각</Th>
-                        <Th className="text-right">hePsi</Th>
-                        <Th className="text-right">he%</Th>
+                        {summaryMetrics.map((metric) => <Th key={metric.key} className="text-right">{metric.label ?? metric.code}</Th>)}
                         <Th className="text-right" />
                       </tr>
                     </thead>
@@ -233,17 +221,6 @@ export default function DashboardClient() {
                       {sortedRows.map((r) => {
                         const lastAtDate = parseIso(r.lastAt);
                         const range = ctrl[r.siteDb] ?? null;
-
-                        const hePsiAlert = isOutOfRange(
-                          r.hePsi,
-                          range?.mrplel ?? null,
-                          range?.mrpleh ?? null,
-                        );
-                        const hePctAlert = isOutOfRange(
-                          r.hePct,
-                          range?.mrlevl ?? null,
-                          range?.mrlevh ?? null,
-                        );
 
                         return (
                           <tr
@@ -267,27 +244,9 @@ export default function DashboardClient() {
                               </div>
                             </Td>
 
-                            <Td
-                              className={[
-                                "text-right whitespace-nowrap tabular-nums",
-                                hePsiAlert
-                                  ? "font-semibold text-red-600 dark:text-red-400"
-                                  : "text-text-major dark:text-text-dark-primary/90",
-                              ].join(" ")}
-                            >
-                              {fmtNum(r.hePsi)}
-                            </Td>
-
-                            <Td
-                              className={[
-                                "text-right whitespace-nowrap tabular-nums",
-                                hePctAlert
-                                  ? "font-semibold text-red-600 dark:text-red-400"
-                                  : "text-text-major dark:text-text-dark-primary/90",
-                              ].join(" ")}
-                            >
-                              {fmtNum(r.hePct, "%")}
-                            </Td>
+                            {summaryMetrics.map((metric) => <Td key={metric.key} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
+                              {formatMetricMeasurement(r.metrics[metric.key], metric.unit, r.lastAt != null)}
+                            </Td>)}
 
                             <Td className="text-right">
                               <Link
@@ -382,19 +341,8 @@ function EmptyState() {
   );
 }
 
-function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
-  const hePsiAlert = isOutOfRange(
-    row.hePsi,
-    range?.mrplel ?? null,
-    range?.mrpleh ?? null,
-  );
-  const hePctAlert = isOutOfRange(
-    row.hePct,
-    range?.mrlevl ?? null,
-    range?.mrlevh ?? null,
-  );
-
-  const anyAlert = row.alertStatus !== "NORMAL" || hePsiAlert || hePctAlert;
+function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | null; metrics: MetricDef[] }) {
+  const anyAlert = row.alertStatus !== "NORMAL" || metrics.some((metric) => isMetricOutOfRange(row.metrics[metric.key], metric.bound, range));
   const d = parseIso(row.lastAt);
 
   return (
@@ -442,36 +390,11 @@ function SiteCard({ row, range }: { row: SiteRow; range: CtrlRange | null }) {
             </span>
           }
         />
-        <MetricCol
-          label="hePsi"
-          value={
-            <span
-              className={[
-                "text-lg font-semibold tabular-nums",
-                hePsiAlert
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-text-major dark:text-text-dark-primary",
-              ].join(" ")}
-            >
-              {fmtNum(row.hePsi)}
-            </span>
-          }
-        />
-        <MetricCol
-          label="he%"
-          value={
-            <span
-              className={[
-                "text-lg font-semibold tabular-nums",
-                hePctAlert
-                  ? "text-red-600 dark:text-red-400"
-                  : "text-text-major dark:text-text-dark-primary",
-              ].join(" ")}
-            >
-              {fmtNum(row.hePct, "%")}
-            </span>
-          }
-        />
+        {metrics.map((metric) => <MetricCol key={metric.key} label={metric.label ?? metric.code}
+          value={<span className={`text-lg font-semibold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
+            {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null)}
+          </span>}
+        />)}
       </div>
     </Link>
   );

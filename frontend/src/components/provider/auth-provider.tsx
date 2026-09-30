@@ -23,7 +23,6 @@ import {
   useMemo,
   useState,
 } from "react";
-import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 
 interface AuthContextType {
   session: Session | null;
@@ -60,6 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    try { window.localStorage.removeItem("pentaworks_dashboard_snapshot_v1"); } catch { /* Storage unavailable. */ }
     const stored = readStoredSession();
     if (stored && !accessTokenExpiresSoon(stored)) {
       setSession({ id: stored.id, email: stored.email, name: stored.name, role: stored.role });
@@ -83,7 +83,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession({ id: current.id, email: current.email, name: current.name, role: current.role });
           } else {
             clearStoredSession();
-            clearDashboardSnapshot();
             queryClient.clear();
             setSession(null);
           }
@@ -98,7 +97,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const result = await requestLogin(email, password);
       queryClient.clear();
-      clearDashboardSnapshot();
       const next = {
         id: result.id,
         email: result.email,
@@ -115,7 +113,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await requestLogout();
     queryClient.clear();
     clearStoredSession();
-    clearDashboardSnapshot();
     setSession(null);
   }, [queryClient]);
 
@@ -123,7 +120,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const refreshed = () => setSession(sessionFromStorage());
     const expired = () => {
       queryClient.clear();
-      clearDashboardSnapshot();
       setSession(null);
     };
     window.addEventListener("auth:refreshed", refreshed);

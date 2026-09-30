@@ -10,6 +10,7 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,6 +21,22 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
+    @Test
+    @SuppressWarnings("unchecked")
+    void eventFromAnotherCompanyIsHiddenAsNotFound() throws Exception {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        ResultSet resultSet = mock(ResultSet.class);
+        when(resultSet.next()).thenReturn(true);
+        when(resultSet.getString(1)).thenReturn("other-site");
+        when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class), eq(99L)))
+            .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(resultSet));
+        AlertEventService service = new AlertEventService(jdbcTemplate,
+            mock(CurrentUserService.class), mock(AuditService.class));
+
+        assertThrows(com.pentaworks.monitoring.common.NotFoundException.class,
+            () -> service.requireEventAccess(99L, java.util.Set.of("my-site")));
+    }
+
     @Test
     void disabledSiteDoesNotEvaluateMetrics() {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
@@ -36,9 +53,26 @@ class AlertEventServiceTest {
     }
 
     @Test
-    void zeroIsAnErrorEvenWhenStaticLowerBoundIsZero() {
-        assertEquals("low", AlertEventService.direction(0.0, 0.0, 999.0));
+    void unmeasuredValuesDoNotCreateRangeAlerts() {
+        assertNull(AlertEventService.direction(0.0, 0.0, 999.0));
+        assertNull(AlertEventService.direction(0.001, 1.0, 999.0));
+        assertNull(AlertEventService.direction(0.01, 1.0, 999.0));
         assertNull(AlertEventService.direction(1.0, 0.0, 999.0));
+        assertEquals("low", AlertEventService.direction(0.011, 1.0, 999.0));
+    }
+
+    @Test
+    void unmeasuredValueDoesNotRecoverAnOpenRangeAlert() {
+        JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
+        AlertEventService service = new AlertEventService(jdbcTemplate,
+            mock(CurrentUserService.class), mock(AuditService.class));
+        SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false,
+            true, 0, 0, null, null, false);
+        AlertThreshold threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
+
+        assertNull(service.evaluate(site, threshold, 0.001));
+
+        verifyNoInteractions(jdbcTemplate);
     }
 
     @Test

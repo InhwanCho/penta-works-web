@@ -192,7 +192,7 @@ public class DashboardService {
 
     private Map<String, Double> metricMap(ResultSet rs) throws SQLException {
         Map<String, Double> result = new LinkedHashMap<>();
-        for (String metric : METRICS) result.put(metric, parseNumber(rs.getString(metric)));
+        for (String metric : METRICS) result.put(metric, parseMeasurement(rs.getString(metric)));
         return result;
     }
 
@@ -233,6 +233,13 @@ public class DashboardService {
         String cleaned = value.trim().replaceAll("[^\\d.+-]", "");
         if (cleaned.isBlank()) return null;
         try { return Double.valueOf(cleaned); } catch (NumberFormatException error) { return null; }
+    }
+    public static Double parseMeasurement(String value) {
+        Double parsed = parseNumber(value);
+        return isUnmeasured(parsed) ? null : parsed;
+    }
+    public static boolean isUnmeasured(Double value) {
+        return value != null && (value == 0.0 || value == 0.001 || value == 0.01);
     }
     private static String siteSlug(String id) { return id.matches("\\d+") ? String.valueOf(Integer.parseInt(id)) : id; }
     private record Site(String id, String name) {}

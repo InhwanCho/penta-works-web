@@ -1,6 +1,7 @@
 "use client";
 
-import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import CircleLoader from "@/components/icons/circle-loader";
+import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -66,7 +67,7 @@ const INPUT =
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
-  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "metrics" | "audit">("users");
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => apiFetch<UserRow[]>("/admin/accounts/users"),
@@ -121,10 +122,11 @@ export default function AdminClient() {
         </div>
       </header>
 
-      <div className="mb-5 inline-flex rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
+      <div className="mb-5 flex w-fit max-w-full flex-wrap rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
         <Tab active={tab === "users"} onClick={() => setTab("users")}>사용자</Tab>
         <Tab active={tab === "invitations"} onClick={() => setTab("invitations")}>초대</Tab>
         <Tab active={tab === "sites"} onClick={() => setTab("sites")}>사업장</Tab>
+        <Tab active={tab === "metrics"} onClick={() => setTab("metrics")}>측정항목</Tab>
         <Tab active={tab === "audit"} onClick={() => setTab("audit")}>감사 로그</Tab>
       </div>
 
@@ -146,6 +148,7 @@ export default function AdminClient() {
       )}
       {tab === "sites" && <SiteSection sites={sites.data ?? []} company={company.data ?? null} loading={sites.isLoading || company.isLoading} />}
       {tab === "audit" && <AuditSection rows={audits.data ?? []} loading={audits.isLoading} />}
+      {tab === "metrics" && <CompanyMetricsEditor />}
     </main>
   );
 }
@@ -581,12 +584,12 @@ function groupSites(sites: SiteOption[]) {
 function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button type="button" onClick={onClick} className={`cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-text-dark-primary/55 dark:hover:bg-white/5"}`}>{children}</button>;
 }
-function Loading() { return <main className="flex min-h-[50vh] items-center justify-center"><ThreeDotLoader size="xl" /></main>; }
+function Loading() { return <main className="flex min-h-[50vh] items-center justify-center"><CircleLoader size="xl" /></main>; }
 function Empty({ children }: { children: React.ReactNode }) { return <p className="text-text-secondary p-5 text-center text-sm">{children}</p>; }
 function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-center"><h1 className="text-xl font-bold">접근 권한이 없습니다</h1><Link href="/" className="mt-4 inline-block underline">대시보드로 이동</Link></main>; }
 function roleLabel(role: Role) { return role === "PLATFORM_ADMIN" ? "플랫폼 관리자" : role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
-function actionLabel(value: string) { return ({ ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
+function actionLabel(value: string) { return ({ COMPANY_METRICS_UPDATED: "측정항목 표시 변경", PASSWORD_RESET_REQUESTED: "비밀번호 찾기 요청", ALERT_DELIVERY_CONFIRMED: "수신 여부 확인", ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
 function SummaryChip({ value, label }: { value: number; label: string }) { return <div className="rounded-xl border border-white/10 bg-white/10 px-3.5 py-2 backdrop-blur-sm"><span className="text-base font-extrabold">{value}</span><span className="ml-1.5 text-xs font-medium text-white/65">{label}</span></div>; }
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) { return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"}`}><span className={`h-1.5 w-1.5 rounded-full ${status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"}`} />{status === "ACTIVE" ? "활성" : "정지"}</span>; }

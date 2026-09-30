@@ -56,7 +56,8 @@ public class RollingAverageService {
                     Accumulator accumulator = site.computeIfAbsent(key, ignored -> new Accumulator());
                     Double value = DashboardService.parseNumber(rs.getString(key));
                     if (value == null || !Double.isFinite(value)) continue;
-                    if (value == 0.0) accumulator.zeroCount++;
+                    // 기존 zero_count 컬럼에 0, 0.001, 0.01 미측정 건수를 함께 기록합니다.
+                    if (DashboardService.isUnmeasured(value)) accumulator.zeroCount++;
                     else {
                         accumulator.sum += value;
                         accumulator.sampleCount++;

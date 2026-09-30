@@ -1,6 +1,6 @@
 "use client";
 
-import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
@@ -9,7 +9,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, isLoading } = useAuth();
-  const publicPage = pathname === "/login" || pathname === "/accept-invite" || pathname === "/reset-password";
+  const publicPage = pathname === "/login" || pathname === "/accept-invite" || pathname === "/reset-password" || pathname === "/forgot-password";
 
   useEffect(() => {
     if (!publicPage && !isLoading && !session) {
@@ -21,7 +21,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (isLoading || !session) {
     return (
       <main className="flex min-h-[60vh] items-center justify-center">
-        <ThreeDotLoader size="xl" />
+        <CircleLoader size="xl" />
       </main>
     );
   }

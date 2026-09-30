@@ -2,15 +2,16 @@
 
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
-import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import CircleLoader from "@/components/icons/circle-loader";
 import OfficeAssetsPanel from "@/components/site/office-assets-panel";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
-import { METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
+import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { companyMetrics } from "@/lib/company-metrics";
 
 const TimeSeriesLines = dynamic(
   () =>
@@ -37,13 +38,18 @@ function metricTitle(metric: MetricDef) {
 }
 
 function toPointNumber(v: number | null | undefined): number | null {
-  return typeof v === "number" && Number.isFinite(v) ? v : null;
+  return typeof v === "number" && Number.isFinite(v) && !isUnmeasuredMetricValue(v) ? v : null;
 }
 
 export default function SiteDetailClient({ slug }: { slug: string }) {
   const sp = useSearchParams();
   const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
+  const { data, isLoading, isError, refetch, isFetching } = useSiteDetailQuery(
+    slug,
+    take,
+  );
+  const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
   const [mode, setMode] = useState<ViewMode>("grid");
   const [focused, setFocused] = useState<MetricKey>("hepres");
@@ -86,32 +92,42 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       /* 저장 실패가 차트 조작을 막지 않도록 합니다. */
     }
   }, [selected, focused, mode, preferencesReady]);
-  const visibleKeys = mode === "single" ? [focused] : selected;
+  const selection = useMemo(() => {
+    const available = selected.filter((key) => metrics.some((metric) => metric.key === key));
+    return available.length ? available : metrics.slice(0, 2).map((metric) => metric.key);
+  }, [metrics, selected]);
+  const currentFocus = selection.includes(focused) ? focused : selection[0];
+  const visibleKeys = mode === "single" ? [currentFocus] : selection;
   const visibleMetrics = visibleKeys.flatMap((key) =>
-    METRICS.filter((m) => m.key === key),
+    metrics.filter((m) => m.key === key),
   );
 
+  useEffect(() => {
+    if (!data || !metrics.length) return;
+    if (selected.length !== selection.length || selected.some((key, index) => key !== selection[index])) {
+      setSelected(selection);
+    }
+    if (focused !== currentFocus) setFocused(currentFocus);
+  }, [currentFocus, data, focused, metrics.length, selected, selection]);
+
   const toggleMetric = (key: MetricKey) => {
-    if (selected.includes(key)) {
-      const next = selected.filter((item) => item !== key);
+    if (selection.includes(key)) {
+      const next = selection.filter((item) => item !== key);
       if (!next.length) return;
       setSelected(next);
       if (focused === key) setFocused(next[0]);
-    } else if (selected.length < 4) {
-      setSelected([...selected, key]);
+    } else if (selection.length < 4) {
+      setSelected([...selection, key]);
       setFocused(key);
     }
   };
 
-  const { data, isLoading, isError, refetch, isFetching } = useSiteDetailQuery(
-    slug,
-    take,
-  );
+
 
   if (isLoading) {
     return (
       <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
-        <ThreeDotLoader size="xl" />
+        <CircleLoader size="xl" />
       </main>
     );
   }
@@ -245,7 +261,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             <span>
               항목 선택{" "}
               <span className="text-brand-primary dark:text-brand-dark-primary">
-                {selected.length}/4
+                {selection.length}/4
               </span>
             </span>
             <span className="text-text-secondary dark:text-text-dark-primary/70 text-xs font-semibold">
@@ -271,14 +287,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                   ["온도", ["actemp", "gctemp", "cctemp"]],
                   ["냉각", ["gctemp", "gcflow", "cctemp", "ccflow"]],
                 ] as [string, MetricKey[]][]
-              ).map(([label, keys]) => (
+              ).filter(([, keys]) => keys.some((key) => metrics.some((metric) => metric.key === key))).map(([label, keys]) => (
                 <button
                   key={label}
                   type="button"
                   className="min-h-11 rounded-lg border px-3 text-sm"
                   onClick={() => {
-                    setSelected(keys);
-                    setFocused(keys[0]);
+                    const visible = keys.filter((key) => metrics.some((metric) => metric.key === key));
+                    setSelected(visible);
+                    setFocused(visible[0]);
                   }}
                 >
                   {label} 묶음
@@ -286,20 +303,20 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               ))}
             </div>
             <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-sm">
-              {selected.length === 4
+              {selection.length === 4
                 ? "4개 선택 완료 · 다른 항목을 추가하려면 선택한 항목 하나를 해제하세요."
                 : "최소 1개, 최대 4개 항목을 선택하세요."}
             </p>
             <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              {METRICS.map((metric) => {
-                const active = selected.includes(metric.key);
+              {metrics.map((metric) => {
+                const active = selection.includes(metric.key);
                 return (
                   <button
                     key={metric.key}
                     type="button"
                     aria-pressed={active}
                     disabled={
-                      active ? selected.length === 1 : selected.length === 4
+                      active ? selection.length === 1 : selection.length === 4
                     }
                     onClick={() => toggleMetric(metric.key)}
                     className={`min-h-11 min-w-0 rounded-lg border px-3 py-2 text-left text-sm break-words disabled:opacity-50 ${active ? "border-brand-primary bg-brand-primary text-white" : "dark:bg-background-dark-secondary"}`}
@@ -324,8 +341,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           role="group"
           aria-label="집중해서 볼 항목"
         >
-          {selected.map((key) => {
-            const metric = METRICS.find((item) => item.key === key)!;
+          {selection.map((key) => {
+            const metric = metrics.find((item) => item.key === key)!;
             return (
               <button
                 key={key}
@@ -334,8 +351,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                   setFocused(key);
                   setMode("single");
                 }}
-                aria-pressed={mode === "single" && focused === key}
-                className={`min-h-11 max-w-full rounded-md border px-3 py-1 text-sm break-words ${mode === "single" && focused === key ? "bg-brand-primary font-bold text-white" : ""}`}
+                aria-pressed={mode === "single" && currentFocus === key}
+                className={`min-h-11 max-w-full rounded-md border px-3 py-1 text-sm break-words ${mode === "single" && currentFocus === key ? "bg-brand-primary font-bold text-white" : ""}`}
               >
                 {metricTitle(metric)}
               </button>
@@ -374,11 +391,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                 <span>
                   최신 값{" "}
                   <strong className="text-sm tabular-nums">
-                    {toPointNumber(rowsDesc[0]?.[metric.key])?.toLocaleString(
-                      "ko-KR",
-                      { maximumFractionDigits: 3 },
-                    ) ?? "—"}{" "}
-                    {metric.unit}
+                    {formatMetricMeasurement(rowsDesc[0]?.[metric.key], metric.unit)}
                   </strong>
                 </span>
                 {mode !== "single" && (
@@ -406,7 +419,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               ) : (
                 <div className="dark:bg-background-dark-card rounded-lg border bg-white p-4 text-sm">
                   <h2 className="font-bold">{metricTitle(metric)}</h2>
-                  <p className="mt-2">선택한 기간에 수집된 값이 없습니다.</p>
+                  <p className="mt-2">선택한 기간에 측정된 값이 없습니다.</p>
                 </div>
               )}
             </div>

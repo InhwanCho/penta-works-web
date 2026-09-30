@@ -19,12 +19,39 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 class MonitorServiceTest {
+    @Test
+    void manualRetryDoesNotReportSuccessWhenAnotherWorkerOwnsTheBatch() {
+        DashboardService dashboard = mock(DashboardService.class);
+        AlertService alerts = mock(AlertService.class);
+        AlertEventService alertEvents = mock(AlertEventService.class);
+        AlertRecipientService recipients = mock(AlertRecipientService.class);
+        com.pentaworks.monitoring.alert.AlertDeliveryService deliveries =
+            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class);
+        AppProperties properties = new AppProperties(null, null, new AppProperties.Monitor("secret", ""), null);
+        AlertEventService.Transition transition = new AlertEventService.Transition(
+            10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0, "이상");
+        SiteAlertSettings policy = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
+            true, 0, 0, null, null, false, List.of(), false);
+        when(alertEvents.retryTransition(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(10L)))
+            .thenReturn(transition);
+        when(alerts.alertSettings()).thenReturn(List.of(policy));
+        when(recipients.activeWebhooks(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(List.of("https://example.invalid/hook"));
+        when(deliveries.begin(10L, List.of("https://example.invalid/hook"), true)).thenReturn(null);
+        var actor = new com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser(
+            1L, 1L, "admin@example.com", "관리자", "ADMIN", "ACTIVE");
+
+        assertThrows(com.pentaworks.monitoring.common.BadRequestException.class,
+            () -> new MonitorService(dashboard, alerts, alertEvents, recipients, properties, deliveries).retry(actor, 10L));
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void evaluatesEveryEnabledMetric() {
@@ -51,13 +78,15 @@ class MonitorServiceTest {
             org.mockito.ArgumentMatchers.argThat(threshold -> "actemp".equals(threshold.key())),
             org.mockito.ArgumentMatchers.eq(31.0))).thenReturn(transition);
 
-        Map<String, Object> result = new MonitorService(dashboard, alerts, alertEvents, recipients, properties).run();
+        Map<String, Object> result = new MonitorService(dashboard, alerts, alertEvents, recipients, properties,
+            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class)).run();
 
         assertEquals(1, result.get("count"));
         List<AlertEventService.Transition> rows = (List<AlertEventService.Transition>) result.get("alerts");
         assertEquals("actemp", rows.get(0).metricKey());
         assertEquals("HIGH", rows.get(0).eventType());
-        verify(alertEvents).markDelivery(List.of(10L), "SKIPPED", null, 0);
+        verify(alertEvents).markDelivery(List.of(10L), "SKIPPED",
+            "사용 가능한 수신 채널이 없습니다. 채널 사용 여부와 제외 시간을 확인해주세요.", 0);
     }
 
     @Test
@@ -77,7 +106,8 @@ class MonitorServiceTest {
             List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)),
             30, true, true, 0, 0, null, null, false, List.of(), false)));
 
-        assertEquals(0, new MonitorService(dashboard, alerts, alertEvents, recipients, properties).run().get("count"));
+        assertEquals(0, new MonitorService(dashboard, alerts, alertEvents, recipients, properties,
+            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class)).run().get("count"));
         verifyNoInteractions(alertEvents, recipients);
     }
 

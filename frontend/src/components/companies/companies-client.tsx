@@ -1,6 +1,6 @@
 "use client";
 
-import ThreeDotLoader from "@/components/icons/three-dot-loader";
+import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -212,5 +212,5 @@ function Metric({ label, value, danger = false }: { label: string; value: number
 function Chip({ label, value }: { label: string; value: number }) { return <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-xs"><strong className="mr-1.5 text-base">{value}</strong>{label}</div>; }
 function formatBusinessNumber(value: string | null) { return value?.replace(/^(\d{3})(\d{2})(\d{5})$/, "$1-$2-$3") ?? "-"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleString("ko-KR") : "-"; }
-function Loading() { return <div className="flex min-h-48 items-center justify-center"><ThreeDotLoader size="xl" /></div>; }
+function Loading() { return <div className="flex min-h-48 items-center justify-center"><CircleLoader size="xl" /></div>; }
 function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-center"><h1 className="text-xl font-bold">플랫폼 관리자만 접근할 수 있습니다.</h1><Link href="/" className="mt-4 inline-block underline">대시보드로 이동</Link></main>; }

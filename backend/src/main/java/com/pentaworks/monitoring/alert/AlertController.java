@@ -27,12 +27,14 @@ public class AlertController {
     private final AlertEventService alertEvents;
     private final CurrentUserService currentUsers;
     private final MonitorService monitorService;
+    private final AlertDeliveryService deliveries;
     public AlertController(AlertService alertService, AlertEventService alertEvents, CurrentUserService currentUsers,
-                           MonitorService monitorService) {
+                           MonitorService monitorService, AlertDeliveryService deliveries) {
         this.alertService = alertService;
         this.alertEvents = alertEvents;
         this.currentUsers = currentUsers;
         this.monitorService = monitorService;
+        this.deliveries = deliveries;
     }
     @GetMapping("/psi-thresholds")
     public List<PsiThreshold> psiThresholds(Authentication authentication) {
@@ -102,12 +104,32 @@ public class AlertController {
         return alertEvents.acknowledge(currentUsers.require(authentication), eventId);
     }
 
+    @GetMapping("/events/{eventId}/deliveries")
+    public List<AlertDeliveryService.Result> deliveryResults(@PathVariable long eventId, Authentication authentication) {
+        var user = currentUsers.require(authentication);
+        var allowed = user.isAdmin() ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user);
+        alertEvents.requireEventAccess(eventId, allowed);
+        return deliveries.results(eventId);
+    }
+
     @PatchMapping("/events/acknowledge")
     public Map<String, Object> acknowledgeMany(@Valid @RequestBody AcknowledgeEventsRequest request,
                                                 Authentication authentication) {
         int count = alertEvents.acknowledgeMany(currentUsers.require(authentication), request.eventIds());
         return Map.of("ok", true, "count", count);
     }
+
+    @PatchMapping("/events/{eventId}/deliveries/{resultId}")
+    public Map<String, Boolean> resolveDelivery(@PathVariable long eventId, @PathVariable long resultId,
+                                               @Valid @RequestBody DeliveryConfirmation request,
+                                               Authentication authentication) {
+        var user = currentUsers.require(authentication);
+        alertEvents.requireEventAccess(eventId, currentUsers.allowedSiteIds(user));
+        deliveries.resolve(user, eventId, resultId, request.received());
+        return Map.of("ok", true);
+    }
+
+    public record DeliveryConfirmation(@NotNull Boolean received) {}
 
     @PostMapping("/events/{eventId}/retry")
     public Map<String, Object> retry(@PathVariable long eventId, Authentication authentication) {

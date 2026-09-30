@@ -1,6 +1,7 @@
 "use client";
 
 import { apiFetch } from "@/lib/api";
+import CircleLoader from "@/components/icons/circle-loader";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -30,9 +31,9 @@ export default function ResetPasswordClient() {
   }
 
   if (!token || info.isError) return <Message text="사용할 수 없는 재설정 링크입니다." />;
-  if (info.isLoading) return <Message text="재설정 링크를 확인하고 있습니다…" />;
+  if (info.isLoading) return <main className="flex min-h-[60vh] items-center justify-center lg:min-h-[calc(100dvh-3.5rem)]"><CircleLoader size="xl" /></main>;
   return (
-    <main className="mx-auto max-w-md px-4 py-10"><form onSubmit={submit} className="rounded-xl border bg-white p-6 shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card">
+    <main className="mx-auto flex w-full items-center justify-center px-4 py-10 lg:min-h-[calc(100dvh-3.5rem)] lg:py-8"><form onSubmit={submit} className="w-full max-w-md rounded-xl border bg-white p-6 shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card">
       <h1 className="text-xl font-bold">비밀번호 재설정</h1><p className="text-text-secondary mt-2 text-sm">{info.data?.name} · {info.data?.email}</p>
       <p className="text-text-secondary mt-1 text-xs">12자 이상이며 영문, 숫자, 특수문자를 포함하세요.</p>
       <input className="mt-5 w-full rounded-md border px-3 py-2.5 dark:border-background-dark-secondary dark:bg-background-dark-primary" type="password" required minLength={12} autoComplete="new-password" placeholder="새 비밀번호" value={password} onChange={(event) => setPassword(event.target.value)} />

@@ -1,7 +1,7 @@
 "use client";
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
-import { METRICS, isMetricOutOfRange } from "@/lib/metrics";
+import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -70,9 +70,11 @@ function metricSubLabel(label: string | null, unit: string | null) {
 export default function DashboardExcelView({
   rows,
   ctrl,
+  metrics,
 }: {
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
+  metrics: MetricDef[];
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{
@@ -146,7 +148,7 @@ export default function DashboardExcelView({
           data-dashboard-scroll
           className="min-h-0 flex-1 overflow-auto overscroll-x-contain"
         >
-          <table className="w-full min-w-[1180px] border-separate border-spacing-0 text-sm sm:min-w-[1290px]">
+          <table className="w-full border-separate border-spacing-0 text-sm" style={{ minWidth: 230 + metrics.length * 96 }}>
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
             </caption>
@@ -165,7 +167,7 @@ export default function DashboardExcelView({
                 >
                   <span className={COL_NAME_INNER}>병원명</span>
                 </th>
-                {METRICS.map((m) => {
+                {metrics.map((m) => {
                   const sub = metricSubLabel(m.label, m.unit);
                   return (
                     <th
@@ -264,7 +266,7 @@ export default function DashboardExcelView({
                       {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[88px] items-center rounded-full px-1.5 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
                     </td>
 
-                    {METRICS.map((m) => {
+                    {metrics.map((m) => {
                       const value = row.metrics?.[m.key] ?? null;
                       const alert = isMetricOutOfRange(value, m.bound, range);
 
@@ -273,7 +275,7 @@ export default function DashboardExcelView({
                           key={m.key}
                           onClick={() => selectCell(row, m.code)}
                           tabIndex={0}
-                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${fmtNum(value)}`}
+                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${formatMetricMeasurement(value, null, row.lastAt != null)}`}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
@@ -291,7 +293,7 @@ export default function DashboardExcelView({
                               : "text-text-major dark:text-text-dark-primary/90",
                           ].join(" ")}
                         >
-                          {fmtNum(value)}
+                          {formatMetricMeasurement(value, null, row.lastAt != null)}
                         </td>
                       );
                     })}

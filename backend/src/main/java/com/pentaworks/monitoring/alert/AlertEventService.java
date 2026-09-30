@@ -6,6 +6,7 @@ import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
 import com.pentaworks.monitoring.common.NotFoundException;
 import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.common.ForbiddenException;
+import com.pentaworks.monitoring.dashboard.DashboardService;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -37,9 +38,12 @@ public class AlertEventService {
         args.add(limit);
         return jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.severity,e.measured_value,
-                   r.min_value,COALESCE(r.max_value,r.no_data_minutes) AS max_value,
+                   e.threshold_min AS min_value,e.threshold_max AS max_value,
                    e.message,e.delivery_status,e.occurred_at,
-                   e.acknowledged_at,e.recovered_at
+                   e.acknowledged_at,e.recovered_at,e.last_notified_at,e.notification_count,
+                   CASE WHEN e.delivery_batch_id IS NULL AND e.delivery_status='FAILED'
+                        THEN '기존 전송에 실패했습니다. 수신 채널 설정을 확인해주세요.'
+                        ELSE e.delivery_error END AS safe_delivery_error
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
@@ -50,13 +54,21 @@ public class AlertEventService {
                 rs.getString("event_type"), rs.getString("severity"), number(rs.getObject("measured_value")),
                 number(rs.getObject("min_value")), number(rs.getObject("max_value")), rs.getString("message"),
                 rs.getString("delivery_status"), instant(rs.getTimestamp("occurred_at")),
-                instant(rs.getTimestamp("acknowledged_at")), instant(rs.getTimestamp("recovered_at"))),
+                instant(rs.getTimestamp("acknowledged_at")), instant(rs.getTimestamp("recovered_at")),
+                rs.getString("safe_delivery_error"), instant(rs.getTimestamp("last_notified_at")), rs.getInt("notification_count")),
             args.toArray());
+    }
+
+    public void requireEventAccess(long eventId, Set<String> allowedSiteIds) {
+        String siteId = jdbcTemplate.query("SELECT site_id FROM alert_event WHERE id=?",
+            rs -> rs.next() ? rs.getString(1) : null, eventId);
+        if (siteId == null || !allowedSiteIds.contains(siteId)) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
     }
 
     @Transactional
     public Transition evaluate(SiteAlertSettings site, AlertThreshold threshold, Double value) {
-        if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active()) return null;
+        if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active() ||
+            value == null || DashboardService.isUnmeasured(value)) return null;
         Double min = threshold.effectiveMin();
         Double max = threshold.effectiveMax();
         jdbcTemplate.update("""
@@ -85,8 +97,7 @@ public class AlertEventService {
         if (open != null && eventType.equals(open.eventType())) {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
-                (value == 0.0 ? "0으로 수집 오류가 의심됩니다." :
-                    "LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+                ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
             return new Transition(open.id(), site.siteid(), site.name(), threshold.key(), threshold.label(),
                 threshold.unit(), eventType, value, min, max, message);
         }
@@ -98,8 +109,7 @@ public class AlertEventService {
         if (!sustained(ruleId, eventType, site.triggerAfterMinutes(), now)) return null;
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
-            (value == 0.0 ? "0으로 수집 오류가 의심됩니다." :
-                "LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+            ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
         long eventId = insertEvent(ruleId, site.siteid(), eventType, value, message, now, null);
         return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
             threshold.unit(), eventType, value, min, max, message);
@@ -159,9 +169,11 @@ public class AlertEventService {
             jdbcTemplate.update("""
                 UPDATE alert_event
                    SET delivery_status=?,delivery_error=?,recipient_snapshot=?,
-                       last_notified_at=CURRENT_TIMESTAMP(6),notification_count=notification_count+1
-                 WHERE id=?
-                """, status, error, snapshot, eventId);
+                       delivery_batch_id=NULL,delivery_started_at=NULL,
+                       last_notified_at=CURRENT_TIMESTAMP(6),
+                       notification_count=notification_count+CASE WHEN ?='SKIPPED' THEN 0 ELSE 1 END
+                 WHERE id=? AND delivery_status<>'SENDING'
+                """, status, error, snapshot, status, eventId);
         }
     }
 
@@ -197,7 +209,7 @@ public class AlertEventService {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         RetryEvent event = jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.measured_value,
-                   r.min_value,COALESCE(r.max_value,r.no_data_minutes) AS max_value,e.message,e.delivery_status
+                   e.threshold_min AS min_value,e.threshold_max AS max_value,e.message,e.delivery_status
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
@@ -210,7 +222,8 @@ public class AlertEventService {
         if (event == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
         currentUsers.requireSiteAccess(actor, event.siteId());
         currentUsers.requireVisibleSiteAccess(actor, event.siteId());
-        if (!"FAILED".equals(event.deliveryStatus())) throw new BadRequestException("전송에 실패한 알림만 재전송할 수 있습니다.");
+        if (!List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.deliveryStatus()))
+            throw new BadRequestException("미발송 또는 전송에 실패한 알림만 재전송할 수 있습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
             event.metricKey(), null, event.eventType(), event.value(), event.min(), event.max(), event.message());
     }
@@ -304,16 +317,17 @@ public class AlertEventService {
         jdbcTemplate.update("""
             INSERT INTO alert_event
                 (rule_id,site_id,event_type,severity,measured_value,message,recipient_snapshot,
-                 delivery_status,occurred_at,recovered_at,created_at)
-            VALUES (?,? ,?,'WARNING',?,?,'{}','PENDING',?,?,CURRENT_TIMESTAMP(6))
+                 delivery_status,occurred_at,recovered_at,created_at,threshold_min,threshold_max)
+            SELECT ?,? ,?,'WARNING',?,?,'{}','PENDING',?,?,CURRENT_TIMESTAMP(6),
+                   min_value,COALESCE(max_value,no_data_minutes) FROM alert_rule WHERE id=?
             """, ruleId, siteId, eventType, value, message, Timestamp.from(occurredAt),
-            recoveredAt == null ? null : Timestamp.from(recoveredAt));
+            recoveredAt == null ? null : Timestamp.from(recoveredAt), ruleId);
         return jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
     }
 
     static String direction(Double value, Double min, Double max) {
         if (value == null) return null;
-        if (value == 0.0) return "low";
+        if (DashboardService.isUnmeasured(value)) return null;
         if (min != null && value < min) return "low";
         if (max != null && value > max) return "high";
         return null;

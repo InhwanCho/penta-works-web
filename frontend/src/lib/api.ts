@@ -5,7 +5,6 @@ import {
   writeStoredSession,
   type StoredSession,
 } from "@/lib/auth";
-import { clearDashboardSnapshot } from "@/lib/dashboard-snapshot";
 import type { MetricKey } from "@/lib/metrics";
 
 const API_BASE_URL = (
@@ -81,7 +80,10 @@ export type AlertEventSummary = {
   min: number | null;
   max: number | null;
   message: string;
-  deliveryStatus: "PENDING" | "SENT" | "FAILED" | "SKIPPED";
+  deliveryStatus: "PENDING" | "SENDING" | "SENT" | "PARTIAL" | "FAILED" | "SKIPPED" | "UNKNOWN";
+  deliveryError: string | null;
+  lastNotifiedAt: string | null;
+  notificationCount: number;
   occurredAt: string;
   acknowledgedAt: string | null;
   recoveredAt: string | null;
@@ -143,7 +145,6 @@ export async function refreshAccessToken(): Promise<StoredSession> {
       if ((error.status === 401 || error.status === 403) &&
           readStoredSession()?.accessToken === previousToken) {
         clearStoredSession();
-        clearDashboardSnapshot();
         window.dispatchEvent(new Event("auth:expired"));
       }
       throw error;

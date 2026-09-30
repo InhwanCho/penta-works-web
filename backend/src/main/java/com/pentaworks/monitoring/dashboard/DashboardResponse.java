@@ -4,7 +4,14 @@ import java.util.List;
 import java.util.Map;
 
 public record DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows,
-                                Map<String, CtrlRange> ctrl, CtrlRange ctrlDefault) {
+                                Map<String, CtrlRange> ctrl, CtrlRange ctrlDefault,
+                                List<com.pentaworks.monitoring.company.CompanyMetricService.Metric> metricConfig) {
+    public DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows, Map<String, CtrlRange> ctrl, CtrlRange ctrlDefault) {
+        this(meta, stats, rows, ctrl, ctrlDefault, List.of());
+    }
+    public DashboardResponse withMetrics(List<com.pentaworks.monitoring.company.CompanyMetricService.Metric> metrics) {
+        return new DashboardResponse(meta, stats, rows, ctrl, ctrlDefault, metrics);
+    }
     public record Meta(long nowMs, long since1hMs, long since24hMs) {}
     public record Stats(int totalSites, int active1h, int stale24h, int total24hRecords,
                         int normalSites, int warningSites, int noDataSites, int openAlerts) {}
