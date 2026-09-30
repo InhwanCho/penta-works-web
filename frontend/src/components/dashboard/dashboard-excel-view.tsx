@@ -292,7 +292,7 @@ export default function DashboardExcelView({
                               : "text-text-major dark:text-text-dark-primary/90",
                           ].join(" ")}
                         >
-                          {formatMetricMeasurement(value, null, row.lastAt != null)}
+                          {formatMetricMeasurement(value, null, row.lastAt != null, "-")}
                         </td>
                       );
                     })}
@@ -360,7 +360,7 @@ export default function DashboardExcelView({
             빨간 값
           </span>
           은 허용 범위를 벗어난 값입니다.
-          <span className="sm:hidden"> ×는 측정 안 됨 · 좌우로 밀어 확인하세요.</span>
+          <span className="sm:hidden"> - 표시는 측정 안 됨 · 좌우로 밀어 확인하세요.</span>
         </p>
       </div>
 

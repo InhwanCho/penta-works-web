@@ -141,7 +141,8 @@ export default function DashboardClient() {
 
   const { meta, ctrl } = data;
   const metrics = companyMetrics(data.metricConfig);
-  const helium = metrics.filter((metric) => metric.key === "hepres" || metric.key === "heleve");
+  const helium = ["hepres", "heleve"].flatMap((key) => metrics.filter((metric) => metric.key === key));
+  const dashboardMetrics = [...helium, ...metrics.filter((metric) => metric.key !== "hepres" && metric.key !== "heleve")];
   const summaryMetrics = helium.length ? helium : metrics.slice(0, 2);
 
   return (
@@ -202,7 +203,7 @@ export default function DashboardClient() {
           <DashboardExcelView
             rows={sortedRows}
             ctrl={ctrl}
-            metrics={metrics}
+            metrics={dashboardMetrics}
           />
         ) : (
           <>
@@ -238,8 +239,8 @@ export default function DashboardClient() {
                     <thead className="bg-background-primary/60 text-text-secondary dark:border-background-dark-secondary dark:bg-background-dark-secondary/40 dark:text-text-dark-primary/70 border-b">
                       <tr>
                         <Th>병원명</Th>
-                        <Th>최신 시각</Th>
                         {summaryMetrics.map((metric) => <Th key={metric.key} className="text-right">{metric.label ?? metric.code}</Th>)}
+                        <Th>최신 시각</Th>
                         <Th className="text-right" />
                       </tr>
                     </thead>
@@ -260,6 +261,10 @@ export default function DashboardClient() {
                               {r.alertIssues[0] && <p className="text-text-secondary mt-1 max-w-72 truncate text-[11px]" title={r.alertIssues.map((issue) => issue.message).join("\n")}>{r.alertIssues[0].message}</p>}
                             </Td>
 
+                            {summaryMetrics.map((metric) => <Td key={metric.key} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
+                              {formatMetricMeasurement(r.metrics[metric.key], metric.unit, r.lastAt != null, "-")}
+                            </Td>)}
+
                             <Td className="text-text-secondary dark:text-text-dark-primary/70 whitespace-nowrap tabular-nums">
                               <div className="leading-tight">
                                 <div className="text-xs font-medium">
@@ -270,10 +275,6 @@ export default function DashboardClient() {
                                 </div>
                               </div>
                             </Td>
-
-                            {summaryMetrics.map((metric) => <Td key={metric.key} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
-                              {formatMetricMeasurement(r.metrics[metric.key], metric.unit, r.lastAt != null)}
-                            </Td>)}
 
                             <Td className="text-right">
                               <Link
@@ -409,6 +410,11 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
 
       {/* Metrics */}
       <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50/75 p-2.5 dark:bg-white/3">
+        {metrics.map((metric) => <MetricCol key={metric.key} label={metric.label ?? metric.code}
+          value={<span className={`text-lg font-semibold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
+            {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null, "-")}
+          </span>}
+        />)}
         <MetricCol
           label="최신 시각"
           value={
@@ -420,11 +426,6 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
             </span>
           }
         />
-        {metrics.map((metric) => <MetricCol key={metric.key} label={metric.label ?? metric.code}
-          value={<span className={`text-lg font-semibold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
-            {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null)}
-          </span>}
-        />)}
       </div>
     </Link>
   );

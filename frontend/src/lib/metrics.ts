@@ -148,10 +148,10 @@ export function formatMetricMeasurement(
   value: number | null | undefined,
   unit?: string | null,
   hasSample = true,
+  unmeasuredDisplay = "×",
 ): string {
   if (!hasSample) return "-";
-  // 실제 샘플이 없는 "-"와 구분해, 측정 실패값은 좁은 모바일 표에서도 짧게 표시합니다.
-  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return "×";
+  if (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) return unmeasuredDisplay;
   const number = value.toLocaleString("ko-KR", { maximumFractionDigits: 3 });
   return unit ? `${number} ${unit}` : number;
 }
