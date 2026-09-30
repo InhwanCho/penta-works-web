@@ -121,6 +121,10 @@
     );
   }
 
+  html.dark {
+    --color-text-secondary: #b9ccdb;
+  }
+
   /* 기본 border/outline 톤(다크에서 과한 대비 방지) */
   * {
     @apply border-border dark:border-background-dark-secondary;
