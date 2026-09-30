@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import { useAuth } from "@/components/provider/auth-provider";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect } from "react";
@@ -19,6 +20,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
 
   if (publicPage) return children;
   if (isLoading || !session) {
+    if (pathname === "/") return <DashboardLoading />;
     return (
       <main className="flex min-h-[60vh] items-center justify-center">
         <CircleLoader size="xl" />

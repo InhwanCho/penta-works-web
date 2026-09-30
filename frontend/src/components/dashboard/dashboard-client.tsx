@@ -4,7 +4,7 @@ import PullToRefresh from "@/components/common/pull-to-refresh";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
-import CircleLoader from "@/components/icons/circle-loader";
+import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import {
   type CtrlRange,
   type SiteRow,
@@ -14,7 +14,7 @@ import Link from "next/link";
 import type React from "react";
 import { companyMetrics } from "@/lib/company-metrics";
 import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 
 /** 기본 뷰 / 관리자 뷰(엑셀형 전체 지표) */
 type ViewMode = "basic" | "grid";
@@ -28,6 +28,7 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
 };
 
 const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
+const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v1";
 
 function isViewMode(v: unknown): v is ViewMode {
   return v === "basic" || v === "grid";
@@ -77,21 +78,29 @@ function fmtYmdHms(ms: number) {
 }
 
 export default function DashboardClient() {
-  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
+  const { data, isLoading, isFetching, isError, error, refetch } = useDashboardQuery();
 
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem(VIEW_MODE_STORAGE_KEY);
-    if (isViewMode(saved)) setViewMode(saved);
+    const mobile = window.matchMedia("(max-width: 639px)").matches;
+    setViewMode(mobile ? "basic" : "grid");
+    try {
+      const saved = localStorage.getItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY);
+      if (isViewMode(saved)) setViewMode(saved);
+    } catch { /* Use the device default if storage is unavailable. */ }
   }, []);
 
   const changeViewMode = useCallback((next: ViewMode) => {
     setViewMode(next);
-    localStorage.setItem(VIEW_MODE_STORAGE_KEY, next);
+    try {
+      const mobile = window.matchMedia("(max-width: 639px)").matches;
+      localStorage.setItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY, next);
+    } catch { /* The selected view still works without storage. */ }
   }, []);
 
   const changeStatusFilter = useCallback((next: StatusFilter) => {
@@ -105,12 +114,13 @@ export default function DashboardClient() {
 
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
-    return currentRows.filter((row) => statusFilter === "all" ||
+    const query = search.trim().toLocaleLowerCase();
+    return currentRows.filter((row) => (!query || `${row.name ?? ""} ${row.siteDb}`.toLocaleLowerCase().includes(query)) && (statusFilter === "all" ||
       (statusFilter === "issues" && row.alertStatus !== "NORMAL") ||
       (statusFilter === "warning" && row.alertStatus === "WARNING") ||
       (statusFilter === "no-data" && row.alertStatus === "NO_DATA") ||
-      (statusFilter === "normal" && row.alertStatus === "NORMAL"));
-  }, [data?.rows, statusFilter]);
+      (statusFilter === "normal" && row.alertStatus === "NORMAL")));
+  }, [data?.rows, statusFilter, search]);
 
   const sortedRows = useMemo(
     () => filteredRows.slice().sort((a, b) => {
@@ -121,11 +131,7 @@ export default function DashboardClient() {
   );
 
   if (isLoading) {
-    return (
-      <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
-        <CircleLoader size="xl" />
-      </main>
-    );
+    return <DashboardLoading />;
   }
 
   if (!data) {
@@ -134,6 +140,7 @@ export default function DashboardClient() {
         <div className="rounded-lg border border-red-200 bg-red-50/60 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
           데이터를 불러오지 못했습니다.{" "}
           {String((error as Error)?.message ?? "알 수 없는 오류")}
+          <button type="button" onClick={handleRefresh} className="mt-3 block min-h-11 rounded-xl bg-white px-4 font-bold text-sky-800">다시 불러오기</button>
         </div>
       </main>
     );
@@ -151,7 +158,7 @@ export default function DashboardClient() {
       topOffset={56}
     >
       <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-        <DashboardScrollTo offset={80} />
+        <Suspense fallback={null}><DashboardScrollTo offset={80} /></Suspense>
 
         <header className="mb-5 hidden flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-5 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
@@ -189,6 +196,10 @@ export default function DashboardClient() {
             필터 · {STATUS_FILTER_LABEL[statusFilter]}
           </button>
         </div>
+        <div className="mb-3 flex gap-2 sm:hidden">
+          <input type="search" aria-label="현재 대시보드 병원 검색" placeholder="병원명 검색" value={search} onChange={(event) => setSearch(event.target.value)} className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 text-base outline-none focus:border-sky-500 dark:border-white/10 dark:bg-background-dark-card" />
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 shrink-0 rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold disabled:opacity-50 dark:border-white/10 dark:bg-background-dark-card">{isFetching ? "갱신 중" : "새로고침"}</button>
+        </div>
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
         <section id="dashboard-status-filters" className={`${showMobileFilters ? "grid" : "hidden"} mb-2 grid-cols-2 gap-2 sm:mb-5 sm:grid sm:grid-cols-5`} aria-label="상태별 병원 필터">
@@ -212,7 +223,7 @@ export default function DashboardClient() {
               {sortedRows.length === 0 ? (
                 <EmptyState />
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-2 px-1">
                   {sortedRows.map((r) => {
                     return (
                       <SiteCard
@@ -231,7 +242,7 @@ export default function DashboardClient() {
             <section className="hidden overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(22,58,82,0.06)] md:block dark:border-white/8 dark:bg-background-dark-card">
               {sortedRows.length === 0 ? (
                 <div className="py-12">
-                  <EmptyState />
+        <EmptyState />
                 </div>
               ) : (
                 <div className="overflow-x-auto">
@@ -319,12 +330,12 @@ function ViewModeTabs({
       <ViewModeTab
         active={value === "grid"}
         onClick={() => onChange("grid")}
-        label="관리자 뷰"
+        label="전체 표"
       />
       <ViewModeTab
         active={value === "basic"}
         onClick={() => onChange("basic")}
-        label="간단 보기"
+        label="요약 보기"
       />
     </div>
   );
@@ -381,7 +392,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
       href={`/sites/${row.siteSlug}`}
       id={`site-m-${row.siteSlug}`}
       className={[
-        "group block scroll-mt-[120px] rounded-2xl border bg-white p-4 shadow-[0_6px_24px_rgba(22,58,82,0.06)] transition-all active:scale-[0.997]",
+        "group block scroll-mt-[120px] rounded-2xl border bg-white p-3 shadow-sm transition-colors active:bg-sky-50 dark:active:bg-sky-950/20",
         "hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:hover:border-sky-900/60",
         "dark:border-background-dark-secondary dark:bg-background-dark-card",
         anyAlert ? "border-red-300/80 dark:border-red-900/50" : "border-border",
@@ -391,7 +402,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
       <div className="flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center">
           <span
-            className="text-text-major dark:text-text-dark-primary truncate text-[15px] font-semibold"
+            className="text-text-major dark:text-text-dark-primary line-clamp-2 text-base font-bold"
             title={row.name ?? ""}
           >
             {row.name ?? "-"}
@@ -403,30 +414,16 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
         </div>
       </div>
 
-      {row.alertIssues.length > 0 && <div className="mt-3 rounded-xl bg-rose-50 px-3 py-2 dark:bg-rose-950/25"><p className="line-clamp-2 text-xs font-semibold text-rose-700 dark:text-rose-300">{row.alertIssues.slice(0, 2).map((issue) => issue.message).join(" · ")}</p>{row.alertIssues.length > 2 && <p className="mt-1 text-[10px] font-bold text-rose-500">외 {row.alertIssues.length - 2}건</p>}</div>}
-
-      {/* Divider */}
-      <div className="bg-border/50 dark:bg-background-dark-secondary/60 my-3 h-px" />
-
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-2 rounded-xl bg-slate-50/75 p-2.5 dark:bg-white/3">
+      <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50/75 p-3 dark:bg-white/3">
         {metrics.map((metric) => <MetricCol key={metric.key} label={metric.label ?? metric.code}
-          value={<span className={`text-lg font-semibold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
+          value={<span className={`text-2xl font-bold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
             {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null, "-")}
           </span>}
         />)}
-        <MetricCol
-          label="최신 시각"
-          value={
-            <span className="text-text-major dark:text-text-dark-primary text-sm leading-tight font-semibold tabular-nums">
-              <span className="block">{fmtYmd(d)}</span>
-              <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-xs font-medium">
-                {fmtHms(d)}
-              </span>
-            </span>
-          }
-        />
       </div>
+      {row.alertIssues.length > 0 && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-rose-700 dark:text-rose-300">{row.alertIssues[0].message}{row.alertIssues.length > 1 ? ` · 외 ${row.alertIssues.length - 1}건` : ""}</p>}
+      <div className="text-text-secondary mt-2 flex items-center justify-between gap-2 text-[11px] dark:text-text-dark-primary/70"><span className="tabular-nums">{fmtYmd(d)} {fmtHms(d)}</span><span className="font-semibold">상세 보기 →</span></div>
     </Link>
   );
 }

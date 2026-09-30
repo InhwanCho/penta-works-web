@@ -4,6 +4,7 @@ import { AuthProvider } from "@/components/provider/auth-provider";
 import { ModalProvider } from "@/components/provider/modal-provider";
 import { QueryProviders } from "@/components/provider/query-provider";
 import { ThemeProvider } from "@/components/provider/theme-provider";
+import PwaProvider from "@/components/provider/pwa-provider";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -93,6 +94,7 @@ export default function RootLayout({
         ].join(" ")}
       >
         <QueryProviders>
+          <PwaProvider />
           <ThemeProvider>
             <AuthProvider>
               <ModalProvider>

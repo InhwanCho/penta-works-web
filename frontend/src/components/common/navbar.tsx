@@ -1,6 +1,6 @@
 "use client";
 
-import SiteSearchModal from "@/components/common/site-search-modal";
+import dynamic from "next/dynamic";
 import SearchIcon from "@/components/icons/search-icon";
 import { useModal } from "@/components/provider/modal-provider";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -11,12 +11,14 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const ICON_BUTTON =
-  "inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-full text-white/85 transition hover:bg-white/12 hover:text-white focus-visible:bg-white/12";
+  "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-white/85 transition hover:bg-white/12 hover:text-white focus-visible:bg-white/12";
+
+const SiteSearchModal = dynamic(() => import("@/components/common/site-search-modal"), { ssr: false });
 
 export default function Navbar() {
   const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
   const { session, isAdmin, logout } = useAuth();
-  const { open: openSearchModal } = useModal("SearchModal");
+  const { open: openSearchModal, isOpen: searchOpen } = useModal("SearchModal");
   const router = useRouter();
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export default function Navbar() {
           <Link href="/" className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
             <Image src="/favicon/android-chrome-192x192.png" alt="MrEyes" width={32} height={32} priority
               className="h-8 w-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:-rotate-3 group-hover:scale-105" />
-            <span className="hidden text-[15px] font-bold tracking-[-0.02em] sm:inline">MrEyes</span>
+            <span className="text-[15px] font-bold tracking-[-0.02em]">MrEyes</span>
           </Link>
 
           <nav className="flex items-center gap-1.5">
@@ -60,7 +62,7 @@ export default function Navbar() {
 
             {session ? (
               <div className="relative" ref={menuRef}>
-                <button type="button" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}
+                <button type="button" aria-label="계정 및 메뉴" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}
                   className="flex h-10 cursor-pointer items-center gap-2 rounded-full border border-white/15 bg-white/10 py-1 pr-2 pl-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:pr-3">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
                     {initial}
@@ -111,7 +113,7 @@ export default function Navbar() {
           </nav>
         </div>
       </header>
-      <SiteSearchModal />
+      {searchOpen && <SiteSearchModal />}
     </>
   );
 }
