@@ -122,7 +122,7 @@ export default function SiteSearchModal() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="병원명으로 검색..."
-              className="w-full border-0 bg-transparent px-11 py-4 text-sm outline-none placeholder:text-text-secondary/70 dark:placeholder:text-text-dark-primary/40 dark:text-text-dark-primary"
+              className="w-full border-0 bg-transparent py-4 pr-16 pl-11 text-sm outline-none placeholder:text-text-secondary/70 dark:placeholder:text-text-dark-primary/40 dark:text-text-dark-primary"
               inputMode="search"
               autoComplete="off"
             />
@@ -130,9 +130,9 @@ export default function SiteSearchModal() {
               type="button"
               onClick={() => closeSearchModal()}
               aria-label="닫기"
-              className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute right-3 inline-flex h-7 items-center justify-center rounded border border-border px-1.5 text-[11px] font-semibold dark:border-background-dark-secondary"
+              className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute right-2 inline-flex h-11 min-w-11 items-center justify-center rounded-lg border border-border px-2 text-xs font-semibold sm:right-3 sm:h-7 sm:min-w-0 sm:rounded sm:px-1.5 sm:text-[11px] dark:border-background-dark-secondary"
             >
-              ESC
+              <span className="sm:hidden">닫기</span><span className="hidden sm:inline">ESC</span>
             </button>
           </div>
         </form>
@@ -181,7 +181,7 @@ export default function SiteSearchModal() {
           )}
         </div>
 
-        <div className="border-t border-border/60 bg-background-primary/50 px-4 py-2.5 text-[11px] text-text-secondary dark:border-background-dark-secondary/60 dark:bg-background-dark-secondary/30 dark:text-text-dark-primary/60">
+        <div className="hidden border-t border-border/60 bg-background-primary/50 px-4 py-2.5 text-[11px] text-text-secondary sm:block dark:border-background-dark-secondary/60 dark:bg-background-dark-secondary/30 dark:text-text-dark-primary/60">
           <span className="inline-flex items-center gap-1.5">
             <kbd className="rounded border border-border bg-white px-1.5 py-0.5 text-[10px] font-semibold dark:border-background-dark-secondary dark:bg-background-dark-card">
               ↵

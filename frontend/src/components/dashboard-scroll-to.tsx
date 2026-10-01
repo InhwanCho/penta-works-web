@@ -5,22 +5,26 @@ import { useEffect } from "react";
 
 export default function DashboardScrollTo({
   offset = 120,
+  onTargetRequested,
 }: {
   offset?: number;
+  onTargetRequested?: () => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
 
   useEffect(() => {
-    const slug = sp.get("scrollTo");
-    if (!slug) return;
+    const requestedSlug = sp.get("scrollTo")?.trim();
+    if (!requestedSlug) return;
+    onTargetRequested?.();
+    const slug = /^\d+$/.test(requestedSlug) ? String(Number(requestedSlug)) : requestedSlug;
 
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;
     const id = isDesktop ? `site-d-${slug}` : `site-m-${slug}`;
 
     let cancelled = false;
-    let tries = 0;
+    const deadline = performance.now() + 5000;
 
     const tick = () => {
       if (cancelled) return;
@@ -28,14 +32,17 @@ export default function DashboardScrollTo({
       const gridRow = document.getElementById(`site-grid-${slug}`);
       const el = gridRow ?? document.getElementById(id);
       if (!el) {
-        tries += 1;
-        if (tries < 40) requestAnimationFrame(tick); // 약 40프레임 재시도
+        if (performance.now() < deadline) requestAnimationFrame(tick);
         return;
       }
 
       if (gridRow) {
         const scroller = gridRow.closest<HTMLElement>("[data-dashboard-scroll]");
         if (scroller) {
+          window.scrollTo({
+            top: Math.max(0, scroller.getBoundingClientRect().top + window.scrollY - offset),
+            behavior: "smooth",
+          });
           const headHeight = scroller.querySelector("thead")?.getBoundingClientRect().height ?? 60;
           scroller.scrollTo({
             top: scroller.scrollTop + gridRow.getBoundingClientRect().top - scroller.getBoundingClientRect().top - headHeight,
@@ -61,7 +68,7 @@ export default function DashboardScrollTo({
     return () => {
       cancelled = true;
     };
-  }, [sp, pathname, router, offset]);
+  }, [sp, pathname, router, offset, onTargetRequested]);
 
   return null;
 }

@@ -22,7 +22,7 @@ class BaroKakaoServiceTest {
 
     @Test
     void requestUsesApprovedTemplateAndCustomSmsFallbackOnly() {
-        BaroKakaoService service = new BaroKakaoService(true, "test-key", "1234567890", "sender", "01012345678");
+        BaroKakaoService service = new BaroKakaoService(true, "test-key", "1234567890", "sender", "01012345678", false);
         Transition alert = new Transition(1, "001", "테스트 병원", "hepres", "He Pressure",
             "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
         String request = service.request("01099998888", alert,
@@ -32,6 +32,19 @@ class BaroKakaoServiceTest {
         assertTrue(request.contains("<SmsMessage>[MRI] 테스트 병원 He Pressure 3.25psi</SmsMessage>"));
         assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림</TemplateName>"));
         assertTrue(request.contains("<ReceiverNum>01099998888</ReceiverNum>"));
-        assertFalse(new BaroKakaoService(false, "", "", "", "").ready());
+        assertTrue(request.contains("감지 시각: 2026-09-30 12:00 (수)"));
+        assertTrue(request.contains("<Url1>https://app.pentaworks.net/</Url1>"));
+        assertFalse(new BaroKakaoService(false, "", "", "", "", false).ready());
+    }
+
+    @Test
+    void approvedDeepLinkUsesSiteIdForBothKakaoButtonUrls() {
+        BaroKakaoService service = new BaroKakaoService(true, "test-key", "1234567890", "sender", "01012345678", true);
+        Transition alert = new Transition(1, "006", "테스트 병원", "hepres", "He Pressure",
+            "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
+        String request = service.request("01099998888", alert,
+            ZonedDateTime.of(2026, 9, 30, 12, 0, 0, 0, ZoneId.of("Asia/Seoul")));
+        assertTrue(request.contains("<Url1>https://app.pentaworks.net/?scrollTo=006</Url1>"));
+        assertTrue(request.contains("<Url2>https://app.pentaworks.net/?scrollTo=006</Url2>"));
     }
 }

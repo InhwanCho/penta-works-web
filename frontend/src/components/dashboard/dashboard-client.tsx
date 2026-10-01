@@ -106,6 +106,8 @@ export default function DashboardClient() {
     setShowMobileFilters(false);
   }, []);
 
+  const resetStatusFilter = useCallback(() => changeStatusFilter("all"), [changeStatusFilter]);
+
   const handleRefresh = useCallback(async () => {
     await refetch();
   }, [refetch]);
@@ -148,6 +150,15 @@ export default function DashboardClient() {
   const helium = ["hepres", "heleve"].flatMap((key) => metrics.filter((metric) => metric.key === key));
   const dashboardMetrics = [...helium, ...metrics.filter((metric) => metric.key !== "hepres" && metric.key !== "heleve")];
   const summaryMetrics = helium.length ? helium : metrics.slice(0, 2);
+  const statusFilterButtons = (
+    <>
+      <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
+      <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
+      <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
+      <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
+      <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
+    </>
+  );
 
   return (
     <PullToRefresh
@@ -155,7 +166,7 @@ export default function DashboardClient() {
       topOffset={56}
     >
       <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-        <Suspense fallback={null}><DashboardScrollTo offset={80} /></Suspense>
+        <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
         <header className="mb-5 hidden flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-5 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
@@ -181,29 +192,13 @@ export default function DashboardClient() {
           />
         </header>
 
-        <div className="mb-2 flex items-center justify-between gap-2 sm:hidden">
-          <ViewModeTabs value={viewMode} onChange={changeViewMode} />
-          <button
-            type="button"
-            aria-controls="dashboard-status-filters"
-            aria-expanded={showMobileFilters}
-            onClick={() => setShowMobileFilters((open) => !open)}
-            className="min-h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-text-major dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary"
-          >
-            필터 · {STATUS_FILTER_LABEL[statusFilter]}
-          </button>
-        </div>
         <div className="mb-3 flex gap-2 sm:hidden">
           <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold disabled:opacity-50 dark:border-white/10 dark:bg-background-dark-card">{isFetching ? "갱신 중" : "새로고침"}</button>
         </div>
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
-        <section id="dashboard-status-filters" className={`${showMobileFilters ? "grid" : "hidden"} mb-2 grid-cols-2 gap-2 sm:mb-5 sm:grid sm:grid-cols-5`} aria-label="상태별 병원 필터">
-          <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
-          <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
-          <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
-          <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
-          <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
+        <section className="mb-5 hidden grid-cols-5 gap-2 sm:grid" aria-label="상태별 병원 필터">
+          {statusFilterButtons}
         </section>
 
         {viewMode === "grid" ? (
@@ -302,6 +297,23 @@ export default function DashboardClient() {
             </section>
           </>
         )}
+        <div className="mt-3 space-y-2 px-1 sm:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <ViewModeTabs value={viewMode} onChange={changeViewMode} />
+            <button
+              type="button"
+              aria-controls="dashboard-mobile-status-filters"
+              aria-expanded={showMobileFilters}
+              onClick={() => setShowMobileFilters((open) => !open)}
+              className="min-h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-text-major dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary"
+            >
+              필터 · {STATUS_FILTER_LABEL[statusFilter]}
+            </button>
+          </div>
+          <section id="dashboard-mobile-status-filters" className={`${showMobileFilters ? "grid" : "hidden"} grid-cols-2 gap-2`} aria-label="상태별 병원 필터">
+            {statusFilterButtons}
+          </section>
+        </div>
         <p className="text-text-secondary mt-2 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
           마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>

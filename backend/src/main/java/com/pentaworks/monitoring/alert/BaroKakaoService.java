@@ -2,10 +2,13 @@ package com.pentaworks.monitoring.alert;
 
 import com.pentaworks.monitoring.alert.AlertEventService.Transition;
 import java.io.StringReader;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +22,7 @@ import org.xml.sax.InputSource;
 @Service
 public class BaroKakaoService {
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
+    private static final DateTimeFormatter ALERT_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm (E)", Locale.KOREAN);
     private static final String ENDPOINT = "https://ws.baroservice.com/KAKAOTALK.asmx";
     private final RestClient client;
     private final boolean enabled;
@@ -26,17 +30,20 @@ public class BaroKakaoService {
     private final String corpNum;
     private final String senderId;
     private final String smsSenderNum;
+    private final boolean deepLinkEnabled;
 
     public BaroKakaoService(@Value("${BARO_KAKAO_ENABLED:false}") boolean enabled,
                             @Value("${BARO_CERT_KEY:}") String certKey,
                             @Value("${BARO_CORP_NUM:}") String corpNum,
                             @Value("${BARO_SENDER_ID:}") String senderId,
-                            @Value("${BARO_SMS_SENDER_NUM:}") String smsSenderNum) {
+                            @Value("${BARO_SMS_SENDER_NUM:}") String smsSenderNum,
+                            @Value("${BARO_KAKAO_DEEP_LINK_ENABLED:false}") boolean deepLinkEnabled) {
         this.enabled = enabled;
         this.certKey = certKey;
         this.corpNum = corpNum;
         this.senderId = senderId;
         this.smsSenderNum = smsSenderNum;
+        this.deepLinkEnabled = deepLinkEnabled;
         var factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(Duration.ofSeconds(3));
         factory.setReadTimeout(Duration.ofSeconds(10));
@@ -69,9 +76,13 @@ public class BaroKakaoService {
             + (alert.max() == null ? "" : "최대 " + value(alert.max(), alert.unit()));
         String message = "[펜타웍스 MRI 모니터링 알림]\n\n" + safe(alert.siteName()) + "의 " + safe(alert.siteId())
             + "에서 설정된 감시 기준을 벗어난 상태가 감지되었습니다.\n\n감지 시각: "
-            + now.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+            + now.format(ALERT_TIME)
             + "\n감지 항목: " + safe(alert.metricLabel()) + "\n현재 값: " + value
             + "\n설정 기준: " + limit + "\n\n모니터링 화면에서 상세 상태를 확인해 주세요.";
+        // 승인된 템플릿의 버튼 URL을 변경한 뒤에만 활성화해야 합니다.
+        String buttonUrl = deepLinkEnabled && alert.siteId() != null && !alert.siteId().isBlank()
+            ? "https://app.pentaworks.net/?scrollTo=" + URLEncoder.encode(alert.siteId().trim(), StandardCharsets.UTF_8)
+            : "https://app.pentaworks.net/";
         String inner = tag("CERTKEY", certKey) + tag("CorpNum", corpNum) + tag("SenderID", senderId)
             + tag("YellowId", "@pentaworks_mri") + tag("TemplateName", "MRI 장비 상태 이상 감지 알림")
             + tag("SendDT", "") + tag("SmsReply", "A") + tag("SmsSenderNum", smsSenderNum)
@@ -79,7 +90,7 @@ public class BaroKakaoService {
             + tag("Title", "") + tag("Message", message) + tag("SmsMessage", sms(alert))
             + tag("SmsSubject", "") + "<Buttons><KakaotalkButton>"
             + tag("Name", "확인하기") + tag("ButtonType", "WL")
-            + tag("Url1", "https://app.pentaworks.net/") + tag("Url2", "https://app.pentaworks.net/")
+            + tag("Url1", buttonUrl) + tag("Url2", buttonUrl)
             + "</KakaotalkButton></Buttons></KakaotalkMessage>";
         return "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
             + "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body>"
