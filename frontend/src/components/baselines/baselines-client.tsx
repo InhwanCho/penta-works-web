@@ -58,7 +58,7 @@ export default function BaselinesClient({
   onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDeleteRecipient: (id: number) => Promise<void>;
 }) {
-  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients">("sites");
+  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients">("thresholds");
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoringSite, setRestoringSite] = useState<string | null>(null);
@@ -110,13 +110,13 @@ export default function BaselinesClient({
         <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">알림 관리</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-white/70">
-          먼저 대시보드에 보여줄 사업장을 선택하세요. 표시된 사업장에만 알림을 켤 수 있습니다.
+          병원별 24시간 평균과 허용편차를 설정하세요. 반복 주기와 발송 제외는 고급 설정에서 관리합니다.
         </p>
       </header>
 
       <div className="mb-5 flex max-w-full overflow-x-auto rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
-        <ViewTab active={view === "sites"} onClick={() => setView("sites")}>사업장·알림</ViewTab>
-        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>상세 기준값</ViewTab>
+        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>알림값 설정</ViewTab>
+        <ViewTab active={view === "sites"} onClick={() => setView("sites")}>사업장 관리</ViewTab>
         <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
         <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>{canEdit ? "수신처" : "내 수신 설정"}</ViewTab>
       </div>
@@ -159,7 +159,7 @@ export default function BaselinesClient({
               <article key={entry.siteid} className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_14px_rgba(22,58,82,0.045)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_7px_22px_rgba(22,58,82,0.075)] dark:border-white/8 dark:bg-background-dark-card">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><h2 className="truncate font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-0.5 text-xs">사업장 {entry.siteid}</p></div>
-                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${entry.alertsEnabled && enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{entry.alertsEnabled ? `${enabled}/12 사용` : "전체 중지"}</span>
+                  <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${entry.alertsEnabled && enabled > 0 ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{entry.alertsEnabled ? `${enabled}/${entry.thresholds.length + 2} 사용` : "전체 중지"}</span>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   <RangePreview label="He Pressure" threshold={pressure} />
@@ -176,7 +176,7 @@ export default function BaselinesClient({
       </> : view === "events" ? <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
         : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
 
-      {selected && <SiteThresholdEditor entry={selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
+      {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
   );
 }
@@ -478,7 +478,7 @@ function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHI
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
 function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "접수 완료", PARTIAL: "일부 접수 실패", FAILED: "접수 실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
 
-function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
+export function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   entry: SiteAlertSettings;
   canEdit: boolean;
   onClose: () => void;
@@ -509,6 +509,16 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     document.body.style.overflow = "hidden";
     return () => { document.removeEventListener("keydown", close); document.body.style.overflow = ""; };
   }, [onClose, saving]);
+
+  // Refresh the stored hourly snapshot without overwriting unsaved preferences.
+  useEffect(() => {
+    setThresholds(current => current.map(item => {
+      const latest = entry.thresholds.find(value => value.key === item.key);
+      return latest ? {...item, averageValue:latest.averageValue,
+        averageSampleCount:latest.averageSampleCount, excludedZeroCount:latest.excludedZeroCount,
+        averageCapturedAt:latest.averageCapturedAt, averageApplied:latest.averageApplied} : item;
+    }));
+  }, [entry.thresholds]);
 
   function update(key: string, patch: Partial<AlertThreshold>) {
     setThresholds((current) => current.map((threshold) => threshold.key === key ? { ...threshold, ...patch } : threshold));
@@ -547,10 +557,22 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[100dvh] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid} · {entry.configured ? "병원별 기준" : "회사 공통 기준 상속"}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다. 저장하면 이 사업장만 별도 기준을 사용합니다.</p></div>
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">알림값 설정 · 사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최근 24시간 평균에 허용편차(±%)만 설정하세요. 평균은 매시간 자동 갱신됩니다.</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
+            <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={event => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />사업장 알림 사용</label>
+            <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5 accent-emerald-600" />콜드칠러 정지 의심</label>
+            <p className="w-full text-xs text-text-secondary">콜드칠러 IN·OUT 온도가 정확히 같으면 알립니다. 미측정 값은 제외합니다.{!entry.dashboardVisible && " 숨긴 사업장은 알림을 켤 수 없습니다."}</p>
+          </div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>
+          <div className="grid gap-3 md:grid-cols-2">
+            {thresholds.filter(threshold => metricFilter === "all" || threshold.active).map(threshold => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} />)}
+          </div>
+          <details className="mt-5 rounded-xl border p-3 dark:border-white/10">
+            <summary className="min-h-11 cursor-pointer font-bold">고급 설정 · 반복 알림 / 수집 누락 / 발송 제외</summary>
+            <div className="mt-3">
           <section className={`mb-4 rounded-xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">{entry.dashboardVisible ? "전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 관리합니다." : "숨긴 사업장은 알림을 켤 수 없습니다. 먼저 대시보드 표시를 켜주세요."}</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -569,13 +591,8 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
             </div>
             <p role="status" className="mt-3 text-sm font-bold">{collectionIntervalMinutes}분마다 수집 · {missingCollectionThreshold}회 연속 누락 시 알림 (마지막 수집 후 {noDataMinutes}분부터)</p>
           </section>
-          <section className="mb-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
-            <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">콜드칠러 정지 의심</h3><p className="text-text-secondary mt-1 text-xs leading-5">IN(cctemp)과 OUT(ccflow) 온도가 소수점까지 정확히 같으면 알립니다. 미측정 값은 제외합니다. 위의 감지 대기시간·반복 주기·제외 시간과 담당자 확인 완료 설정을 따릅니다.</p></div><label className="flex shrink-0 items-center gap-2 text-xs font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5" />사용</label></div>
-          </section>
-          <div className="mb-3 flex gap-2 py-2">{(["active", "all"] as const).map((value) => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}</div>
-          <div className="grid gap-3 md:grid-cols-2">
-            {thresholds.filter((threshold) => metricFilter === "all" || threshold.active).map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={(patch) => update(threshold.key, patch)} />)}
-          </div>
+            </div>
+          </details>
 
         </div>
         {error && <p role="alert" className="shrink-0 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
@@ -606,13 +623,12 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
       {allowAverage && <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={(event) => onChange({ useAverage: event.target.checked })} className="h-4 w-4 accent-emerald-700" />최근 24시간 평균을 기준값으로 사용</label>
-        <p className="text-text-secondary mt-1 text-[11px]">0 · 0.001 · 0.01은 평균에서 제외합니다. 매시간 갱신하며 유효 표본 12개 이상이 필요합니다.</p>
-        <p className="mt-2 text-xs font-semibold tabular-nums">현재 평균 {threshold.averageValue == null ? "없음" : `${roundThreshold(threshold.averageValue)}${threshold.unit ? ` ${threshold.unit}` : ""}`} · 유효 {threshold.averageSampleCount}개 · 미측정 제외 {threshold.excludedZeroCount}개</p>
-        {threshold.useAverage && <div className="mt-2"><label className="block text-xs font-bold">최근 24시간 평균 (자동 계산)<input readOnly value={threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)} ${threshold.unit ?? ""}`} className="mt-1 mb-3 w-full rounded-lg border border-emerald-200 bg-emerald-100/50 px-3 py-3 text-base dark:border-emerald-900 dark:bg-emerald-950/40" /></label><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageValue != null && Number.isFinite(threshold.tolerancePercent) ? `계산 범위 ${roundThreshold(threshold.averageValue - Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} – ${roundThreshold(threshold.averageValue + Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} ${threshold.unit ?? ""}` : "평균 데이터가 아직 없습니다."}{!threshold.averageApplied && " · 표본 부족 또는 오래된 평균이면 고정 범위를 적용합니다."}</p></div>}
+        <p className="text-xs font-bold">{threshold.useAverage ? "24시간 평균 기준 · 자동 갱신" : "고정 범위 사용 중"}</p>
+        {threshold.useAverage && <div className="mt-2"><label className="block text-xs font-bold">최근 24시간 평균 (자동 계산)<input readOnly value={threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)} ${threshold.unit ?? ""}`} className="mt-1 mb-3 w-full rounded-lg border border-emerald-200 bg-emerald-100/50 px-3 py-3 text-base dark:border-emerald-900 dark:bg-emerald-950/40" /></label><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageValue != null && Number.isFinite(threshold.tolerancePercent) ? `계산 범위 ${roundThreshold(threshold.averageValue - Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} – ${roundThreshold(threshold.averageValue + Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} ${threshold.unit ?? ""}` : "평균 데이터가 아직 없습니다."}{" · 평균을 사용할 수 없으면 고급 설정의 고정 범위를 적용합니다."}</p></div>}
       </div>}
-      <details className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3" open={!threshold.useAverage}>
-        <summary className="min-h-10 cursor-pointer text-xs font-bold">{threshold.useAverage ? "평균 사용 불가 시 대체할 고정 범위" : "고정 범위 설정"} · {threshold.min} – {threshold.max}</summary>
+      <details className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
+        <summary className="min-h-10 cursor-pointer text-xs font-bold">{allowAverage ? "고급 · 기준 방식 / 대체 범위" : "고정 범위 설정"}</summary>
+        {allowAverage && <div className="mb-3"><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={event => onChange({useAverage:event.target.checked})} className="h-5 w-5 accent-emerald-600" />24시간 평균 사용</label><p className="mt-2 text-xs text-text-secondary">매시간 정각에 직전 24시간을 계산해 저장하고 재사용합니다. 미측정(0·0.001·0.01)은 제외합니다. 유효 {threshold.averageSampleCount}건 · 제외 {threshold.excludedZeroCount}건 · 갱신 {threshold.averageCapturedAt ?? "대기 중"}. 유효 표본 12개 미만이거나 평균/측정이 2시간 이상 오래되면 아래 고정 범위로 판단합니다.</p></div>}
         <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">{allowAverage ? "고정 기준값 (평균 사용 불가 시 대체) ± 허용편차" : "기준값 ± 허용편차"}</p>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />

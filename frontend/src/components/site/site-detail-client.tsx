@@ -4,12 +4,13 @@ import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
 import OfficeAssetsPanel from "@/components/site/office-assets-panel";
+import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { companyMetrics } from "@/lib/company-metrics";
 
@@ -43,11 +44,25 @@ function toPointNumber(v: number | null | undefined): number | null {
 
 export default function SiteDetailClient({ slug }: { slug: string }) {
   const sp = useSearchParams();
+  const router = useRouter();
+  const from = sp.get("from");
+  const to = sp.get("to");
+  const periodActive = !!(from && to);
+  const localDateTime = (value: string | null, fallback: Date) => {
+    const date = value ? new Date(value) : fallback;
+    if (!Number.isFinite(date.getTime())) return "";
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
+  const [periodStart, setPeriodStart] = useState(() => localDateTime(from, new Date(Date.now() - 86400000)));
+  const [periodEnd, setPeriodEnd] = useState(() => localDateTime(to, new Date()));
+  const [periodError, setPeriodError] = useState("");
   const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
   const { data, isLoading, isError, refetch, isFetching } = useSiteDetailQuery(
     slug,
     take,
+    from,
+    to,
   );
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
@@ -191,6 +206,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               {lastAtLabel}
             </span>
           </span>
+          <SiteAlertSettingsButton siteId={data.site.siteDb} />
         </div>
       </div>
 
@@ -201,7 +217,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
       <fieldset className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
-          표시 건수
+          표시 건수 · 기간 조회
         </legend>
         <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-xs">
           최신 데이터를 몇 건까지 볼지 선택하세요.
@@ -210,24 +226,40 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           <TakeLink
             slug={slug}
             take={10}
-            active={take === 10}
+            active={!periodActive && take === 10}
           />
           <TakeLink
             slug={slug}
             take={20}
-            active={take === 20}
+            active={!periodActive && take === 20}
           />
           <TakeLink
             slug={slug}
             take={50}
-            active={take === 50}
+            active={!periodActive && take === 50}
           />
           <TakeLink
             slug={slug}
             take={100}
-            active={take === 100}
+            active={!periodActive && take === 100}
           />
         </div>
+        <form className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={event => {
+          event.preventDefault();
+          const start = new Date(periodStart), end = new Date(periodEnd);
+          if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start >= end || end.getTime() - start.getTime() > 31 * 86400000) {
+            setPeriodError("시작·종료를 확인해주세요. 한 번에 최대 31일까지 조회할 수 있습니다."); return;
+          }
+          setPeriodError("");
+          router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from: start.toISOString(), to: end.toISOString()})}`);
+        }}>
+          <label className="text-xs font-bold">시작 일시<input type="datetime-local" required value={periodStart} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
+          <label className="text-xs font-bold">종료 일시<input type="datetime-local" required value={periodEnd} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
+          <button type="submit" className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">기간 조회</button>
+        </form>
+        {periodError && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{periodError}</p>}
+        {periodActive && <p className="mt-2 text-xs">조회 기간: {fmtDate(from)} ~ {fmtDate(to)} · {data.rows.length.toLocaleString()}건{data.rows.length >= 5000 ? " (최신 5,000건만 표시됩니다. 기간을 줄여주세요.)" : ""}</p>}
+        <p className="text-text-secondary mt-2 text-[11px]">기간 조회는 최대 31일·5,000건입니다. 건수 버튼을 누르면 최신 건수 조회로 돌아갑니다.</p>
       </fieldset>
 
       <section

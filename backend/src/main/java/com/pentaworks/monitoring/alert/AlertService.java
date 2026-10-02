@@ -100,7 +100,8 @@ public class AlertService {
                 holidays.getOrDefault(rs.getString("registered_site"), List.of()),
                 rs.getObject("is_dashboard_visible") != null && rs.getBoolean("is_dashboard_visible"),
                 companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
-                averageStates.getOrDefault(rs.getString("registered_site"), Map.of()), rs.getBoolean("cold_chiller_active"),
+                averageStates.getOrDefault(rs.getString("registered_site"), Map.of()),
+                rs.getObject("cold_chiller_active") == null || rs.getBoolean("cold_chiller_active"),
                 rs.getObject("collection_interval_minutes") == null ? 10 : rs.getInt("collection_interval_minutes"),
                 rs.getObject("missing_collection_threshold") == null ? 2 : rs.getInt("missing_collection_threshold")));
     }
@@ -384,7 +385,8 @@ public class AlertService {
                 holidayDates(siteId), rs.getObject("is_dashboard_visible") != null &&
                     rs.getBoolean("is_dashboard_visible"),
                 companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
-                averageStates.getOrDefault(siteId, Map.of()), rs.getBoolean("cold_chiller_active"),
+                averageStates.getOrDefault(siteId, Map.of()),
+                rs.getObject("cold_chiller_active") == null || rs.getBoolean("cold_chiller_active"),
                 rs.getObject("collection_interval_minutes") == null ? 10 : rs.getInt("collection_interval_minutes"),
                 rs.getObject("missing_collection_threshold") == null ? 2 : rs.getInt("missing_collection_threshold")),
             siteId);

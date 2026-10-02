@@ -9,6 +9,8 @@ import org.springframework.jdbc.core.RowCallbackHandler;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.contains;
@@ -19,6 +21,47 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RollingAverageServiceTest {
+    @Test
+    void defaultsToAverageAndReadsPersistedSnapshotWithoutRecalculatingMeasurements() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ResultSet rs = mock(ResultSet.class);
+        LocalDateTime now = RollingAverageService.now();
+        when(rs.getString("site_id")).thenReturn("001");
+        when(rs.getString("metric_key")).thenReturn("hepres");
+        when(rs.getObject("average_value")).thenReturn(10.0);
+        when(rs.getDouble("average_value")).thenReturn(10.0);
+        when(rs.getInt("sample_count")).thenReturn(24);
+        when(rs.getTimestamp("captured_at")).thenReturn(Timestamp.valueOf(now));
+        when(rs.getTimestamp("last_sample_at")).thenReturn(Timestamp.valueOf(now));
+        doAnswer(invocation -> {
+            invocation.<RowCallbackHandler>getArgument(1).processRow(rs);
+            return null;
+        }).when(jdbc).query(contains("FROM site_metric_average_hourly"), any(RowCallbackHandler.class),
+            any(Timestamp.class));
+        var state = new RollingAverageService(jdbc).states().get("001").get("hepres");
+        assertTrue(state.useAverage());
+        assertEquals(20.0, state.tolerancePercent());
+        assertEquals(8.0, RollingAverageService.effectiveRange(state, now).min());
+        org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.never()).query(
+            contains("FROM mrtb"), any(RowCallbackHandler.class), any(Timestamp.class), any(Timestamp.class));
+    }
+
+    @Test
+    void retainsExplicitAverageOptOut() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getString("site_id")).thenReturn("001");
+        when(rs.getString("metric_key")).thenReturn("hepres");
+        when(rs.getBoolean("use_average")).thenReturn(false);
+        when(rs.getDouble("tolerance_percent")).thenReturn(15.0);
+        doAnswer(invocation -> {
+            invocation.<RowCallbackHandler>getArgument(1).processRow(rs);
+            return null;
+        }).when(jdbc).query(contains("FROM site_metric_average_policy"), any(RowCallbackHandler.class));
+        var state = new RollingAverageService(jdbc).states().get("001").get("hepres");
+        assertFalse(state.useAverage());
+        assertEquals(15.0, state.tolerancePercent());
+    }
     @Test
     void excludesUnmeasuredValuesFromHourlyRollingAverage() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);

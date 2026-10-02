@@ -11,6 +11,8 @@ export default function BaselinesPageClient() {
   const query = useQuery({
     queryKey: ["alert-thresholds"],
     queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
   const companyThresholds = useQuery({
     queryKey: ["company-alert-thresholds"],

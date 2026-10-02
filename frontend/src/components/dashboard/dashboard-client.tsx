@@ -1,6 +1,7 @@
 "use client";
 
 import PullToRefresh from "@/components/common/pull-to-refresh";
+import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import CollectionStatus, { collectionMissing } from "@/components/dashboard/collection-status";
@@ -81,6 +82,10 @@ function fmtYmdHms(ms: number) {
   return `${fmtYmd(date)} ${fmtHms(date)}`;
 }
 
+function formatAlertBound(value: number | null | undefined) {
+  return value == null || !Number.isFinite(value) ? "—" : value.toLocaleString("ko-KR", {maximumFractionDigits:6});
+}
+
 export default function DashboardClient() {
   const { data, isLoading, isFetching, isError, error, refetch } = useDashboardQuery();
 
@@ -88,7 +93,7 @@ export default function DashboardClient() {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-  const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", refetchInterval: 60_000 });
+  const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
   useEffect(() => {
     const mobile = window.matchMedia("(max-width: 639px)").matches;
@@ -233,7 +238,7 @@ export default function DashboardClient() {
             <div className="p-3"><h2 className="font-extrabold">병원별 알림 적용 항목</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-300">켜진 항목의 실제 적용 범위입니다. —는 비활성 항목입니다. 전체 알림이 꺼진 병원은 발송되지 않습니다.</p><Link href="/baselines" className="mt-2 inline-block text-sm font-bold text-sky-700 dark:text-sky-300">알림값 설정으로 이동 →</Link></div>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
               <div className="max-h-[70dvh] overflow-auto"><table className="w-full border-collapse whitespace-nowrap text-xs"><thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th className="sticky left-0 z-30 bg-slate-100 p-3 text-left dark:bg-slate-800">병원명</th>{dashboardMetrics.map(metric => <th key={metric.key} className="p-3">{metric.label ?? metric.code}</th>)}<th className="p-3">연속 수집 누락</th><th className="p-3">콜드칠러 정지</th><th className="p-3">반복</th></tr></thead><tbody>
-                {(alertSettings.data ?? []).map(site => <tr key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{threshold.effectiveMin} – {threshold.effectiveMax}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.collectionIntervalMinutes}분 · ${site.missingCollectionThreshold}회` : "—"}</td><td className="p-3 text-center">{site.coldChillerActive ? "IN = OUT" : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
+                {(alertSettings.data ?? []).map(site => <tr key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><div className="my-1"><SiteAlertSettingsButton siteId={site.siteid} /></div><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{formatAlertBound(threshold.effectiveMin)} – {formatAlertBound(threshold.effectiveMax)}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.collectionIntervalMinutes}분 · ${site.missingCollectionThreshold}회` : "—"}</td><td className="p-3 text-center">{site.coldChillerActive ? "IN = OUT" : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
               </tbody></table></div>
             )}
           </section>

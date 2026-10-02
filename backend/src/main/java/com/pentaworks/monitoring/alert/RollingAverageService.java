@@ -142,7 +142,7 @@ public class RollingAverageService {
     public record AverageState(boolean useAverage, double tolerancePercent, Double averageValue,
                                int sampleCount, int zeroCount, LocalDateTime capturedAt,
                                LocalDateTime lastSampleAt) {
-        public static final AverageState DEFAULT = new AverageState(false, 20, null, 0, 0, null, null);
+        public static final AverageState DEFAULT = new AverageState(true, 20, null, 0, 0, null, null);
     }
     public record Range(double min, double max) {}
 }

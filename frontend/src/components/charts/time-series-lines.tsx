@@ -124,15 +124,6 @@ export function TimeSeriesLines({
   const { grid, border } = gridColors(dark);
 
   const [zoomReady, setZoomReady] = React.useState(false);
-  const [activeIndex, setActiveIndex] = React.useState<number | null>(null);
-  const [pinnedIndex, setPinnedIndex] = React.useState<number | null>(null);
-  const selectedIndex = pinnedIndex ?? activeIndex;
-  const selectedPoint = selectedIndex == null ? null : points[selectedIndex];
-
-  React.useEffect(() => {
-    setActiveIndex(null);
-    setPinnedIndex(null);
-  }, [points, series]);
 
   React.useEffect(() => {
     if (!interactive) return;
@@ -182,15 +173,6 @@ export function TimeSeriesLines({
   const options: ChartOptions<"line"> = {
     // Reading values is always available. `interactive` only controls zoom/pan.
     events: ["mousemove", "mouseout", "click", "touchstart", "touchmove", "touchend"],
-    onHover: (event, elements) => {
-      const index = elements[0]?.index ?? null;
-      if (event.native?.type === "touchstart" && index != null) setPinnedIndex(index);
-      else if (pinnedIndex == null) setActiveIndex(index);
-    },
-    onClick: (_event, elements) => {
-      const index = elements[0]?.index;
-      if (index != null) { setPinnedIndex(index); setActiveIndex(index); }
-    },
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: "index", intersect: false },
@@ -281,7 +263,6 @@ export function TimeSeriesLines({
             휠/핀치 확대 · Shift + 드래그 이동
           </span>}
         </div>
-        <p className="text-text-secondary mt-1 text-[11px] dark:text-text-dark-primary/60">마우스를 올려 값 확인 · 클릭/터치로 값 고정</p>
       </div>
 
       <div
@@ -292,22 +273,8 @@ export function TimeSeriesLines({
           data={data}
           options={options}
           role="img"
-          aria-label={`${title} 측정 그래프. 방향키로 값을 선택하고 Escape로 해제합니다.`}
-          tabIndex={0}
-          onKeyDown={event => {
-            if (event.key === "Escape") {setPinnedIndex(null); setActiveIndex(null);}
-            else if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-              event.preventDefault();
-              if (points.length) setPinnedIndex(Math.max(0, Math.min(points.length - 1, (selectedIndex ?? 0) + (event.key === "ArrowLeft" ? -1 : 1))));
-            }
-          }}
+          aria-label={`${title} 측정 그래프. 마우스를 올리거나 터치하면 시각과 측정값을 확인할 수 있습니다.`}
         />
-      </div>
-      <div className="mx-3 mb-3 rounded-lg bg-sky-50 px-3 py-2 text-xs text-sky-950 dark:bg-sky-950 dark:text-sky-100" style={{minHeight: 48 + series.length * 24}}>
-        {selectedPoint ? <>
-          <div className="flex min-h-8 items-center justify-between gap-2"><span>{String(selectedPoint.at ?? selectedPoint.t)}{pinnedIndex != null ? " · 선택 고정" : ""}</span>{pinnedIndex != null && <button type="button" onClick={() => {setPinnedIndex(null); setActiveIndex(null);}} className="min-h-8 shrink-0 cursor-pointer font-bold underline">고정 해제</button>}</div>
-          {series.map(item => <p key={item.key} className="mt-1 font-bold">{item.name}: {toNumber(selectedPoint[item.key])?.toLocaleString("ko-KR", {maximumFractionDigits: 6}) ?? "측정 안됨"}</p>)}
-        </> : <p className="py-2">그래프의 지점을 선택하면 시각과 측정값이 표시됩니다.</p>}
       </div>
     </section>
   );

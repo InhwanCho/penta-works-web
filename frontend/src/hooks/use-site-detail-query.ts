@@ -27,9 +27,11 @@ export function clampTake(raw: number) {
 async function fetchSiteDetail(
   slug: string,
   take: number,
+  from: string | null,
+  to: string | null,
 ): Promise<SiteDetailResponse> {
   return apiFetch<SiteDetailResponse>(
-    `/sites/${encodeURIComponent(slug)}?take=${take}`,
+    `/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from, to} : {take: String(take)})}`,
     { cache: "no-store" },
   );
 }
@@ -38,10 +40,10 @@ async function fetchSiteDetail(
  * 사이트 상세 시계열 조회 훅.
  * - staleTime 10초 — 짧은 시간 내 재방문 시 캐시 히트
  */
-export function useSiteDetailQuery(slug: string, take: number) {
+export function useSiteDetailQuery(slug: string, take: number, from: string | null = null, to: string | null = null) {
   return useQuery({
-    queryKey: ["siteDetail", slug, take] as const,
-    queryFn: () => fetchSiteDetail(slug, take),
+    queryKey: ["siteDetail", slug, take, from, to] as const,
+    queryFn: () => fetchSiteDetail(slug, take, from, to),
     staleTime: 10_000,
   });
 }
