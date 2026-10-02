@@ -87,7 +87,7 @@ function formatAlertBound(value: number | null | undefined) {
 }
 
 export default function DashboardClient() {
-  const { data, isLoading, isFetching, isError, error, refetch } = useDashboardQuery();
+  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
 
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -224,9 +224,6 @@ export default function DashboardClient() {
         </header>
 
         {viewMode === "basic" && mobileControls}
-        <div className="mb-3 flex gap-2 sm:hidden">
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-bold disabled:opacity-50 dark:border-white/10 dark:bg-background-dark-card">{isFetching ? "갱신 중" : "새로고침"}</button>
-        </div>
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
         <section className="mb-5 hidden grid-cols-6 gap-2 sm:grid" aria-label="상태별 병원 필터">
