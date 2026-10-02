@@ -21,17 +21,20 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 @Service
 public class CompanyMetricService {
     private static final List<Metric> DEFAULTS = List.of(
-        new Metric("recosi", "리콘덴서 Si410 온도", "K", 0, true),
-        new Metric("coldtp", "콜드헤드 온도", "K", 1, true),
-        new Metric("recoru", "리콘덴서 RuO 온도", "K", 2, true),
-        new Metric("hepres", "He Pressure", "psi", 3, true),
-        new Metric("heleve", "He Level", "%", 4, true),
-        new Metric("actemp", "AC Temp", "°C", 5, true),
-        new Metric("achumi", "AC Humidity", "%", 6, true),
-        new Metric("gctemp", "그라디언트칠러 온도", "°C", 7, true),
-        new Metric("gcflow", "그라디언트칠러 유량", null, 8, true),
-        new Metric("cctemp", "콜드칠러 온도", "°C", 9, true),
-        new Metric("ccflow", "콜드칠러 유량", null, 10, true));
+        new Metric("hepres", "He Pressure", "psi", 0, true),
+        new Metric("heleve", "He Level", "%", 1, true),
+        new Metric("gctemp", "그라디언트칠러 온도", "°C", 2, true),
+        new Metric("cctemp", "콜드칠러 IN 온도", "°C", 3, true),
+        new Metric("ccflow", "콜드칠러 OUT 온도", "°C", 4, true),
+        new Metric("actemp", "항온항습기 온도", "°C", 5, true),
+        new Metric("achumi", "항온항습기 습도", "%", 6, true),
+        new Metric("lastAt", "최신 시각", null, 7, true),
+        new Metric("count1h", "1시간 건수", null, 8, true),
+        new Metric("count24h", "24시간 건수", null, 9, true),
+        new Metric("recosi", "리콘덴서 Si410 온도", "K", 10, true),
+        new Metric("recoru", "리콘덴서 RuO 온도", "K", 11, true),
+        new Metric("coldtp", "콜드헤드 온도", "K", 12, true),
+        new Metric("gcflow", "그라디언트칠러 유량", null, 13, false));
     private final JdbcTemplate jdbc;
     private final AuditService audit;
     private final Map<Long, Cached> cache = new ConcurrentHashMap<>();

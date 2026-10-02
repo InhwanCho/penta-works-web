@@ -3,6 +3,7 @@
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
+import CollectionStatus, { collectionMissing } from "@/components/dashboard/collection-status";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/hooks/use-dashboard-query";
 import Link from "next/link";
 import type React from "react";
-import { companyMetrics } from "@/lib/company-metrics";
+import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
 import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -152,7 +153,7 @@ export default function DashboardClient() {
   const { meta, ctrl } = data;
   const metrics = companyMetrics(data.metricConfig);
   const helium = ["hepres", "heleve"].flatMap((key) => metrics.filter((metric) => metric.key === key));
-  const dashboardMetrics = [...helium, ...metrics.filter((metric) => metric.key !== "hepres" && metric.key !== "heleve")];
+  const dashboardMetrics = metrics;
   const summaryMetrics = helium.length ? helium : metrics.slice(0, 2);
   const statusFilterButtons = (
     <>
@@ -193,7 +194,7 @@ export default function DashboardClient() {
       <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
-        <header className="mb-5 hidden flex-wrap items-center justify-between gap-4 overflow-hidden rounded-3xl border border-slate-200/70 bg-white/90 px-5 py-4 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex dark:border-white/8 dark:bg-background-dark-card/90">
+        <header className="mb-3 hidden flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -231,16 +232,17 @@ export default function DashboardClient() {
           <section className="rounded-xl border border-slate-200 bg-white dark:border-white/10 dark:bg-background-dark-card">
             <div className="p-3"><h2 className="font-extrabold">병원별 알림 적용 항목</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-300">켜진 항목의 실제 적용 범위입니다. —는 비활성 항목입니다. 전체 알림이 꺼진 병원은 발송되지 않습니다.</p><Link href="/baselines" className="mt-2 inline-block text-sm font-bold text-sky-700 dark:text-sky-300">알림값 설정으로 이동 →</Link></div>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
-              <div className="max-h-[70dvh] overflow-auto"><table className="w-full border-collapse whitespace-nowrap text-xs"><thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th className="sticky left-0 z-30 bg-slate-100 p-3 text-left dark:bg-slate-800">병원명</th>{dashboardMetrics.map(metric => <th key={metric.key} className="p-3">{metric.label ?? metric.code}</th>)}<th className="p-3">수신 중단</th><th className="p-3">반복</th></tr></thead><tbody>
-                {(alertSettings.data ?? []).map(site => <tr key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{threshold.effectiveMin} – {threshold.effectiveMax}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.noDataMinutes}분` : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
+              <div className="max-h-[70dvh] overflow-auto"><table className="w-full border-collapse whitespace-nowrap text-xs"><thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th className="sticky left-0 z-30 bg-slate-100 p-3 text-left dark:bg-slate-800">병원명</th>{dashboardMetrics.map(metric => <th key={metric.key} className="p-3">{metric.label ?? metric.code}</th>)}<th className="p-3">연속 수집 누락</th><th className="p-3">콜드칠러 정지</th><th className="p-3">반복</th></tr></thead><tbody>
+                {(alertSettings.data ?? []).map(site => <tr key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{threshold.effectiveMin} – {threshold.effectiveMax}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.collectionIntervalMinutes}분 · ${site.missingCollectionThreshold}회` : "—"}</td><td className="p-3 text-center">{site.coldChillerActive ? "IN = OUT" : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
               </tbody></table></div>
             )}
           </section>
         ) : viewMode === "grid" ? (
-          <DashboardExcelView
+              <DashboardExcelView
             rows={sortedRows}
             ctrl={ctrl}
             metrics={dashboardMetrics}
+            columns={dashboardColumns(data.metricConfig)}
           />
         ) : (
           <>
@@ -423,7 +425,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
         "group block scroll-mt-[120px] rounded-2xl border bg-white p-3 shadow-sm transition-colors active:bg-sky-50 dark:active:bg-sky-950/20",
         "hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:hover:border-sky-900/60",
         "dark:border-background-dark-secondary dark:bg-background-dark-card",
-        anyAlert ? "border-red-300/80 dark:border-red-900/50" : "border-border",
+        collectionMissing(row) ? "border-rose-400 ring-2 ring-rose-200 dark:ring-rose-900" : anyAlert ? "border-red-300/80 dark:border-red-900/50" : "border-border",
       ].join(" ")}
     >
       {/* Header row */}
@@ -436,6 +438,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
             {row.name ?? "-"}
           </span>
           <span className="text-text-secondary mt-1 text-[11px] tabular-nums dark:text-text-dark-primary/70">최근 수집 {fmtYmd(d)} {fmtHms(d)}</span>
+          <CollectionStatus row={row} />
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
           <AlertStatusBadge row={row} />

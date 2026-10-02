@@ -42,6 +42,9 @@ export default function BaselinesPageClient() {
           quietEnd: entry.quietEnd,
           suppressWeekends: entry.suppressWeekends,
           holidayDates: entry.holidayDates,
+          coldChillerActive: entry.coldChillerActive,
+          collectionIntervalMinutes: entry.collectionIntervalMinutes,
+          missingCollectionThreshold: entry.missingCollectionThreshold,
         }),
       }),
     onSuccess: (saved) => {

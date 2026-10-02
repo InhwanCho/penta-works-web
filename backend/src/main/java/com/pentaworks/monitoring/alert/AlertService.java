@@ -28,12 +28,12 @@ public class AlertService {
         new Metric("recoru", "rou", "리콘덴서 RuO 온도", "K", 0, 999),
         new Metric("hepres", "psi", "He Pressure", "psi", 1, 999),
         new Metric("heleve", "he", "He Level", "%", 70, 999),
-        new Metric("actemp", "actemp", "AC Temp", "°C", 0, 999),
-        new Metric("achumi", "achumi", "AC Humidity", "%", 0, 999),
+        new Metric("actemp", "actemp", "항온항습기 온도", "°C", 0, 999),
+        new Metric("achumi", "achumi", "항온항습기 습도", "%", 0, 999),
         new Metric("gctemp", "gctemp", "그라디언트칠러 온도", "°C", 0, 999),
         new Metric("gcflow", "gcflow", "그라디언트칠러 유량", null, 0, 999),
-        new Metric("cctemp", "cctemp", "콜드칠러 온도", "°C", 0, 999),
-        new Metric("ccflow", "ccflow", "콜드칠러 유량", null, 0, 999)
+        new Metric("cctemp", "cctemp", "콜드칠러 IN 온도", "°C", 0, 999),
+        new Metric("ccflow", "ccflow", "콜드칠러 OUT 온도", "°C", 0, 999)
     );
     private static final Map<String, Metric> METRIC_BY_KEY = metricMap();
 
@@ -81,7 +81,7 @@ public class AlertService {
             SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
                    p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
-                   p.quiet_start,p.quiet_end,p.suppress_weekends
+                   p.quiet_start,p.quiet_end,p.suppress_weekends,p.cold_chiller_active,p.collection_interval_minutes,p.missing_collection_threshold
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN company_site cs ON cs.site_id=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
@@ -100,7 +100,9 @@ public class AlertService {
                 holidays.getOrDefault(rs.getString("registered_site"), List.of()),
                 rs.getObject("is_dashboard_visible") != null && rs.getBoolean("is_dashboard_visible"),
                 companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
-                averageStates.getOrDefault(rs.getString("registered_site"), Map.of())));
+                averageStates.getOrDefault(rs.getString("registered_site"), Map.of()), rs.getBoolean("cold_chiller_active"),
+                rs.getObject("collection_interval_minutes") == null ? 10 : rs.getInt("collection_interval_minutes"),
+                rs.getObject("missing_collection_threshold") == null ? 2 : rs.getInt("missing_collection_threshold")));
     }
 
     public List<AlertThreshold> companyThresholds(CurrentUser actor) {
@@ -198,8 +200,39 @@ public class AlertService {
                                                  Boolean alertsEnabled, Integer triggerAfterMinutes,
                                                  Integer repeatMinutes, LocalTime quietStart, LocalTime quietEnd,
                                                  Boolean suppressWeekends, List<LocalDate> holidayDates) {
+        return updateAlertSettings(actor, siteId, updates, noDataMinutes, noDataActive, alertsEnabled,
+            triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends, holidayDates, null);
+    }
+
+    @Transactional
+    public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates,
+                                                 Integer noDataMinutes, Boolean noDataActive,
+                                                 Boolean alertsEnabled, Integer triggerAfterMinutes,
+                                                 Integer repeatMinutes, LocalTime quietStart, LocalTime quietEnd,
+                                                 Boolean suppressWeekends, List<LocalDate> holidayDates,
+                                                 Boolean coldChillerActive) {
+        return updateAlertSettings(actor, siteId, updates, noDataMinutes, noDataActive, alertsEnabled,
+            triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends, holidayDates,
+            coldChillerActive, null, null);
+    }
+
+    @Transactional
+    public SiteAlertSettings updateAlertSettings(CurrentUser actor, String siteId, List<ThresholdUpdate> updates,
+                                                 Integer noDataMinutes, Boolean noDataActive,
+                                                 Boolean alertsEnabled, Integer triggerAfterMinutes,
+                                                 Integer repeatMinutes, LocalTime quietStart, LocalTime quietEnd,
+                                                 Boolean suppressWeekends, List<LocalDate> holidayDates,
+                                                 Boolean coldChillerActive, Integer collectionIntervalMinutes,
+                                                 Integer missingCollectionThreshold) {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
+        if ((collectionIntervalMinutes == null) != (missingCollectionThreshold == null)) {
+            throw new BadRequestException("수집 주기와 연속 누락 기준을 함께 입력해주세요.");
+        }
+        if (collectionIntervalMinutes != null) {
+            validateCollectionPolicy(collectionIntervalMinutes, missingCollectionThreshold);
+            noDataMinutes = collectionIntervalMinutes * missingCollectionThreshold;
+        }
         if (Boolean.TRUE.equals(alertsEnabled) && !currentUsers.visibleSiteIds(actor).contains(siteId)) {
             throw new BadRequestException("대시보드에 표시되는 사업장만 알림을 켤 수 있습니다.");
         }
@@ -278,6 +311,18 @@ public class AlertService {
             """, siteId, alertsEnabled, triggerAfterMinutes, repeatMinutes, time(quietStart), time(quietEnd),
             suppressWeekends);
         if (!alertsEnabled) alertEvents.disableSite(siteId);
+        if (coldChillerActive != null) {
+            jdbcTemplate.update("UPDATE site_alert_policy SET cold_chiller_active=? WHERE site_id=?", coldChillerActive, siteId);
+            if (!coldChillerActive) alertEvents.disableRule(siteId, "__cold_chiller__");
+        }
+        if (collectionIntervalMinutes != null) {
+            jdbcTemplate.update("UPDATE site_alert_policy SET collection_interval_minutes=?,missing_collection_threshold=? WHERE site_id=?",
+                collectionIntervalMinutes, missingCollectionThreshold, siteId);
+        } else if (noDataMinutes != null) {
+            // Backward-compatible clients send the legacy minute threshold only.
+            jdbcTemplate.update("UPDATE site_alert_policy SET missing_collection_threshold=GREATEST(1,CEIL(?/collection_interval_minutes)) WHERE site_id=?",
+                noDataMinutes, siteId);
+        }
         jdbcTemplate.update("DELETE FROM site_alert_holiday WHERE site_id=?", siteId);
         holidayDates.stream().distinct().sorted().forEach(date -> jdbcTemplate.update(
             "INSERT INTO site_alert_holiday (site_id,holiday_date,created_at) VALUES (?,?,CURRENT_TIMESTAMP(6))",
@@ -291,7 +336,10 @@ public class AlertService {
                 "triggerAfterMinutes", triggerAfterMinutes,
                 "repeatMinutes", repeatMinutes,
                 "suppressWeekends", suppressWeekends,
-                "holidayCount", holidayDates.size()));
+                "holidayCount", holidayDates.size(),
+                "coldChillerActive", coldChillerActive == null ? "UNCHANGED" : coldChillerActive,
+                "collectionPolicy", collectionIntervalMinutes == null ? "LEGACY_MINUTES" :
+                    Map.of("intervalMinutes", collectionIntervalMinutes, "missingThreshold", missingCollectionThreshold)));
         dashboardService.invalidateCache();
         return settings(siteId);
     }
@@ -304,6 +352,12 @@ public class AlertService {
         if (min > max) throw new BadRequestException("최소값은 최대값보다 클 수 없습니다.");
     }
 
+    static void validateCollectionPolicy(int interval, int misses) {
+        if (interval < 5 || interval > 1440 || misses < 1 || misses > 288 || (long) interval * misses > 1440) {
+            throw new BadRequestException("수집 주기는 5~1440분, 누락 기준은 1~288회이며 총 대기시간은 1440분 이하여야 합니다.");
+        }
+    }
+
     private SiteAlertSettings settings(String siteId) {
         Map<Long, Map<String, AlertThreshold>> companyDefaults = companyDefaults();
         Map<String, Map<String, RollingAverageService.AverageState>> averageStates = averages.states();
@@ -311,7 +365,7 @@ public class AlertService {
             SELECT a.*, s.site AS registered_site, s.name,cs.company_id,cs.is_dashboard_visible,
                    nd.no_data_minutes,nd.is_enabled AS no_data_active,
                    p.is_enabled AS alerts_enabled,p.trigger_after_minutes,p.repeat_minutes,
-                   p.quiet_start,p.quiet_end,p.suppress_weekends
+                   p.quiet_start,p.quiet_end,p.suppress_weekends,p.cold_chiller_active,p.collection_interval_minutes,p.missing_collection_threshold
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN company_site cs ON cs.site_id=s.site
               LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
@@ -330,7 +384,9 @@ public class AlertService {
                 holidayDates(siteId), rs.getObject("is_dashboard_visible") != null &&
                     rs.getBoolean("is_dashboard_visible"),
                 companyDefaults.getOrDefault(rs.getLong("company_id"), Map.of()),
-                averageStates.getOrDefault(siteId, Map.of())),
+                averageStates.getOrDefault(siteId, Map.of()), rs.getBoolean("cold_chiller_active"),
+                rs.getObject("collection_interval_minutes") == null ? 10 : rs.getInt("collection_interval_minutes"),
+                rs.getObject("missing_collection_threshold") == null ? 2 : rs.getInt("missing_collection_threshold")),
             siteId);
     }
 
@@ -342,7 +398,9 @@ public class AlertService {
                                        boolean suppressWeekends, List<LocalDate> holidayDates,
                                        boolean dashboardVisible,
                                        Map<String, AlertThreshold> companyDefaults,
-                                       Map<String, RollingAverageService.AverageState> averageStates) throws SQLException {
+                                       Map<String, RollingAverageService.AverageState> averageStates,
+                                       boolean coldChillerActive, int collectionIntervalMinutes,
+                                       int missingCollectionThreshold) throws SQLException {
         List<AlertThreshold> thresholds = new ArrayList<>();
         for (Metric metric : METRICS) {
             String prefix = metric.storagePrefix();
@@ -362,9 +420,9 @@ public class AlertService {
                 average.useAverage(), average.tolerancePercent(), average.averageValue(),
                 average.sampleCount(), average.zeroCount(), average.capturedAt(), range != null));
         }
-        return new SiteAlertSettings(siteId, name, exists, thresholds, noDataMinutes, noDataActive,
+        return new SiteAlertSettings(siteId, name, exists, thresholds, collectionIntervalMinutes * missingCollectionThreshold, noDataActive,
             alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,
-            holidayDates, dashboardVisible);
+            holidayDates, dashboardVisible, coldChillerActive, collectionIntervalMinutes, missingCollectionThreshold);
     }
 
     private static Map<String, Metric> metricMap() {

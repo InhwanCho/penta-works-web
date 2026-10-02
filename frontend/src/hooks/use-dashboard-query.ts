@@ -17,6 +17,9 @@ export type SiteRow = {
   name: string | null;
   lastAt: string | null; // ISO
   lagMin: number | null;
+  collectionIntervalMinutes: number;
+  missingCollectionThreshold: number;
+  missedCollectionCount: number | null;
   count1h: number;
   count24h: number;
   hePsi: number | null;
@@ -28,7 +31,7 @@ export type SiteRow = {
   unacknowledgedAlertCount: number;
   alertIssues: {
     id: number;
-    metricKey: MetricKey | "__data__";
+    metricKey: MetricKey | "__data__" | "__cold_chiller__";
     eventType: "LOW" | "HIGH" | "NO_DATA";
     message: string;
     occurredAt: string;

@@ -3,6 +3,8 @@
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, type MetricDef } from "@/lib/metrics";
 import Link from "next/link";
+import type { CompanyMetric } from "@/lib/company-metrics";
+import CollectionStatus, { collectionMissing } from "./collection-status";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
@@ -13,8 +15,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * 모바일에서는 큰글씨 모드에서도 여백이 함께 커지지 않도록 px 단위를 씁니다.
  */
 const COL_NAME =
-  "w-[80px] min-w-[80px] max-w-[80px] sm:w-[190px] sm:min-w-[190px] sm:max-w-[190px]";
-const COL_NAME_INNER = "block w-[74px] truncate sm:w-[166px]";
+  "w-[80px] min-w-[80px] max-w-[80px] sm:w-[130px] lg:w-[190px] sm:min-w-[130px] lg:min-w-[190px] sm:max-w-[130px] lg:max-w-[190px]";
+const COL_NAME_INNER = "block w-[74px] truncate sm:w-[118px] lg:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -71,10 +73,12 @@ export default function DashboardExcelView({
   rows,
   ctrl,
   metrics,
+  columns,
 }: {
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
   metrics: MetricDef[];
+  columns: CompanyMetric[];
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{
@@ -148,7 +152,7 @@ export default function DashboardExcelView({
           data-dashboard-scroll
           className="max-h-[calc(100dvh-11rem)] overflow-auto overscroll-contain sm:min-h-0 sm:max-h-none sm:flex-1"
         >
-          <table className="w-full border-separate border-spacing-0 text-xs sm:text-sm" style={{ minWidth: 265 + metrics.length * 64 }}>
+          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 80 + columns.length * 64 }}>
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
             </caption>
@@ -158,7 +162,7 @@ export default function DashboardExcelView({
                 <th
                   scope="col"
                   className={[
-                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[3px] py-[5px] text-left align-bottom text-xs leading-tight font-bold tracking-wide sm:px-3 sm:py-2.5 sm:text-sm",
+                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[3px] py-[5px] text-left align-bottom text-xs leading-tight font-bold tracking-wide lg:px-3 lg:py-2.5 lg:text-sm",
                     COL_NAME,
                     CELL_BORDER,
                     HEAD_BG,
@@ -167,14 +171,16 @@ export default function DashboardExcelView({
                 >
                   <span className={COL_NAME_INNER}>병원명</span>
                 </th>
-                {metrics.map((m) => {
+                {columns.map((column) => {
+                  const m = metrics.find(metric => metric.key === column.key);
+                  if (!m) return <HeadCell key={column.key} className="min-w-[72px] text-right">{column.displayName}</HeadCell>;
                   const sub = metricSubLabel(m.label, m.unit);
                   return (
                     <th
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-right whitespace-nowrap sm:min-w-[104px] sm:px-3 sm:py-2",
+                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-right whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2",
                         sub ? "align-top" : "align-middle",
                         CELL_BORDER,
                         HEAD_BG,
@@ -186,14 +192,14 @@ export default function DashboardExcelView({
                           type="button"
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
-                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 sm:text-sm"
+                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
                           onClick={() => showMetricHelp(m.key, true)}
                           onMouseEnter={() => showMetricHelp(m.key)}
                           onMouseLeave={hideMetricHelp}
                           onFocus={() => showMetricHelp(m.key)}
                           onBlur={hideMetricHelp}
                         >
-                          {m.code}
+                          {column.displayName}
                         </button>
                         {openMetric === m.key ? (
                           <span
@@ -210,22 +216,13 @@ export default function DashboardExcelView({
                       </span>
                       {sub ? (
                         <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 hidden text-xs font-medium sm:block">
-                          {sub}
+                          {m.key === "cctemp" ? "cc-in" : m.key === "ccflow" ? "cc-out" : m.code}{m.unit ? ` (${m.unit})` : ""}
                         </span>
                       ) : null}
                     </th>
                   );
                 })}
 
-                <HeadCell className="w-[50px] min-w-[50px] text-right sm:w-[96px] sm:min-w-[96px]">
-                  <span className="sm:hidden">1h</span><span className="hidden sm:inline">1시간 건수</span>
-                </HeadCell>
-                <HeadCell className="w-[50px] min-w-[50px] text-right sm:w-[96px] sm:min-w-[96px]">
-                  <span className="sm:hidden">24h</span><span className="hidden sm:inline">24시간 건수</span>
-                </HeadCell>
-                <HeadCell className="w-[85px] min-w-[85px] text-left sm:w-[128px] sm:min-w-[128px]">
-                  <span className="sm:hidden">시각</span><span className="hidden sm:inline">최신 시각</span>
-                </HeadCell>
               </tr>
             </thead>
 
@@ -241,15 +238,15 @@ export default function DashboardExcelView({
                     // 고정열은 불투명 배경이라 알파 hover 를 쓸 수 없습니다.
                     // 행 전체와 고정열의 hover 색이 어긋나지 않도록 양쪽 모두
                     // 알파 없는 같은 색(FIXED_BG 의 group-hover)을 사용합니다.
-                    className="group hover:bg-background-primary dark:hover:bg-background-dark-secondary transition-colors"
+                    className={`group transition-colors ${collectionMissing(row) ? "bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50" : "hover:bg-background-primary dark:hover:bg-background-dark-secondary"}`}
                   >
                     {/* 고정열 1 — 병원명 */}
                     <td
                       className={[
-                        "text-text-major dark:text-text-dark-primary sticky left-0 px-[3px] py-[5px] font-medium sm:px-3 sm:py-2",
+                        "text-text-major dark:text-text-dark-primary sticky left-0 px-[3px] py-[5px] font-medium lg:px-3 lg:py-2",
                         COL_NAME,
                         CELL_BORDER,
-                        FIXED_BG,
+                        collectionMissing(row) ? "bg-rose-50 group-hover:bg-rose-100 dark:bg-rose-950 dark:group-hover:bg-rose-900" : FIXED_BG,
                         Z_FIXED,
                       ].join(" ")}
                       title={row.name ?? undefined}
@@ -262,10 +259,15 @@ export default function DashboardExcelView({
                           {row.name ?? "-"}
                         </span>
                       </Link>
+                      <CollectionStatus row={row} />
                       {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[74px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
                     </td>
 
-                    {metrics.map((m) => {
+                    {columns.map((column) => {
+                      const m = metrics.find(metric => metric.key === column.key);
+                      if (!m) return <td key={column.key} onClick={() => selectCell(row, column.displayName)} className={`${CELL_BORDER} cursor-cell px-1 py-1.5 text-right whitespace-nowrap tabular-nums lg:px-3 lg:py-2`}>
+                        {column.key === "lastAt" ? <><span className="block text-xs">{fmtYmd(lastAtDate)}</span><span className="block text-xs opacity-70">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
+                      </td>;
                       const value = row.metrics?.[m.key] ?? null;
                       const alert = isMetricOutOfRange(value, m.bound, range);
 
@@ -282,7 +284,7 @@ export default function DashboardExcelView({
                             }
                           }}
                           className={[
-                            "cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
+                            "cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums lg:px-3 lg:py-2",
                             CELL_BORDER,
                             selectedCell?.key === `${row.siteDb}:${m.code}`
                               ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
@@ -297,44 +299,6 @@ export default function DashboardExcelView({
                       );
                     })}
 
-                    <td
-                      onClick={() => selectCell(row, "1시간 건수")}
-                      className={[
-                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
-                        CELL_BORDER,
-                        selectedCell?.key === `${row.siteDb}:1시간 건수`
-                          ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
-                          : "",
-                      ].join(" ")}
-                    >
-                      {fmtNum(row.count1h)}
-                    </td>
-                    <td
-                      onClick={() => selectCell(row, "24시간 건수")}
-                      className={[
-                        "text-text-major dark:text-text-dark-primary/90 cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
-                        CELL_BORDER,
-                        selectedCell?.key === `${row.siteDb}:24시간 건수`
-                          ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
-                          : "",
-                      ].join(" ")}
-                    >
-                      {fmtNum(row.count24h)}
-                    </td>
-
-                    <td
-                      className={[
-                        "text-text-secondary dark:text-text-dark-primary/70 px-[3px] py-[5px] whitespace-nowrap tabular-nums sm:px-3 sm:py-2",
-                        CELL_BORDER,
-                      ].join(" ")}
-                    >
-                      <span className="block text-xs leading-tight font-medium">
-                        {fmtYmd(lastAtDate)}
-                      </span>
-                      <span className="mt-0.5 block text-xs leading-tight opacity-70">
-                        {fmtHms(lastAtDate)}
-                      </span>
-                    </td>
                   </tr>
                 );
               })}
@@ -343,7 +307,7 @@ export default function DashboardExcelView({
         </div>
       )}
 
-      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 sm:py-2.5">
+      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 lg:py-2.5">
         <p>
           <span className="font-semibold text-red-600 dark:text-red-400">
             빨간 값
@@ -384,7 +348,7 @@ function HeadCell({
     <th
       scope="col"
       className={[
-        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[3px] py-[5px] align-bottom text-xs leading-tight font-bold tracking-wide whitespace-nowrap sm:px-3 sm:py-2.5 sm:text-sm",
+        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[3px] py-[5px] align-bottom text-xs leading-tight font-bold tracking-wide whitespace-nowrap lg:px-3 lg:py-2.5 lg:text-sm",
         CELL_BORDER,
         HEAD_BG,
         Z_HEAD,

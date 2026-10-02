@@ -80,17 +80,17 @@ class CompanyMetricServiceTest {
         CompanyMetricService service = new CompanyMetricService(jdbc, audit);
 
         assertEquals("회사 1 압력", service.metrics(1L).get(0).displayName());
-        assertEquals("리콘덴서 Si410 온도", service.metrics(2L).get(0).displayName());
+        assertEquals("He Pressure", service.metrics(2L).get(0).displayName());
 
         TransactionSynchronizationManager.initSynchronization();
         List<CompanyMetricService.Metric> reversed = new ArrayList<>(defaults());
         Collections.reverse(reversed);
         List<CompanyMetricService.Metric> saved = service.save(user(2, "SUPER_ADMIN"), reversed);
 
-        assertEquals("ccflow", saved.get(0).key());
+        assertEquals("gcflow", saved.get(0).key());
         assertEquals(0, saved.get(0).sortOrder());
         assertEquals(10, saved.get(10).sortOrder());
-        verify(jdbc, times(11)).update(org.mockito.ArgumentMatchers.contains("INSERT INTO company_metric_config"), any(Object[].class));
+        verify(jdbc, times(14)).update(org.mockito.ArgumentMatchers.contains("INSERT INTO company_metric_config"), any(Object[].class));
         verify(audit).record(any(), eq("COMPANY_METRICS_UPDATED"), eq("COMPANY"), eq("2"), any());
         assertTrue(TransactionSynchronizationManager.getSynchronizations().size() == 1);
     }
@@ -101,12 +101,13 @@ class CompanyMetricServiceTest {
 
     private static List<CompanyMetricService.Metric> defaults() {
         return List.of(
-            metric("recosi", "리콘덴서 Si410 온도", "K"), metric("coldtp", "콜드헤드 온도", "K"),
-            metric("recoru", "리콘덴서 RuO 온도", "K"), metric("hepres", "He Pressure", "psi"),
-            metric("heleve", "He Level", "%"), metric("actemp", "AC Temp", "°C"),
-            metric("achumi", "AC Humidity", "%"), metric("gctemp", "그라디언트칠러 온도", "°C"),
-            metric("gcflow", "그라디언트칠러 유량", null), metric("cctemp", "콜드칠러 온도", "°C"),
-            metric("ccflow", "콜드칠러 유량", null));
+            metric("hepres", "He Pressure", "psi"), metric("heleve", "He Level", "%"),
+            metric("gctemp", "그라디언트칠러 온도", "°C"), metric("cctemp", "콜드칠러 IN 온도", "°C"),
+            metric("ccflow", "콜드칠러 OUT 온도", "°C"), metric("actemp", "항온항습기 온도", "°C"),
+            metric("achumi", "항온항습기 습도", "%"), metric("lastAt", "최신 시각", null),
+            metric("count1h", "1시간 건수", null), metric("count24h", "24시간 건수", null),
+            metric("recosi", "리콘덴서 Si410 온도", "K"), metric("recoru", "리콘덴서 RuO 온도", "K"),
+            metric("coldtp", "콜드헤드 온도", "K"), metric("gcflow", "그라디언트칠러 유량", null));
     }
 
     private static CompanyMetricService.Metric metric(String key, String name, String unit) {

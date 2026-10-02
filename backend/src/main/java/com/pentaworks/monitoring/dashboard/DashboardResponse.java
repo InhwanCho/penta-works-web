@@ -18,7 +18,17 @@ public record DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows,
     public record DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
                                int count1h, int count24h, Double hePsi, Double hePct,
                                Map<String, Double> metrics, String alertStatus, int openAlertCount,
-                               int unacknowledgedAlertCount, List<AlertIssue> alertIssues) {}
+                               int unacknowledgedAlertCount, List<AlertIssue> alertIssues,
+                               int collectionIntervalMinutes, int missingCollectionThreshold,
+                               Long missedCollectionCount) {
+        public DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
+                            int count1h, int count24h, Double hePsi, Double hePct, Map<String, Double> metrics,
+                            String alertStatus, int openAlertCount, int unacknowledgedAlertCount, List<AlertIssue> alertIssues) {
+            this(siteDb, siteSlug, name, lastAt, lagMin, count1h, count24h, hePsi, hePct, metrics,
+                alertStatus, openAlertCount, unacknowledgedAlertCount, alertIssues, 10, 2,
+                com.pentaworks.monitoring.alert.CollectionHealth.missedCount(lagMin, 10));
+        }
+    }
     public record AlertIssue(long id, String metricKey, String eventType, String message,
                              String occurredAt, boolean acknowledged) {}
     public record CtrlRange(Double recosil, Double recosih, Double coldtpl, Double coldtph,

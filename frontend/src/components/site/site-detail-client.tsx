@@ -158,6 +158,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       const d = r.date ? new Date(r.date) : null;
       return {
         t: d ? fmtTime(d) : "-",
+        at: d ? fmtDate(d) : "-",
         ...Object.fromEntries(
           visibleKeys.map((key) => [key, toPointNumber(r[key])]),
         ),
@@ -284,7 +285,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               {(
                 [
                   ["헬륨", ["hepres", "heleve"]],
-                  ["온도", ["actemp", "gctemp", "cctemp"]],
+                  ["온도", ["actemp", "gctemp", "cctemp", "ccflow"]],
                   ["냉각", ["gctemp", "gcflow", "cctemp", "ccflow"]],
                 ] as [string, MetricKey[]][]
               ).filter(([, keys]) => keys.some((key) => metrics.some((metric) => metric.key === key))).map(([label, keys]) => (

@@ -59,6 +59,9 @@ export type SiteAlertSettings = {
   thresholds: AlertThreshold[];
   noDataMinutes: number;
   noDataActive: boolean;
+  collectionIntervalMinutes: number;
+  missingCollectionThreshold: number;
+  coldChillerActive: boolean;
   alertsEnabled: boolean;
   triggerAfterMinutes: number;
   repeatMinutes: number;
@@ -73,7 +76,7 @@ export type AlertEventSummary = {
   id: number;
   siteId: string;
   siteName: string | null;
-  metricKey: MetricKey | "__data__";
+  metricKey: MetricKey | "__data__" | "__cold_chiller__";
   eventType: "LOW" | "HIGH" | "NO_DATA" | "RECOVERY";
   severity: string;
   measuredValue: number | null;

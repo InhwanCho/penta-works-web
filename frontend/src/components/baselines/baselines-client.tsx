@@ -72,7 +72,7 @@ export default function BaselinesClient({
     );
   }, [entries, query]);
   const activeCount = useMemo(
-    () => entries.reduce((count, entry) => count + entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0), 0),
+    () => entries.reduce((count, entry) => count + entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0) + (entry.coldChillerActive ? 1 : 0), 0),
     [entries],
   );
 
@@ -154,7 +154,7 @@ export default function BaselinesClient({
           {filtered.map((entry) => {
             const pressure = entry.thresholds.find((threshold) => threshold.key === "hepres");
             const level = entry.thresholds.find((threshold) => threshold.key === "heleve");
-            const enabled = entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0);
+            const enabled = entry.thresholds.filter((threshold) => threshold.active).length + (entry.noDataActive ? 1 : 0) + (entry.coldChillerActive ? 1 : 0);
             return (
               <article key={entry.siteid} className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_14px_rgba(22,58,82,0.045)] transition hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_7px_22px_rgba(22,58,82,0.075)] dark:border-white/8 dark:bg-background-dark-card">
                 <div className="flex items-start justify-between gap-3">
@@ -444,9 +444,10 @@ function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onA
   const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
   const metric = METRICS.find((item) => item.key === event.metricKey);
   const isNoData = event.metricKey === "__data__";
+  const isColdChiller = event.metricKey === "__cold_chiller__";
   return <article className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_12px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={recovered || !!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{showDelivery ? event.message : ""}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
+      <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={recovered || !!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={isColdChiller ? "COLD_CHILLER" : event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : isColdChiller ? "콜드칠러 정지 의심" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{showDelivery ? event.message : ""}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : isColdChiller ? `IN = OUT: ${formatValue(event.measuredValue, "°C")}` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
     </div>
     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "종료" : "진행 중"}</span><div className="flex items-center gap-2">{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : !recovered && <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인완료"}</button>}</div></div>
@@ -469,9 +470,9 @@ function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onA
   </article>;
 }
 
-function EventBadge({ type }: { type: AlertEventSummary["eventType"] }) {
+function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHILLER" }) {
   const style = type === "RECOVERY" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" : type === "LOW" ? "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300";
-  return <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold ${style}`}>{type === "RECOVERY" ? "복구" : type === "LOW" ? "낮음" : type === "NO_DATA" ? "수신 중단" : "높음"}</span>;
+  return <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-extrabold ${style}`}>{type === "COLD_CHILLER" ? "정지 의심" : type === "RECOVERY" ? "복구" : type === "LOW" ? "낮음" : type === "NO_DATA" ? "수신 중단" : "높음"}</span>;
 }
 
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
@@ -485,8 +486,11 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
 }) {
   const [thresholds, setThresholds] = useState(entry.thresholds);
   const [metricFilter, setMetricFilter] = useState<"active" | "all">(entry.thresholds.some(item => item.active) ? "active" : "all");
-  const [noDataMinutes, setNoDataMinutes] = useState(entry.noDataMinutes);
+  const [collectionIntervalMinutes, setCollectionIntervalMinutes] = useState(entry.collectionIntervalMinutes ?? 10);
+  const [missingCollectionThreshold, setMissingCollectionThreshold] = useState(entry.missingCollectionThreshold ?? 2);
+  const noDataMinutes = collectionIntervalMinutes * missingCollectionThreshold;
   const [noDataActive, setNoDataActive] = useState(entry.noDataActive);
+  const [coldChillerActive, setColdChillerActive] = useState(entry.coldChillerActive);
   const [alertsEnabled, setAlertsEnabled] = useState(entry.alertsEnabled);
   const [triggerAfterMinutes, setTriggerAfterMinutes] = useState(entry.triggerAfterMinutes);
   const [repeatMinutes, setRepeatMinutes] = useState(entry.repeatMinutes);
@@ -518,8 +522,8 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
       }
       if (threshold.min > threshold.max) { setError(`${threshold.label}: 최소값이 최대값보다 큽니다.`); return; }
     }
-    if (!Number.isInteger(noDataMinutes) || noDataMinutes < 5 || noDataMinutes > 1440) {
-      setError("수신 중단 기준은 5분에서 1440분 사이의 정수여야 합니다."); return;
+    if (!Number.isInteger(collectionIntervalMinutes) || collectionIntervalMinutes < 5 || collectionIntervalMinutes > 1440 || !Number.isInteger(missingCollectionThreshold) || missingCollectionThreshold < 1 || missingCollectionThreshold > 288 || noDataMinutes > 1440) {
+      setError("수집 주기는 5~1440분, 누락 기준은 1~288회 정수이며 총 대기시간은 1440분 이하여야 합니다."); return;
     }
     if (!Number.isInteger(triggerAfterMinutes) || triggerAfterMinutes < 0 || triggerAfterMinutes > 1440) {
       setError("이상 지속 기준은 0분에서 1440분 사이의 정수여야 합니다."); return;
@@ -534,7 +538,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
     }
     if (quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("발송 제외 시작과 종료를 서로 다르게 입력해주세요."); return; }
     setSaving(true); setError(null);
-    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
+    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, coldChillerActive, collectionIntervalMinutes, missingCollectionThreshold, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
     finally { setSaving(false); }
   }
@@ -558,10 +562,17 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
             <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!holidayDate || !canEdit || saving || holidayDates.includes(holidayDate)} onClick={() => { setHolidayDates((current) => [...current, holidayDate].sort()); setHolidayDate(""); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
           </section>
           <section className={`mb-4 rounded-xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">설정 시간 동안 데이터가 없으면 알림을 보냅니다. 반복 주기는 위 설정을 따릅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
-            <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">연속 수집 누락 알림</h3><p className="text-text-secondary mt-1 text-xs leading-5">마지막 수집 시각부터 예정된 수집이 연속으로 빠진 횟수를 계산합니다. 1시간 건수와는 별개이며, 다시 수집되면 누락 횟수는 0으로 돌아갑니다. 반복 주기는 위 설정을 따릅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <label className="text-text-secondary text-xs font-bold">예상 수집 주기 (분)<input type="number" min="5" max="1440" step="1" required value={collectionIntervalMinutes} disabled={!canEdit || saving} onChange={event => setCollectionIntervalMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
+              <label className="text-text-secondary text-xs font-bold">연속 누락 알림 기준 (회)<input type="number" min="1" max="288" step="1" required value={missingCollectionThreshold} disabled={!canEdit || saving} onChange={event => setMissingCollectionThreshold(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
+            </div>
+            <p role="status" className="mt-3 text-sm font-bold">{collectionIntervalMinutes}분마다 수집 · {missingCollectionThreshold}회 연속 누락 시 알림 (마지막 수집 후 {noDataMinutes}분부터)</p>
           </section>
-          <div className="sticky top-0 z-10 mb-3 flex gap-2 bg-white py-2 dark:bg-background-dark-card">{(["active", "all"] as const).map((value) => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}</div>
+          <section className="mb-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
+            <div className="flex items-start justify-between gap-3"><div><h3 className="font-extrabold">콜드칠러 정지 의심</h3><p className="text-text-secondary mt-1 text-xs leading-5">IN(cctemp)과 OUT(ccflow) 온도가 소수점까지 정확히 같으면 알립니다. 미측정 값은 제외합니다. 위의 감지 대기시간·반복 주기·제외 시간과 담당자 확인 완료 설정을 따릅니다.</p></div><label className="flex shrink-0 items-center gap-2 text-xs font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5" />사용</label></div>
+          </section>
+          <div className="mb-3 flex gap-2 py-2">{(["active", "all"] as const).map((value) => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}</div>
           <div className="grid gap-3 md:grid-cols-2">
             {thresholds.filter((threshold) => metricFilter === "all" || threshold.active).map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={(patch) => update(threshold.key, patch)} />)}
           </div>

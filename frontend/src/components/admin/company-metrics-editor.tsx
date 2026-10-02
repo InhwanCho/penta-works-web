@@ -44,8 +44,8 @@ export default function CompanyMetricsEditor() {
   if (query.isLoading) return <div className="flex min-h-48 items-center justify-center"><CircleLoader size="xl" /></div>;
   if (query.isError) return <button type="button" onClick={() => query.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button>;
   return <section className="rounded-xl border border-slate-200 bg-white p-4 sm:p-6 dark:border-white/10 dark:bg-background-dark-card">
-    <h2 className="text-lg font-bold">회사 측정항목 표시</h2>
-    <p className="text-text-secondary mt-2 text-sm leading-6">대시보드와 상세 차트에 사용할 이름·단위·순서를 설정합니다. 단위는 표시만 변경하며 수치는 변환하지 않습니다. 항목을 숨겨도 알림 설정은 유지됩니다.</p>
+    <h2 className="text-lg font-bold">대시보드 컬럼 이름·순서</h2>
+    <p className="text-text-secondary mt-2 text-sm leading-6">병원명은 첫 컬럼으로 고정됩니다. 나머지 컬럼의 이름·순서·표시 여부는 회사 전체에 적용됩니다. 화살표로 순서를 바꾼 뒤 저장하세요. 단위는 표시만 변경하며 수치는 변환하지 않습니다. 항목을 숨겨도 알림 설정은 유지됩니다.</p>
     {!canEdit && <p className="mt-2 text-sm">회사 최고관리자가 설정을 변경할 수 있습니다.</p>}
     <div className="mt-5 space-y-3">{entries.map((metric, index) => <div key={metric.key} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-[8rem_1fr_7rem_auto] sm:items-end dark:border-white/10">
       <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={metric.visible} disabled={!canEdit || saving} onChange={(event) => change(index, { visible: event.target.checked })} />{metric.key}</label>

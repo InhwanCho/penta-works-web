@@ -23,6 +23,80 @@ import static org.mockito.Mockito.when;
 class AlertEventServiceTest {
     @Test
     @SuppressWarnings("unchecked")
+    void collectionAlertStartsAtSecondMissAndClosesWhenDataReturns() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"))).thenReturn(7L);
+        when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(9L);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.next()).thenReturn(false, false, true);
+        when(rs.getLong("id")).thenReturn(9L);
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("NO_DATA")))
+            .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs));
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 20, true, true, 0, 30,
+            null, null, false, List.of(), true, false, 10, 2);
+        assertNull(service.evaluateNoData(site, 19L));
+        var transition = service.evaluateNoData(site, 20L);
+        assertEquals(9L, transition.eventId());
+        assertEquals("NO_DATA", transition.eventType());
+        org.junit.jupiter.api.Assertions.assertTrue(transition.message().contains("2회 연속 누락"));
+        assertNull(service.evaluateNoData(site, 0L));
+        verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(9L));
+    }
+    @Test
+    void coldChillerIgnoresUnmeasuredAndDisabledValues() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
+            null, null, false, List.of(), true, true);
+        for (double value : new double[]{0, 0.001, 0.01, Double.NaN, Double.POSITIVE_INFINITY}) {
+            assertNull(service.evaluateColdChiller(site, value, value));
+        }
+        assertNull(service.evaluateColdChiller(site, null, 20.0));
+        var disabled = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30, null, null, false);
+        assertNull(service.evaluateColdChiller(disabled, 20.5, 20.5));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void coldChillerCreatesNewIncidentWhenEqual() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
+        when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(9L);
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
+            .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(mock(ResultSet.class)));
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
+            null, null, false, List.of(), true, true);
+        assertEquals(9L, service.evaluateColdChiller(site, 20.123, 20.123).eventId());
+        verify(jdbc).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void coldChillerExactEqualityRepeatsSameIncidentAndDifferentValuesCloseIt() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.next()).thenReturn(true);
+        when(rs.getLong("id")).thenReturn(5L);
+        when(rs.getString("event_type")).thenReturn("HIGH");
+        when(rs.getString("delivery_status")).thenReturn("SKIPPED");
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
+            .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs));
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
+            null, null, false, List.of(), true, true);
+        var transition = service.evaluateColdChiller(site, 20.123, 20.123);
+        assertEquals(5L, transition.eventId());
+        assertEquals(20.123, transition.value());
+        assertEquals("__cold_chiller__", transition.metricKey());
+        assertNull(service.evaluateColdChiller(site, 20.123, 20.124));
+        verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(5L));
+    }
+    @Test
+    @SuppressWarnings("unchecked")
     void skippedOneShotAlertCanBeDeliveredAfterQuietHoursEnd() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);

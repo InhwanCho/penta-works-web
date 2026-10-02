@@ -79,6 +79,21 @@ public class AlertEventService {
 
     @Transactional
     public Transition evaluate(SiteAlertSettings site, AlertThreshold threshold, Double value) {
+        return evaluateCondition(site, threshold, value, false, null);
+    }
+
+    @Transactional
+    public Transition evaluateColdChiller(SiteAlertSettings site, Double inlet, Double outlet) {
+        if (!site.coldChillerActive() || inlet == null || outlet == null ||
+            !Double.isFinite(inlet) || !Double.isFinite(outlet) ||
+            DashboardService.isUnmeasured(inlet) || DashboardService.isUnmeasured(outlet)) return null;
+        return evaluateCondition(site,
+            new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (IN=OUT)", "°C", null, null, true),
+            inlet, true, Double.compare(inlet, outlet) == 0 ? "HIGH" : null);
+    }
+
+    private Transition evaluateCondition(SiteAlertSettings site, AlertThreshold threshold, Double value,
+                                         boolean coldChiller, String conditionDirection) {
         if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active() ||
             value == null || DashboardService.isUnmeasured(value)) return null;
         Double min = threshold.effectiveMin();
@@ -94,7 +109,7 @@ public class AlertEventService {
             SELECT id FROM alert_rule WHERE site_id=? AND metric_key=? AND rule_type='RANGE' FOR UPDATE
             """, Long.class, site.siteid(), threshold.key());
         OpenEvent open = openEvent(ruleId);
-        String direction = direction(value, min, max);
+        String direction = coldChiller ? conditionDirection : direction(value, min, max);
         if (direction == null) {
             clearPending(ruleId);
             if (open == null) return null;
@@ -107,6 +122,7 @@ public class AlertEventService {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
                 ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+            if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도가 " + value + "°C로 동일합니다. 정지 상태를 확인해주세요.";
             jdbcTemplate.update("UPDATE alert_event SET event_type=?,measured_value=?,threshold_min=?,threshold_max=?,message=? WHERE id=?",
                 eventType, value, min, max, message, open.id());
             return new Transition(open.id(), site.siteid(), site.name(), threshold.key(), threshold.label(),
@@ -117,6 +133,7 @@ public class AlertEventService {
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
             ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+        if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도가 " + value + "°C로 동일합니다. 정지 상태를 확인해주세요.";
         long eventId = insertEvent(ruleId, site.siteid(), eventType, value, message, now, null);
         return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
             threshold.unit(), eventType, value, min, max, message);
@@ -137,7 +154,8 @@ public class AlertEventService {
             SELECT id FROM alert_rule WHERE site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' FOR UPDATE
             """, Long.class, site.siteid());
         OpenEvent open = openEvent(ruleId, "NO_DATA");
-        boolean stale = lagMinutes == null || lagMinutes > site.noDataMinutes();
+        boolean stale = CollectionHealth.isMissing(lagMinutes, site.collectionIntervalMinutes(), site.missingCollectionThreshold());
+        Long missedCount = CollectionHealth.missedCount(lagMinutes, site.collectionIntervalMinutes());
         Double measured = lagMinutes == null ? null : lagMinutes.doubleValue();
         if (!stale) {
             clearPending(ruleId);
@@ -150,16 +168,17 @@ public class AlertEventService {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = lagMinutes == null
                 ? site.name() + " · 수신된 데이터가 계속 없습니다."
-                : site.name() + " · 마지막 데이터 수신 후 " + lagMinutes + "분이 지났습니다.";
-            return new Transition(open.id(), site.siteid(), site.name(), "__data__", "데이터 수신", "분",
+                : site.name() + " · 수집 " + missedCount + "회 연속 누락 (" + site.collectionIntervalMinutes() + "분 주기, 마지막 수신 " + lagMinutes + "분 전)";
+            jdbcTemplate.update("UPDATE alert_event SET measured_value=?,threshold_max=?,message=? WHERE id=?", measured, site.noDataMinutes(), message, open.id());
+            return new Transition(open.id(), site.siteid(), site.name(), "__data__", missedCount == null ? "데이터 수집 기록 없음" : "데이터 수집 " + missedCount + "회 연속 누락", "분",
                 "NO_DATA", measured, null, (double) site.noDataMinutes(), message);
         }
         Instant now = Instant.now();
         String message = lagMinutes == null
             ? site.name() + " · 수신된 데이터가 없습니다."
-            : site.name() + " · 마지막 데이터 수신 후 " + lagMinutes + "분이 지났습니다.";
+            : site.name() + " · 수집 " + missedCount + "회 연속 누락 (" + site.collectionIntervalMinutes() + "분 주기, 마지막 수신 " + lagMinutes + "분 전)";
         long eventId = insertEvent(ruleId, site.siteid(), "NO_DATA", measured, message, now, null);
-        return new Transition(eventId, site.siteid(), site.name(), "__data__", "데이터 수신", "분",
+        return new Transition(eventId, site.siteid(), site.name(), "__data__", missedCount == null ? "데이터 수집 기록 없음" : "데이터 수집 " + missedCount + "회 연속 누락", "분",
             "NO_DATA", measured, null, (double) site.noDataMinutes(), message);
     }
 
@@ -229,7 +248,9 @@ public class AlertEventService {
         if (!List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.deliveryStatus()))
             throw new BadRequestException("미발송 또는 전송에 실패한 알림만 재전송할 수 있습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
-            event.metricKey(), null, event.eventType(), event.value(), event.min(), event.max(), event.message());
+            "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (IN=OUT)" : event.metricKey(),
+            "__cold_chiller__".equals(event.metricKey()) ? "°C" : null,
+            event.eventType(), event.value(), event.min(), event.max(), event.message());
     }
 
     @Transactional

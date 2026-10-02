@@ -88,7 +88,8 @@ public class AlertController {
         return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates,
             request.noDataMinutes(), request.noDataActive(), request.alertsEnabled(),
             request.triggerAfterMinutes(), request.repeatMinutes(), request.quietStart(), request.quietEnd(),
-            request.suppressWeekends(), request.holidayDates());
+            request.suppressWeekends(), request.holidayDates(), request.coldChillerActive(),
+            request.collectionIntervalMinutes(), request.missingCollectionThreshold());
     }
 
     @GetMapping("/events")
@@ -155,7 +156,10 @@ public class AlertController {
                                                LocalTime quietStart,
                                                LocalTime quietEnd,
                                                @NotNull Boolean suppressWeekends,
-                                               @NotNull List<@NotNull LocalDate> holidayDates) {}
+                                               @NotNull List<@NotNull LocalDate> holidayDates,
+                                               Boolean coldChillerActive,
+                                               Integer collectionIntervalMinutes,
+                                               Integer missingCollectionThreshold) {}
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
                                          @NotNull Boolean active, Boolean useAverage,
                                          Double tolerancePercent) {}

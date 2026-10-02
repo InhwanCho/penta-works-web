@@ -1,9 +1,17 @@
 import { METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
 
-export type CompanyMetric = { key: MetricKey; displayName: string; unit: string | null; sortOrder: number; visible: boolean };
+export type DashboardColumnKey = MetricKey | "lastAt" | "count1h" | "count24h";
+export type CompanyMetric = { key: DashboardColumnKey; displayName: string; unit: string | null; sortOrder: number; visible: boolean };
+export const DEFAULT_COLUMN_ORDER: DashboardColumnKey[] = ["hepres", "heleve", "gctemp", "cctemp", "ccflow", "actemp", "achumi", "lastAt", "count1h", "count24h", "recosi", "recoru", "coldtp", "gcflow"];
+
+export function dashboardColumns(config?: CompanyMetric[]) {
+  const byKey = new Map(config?.map(column => [column.key, column]));
+  return defaultCompanyMetrics().map(column => byKey.get(column.key) ?? column)
+    .filter(column => column.visible).sort((a, b) => a.sortOrder - b.sortOrder);
+}
 
 export function companyMetrics(config?: CompanyMetric[]): MetricDef[] {
-  if (!config?.length) return [...METRICS];
+  if (!config?.length) config = defaultCompanyMetrics();
   const byKey = new Map(config.map((metric) => [metric.key, metric]));
   return METRICS.filter((metric) => byKey.get(metric.key)?.visible !== false)
     .map((metric) => {
@@ -14,5 +22,9 @@ export function companyMetrics(config?: CompanyMetric[]): MetricDef[] {
 }
 
 export function defaultCompanyMetrics(): CompanyMetric[] {
-  return METRICS.map((metric, index) => ({ key: metric.key, displayName: metric.label ?? metric.code, unit: metric.unit, sortOrder: index, visible: true }));
+  const metadataNames: Partial<Record<DashboardColumnKey, string>> = {lastAt: "최신 시각", count1h: "1시간 건수", count24h: "24시간 건수"};
+  return DEFAULT_COLUMN_ORDER.map((key, index) => {
+    const metric = METRICS.find(metric => metric.key === key);
+    return { key, displayName: metric?.label ?? metadataNames[key] ?? key, unit: metric?.unit ?? null, sortOrder: index, visible: key !== "gcflow" };
+  });
 }

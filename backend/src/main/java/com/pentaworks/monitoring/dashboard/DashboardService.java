@@ -88,7 +88,8 @@ public class DashboardService {
                 acknowledged.contains(issue.id()))).toList();
             return new DashboardRow(row.siteDb(), row.siteSlug(), row.name(), row.lastAt(), row.lagMin(),
                 row.count1h(), row.count24h(), row.hePsi(), row.hePct(), row.metrics(), row.alertStatus(),
-                row.openAlertCount(), (int) issues.stream().filter(issue -> !issue.acknowledged()).count(), issues);
+                row.openAlertCount(), (int) issues.stream().filter(issue -> !issue.acknowledged()).count(), issues,
+                row.collectionIntervalMinutes(), row.missingCollectionThreshold(), row.missedCollectionCount());
         }).toList();
         return new DashboardResponse(scoped.meta(), scoped.stats(), rows, scoped.ctrl(), scoped.ctrlDefault());
     }
@@ -113,6 +114,9 @@ public class DashboardService {
         Instant since1h = now.minus(Duration.ofHours(1));
         Instant since24h = now.minus(Duration.ofHours(24));
         List<Site> sites = jdbcTemplate.query("SELECT site, name FROM site ORDER BY site", (rs, row) -> new Site(rs.getString(1), rs.getString(2)));
+        Map<String, int[]> collectionPolicies = new HashMap<>();
+        jdbcTemplate.query("SELECT site_id,collection_interval_minutes,missing_collection_threshold FROM site_alert_policy",
+            (RowCallbackHandler) rs -> collectionPolicies.put(rs.getString(1), new int[]{rs.getInt(2), rs.getInt(3)}));
 
         Map<String, Counts> counts = new HashMap<>();
         jdbcTemplate.query("""
@@ -184,15 +188,18 @@ public class DashboardService {
             Counts count = counts.get(site.id());
             Latest latest = latestBySite.get(site.id());
             Instant lastAt = latest == null ? null : latest.lastAt();
+            Long lagMinutes = lastAt == null ? null : Math.max(0, Duration.between(lastAt, now).toMinutes());
+            int[] collectionPolicy = collectionPolicies.getOrDefault(site.id(), new int[]{10, 2});
             Map<String, Double> values = latest == null ? emptyMetrics() : latest.metrics();
             List<AlertIssue> issues = issuesBySite.getOrDefault(site.id(), List.of());
             String alertStatus = issues.stream().anyMatch(issue -> "NO_DATA".equals(issue.eventType()))
                 ? "NO_DATA" : issues.isEmpty() ? "NORMAL" : "WARNING";
             int unacknowledged = (int) issues.stream().filter(issue -> !issue.acknowledged()).count();
             rows.add(new DashboardRow(site.id(), siteSlug(site.id()), site.name(), lastAt == null ? null : lastAt.toString(),
-                lastAt == null ? null : Math.max(0, Duration.between(lastAt, now).toMinutes()),
+                lagMinutes,
                 count == null ? 0 : count.count1h(), count == null ? 0 : count.count24h(), values.get("hepres"), values.get("heleve"), values,
-                alertStatus, issues.size(), unacknowledged, issues));
+                alertStatus, issues.size(), unacknowledged, issues, collectionPolicy[0], collectionPolicy[1],
+                com.pentaworks.monitoring.alert.CollectionHealth.missedCount(lagMinutes, collectionPolicy[0])));
         }
         rows.sort(Comparator.comparingLong((DashboardRow row) ->
             row.lastAt() == null ? 0L : Instant.parse(row.lastAt()).toEpochMilli()).reversed());

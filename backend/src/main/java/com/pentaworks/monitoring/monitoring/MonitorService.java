@@ -55,7 +55,10 @@ public class MonitorService {
             if (row.name() == null || site == null || !site.dashboardVisible() || !site.alertsEnabled()) continue;
             Transition noData = alertEvents.evaluateNoData(site, row.lagMin());
             if (noData != null) transitions.add(noData);
-            if (site.noDataActive() && (row.lagMin() == null || row.lagMin() > site.noDataMinutes())) continue;
+            if (site.noDataActive() && com.pentaworks.monitoring.alert.CollectionHealth.isMissing(
+                row.lagMin(), site.collectionIntervalMinutes(), site.missingCollectionThreshold())) continue;
+            Transition coldChiller = alertEvents.evaluateColdChiller(site, row.metrics().get("cctemp"), row.metrics().get("ccflow"));
+            if (coldChiller != null) transitions.add(coldChiller);
             for (AlertThreshold threshold : site.thresholds()) {
                 Double value = row.metrics().get(threshold.key());
                 if (!threshold.active()) continue;
