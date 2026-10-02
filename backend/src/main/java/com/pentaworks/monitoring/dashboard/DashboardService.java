@@ -77,6 +77,22 @@ public class DashboardService {
         cachedDashboard = null;
     }
 
+    public DashboardResponse getDashboard(Set<String> allowedSiteIds, long userId) {
+        DashboardResponse scoped = getDashboard(allowedSiteIds);
+        Set<Long> acknowledged = new java.util.HashSet<>(jdbcTemplate.query(
+            "SELECT event_id FROM alert_event_acknowledgement WHERE user_id=?",
+            (rs, row) -> rs.getLong(1), userId));
+        List<DashboardRow> rows = scoped.rows().stream().map(row -> {
+            List<AlertIssue> issues = row.alertIssues().stream().map(issue -> new AlertIssue(
+                issue.id(), issue.metricKey(), issue.eventType(), issue.message(), issue.occurredAt(),
+                acknowledged.contains(issue.id()))).toList();
+            return new DashboardRow(row.siteDb(), row.siteSlug(), row.name(), row.lastAt(), row.lagMin(),
+                row.count1h(), row.count24h(), row.hePsi(), row.hePct(), row.metrics(), row.alertStatus(),
+                row.openAlertCount(), (int) issues.stream().filter(issue -> !issue.acknowledged()).count(), issues);
+        }).toList();
+        return new DashboardResponse(scoped.meta(), scoped.stats(), rows, scoped.ctrl(), scoped.ctrlDefault());
+    }
+
     private static boolean after(String value, Instant threshold) {
         return value != null && Instant.parse(value).isAfter(threshold);
     }
@@ -109,8 +125,10 @@ public class DashboardService {
 
         Map<String, Latest> latestBySite = new HashMap<>();
         jdbcTemplate.query("""
-            SELECT m.siteid, m.date, m.recosi, m.coldtp, m.recoru, m.hepres, m.heleve,
-                   m.actemp, m.achumi, m.gctemp, m.gcflow, m.cctemp, m.ccflow
+            SELECT m.siteid, m.date, m.recosi_value AS recosi, m.coldtp_value AS coldtp,
+                   m.recoru_value AS recoru, m.hepres_value AS hepres, m.heleve_value AS heleve,
+                   m.actemp_value AS actemp, m.achumi_value AS achumi, m.gctemp_value AS gctemp,
+                   m.gcflow_value AS gcflow, m.cctemp_value AS cctemp, m.ccflow_value AS ccflow
               FROM mrtb m
               JOIN (
                     SELECT siteid, MAX(`index`) AS max_index

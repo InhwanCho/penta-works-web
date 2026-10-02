@@ -97,6 +97,7 @@ export type AlertRecipient = {
   userName: string;
   channel: "KAKAO_ALIMTALK";
   destinationMasked: string;
+  destination: string;
   quietStart: string | null;
   quietEnd: string | null;
   enabled: boolean;

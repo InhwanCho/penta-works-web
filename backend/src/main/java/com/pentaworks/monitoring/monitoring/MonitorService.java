@@ -110,8 +110,12 @@ public class MonitorService {
                 continue;
             }
             Map<Long, AlertDeliveryService.Batch> batches = new LinkedHashMap<>();
+            Map<Long, List<String>> eligible = new LinkedHashMap<>();
             for (Transition alert : siteAlerts) {
-                var batch = deliveries.begin(alert.eventId(), destinations, manual);
+                List<String> eventPhones = recipients.activePhones(entry.getKey(), now.toLocalTime(), alert.eventId());
+                eligible.put(alert.eventId(), eventPhones);
+                if (eventPhones.isEmpty()) continue;
+                var batch = deliveries.begin(alert.eventId(), eventPhones.stream().map(phone -> "KAKAO_ALIMTALK:" + phone).toList(), manual);
                 if (batch != null) batches.put(alert.eventId(), batch);
             }
             if (manual && batches.size() != siteAlerts.size()) {
@@ -121,10 +125,11 @@ public class MonitorService {
                 String destination = "KAKAO_ALIMTALK:" + phone;
                 for (Transition alert : siteAlerts) {
                     var batch = batches.get(alert.eventId());
+                    if (!eligible.getOrDefault(alert.eventId(), List.of()).contains(phone)) continue;
                     if (batch == null || !deliveries.claim(batch, destination)) continue;
                     try {
-                        kakao.send(phone, alert);
-                        deliveries.complete(batch, destination, "SENT", null);
+                        String receipt = kakao.send(phone, alert);
+                        deliveries.accepted(batch, destination, receipt);
                     } catch (IllegalStateException error) {
                         deliveries.complete(batch, destination, "FAILED", error.getMessage());
                     } catch (RestClientResponseException error) {

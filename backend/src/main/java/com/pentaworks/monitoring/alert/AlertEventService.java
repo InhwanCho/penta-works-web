@@ -31,25 +31,37 @@ public class AlertEventService {
     }
 
     public List<AlertEventSummary> events(Set<String> allowedSiteIds, int requestedLimit) {
+        return events(allowedSiteIds, requestedLimit, -1);
+    }
+
+    public List<AlertEventSummary> events(Set<String> allowedSiteIds, int requestedLimit, long actorId) {
+        return events(allowedSiteIds, requestedLimit, actorId, null);
+    }
+
+    private List<AlertEventSummary> events(Set<String> allowedSiteIds, int requestedLimit, long actorId, Long eventId) {
         if (allowedSiteIds.isEmpty()) return List.of();
         int limit = Math.min(Math.max(requestedLimit, 1), 500);
         String placeholders = String.join(",", Collections.nCopies(allowedSiteIds.size(), "?"));
-        List<Object> args = new ArrayList<>(allowedSiteIds);
+        List<Object> args = new ArrayList<>();
+        args.add(actorId);
+        args.addAll(allowedSiteIds);
+        if (eventId != null) args.add(eventId);
         args.add(limit);
         return jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.severity,e.measured_value,
                    e.threshold_min AS min_value,e.threshold_max AS max_value,
                    e.message,e.delivery_status,e.occurred_at,
-                   e.acknowledged_at,e.recovered_at,e.last_notified_at,e.notification_count,
+                   ack.acknowledged_at,e.recovered_at,e.last_notified_at,e.notification_count,
                    CASE WHEN e.delivery_batch_id IS NULL AND e.delivery_status='FAILED'
                         THEN '기존 전송에 실패했습니다. 수신 채널 설정을 확인해주세요.'
                         ELSE e.delivery_error END AS safe_delivery_error
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
-             WHERE e.site_id IN (%s)
+              LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
+             WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) %s
              ORDER BY e.occurred_at DESC,e.id DESC LIMIT ?
-            """.formatted(placeholders), (rs, row) -> new AlertEventSummary(
+            """.formatted(placeholders, eventId == null ? "" : "AND e.id=?"), (rs, row) -> new AlertEventSummary(
                 rs.getLong("id"), rs.getString("site_id"), rs.getString("name"), rs.getString("metric_key"),
                 rs.getString("event_type"), rs.getString("severity"), number(rs.getObject("measured_value")),
                 number(rs.getObject("min_value")), number(rs.getObject("max_value")), rs.getString("message"),
@@ -88,24 +100,19 @@ public class AlertEventService {
             if (open == null) return null;
             Instant now = Instant.now();
             jdbcTemplate.update("UPDATE alert_event SET recovered_at=? WHERE id=?", Timestamp.from(now), open.id());
-            String message = site.name() + " · " + threshold.label() + " 값이 정상 범위로 복구되었습니다.";
-            long eventId = insertEvent(ruleId, site.siteid(), "RECOVERY", value, message, now, now);
-            return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
-                threshold.unit(), "RECOVERY", value, min, max, message);
+            return null;
         }
         String eventType = direction.toUpperCase();
-        if (open != null && eventType.equals(open.eventType())) {
+        if (open != null) {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
                 ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
+            jdbcTemplate.update("UPDATE alert_event SET event_type=?,measured_value=?,threshold_min=?,threshold_max=?,message=? WHERE id=?",
+                eventType, value, min, max, message, open.id());
             return new Transition(open.id(), site.siteid(), site.name(), threshold.key(), threshold.label(),
                 threshold.unit(), eventType, value, min, max, message);
         }
         Instant now = Instant.now();
-        if (open != null) {
-            jdbcTemplate.update("UPDATE alert_event SET recovered_at=? WHERE id=?", Timestamp.from(now), open.id());
-            clearPending(ruleId);
-        }
         if (!sustained(ruleId, eventType, site.triggerAfterMinutes(), now)) return null;
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
@@ -137,10 +144,7 @@ public class AlertEventService {
             if (open == null) return null;
             Instant now = Instant.now();
             jdbcTemplate.update("UPDATE alert_event SET recovered_at=? WHERE id=?", Timestamp.from(now), open.id());
-            String message = site.name() + " · 데이터 수신이 정상화되었습니다.";
-            long eventId = insertEvent(ruleId, site.siteid(), "RECOVERY", measured, message, now, now);
-            return new Transition(eventId, site.siteid(), site.name(), "__data__", "데이터 수신", "분",
-                "RECOVERY", measured, null, (double) site.noDataMinutes(), message);
+            return null;
         }
         if (open != null) {
             if (!repeatDue(open, site.repeatMinutes())) return null;
@@ -170,10 +174,10 @@ public class AlertEventService {
                 UPDATE alert_event
                    SET delivery_status=?,delivery_error=?,recipient_snapshot=?,
                        delivery_batch_id=NULL,delivery_started_at=NULL,
-                       last_notified_at=CURRENT_TIMESTAMP(6),
+                       last_notified_at=CASE WHEN ?='SKIPPED' THEN last_notified_at ELSE CURRENT_TIMESTAMP(6) END,
                        notification_count=notification_count+CASE WHEN ?='SKIPPED' THEN 0 ELSE 1 END
-                 WHERE id=? AND delivery_status<>'SENDING'
-                """, status, error, snapshot, status, eventId);
+                 WHERE id=? AND delivery_status NOT IN ('SENDING','UNKNOWN')
+                """, status, error, snapshot, status, status, eventId);
         }
     }
 
@@ -184,19 +188,19 @@ public class AlertEventService {
         if (siteId == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         jdbcTemplate.update("""
-            UPDATE alert_event SET acknowledged_by=?,acknowledged_at=COALESCE(acknowledged_at,CURRENT_TIMESTAMP(6))
-             WHERE id=?
+            INSERT IGNORE INTO alert_event_acknowledgement (user_id,event_id) VALUES (?,?)
             """, actor.id(), eventId);
         audit.record(actor, "ALERT_ACKNOWLEDGED", "ALERT_EVENT", Long.toString(eventId),
             java.util.Map.of("siteId", siteId));
-        return events(Set.of(siteId), 500).stream().filter(event -> event.id() == eventId)
+        return events(Set.of(siteId), 1, actor.id(), eventId).stream()
             .findFirst().orElseThrow(() -> new NotFoundException("알림 이력을 찾을 수 없습니다."));
     }
 
     @Transactional
     public int acknowledgeMany(CurrentUser actor, List<Long> eventIds) {
         if (eventIds == null || eventIds.isEmpty()) throw new BadRequestException("확인할 알림을 선택해주세요.");
-        if (eventIds.size() > 500) throw new BadRequestException("한 번에 최대 500건까지 확인할 수 있습니다.");
+        if (eventIds.size() > 500 || eventIds.stream().anyMatch(java.util.Objects::isNull))
+            throw new BadRequestException("확인할 알림은 최대 500건까지 올바른 번호로 지정해주세요.");
         int updated = 0;
         for (Long eventId : new java.util.LinkedHashSet<>(eventIds)) {
             AlertEventSummary event = acknowledge(actor, eventId);
@@ -213,7 +217,7 @@ public class AlertEventService {
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
-             WHERE e.id=?
+             WHERE e.id=? AND e.recovered_at IS NULL AND r.is_enabled=TRUE
             """, rs -> rs.next() ? new RetryEvent(rs.getLong("id"), rs.getString("site_id"),
                 rs.getString("name"), rs.getString("metric_key"), rs.getString("event_type"),
                 number(rs.getObject("measured_value")), number(rs.getObject("min_value")),
@@ -276,12 +280,12 @@ public class AlertEventService {
         args.add(ruleId);
         args.addAll(List.of(eventTypes));
         return jdbcTemplate.query("""
-            SELECT id,event_type,occurred_at,last_notified_at FROM alert_event
+            SELECT id,event_type,occurred_at,last_notified_at,delivery_status FROM alert_event
              WHERE rule_id=? AND recovered_at IS NULL AND event_type IN (%s)
              ORDER BY id DESC LIMIT 1 FOR UPDATE
             """.formatted(placeholders),
             rs -> rs.next() ? new OpenEvent(rs.getLong("id"), rs.getString("event_type"),
-                instant(rs.getTimestamp("occurred_at")), instant(rs.getTimestamp("last_notified_at"))) : null,
+                instant(rs.getTimestamp("occurred_at")), instant(rs.getTimestamp("last_notified_at")), rs.getString("delivery_status")) : null,
             args.toArray());
     }
 
@@ -304,7 +308,11 @@ public class AlertEventService {
     }
 
     private boolean repeatDue(OpenEvent open, int repeatMinutes) {
-        if (repeatMinutes <= 0 || open.lastNotifiedAt() == null) return false;
+        if ("UNKNOWN".equals(open.deliveryStatus()) || "SENDING".equals(open.deliveryStatus())) return false;
+        // A quiet-hours/no-recipient skip is not a notification, including one-shot rules.
+        if ("SKIPPED".equals(open.deliveryStatus())) return true;
+        if (repeatMinutes <= 0) return false;
+        if (open.lastNotifiedAt() == null) return true;
         return Duration.between(open.lastNotifiedAt(), Instant.now()).toMinutes() >= repeatMinutes;
     }
 
@@ -335,7 +343,7 @@ public class AlertEventService {
 
     private static Double number(Object value) { return value == null ? null : ((Number) value).doubleValue(); }
     private static Instant instant(Timestamp value) { return value == null ? null : value.toInstant(); }
-    private record OpenEvent(long id, String eventType, Instant occurredAt, Instant lastNotifiedAt) {}
+    private record OpenEvent(long id, String eventType, Instant occurredAt, Instant lastNotifiedAt, String deliveryStatus) {}
     private record PendingState(String eventType, Instant firstSeenAt) {}
     private record RetryEvent(long id, String siteId, String siteName, String metricKey, String eventType,
                               Double value, Double min, Double max, String message, String deliveryStatus) {}

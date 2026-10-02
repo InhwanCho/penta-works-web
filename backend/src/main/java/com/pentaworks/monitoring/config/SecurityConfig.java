@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/events/acknowledge")
                     .authenticated()
                 .requestMatchers("/api/v1/alerts/recipients", "/api/v1/alerts/recipients/**")
-                    .hasAnyRole("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN")
+                    .authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/**")
                     .hasAnyRole("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN")

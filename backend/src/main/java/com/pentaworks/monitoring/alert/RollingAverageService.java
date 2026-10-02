@@ -45,8 +45,14 @@ public class RollingAverageService {
     void captureAt(LocalDateTime end) {
         Map<String, Map<String, Accumulator>> values = new LinkedHashMap<>();
         jdbcTemplate.query("""
-            SELECT m.siteid,m.date,m.recosi,m.coldtp,m.recoru,m.hepres,m.heleve,m.actemp,m.achumi,
-                   m.gctemp,m.gcflow,m.cctemp,m.ccflow
+            SELECT m.siteid,m.date,m.recosi_value AS recosi,m.coldtp_value AS coldtp,
+                   m.recoru_value AS recoru,m.hepres_value AS hepres,m.heleve_value AS heleve,
+                   m.actemp_value AS actemp,m.achumi_value AS achumi,m.gctemp_value AS gctemp,
+                   m.gcflow_value AS gcflow,m.cctemp_value AS cctemp,m.ccflow_value AS ccflow,
+                   m.recosi_unmeasured,m.coldtp_unmeasured,m.recoru_unmeasured,
+                   m.hepres_unmeasured,m.heleve_unmeasured,m.actemp_unmeasured,
+                   m.achumi_unmeasured,m.gctemp_unmeasured,m.gcflow_unmeasured,
+                   m.cctemp_unmeasured,m.ccflow_unmeasured
               FROM mrtb m JOIN company_site cs ON cs.site_id=m.siteid
              WHERE m.date>=? AND m.date<?
             """, (RowCallbackHandler) rs -> {
@@ -54,11 +60,12 @@ public class RollingAverageService {
                     ignored -> new HashMap<>());
                 for (String key : METRIC_KEYS) {
                     Accumulator accumulator = site.computeIfAbsent(key, ignored -> new Accumulator());
-                    Double value = DashboardService.parseNumber(rs.getString(key));
-                    if (value == null || !Double.isFinite(value)) continue;
-                    // 기존 zero_count 컬럼에 0, 0.001, 0.01 미측정 건수를 함께 기록합니다.
-                    if (DashboardService.isUnmeasured(value)) accumulator.zeroCount++;
-                    else {
+                    if (rs.getBoolean(key + "_unmeasured")) {
+                        // Keep the historical zero_count field for API compatibility.
+                        accumulator.zeroCount++;
+                    } else {
+                        Double value = DashboardService.parseNumber(rs.getString(key));
+                        if (value == null || !Double.isFinite(value)) continue;
                         accumulator.sum += value;
                         accumulator.sampleCount++;
                         Timestamp sampleAt = rs.getTimestamp("date");

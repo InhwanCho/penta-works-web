@@ -30,10 +30,10 @@ class BaroKakaoServiceTest {
         assertTrue(service.ready());
         assertTrue(request.contains("<SmsReply>A</SmsReply>"));
         assertTrue(request.contains("<SmsMessage>[MRI] 테스트 병원 He Pressure 3.25psi</SmsMessage>"));
-        assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림</TemplateName>"));
+        assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림 - 간소화</TemplateName>"));
         assertTrue(request.contains("<ReceiverNum>01099998888</ReceiverNum>"));
         assertTrue(request.contains("감지 시각: 2026-09-30 12:00 (수)"));
-        assertTrue(request.contains("<Url1>https://app.pentaworks.net/</Url1>"));
+        assertTrue(request.contains("<Url1>https://app.pentaworks.net/?scrollTo=001</Url1>"));
         assertFalse(new BaroKakaoService(false, "", "", "", "", false).ready());
     }
 
@@ -46,5 +46,21 @@ class BaroKakaoServiceTest {
             ZonedDateTime.of(2026, 9, 30, 12, 0, 0, 0, ZoneId.of("Asia/Seoul")));
         assertTrue(request.contains("<Url1>https://app.pentaworks.net/?scrollTo=006</Url1>"));
         assertTrue(request.contains("<Url2>https://app.pentaworks.net/?scrollTo=006</Url2>"));
+    }
+
+    @Test
+    void parsesProviderKakaoFailureAndSmsFallbackState() {
+        String response = """
+            <soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+              <soap:Body><GetSendKakaotalkExResponse xmlns="http://ws.baroservice.com/">
+                <GetSendKakaotalkExResult><SendStatus>2</SendStatus><ResultCode>2</ResultCode>
+                  <ResultMessage>카카오톡 전송 실패</ResultMessage><SmsSendState>전송성공</SmsSendState>
+                </GetSendKakaotalkExResult>
+              </GetSendKakaotalkExResponse></soap:Body>
+            </soap:Envelope>
+            """;
+        BaroKakaoService.ProviderStatus result = BaroKakaoService.parseStatus(response);
+        assertEquals(2, result.sendStatus());
+        assertEquals("전송성공", result.smsSendState());
     }
 }

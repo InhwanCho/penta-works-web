@@ -25,6 +25,47 @@ import static org.mockito.Mockito.when;
 
 class AlertRecipientServiceTest {
     @Test
+    void equalQuietHoursAreRejectedInsteadOfSilentlyAllowingAllDayDelivery() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        var service = new AlertRecipientService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var actor = new CurrentUser(1, 1, "user@example.com", "User", "USER", "ACTIVE");
+        assertThrows(BadRequestException.class, () -> service.create(actor,
+            new CreateRecipient("001", "KAKAO_ALIMTALK", "01012345678", LocalTime.NOON, LocalTime.NOON, true)));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void acknowledgedIncidentSuppressesOnlyThatRecipientsPhone() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        AlertRecipientService service = new AlertRecipientService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        when(jdbc.query(anyString(), any(RowMapper.class), eq("001"), eq("KAKAO_ALIMTALK")))
+            .thenAnswer(invocation -> {
+                RowMapper<?> mapper = invocation.getArgument(1);
+                ResultSet first = mock(ResultSet.class), second = mock(ResultSet.class);
+                when(first.getString("destination")).thenReturn("01012345678");
+                when(second.getString("destination")).thenReturn("01099998888");
+                return List.of(mapper.mapRow(first, 0), mapper.mapRow(second, 1));
+            });
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(10L), eq("001")))
+            .thenReturn(List.of("01012345678"));
+        when(jdbc.query(anyString(), any(RowMapper.class), eq(11L), eq("001")))
+            .thenReturn(List.of());
+        assertEquals(List.of("01099998888"), service.activePhones("001", LocalTime.NOON, 10L));
+        assertEquals(List.of("01012345678", "01099998888"), service.activePhones("001", LocalTime.NOON, 11L));
+    }
+
+    @Test
+    void regularUserCannotRegisterAnotherUser() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        AlertRecipientService service = new AlertRecipientService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        CurrentUser actor = new CurrentUser(1, 1, "user@example.com", "User", "USER", "ACTIVE");
+        assertThrows(com.pentaworks.monitoring.common.ForbiddenException.class, () -> service.create(actor,
+            new CreateRecipient("001", "KAKAO_ALIMTALK", "01012345678", null, null, true, 2L)));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
     void rejectsLegacyChannelBeforeDatabaseWrite() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         CurrentUserService currentUsers = mock(CurrentUserService.class);

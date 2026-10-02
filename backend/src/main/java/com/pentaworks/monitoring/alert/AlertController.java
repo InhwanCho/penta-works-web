@@ -96,7 +96,7 @@ public class AlertController {
                                           Authentication authentication) {
         var user = currentUsers.require(authentication);
         return alertEvents.events(user.isAdmin()
-            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user), limit);
+            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user), limit, user.id());
     }
 
     @PatchMapping("/events/{eventId}/acknowledge")

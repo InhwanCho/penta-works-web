@@ -17,6 +17,7 @@ import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
 @Service
@@ -68,23 +69,32 @@ public class BaroKakaoService {
         return receipt;
     }
 
+    /** The provider reports Kakao status and the SMS fallback state separately. */
+    public ProviderStatus lookup(String receipt) {
+        if (!ready()) throw new IllegalStateException("바로빌 조회 설정이 완료되지 않았습니다.");
+        if (receipt == null || receipt.isBlank() || receipt.length() > 50)
+            throw new IllegalArgumentException("바로빌 접수번호 형식이 올바르지 않습니다.");
+        String body = tag("CERTKEY", certKey) + tag("CorpNum", corpNum) + tag("SendKey", receipt);
+        String xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
+            + "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body>"
+            + "<GetSendKakaotalkEx xmlns=\"http://ws.baroservice.com/\">" + body
+            + "</GetSendKakaotalkEx></soap:Body></soap:Envelope>";
+        String response = client.post().uri(ENDPOINT).contentType(MediaType.TEXT_XML)
+            .header("SOAPAction", "http://ws.baroservice.com/GetSendKakaotalkEx")
+            .body(xml).retrieve().body(String.class);
+        return parseStatus(response);
+    }
+
     String request(String phone, Transition alert, ZonedDateTime now) {
+        // Approved template BB0836851023705085; this API identifies it by TemplateName.
         String value = value(alert.value(), alert.unit());
-        String limit = alert.min() == null && alert.max() == null ? "데이터 수신 확인"
-            : (alert.min() == null ? "" : "최소 " + value(alert.min(), alert.unit()))
-            + (alert.min() != null && alert.max() != null ? " / " : "")
-            + (alert.max() == null ? "" : "최대 " + value(alert.max(), alert.unit()));
-        String message = "[펜타웍스 MRI 모니터링 알림]\n\n" + safe(alert.siteName()) + "의 " + safe(alert.siteId())
-            + "에서 설정된 감시 기준을 벗어난 상태가 감지되었습니다.\n\n감지 시각: "
-            + now.format(ALERT_TIME)
-            + "\n감지 항목: " + safe(alert.metricLabel()) + "\n현재 값: " + value
-            + "\n설정 기준: " + limit + "\n\n모니터링 화면에서 상세 상태를 확인해 주세요.";
-        // 승인된 템플릿의 버튼 URL을 변경한 뒤에만 활성화해야 합니다.
-        String buttonUrl = deepLinkEnabled && alert.siteId() != null && !alert.siteId().isBlank()
-            ? "https://app.pentaworks.net/?scrollTo=" + URLEncoder.encode(alert.siteId().trim(), StandardCharsets.UTF_8)
-            : "https://app.pentaworks.net/";
+        String message = "[MrEyes MRI 모니터링 알림]\n담당자님, 설정 범위 이탈이 감지되었습니다.\n\n병원명: "
+            + safe(alert.siteName()) + "\n감지 시각: " + now.format(ALERT_TIME)
+            + "\n감지 항목: " + safe(alert.metricLabel()) + "\n현재 값: " + value;
+        String buttonUrl = "https://app.pentaworks.net/?scrollTo="
+            + URLEncoder.encode(safe(alert.siteId()), StandardCharsets.UTF_8);
         String inner = tag("CERTKEY", certKey) + tag("CorpNum", corpNum) + tag("SenderID", senderId)
-            + tag("YellowId", "@pentaworks_mri") + tag("TemplateName", "MRI 장비 상태 이상 감지 알림")
+            + tag("YellowId", "@pentaworks_mri") + tag("TemplateName", "MRI 장비 상태 이상 감지 알림 - 간소화")
             + tag("SendDT", "") + tag("SmsReply", "A") + tag("SmsSenderNum", smsSenderNum)
             + "<KakaotalkMessage>" + tag("ReceiverName", "MRI 알림") + tag("ReceiverNum", phone)
             + tag("Title", "") + tag("Message", message) + tag("SmsMessage", sms(alert))
@@ -131,8 +141,35 @@ public class BaroKakaoService {
     }
 
     private static String result(String xml) {
+        Node node = responseNode(xml, "SendATKakaotalkExResult");
+        return node == null ? null : node.getTextContent().trim();
+    }
+
+    static ProviderStatus parseStatus(String xml) {
+        Node node = responseNode(xml, "GetSendKakaotalkExResult");
+        if (node == null) throw new IllegalArgumentException("바로빌 상태 조회 결과가 없습니다.");
+        int sendStatus = number(child(node, "SendStatus"));
+        int resultCode = number(child(node, "ResultCode"));
+        return new ProviderStatus(sendStatus, resultCode,
+            child(node, "ResultMessage"), child(node, "SmsSendState"));
+    }
+
+    private static int number(String value) {
+        try { return Integer.parseInt(value); }
+        catch (NumberFormatException error) { throw new IllegalArgumentException("바로빌 상태 코드가 올바르지 않습니다.", error); }
+    }
+
+    private static String child(Node parent, String name) {
+        for (Node node = parent.getFirstChild(); node != null; node = node.getNextSibling())
+            if (name.equals(node.getLocalName()) || name.equals(node.getNodeName()))
+                return node.getTextContent().trim();
+        return null;
+    }
+
+    private static Node responseNode(String xml, String name) {
         try {
             var factory = DocumentBuilderFactory.newInstance();
+            factory.setNamespaceAware(true);
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
             factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
             factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
@@ -140,11 +177,13 @@ public class BaroKakaoService {
             factory.setXIncludeAware(false);
             factory.setExpandEntityReferences(false);
             Document document = factory.newDocumentBuilder().parse(new InputSource(new StringReader(xml)));
-            var nodes = document.getElementsByTagNameNS("*", "SendATKakaotalkExResult");
-            if (nodes.getLength() == 0) nodes = document.getElementsByTagName("SendATKakaotalkExResult");
-            return nodes.getLength() == 0 ? null : nodes.item(0).getTextContent().trim();
+            var nodes = document.getElementsByTagNameNS("*", name);
+            if (nodes.getLength() == 0) nodes = document.getElementsByTagName(name);
+            return nodes.getLength() == 0 ? null : nodes.item(0);
         } catch (Exception error) {
             throw new IllegalArgumentException("바로빌 응답을 해석할 수 없습니다.", error);
         }
     }
+
+    public record ProviderStatus(int sendStatus, int resultCode, String resultMessage, String smsSendState) {}
 }

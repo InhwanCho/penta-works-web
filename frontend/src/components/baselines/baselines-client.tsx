@@ -54,7 +54,7 @@ export default function BaselinesClient({
   recipients: AlertRecipient[];
   recipientsLoading?: boolean;
   recipientsFailed?: boolean;
-  onCreateRecipient: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
+  onCreateRecipient: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
   onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDeleteRecipient: (id: number) => Promise<void>;
 }) {
@@ -114,11 +114,11 @@ export default function BaselinesClient({
         </p>
       </header>
 
-      <div className="mb-5 inline-flex rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
+      <div className="mb-5 flex max-w-full overflow-x-auto rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
         <ViewTab active={view === "sites"} onClick={() => setView("sites")}>사업장·알림</ViewTab>
         <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>상세 기준값</ViewTab>
         <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
-        {canEdit && <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>수신 채널</ViewTab>}
+        <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>{canEdit ? "수신처" : "내 수신 설정"}</ViewTab>
       </div>
 
       {view === "sites" ? <section className="space-y-3">
@@ -174,7 +174,7 @@ export default function BaselinesClient({
         </section>
       )}
       </> : view === "events" ? <AlertEventsPanel events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
-        : <RecipientPanel sites={entries.filter((entry) => entry.dashboardVisible)} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
+        : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
 
       {selected && <SiteThresholdEditor entry={selected} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
@@ -210,60 +210,116 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
 }
 
 function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate, onDelete }: {
-  sites: SiteAlertSettings[];
-  recipients: AlertRecipient[];
-  loading: boolean;
-  failed: boolean;
-  onCreate: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
-  onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>;
-  onDelete: (id: number) => Promise<void>;
+  sites: SiteAlertSettings[]; recipients: AlertRecipient[]; loading: boolean; failed: boolean;
+  onCreate: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
+  onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>; onDelete: (id: number) => Promise<void>;
 }) {
-  const [siteId, setSiteId] = useState(sites[0]?.siteid ?? "");
+  const { isAdmin, session } = useAuth();
+  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => apiFetch<{ id: number; name: string; email: string; phone: string | null; siteIds: string[]; role: string; status: string }[]>("/admin/accounts/users"), enabled: isAdmin });
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const [owner, setOwner] = useState<number>(session?.id ?? 0);
   const [destination, setDestination] = useState("");
   const [quietEnabled, setQuietEnabled] = useState(false);
   const [quietStart, setQuietStart] = useState("22:00");
   const [quietEnd, setQuietEnd] = useState("08:00");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const [siteFilter, setSiteFilter] = useState("");
+  const [resultMessage, setResultMessage] = useState("");
+  const chosenUser = users.data?.find(user => user.id === owner);
+  const availableSites = chosenUser?.role === "USER" ? sites.filter(site => chosenUser.siteIds.includes(site.siteid)) : sites;
   async function submit(event: FormEvent) {
-    event.preventDefault(); setSaving(true); setError(null);
+    event.preventDefault();
+    const phone = destination.replace(/[-\s]/g, "");
+    if (!/^01[016789][0-9]{7,8}$/.test(phone)) { setError("휴대폰 번호를 확인해주세요."); return; }
+    if (quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("조용한 시간의 시작과 종료를 서로 다르게 입력해주세요."); return; }
+    setSaving(true); setError(null); setResultMessage("");
+    let created = 0, skipped = 0;
+    const failures: { id: string; message: string }[] = [];
     try {
-      await onCreate({ siteId, channel: "KAKAO_ALIMTALK", destination, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, enabled: true });
-      setDestination("");
-    } catch (createError) { setError(createError instanceof Error ? createError.message : "수신 채널을 추가하지 못했습니다."); }
-    finally { setSaving(false); }
+      for (const siteId of selectedSites) {
+        if (!availableSites.some(site => site.siteid === siteId)) { failures.push({ id: siteId, message: "담당자의 병원 접근 권한을 확인해주세요." }); continue; }
+        const existing = recipients.find(row => row.siteId === siteId && row.destination.replace(/[-\s]/g, "") === phone);
+        if (existing) {
+          if (existing.userId !== (owner || session?.id) || !existing.enabled) failures.push({ id: siteId, message: "같은 번호가 다른 담당자 또는 수신 중지 상태로 등록되어 있습니다. 기존 수신처를 수정해주세요." });
+          else skipped++;
+          continue;
+        }
+        try {
+          await onCreate({ siteId, userId: owner || undefined, channel: "KAKAO_ALIMTALK", destination: phone, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, enabled: true });
+          created++;
+        } catch (err) { failures.push({ id: siteId, message: err instanceof Error ? err.message : "등록 실패" }); }
+      }
+      setResultMessage(`신규 등록 ${created}개 · 기존 등록 ${skipped}개 · 확인 필요 ${failures.length}개`);
+      setSelectedSites(failures.map(item => item.id));
+      if (failures.length) setError(failures.map(item => `${sites.find(site => site.siteid === item.id)?.name ?? item.id}: ${item.message}`).join("\n"));
+      else setDestination("");
+    } finally { setSaving(false); }
   }
-
   return <section className="grid gap-4 xl:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
-    <form onSubmit={submit} className="h-fit rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card">
-      <h2 className="text-lg font-extrabold">알림톡 수신처 추가</h2><p className="text-text-secondary mt-1 text-sm leading-6">사업장별 휴대폰 번호를 등록합니다. 알림톡 실패 시 90바이트 이하 문자로 대체됩니다.</p>
-      <label className="mt-5 block text-sm font-bold">사업장<select required value={siteId} onChange={(event) => setSiteId(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5">{sites.map((site) => <option key={site.siteid} value={site.siteid}>{site.name ?? site.siteid} · {site.siteid}</option>)}</select></label>
-      <label className="mt-4 block text-sm font-bold">수신 휴대폰 번호<input required type="tel" inputMode="tel" autoComplete="off" placeholder="010-1234-5678" value={destination} onChange={(event) => setDestination(event.target.value)} className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5" /></label>
-      <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={quietEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-5 w-5 accent-sky-700" />조용한 시간 사용</label>
+    <form onSubmit={submit} className="h-fit rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-background-dark-card">
+      <h2 className="text-lg font-extrabold">{isAdmin ? "담당자 수신처 등록" : "내 수신처 등록"}</h2>
+      <fieldset disabled={saving || loading || failed} className="min-w-0 disabled:opacity-60">
+      <p className="text-text-secondary mt-2 text-sm">병원마다 여러 담당자를 등록할 수 있습니다. 각 번호로 알림톡을 보내고 실패하면 문자로 대체합니다.</p>
+      {isAdmin && <label className="mt-4 block text-sm font-bold">담당자<select value={owner} onChange={event => { const id = Number(event.target.value); setOwner(id); setSelectedSites([]); setDestination(users.data?.find(user => user.id === id)?.phone ?? ""); }} className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10"><option value={session?.id}>{session?.name} (본인)</option>{users.data?.filter(user => user.id !== session?.id && user.status === "ACTIVE").map(user => <option value={user.id} key={user.id}>{user.name} · {user.email}</option>)}</select></label>}
+      <fieldset className="mt-4"><legend className="text-sm font-bold">받을 병원 ({selectedSites.length}개 선택)</legend>
+        <label className="my-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={availableSites.length > 0 && availableSites.every(site => selectedSites.includes(site.siteid))} onChange={event => setSelectedSites(event.target.checked ? availableSites.map(site => site.siteid) : [])} />전체 사이트 선택</label>
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-white/10">{availableSites.map(site => <label className="flex min-h-11 items-center gap-2 text-sm" key={site.siteid}><input type="checkbox" className="h-5 w-5" checked={selectedSites.includes(site.siteid)} onChange={event => setSelectedSites(current => event.target.checked ? [...current, site.siteid] : current.filter(id => id !== site.siteid))} />{site.name} <span className="text-text-secondary">{site.siteid}</span></label>)}</div>
+      </fieldset>
+      <label className="mt-4 block text-sm font-bold">수신 휴대폰 번호<input required type="tel" value={destination} onChange={event => setDestination(event.target.value)} placeholder="010-1234-5678" className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label>
+      <label className="mt-4 flex min-h-11 items-center gap-2 text-sm font-bold"><input type="checkbox" checked={quietEnabled} onChange={event => setQuietEnabled(event.target.checked)} className="h-5 w-5" />조용한 시간 사용</label>
+      <p className="text-text-secondary text-xs leading-5">설정한 시간에는 이 담당자에게 알림톡·문자를 보내지 않습니다. 예: 22:00–08:00은 밤 10시부터 다음 날 오전 8시까지입니다. 다른 담당자는 각자의 설정을 따릅니다.</p>
       {quietEnabled && <div className="mt-3 grid grid-cols-2 gap-2"><TimeField label="시작" value={quietStart} onChange={setQuietStart} /><TimeField label="종료" value={quietEnd} onChange={setQuietEnd} /></div>}
-      {error && <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      <button type="submit" disabled={saving || !siteId} className="bg-button-primary hover:bg-button-primary-hover mt-5 w-full rounded-xl py-3 text-sm font-bold text-white disabled:opacity-50">{saving ? "추가 중…" : "수신 채널 추가"}</button>
+      {resultMessage && <p role="status" className="mt-3 text-sm font-bold text-sky-700 dark:text-sky-300">{resultMessage}</p>}
+      {error && <p role="alert" className="mt-3 whitespace-pre-line text-sm text-rose-600 dark:text-rose-300">{error}</p>}
+      <button disabled={saving || selectedSites.length === 0} className="mt-4 min-h-11 w-full rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">{saving ? "등록 중…" : `선택한 ${selectedSites.length}개 병원에 등록`}</button>
+      </fieldset>
     </form>
-    <div><div className="mb-3"><h2 className="text-lg font-extrabold">등록된 수신처</h2><p className="text-text-secondary mt-1 text-sm">등록된 휴대폰 번호가 없으면 알림톡을 발송하지 않습니다.</p></div>{failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">수신처를 불러오지 못했습니다.</p>}{loading ? <p className="text-text-secondary py-12 text-center text-sm">불러오는 중…</p> : recipients.length === 0 ? <EmptyState /> : <div className="space-y-2">{recipients.map((recipient) => <RecipientRow key={recipient.id} recipient={recipient} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</div>
+    <div><h2 className="text-lg font-extrabold">{isAdmin ? "병원별 담당자 · 번호" : "내 등록 현황"}</h2>
+      <select aria-label="수신처 병원 필터" value={siteFilter} onChange={event => setSiteFilter(event.target.value)} className="my-3 min-h-11 w-full rounded-lg border bg-white px-3 dark:bg-background-dark-card dark:border-white/10"><option value="">전체 병원 · {recipients.length}개 수신처</option>{sites.map(site => <option key={site.siteid} value={site.siteid}>{site.name} · {recipients.filter(row => row.siteId === site.siteid).length}명</option>)}</select>
+      {failed && <p role="alert">수신처를 불러오지 못했습니다.</p>}
+      {loading ? <p>불러오는 중…</p> : sites.filter(site => !siteFilter || site.siteid === siteFilter).map(site => <section key={site.siteid} className="mb-4"><h3 className="mb-2 font-bold">{site.name} · {site.siteid}</h3>{recipients.filter(row => row.siteId === site.siteid).length === 0 ? <p className="text-text-secondary rounded-lg border border-dashed p-3 text-sm">등록된 수신처 없음</p> : <div className="space-y-2">{recipients.filter(row => row.siteId === site.siteid).map(row => <RecipientRow key={row.id} recipient={row} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</section>)}
+    </div>
   </section>;
 }
 
 function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecipient; onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>; onDelete: (id: number) => Promise<void> }) {
+  const { isAdmin } = useAuth();
+  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => apiFetch<{ id: number; name: string; email: string; phone: string | null; siteIds: string[]; role: string; status: string }[]>("/admin/accounts/users"), enabled: isAdmin });
+  const [owner, setOwner] = useState(recipient.userId);
+  const [editing, setEditing] = useState(false);
+  const [phone, setPhone] = useState(recipient.destination);
   const [start, setStart] = useState(recipient.quietStart?.slice(0, 5) ?? "");
   const [end, setEnd] = useState(recipient.quietEnd?.slice(0, 5) ?? "");
   const [saving, setSaving] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function update(patch: Partial<AlertRecipient> = {}) { setSaving(true); setError(null); try { await onUpdate({ ...recipient, quietStart: start || null, quietEnd: end || null, ...patch }); } catch (updateError) { setError(updateError instanceof Error ? updateError.message : "변경하지 못했습니다."); } finally { setSaving(false); } }
-  async function remove() { if (!confirmDelete) { setConfirmDelete(true); return; } setSaving(true); try { await onDelete(recipient.id); } catch (deleteError) { setError(deleteError instanceof Error ? deleteError.message : "삭제하지 못했습니다."); setSaving(false); } }
-  return <article className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm dark:border-white/8 dark:bg-background-dark-card"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">{recipient.siteName ?? recipient.siteId} <span className="text-text-secondary text-xs font-medium">· {recipient.siteId}</span></h3><p className="text-text-secondary mt-1 text-xs">알림톡/SMS · {recipient.destinationMasked} · 등록 {recipient.userName}</p></div><button type="button" disabled={saving} onClick={() => update({ enabled: !recipient.enabled })} className={`rounded-full px-3 py-1.5 text-xs font-bold ${recipient.enabled ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-white/5 dark:text-white/55"}`}>{recipient.enabled ? "사용 중" : "중지됨"}</button></div><div className="mt-3 flex flex-wrap items-end gap-2"><TimeField label="조용한 시간 시작" value={start} onChange={setStart} optional /><TimeField label="종료" value={end} onChange={setEnd} optional /><button type="button" disabled={saving || (!!start !== !!end)} onClick={() => update()} className="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">시간 저장</button><button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="rounded-xl px-3 py-2.5 text-xs font-bold text-rose-600 hover:bg-rose-50 dark:text-rose-300 hover:bg-rose-50 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : "삭제"}</button></div>{error && <p className="mt-3 text-xs font-semibold text-red-600 dark:text-red-300">{error}</p>}</article>;
+  function toggleEditing() {
+    setPhone(recipient.destination); setOwner(recipient.userId);
+    setStart(recipient.quietStart?.slice(0, 5) ?? ""); setEnd(recipient.quietEnd?.slice(0, 5) ?? "");
+    setError(null); setEditing(!editing);
+  }
+  async function update(toggleOnly = false) {
+    if (!toggleOnly && start && start === end) { setError("시작과 종료를 다르게 입력하거나 조용한 시간을 해제해주세요."); return; }
+    setSaving(true); setError(null);
+    try {
+      await onUpdate(toggleOnly ? { ...recipient, enabled: !recipient.enabled } : { ...recipient, userId: owner, destination: phone, quietStart: start || null, quietEnd: end || null });
+      setEditing(false);
+    } catch (err) { setError(err instanceof Error ? err.message : "변경하지 못했습니다."); }
+    finally { setSaving(false); }
+  }
+  async function remove() { if (!window.confirm("이 병원의 수신처를 삭제할까요?")) return; setSaving(true); try { await onDelete(recipient.id); } catch (err) { setError(err instanceof Error ? err.message : "삭제하지 못했습니다."); } finally { setSaving(false); } }
+  return <article className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-background-dark-card">
+    {editing && isAdmin && <label className="mb-3 block text-xs font-bold">수신 담당자<select value={owner} onChange={event => setOwner(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 px-3 dark:border-white/10 dark:bg-background-dark-primary"><option value={recipient.userId}>{recipient.userName}</option>{users.data?.filter(user => user.id !== recipient.userId && user.status === "ACTIVE" && (user.role !== "USER" || user.siteIds.includes(recipient.siteId))).map(user => <option key={user.id} value={user.id}>{user.name} · {user.email}</option>)}</select></label>}
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{recipient.userName} · {recipient.destination}</p><p className="text-text-secondary mt-1 text-xs">{recipient.enabled ? "알림톡 → 실패 시 문자" : "수신 중지"} · {recipient.quietStart ? `발송 제외 ${recipient.quietStart.slice(0,5)}–${recipient.quietEnd?.slice(0,5)}` : "시간 제한 없음"}</p></div><button type="button" disabled={saving} onClick={toggleEditing} className="min-h-11 rounded-lg border px-3 text-xs font-bold">{editing ? "접기" : "수정"}</button></div>
+    {editing && <div className="mt-3 space-y-3"><label className="block text-xs font-bold">휴대폰 번호<input type="tel" value={phone} onChange={event => setPhone(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label><div className="grid grid-cols-2 gap-2"><TimeField label="발송 제외 시작" value={start} onChange={setStart} optional /><TimeField label="종료" value={end} onChange={setEnd} optional /></div><button type="button" onClick={() => { setStart(""); setEnd(""); }} className="min-h-10 text-xs underline">조용한 시간 해제</button><div className="flex flex-wrap gap-2"><button type="button" disabled={saving || (!!start !== !!end)} onClick={() => update()} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">저장</button><button type="button" disabled={saving} onClick={() => update(true)} className="min-h-11 rounded-lg border px-3 text-sm">{recipient.enabled ? "수신 중지" : "수신 시작"}</button><button type="button" disabled={saving} onClick={remove} className="min-h-11 px-3 text-sm text-rose-600 dark:text-rose-300">삭제</button></div></div>}
+    {error && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{error}</p>}
+  </article>;
 }
 
 function TimeField({ label, value, onChange, optional = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-xs font-bold">{label}<input type="time" required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
 
 function ViewTab({ active, onClick, badge, children }: { active: boolean; onClick: () => void; badge?: number; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className={`flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/5"}`}>{children}{badge ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/15 text-white" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"}`}>{badge}</span> : null}</button>;
+  return <button type="button" onClick={onClick} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-3 sm:px-4 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/5"}`}>{children}{badge ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/15 text-white" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"}`}>{badge}</span> : null}</button>;
 }
 
 function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledgeMany, onRetryDelivery }: {
@@ -274,11 +330,14 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
   onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
 }) {
-  const [filter, setFilter] = useState<"all" | "open" | "recovered" | "unacknowledged" | "failed" | "skipped">("all");
+  const [filter, setFilter] = useState<"all" | "open" | "unacknowledged" | "failed" | "skipped">("open");
+  const [page, setPage] = useState(1);
+
   const [query, setQuery] = useState("");
   const [siteId, setSiteId] = useState("");
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  useEffect(() => setPage(1), [filter, query, siteId, fromDate, toDate]);
   const [selected, setSelected] = useState<number[]>([]);
   const [acknowledging, setAcknowledging] = useState<number | null>(null);
   const [bulkSaving, setBulkSaving] = useState(false);
@@ -293,19 +352,23 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
       const occurred = new Date(event.occurredAt).getTime();
       const statusMatches = filter === "all" ||
         (filter === "open" && event.eventType !== "RECOVERY" && !event.recoveredAt) ||
-        (filter === "recovered" && (event.eventType === "RECOVERY" || !!event.recoveredAt)) ||
+
         (filter === "unacknowledged" && !event.acknowledgedAt) ||
         (filter === "failed" && ["FAILED", "PARTIAL", "UNKNOWN"].includes(event.deliveryStatus)) ||
         (filter === "skipped" && event.deliveryStatus === "SKIPPED");
       const queryMatches = !keyword || `${event.siteName ?? ""} ${event.siteId} ${event.message} ${event.metricKey}`.toLowerCase().includes(keyword);
-      return statusMatches && (!siteId || event.siteId === siteId) && queryMatches &&
+      return event.eventType !== "RECOVERY" && statusMatches && (!siteId || event.siteId === siteId) && queryMatches &&
         (from == null || occurred >= from) && (to == null || occurred <= to);
     });
   }, [events, filter, query, siteId, fromDate, toDate]);
   const openCount = events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length;
-  const selectableIds = filtered.filter((event) => !event.acknowledgedAt).map((event) => event.id);
+  const selectableIds = filtered.filter((event) => !event.acknowledgedAt && !event.recoveredAt).map((event) => event.id);
+  const selectedIds = selected.filter(id => selectableIds.includes(id));
+  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / 20)));
+  const busy = bulkSaving || acknowledging !== null || retrying !== null;
 
   async function acknowledge(eventId: number) {
+    if (!window.confirm("확인완료하면 이 알림은 본인에게 더 이상 발송되지 않습니다. 정상 범위로 돌아온 뒤 다시 이탈하면 알림을 받습니다. 확인완료할까요?")) return;
     setAcknowledging(eventId); setError(null);
     try { await onAcknowledge(eventId); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 확인 처리하지 못했습니다."); }
@@ -314,6 +377,7 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
 
   async function acknowledgeSelected(ids: number[]) {
     if (ids.length === 0) return;
+    if (!window.confirm(`${ids.length}건을 확인완료하고 본인의 반복 알림을 중지할까요? 다른 담당자는 계속 받습니다.`)) return;
     setBulkSaving(true); setError(null);
     try { await onAcknowledgeMany(ids); setSelected((current) => current.filter((id) => !ids.includes(id))); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 일괄 확인 처리하지 못했습니다."); }
@@ -321,6 +385,7 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
   }
 
   async function retry(eventId: number) {
+    if (!window.confirm("발송에 실패한 수신처에 다시 전송할까요? 확인완료한 담당자는 제외됩니다.")) return;
     setRetrying(eventId); setError(null);
     try { await onRetryDelivery(eventId); }
     catch (retryError) { setError(retryError instanceof Error ? retryError.message : "알림을 재전송하지 못했습니다."); }
@@ -331,8 +396,8 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div><h2 className="text-lg font-extrabold">발생·복구 이력</h2><p className="text-text-secondary mt-1 text-sm">동일한 이상 상태는 한 번만 기록되고 정상 복귀 시 복구 이력이 추가됩니다.</p></div>
-        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "unacknowledged", "failed", "skipped", "recovered"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : value === "unacknowledged" ? "미확인" : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "복구"}</button>)}</div>
+        <div><h2 className="text-lg font-extrabold">범위 이탈 알림</h2><p className="text-text-secondary mt-1 text-sm">확인완료는 본인의 반복 알림만 중지합니다. 상세 발송 결과는 필요한 알림에서 펼쳐보세요.</p></div>
+        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["all", "open", "unacknowledged", "failed", "skipped"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체" : value === "open" ? `진행 중 ${openCount}` : value === "unacknowledged" ? "미확인" : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "미발송"}</button>)}</div>
       </div>
       <div className="mb-3 grid gap-2 rounded-xl border border-slate-200/80 bg-white p-3 sm:grid-cols-2 lg:grid-cols-[minmax(12rem,1fr)_minmax(9rem,.5fr)_auto_auto] dark:border-white/8 dark:bg-background-dark-card">
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원명·측정항목·내용 검색" className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-sky-400 dark:border-white/10 dark:bg-white/5" />
@@ -340,15 +405,17 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
         <label className="text-text-secondary text-[11px] font-bold">시작일<input type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" /></label>
         <label className="text-text-secondary text-[11px] font-bold">종료일<input type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} className="mt-1 block rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm dark:border-white/10 dark:bg-white/5" /></label>
       </div>
+      <p className="text-text-secondary mb-3 text-xs">최근 최대 500건을 표시합니다. 확인완료는 진행 중인 알림에만 적용됩니다.</p>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))} onChange={(event) => setSelected(event.target.checked ? Array.from(new Set([...selected, ...selectableIds])) : selected.filter((id) => !selectableIds.includes(id)))} className="h-4 w-4 accent-sky-700" />검색 결과의 미확인 알림 선택</label>
-        <button type="button" disabled={bulkSaving || selected.length === 0} onClick={() => acknowledgeSelected(selected)} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">선택 확인 ({selected.length})</button>
-        <button type="button" disabled={bulkSaving || selectableIds.length === 0} onClick={() => acknowledgeSelected(selectableIds)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">현재 결과 전체 확인</button>
+        <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">선택 확인 ({selectedIds.length})</button>
+        <button type="button" disabled={busy || selectableIds.length === 0} onClick={() => acknowledgeSelected(selectableIds)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">현재 결과 전체 확인</button>
         <span className="text-text-secondary ml-auto text-xs">검색 결과 {filtered.length}건</span>
       </div>
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다.</p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      {filtered.length === 0 ? <EmptyState /> : <div className="space-y-2">{filtered.map((event) => <AlertEventRow key={event.id} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={acknowledging === event.id} retrying={retrying === event.id} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} />)}</div>}
+      {filtered.length === 0 ? <EmptyState /> : <div className="space-y-2">{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((event) => <AlertEventRow key={event.id} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} />)}</div>}
+      {filtered.length > 20 && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.ceil(filtered.length / 20)}</span><button type="button" disabled={currentPage * 20 >= filtered.length} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
     </section>
   );
 }
@@ -370,23 +437,26 @@ function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onA
   }
   const results = useQuery({
     queryKey: ["alert-deliveries", event.id, event.deliveryStatus, event.notificationCount],
-    queryFn: () => apiFetch<{ id: number; recipientLabel: string; status: AlertEventSummary["deliveryStatus"]; attemptCount: number; errorMessage: string | null; startedAt: string | null; currentBatch: boolean }[]>(`/alerts/events/${event.id}/deliveries`),
+    queryFn: () => apiFetch<{ id: number; recipientLabel: string; status: AlertEventSummary["deliveryStatus"]; attemptCount: number; errorMessage: string | null; startedAt: string | null; currentBatch: boolean; providerSendStatus: number | null; providerResultCode: number | null; providerResultMessage: string | null; smsSendState: string | null; providerCheckedAt: string | null }[]>(`/alerts/events/${event.id}/deliveries`),
     enabled: showDelivery,
+    refetchInterval: showDelivery ? 30000 : false,
   });
   const recovered = event.eventType === "RECOVERY" || !!event.recoveredAt;
   const metric = METRICS.find((item) => item.key === event.metricKey);
   const isNoData = event.metricKey === "__data__";
   return <article className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_12px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-start justify-between gap-3">
-      <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={!!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{event.message}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
+      <div className="flex min-w-0 items-start gap-3"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={recovered || !!event.acknowledgedAt} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-sky-700 disabled:opacity-30" /><EventBadge type={event.eventType} /><div className="min-w-0"><h3 className="font-extrabold">{event.siteName ?? event.siteId} · {isNoData ? "데이터 수신" : metric?.label ?? event.metricKey}</h3><p className="text-text-secondary mt-1 text-sm">{showDelivery ? event.message : ""}</p><p className="text-text-secondary mt-1 text-xs tabular-nums">{isNoData ? `수신 지연 ${formatValue(event.measuredValue, "분")} · 기준 ${formatValue(event.max, "분")}` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="shrink-0 text-right"><p className="text-text-secondary text-xs tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-[10px]">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
     </div>
-    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "복구됨" : "진행 중"}</span><div className="flex items-center gap-2">{isAdmin && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인 처리"}</button>}</div></div>
+    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-white/7"><span className={`text-xs font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "종료" : "진행 중"}</span><div className="flex items-center gap-2">{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-xs">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : !recovered && <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold transition hover:bg-slate-200 disabled:opacity-50 dark:bg-white/5 dark:hover:bg-white/10">{acknowledging ? "처리 중…" : "확인완료"}</button>}</div></div>
     {event.deliveryError && <p className="mt-3 text-xs leading-5 text-amber-700 dark:text-amber-300">{event.deliveryError}</p>}
-    <button type="button" aria-expanded={showDelivery} onClick={() => setShowDelivery(!showDelivery)} className="mt-3 cursor-pointer text-xs font-semibold text-sky-700 dark:text-sky-300">{showDelivery ? "전송 결과 접기" : "수신처별 전송 결과"}</button>
+    <button type="button" aria-expanded={showDelivery} onClick={() => setShowDelivery(!showDelivery)} className="min-h-10 cursor-pointer text-xs font-semibold text-sky-700 dark:text-sky-300">{showDelivery ? "전송 결과 접기" : "수신처별 전송 결과"}</button>
     {showDelivery && <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 text-xs dark:bg-white/5">
       {results.isLoading ? <p>불러오는 중…</p> : results.isError ? <button type="button" onClick={() => results.refetch()}>결과를 불러오지 못했습니다. 다시 시도</button> : !results.data?.length ? <p>기록된 수신처별 결과가 없습니다. 이전 발송 또는 미발송 건일 수 있습니다.</p> : results.data.map((result) => <div key={result.id} className="space-y-1">
         <p className="font-semibold">{result.recipientLabel} · {deliveryLabel(result.status)} · 시도 {result.attemptCount}회</p>
+        {result.providerCheckedAt && <p className="text-text-secondary">{result.providerSendStatus === 1 ? "알림톡 전송 성공" : result.providerSendStatus === 2 ? "알림톡 실패" : result.providerSendStatus === 0 ? "알림톡 전송 중" : "바로빌 상태 확인 필요"}{result.smsSendState ? ` · 대체문자: ${result.smsSendState}` : ""} · 확인 {new Date(result.providerCheckedAt).toLocaleString("ko-KR")}</p>}
+        {result.providerResultMessage && result.providerSendStatus !== 1 && <p className="text-amber-700 dark:text-amber-300">{result.providerResultMessage}</p>}
         {result.startedAt && <p className="text-text-secondary">{new Date(result.startedAt).toLocaleString("ko-KR")}</p>}
         {result.errorMessage && <p className="text-amber-700 dark:text-amber-300">{result.errorMessage}</p>}
         {isAdmin && result.currentBatch && event.deliveryStatus === "UNKNOWN" && result.status === "UNKNOWN" && <div className="flex gap-3">
@@ -405,7 +475,7 @@ function EventBadge({ type }: { type: AlertEventSummary["eventType"] }) {
 }
 
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
-function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "완료", PARTIAL: "일부 실패", FAILED: "실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
+function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "접수 완료", PARTIAL: "일부 접수 실패", FAILED: "접수 실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
 
 function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   entry: SiteAlertSettings;
@@ -414,6 +484,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
   const [thresholds, setThresholds] = useState(entry.thresholds);
+  const [metricFilter, setMetricFilter] = useState<"active" | "all">(entry.thresholds.some(item => item.active) ? "active" : "all");
   const [noDataMinutes, setNoDataMinutes] = useState(entry.noDataMinutes);
   const [noDataActive, setNoDataActive] = useState(entry.noDataActive);
   const [alertsEnabled, setAlertsEnabled] = useState(entry.alertsEnabled);
@@ -461,6 +532,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
         setError(`${threshold.label}: 자동 평균 허용편차는 0.1%에서 100% 사이여야 합니다.`); return;
       }
     }
+    if (quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("발송 제외 시작과 종료를 서로 다르게 입력해주세요."); return; }
     setSaving(true); setError(null);
     try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
@@ -469,7 +541,7 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
+      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[100dvh] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
           <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">사업장 {entry.siteid} · {entry.configured ? "병원별 기준" : "회사 공통 기준 상속"}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최소·최대값을 직접 입력하거나 기준값과 ± 허용편차로 빠르게 계산할 수 있습니다. 저장하면 이 사업장만 별도 기준을 사용합니다.</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
@@ -479,21 +551,23 @@ function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">사업장 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">{entry.dashboardVisible ? "전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 관리합니다." : "숨긴 사업장은 알림을 켤 수 없습니다. 먼저 대시보드 표시를 켜주세요."}</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-text-secondary text-xs font-bold">이상 지속 후 알림 (분)<input type="number" min="0" max="1440" step="1" required value={triggerAfterMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setTriggerAfterMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 이상 감지 즉시 알립니다.</span></label>
-              <label className="text-text-secondary text-xs font-bold">반복 알림 주기 (분)<input type="number" min="0" max="10080" step="1" required value={repeatMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setRepeatMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 최초 발생과 복구 시에만 알립니다.</span></label>
+              <label className="text-text-secondary text-xs font-bold">반복 알림 주기 (분)<input type="number" min="0" max="10080" step="1" required value={repeatMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setRepeatMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 최초 1회만 발송합니다. 5분 이상 입력하면 확인완료 전까지 반복합니다.</span></label>
             </div>
             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2"><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={quietEnabled} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-4 w-4 accent-sky-700" />야간 발송 제외</label><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={suppressWeekends} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setSuppressWeekends(event.target.checked)} className="h-4 w-4 accent-sky-700" />주말 발송 제외</label></div>
             {quietEnabled && <div className="mt-3 grid max-w-md grid-cols-2 gap-2"><TimeField label="제외 시작" value={quietStart} onChange={setQuietStart} /><TimeField label="제외 종료" value={quietEnd} onChange={setQuietEnd} /></div>}
             <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!holidayDate || !canEdit || saving || holidayDates.includes(holidayDate)} onClick={() => { setHolidayDates((current) => [...current, holidayDate].sort()); setHolidayDate(""); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
           </section>
           <section className={`mb-4 rounded-xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">마지막 데이터 이후 설정 시간을 넘기면 한 번 알리고, 수신 재개 시 복구 알림을 보냅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">데이터 수신 중단</h3><p className="text-text-secondary mt-1 text-xs">설정 시간 동안 데이터가 없으면 알림을 보냅니다. 반복 주기는 위 설정을 따릅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>
             <label className="text-text-secondary mt-3 block max-w-52 text-xs font-bold">수신 중단 기준 (분)<input type="number" min="5" max="1440" step="1" required value={noDataMinutes} disabled={!canEdit || saving} onChange={(event) => setNoDataMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-amber-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>
           </section>
+          <div className="sticky top-0 z-10 mb-3 flex gap-2 bg-white py-2 dark:bg-background-dark-card">{(["active", "all"] as const).map((value) => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}</div>
           <div className="grid gap-3 md:grid-cols-2">
-            {thresholds.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={(patch) => update(threshold.key, patch)} />)}
+            {thresholds.filter((threshold) => metricFilter === "all" || threshold.active).map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={(patch) => update(threshold.key, patch)} />)}
           </div>
-          {error && <p role="alert" className="mt-4 rounded-xl bg-red-50 px-3 py-2.5 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
+
         </div>
+        {error && <p role="alert" className="shrink-0 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
         <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:flex sm:justify-end sm:px-6 dark:border-white/7 dark:bg-background-dark-card">
           <button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">{canEdit ? "취소" : "닫기"}</button>
           {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover rounded-xl px-6 py-3 text-sm font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? "저장 중…" : "전체 변경 저장"}</button>}
@@ -522,21 +596,22 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
       </div>
       {allowAverage && <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
         <label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={(event) => onChange({ useAverage: event.target.checked })} className="h-4 w-4 accent-emerald-700" />최근 24시간 평균을 기준값으로 사용</label>
-        <p className="text-text-secondary mt-1 text-[11px]">0은 평균에서 제외합니다. 매시간 갱신하며 유효 표본 12개 이상이 필요합니다.</p>
+        <p className="text-text-secondary mt-1 text-[11px]">0 · 0.001 · 0.01은 평균에서 제외합니다. 매시간 갱신하며 유효 표본 12개 이상이 필요합니다.</p>
         <p className="mt-2 text-xs font-semibold tabular-nums">현재 평균 {threshold.averageValue == null ? "없음" : `${roundThreshold(threshold.averageValue)}${threshold.unit ? ` ${threshold.unit}` : ""}`} · 유효 {threshold.averageSampleCount}개 · 미측정 제외 {threshold.excludedZeroCount}개</p>
-        {threshold.useAverage && <div className="mt-2"><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageApplied ? `적용 범위 ${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}` : "평균을 적용할 수 없으면 아래 고정 범위를 사용합니다."}</p></div>}
+        {threshold.useAverage && <div className="mt-2"><label className="block text-xs font-bold">최근 24시간 평균 (자동 계산)<input readOnly value={threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)} ${threshold.unit ?? ""}`} className="mt-1 mb-3 w-full rounded-lg border border-emerald-200 bg-emerald-100/50 px-3 py-3 text-base dark:border-emerald-900 dark:bg-emerald-950/40" /></label><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageValue != null && Number.isFinite(threshold.tolerancePercent) ? `계산 범위 ${roundThreshold(threshold.averageValue - Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} – ${roundThreshold(threshold.averageValue + Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} ${threshold.unit ?? ""}` : "평균 데이터가 아직 없습니다."}{!threshold.averageApplied && " · 표본 부족 또는 오래된 평균이면 고정 범위를 적용합니다."}</p></div>}
       </div>}
-      <div className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
+      <details className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3" open={!threshold.useAverage}>
+        <summary className="min-h-10 cursor-pointer text-xs font-bold">{threshold.useAverage ? "평균 사용 불가 시 대체할 고정 범위" : "고정 범위 설정"} · {threshold.min} – {threshold.max}</summary>
         <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">{allowAverage ? "고정 기준값 (평균 사용 불가 시 대체) ± 허용편차" : "기준값 ± 허용편차"}</p>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />
           <NumberField label="± 편차" value={tolerance} disabled={disabled} ignoreBlank onChange={changeTolerance} />
         </div>
-      </div>
       <div className="mt-2 grid grid-cols-2 gap-2">
         <NumberField label="최소" value={threshold.min} disabled={disabled} onChange={(min) => onChange({ min })} />
         <NumberField label="최대" value={threshold.max} disabled={disabled} onChange={(max) => onChange({ max })} />
       </div>
+      </details>
     </section>
   );
 }

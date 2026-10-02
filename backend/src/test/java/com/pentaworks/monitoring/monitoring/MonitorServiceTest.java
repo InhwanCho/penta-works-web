@@ -47,14 +47,17 @@ class MonitorServiceTest {
             org.mockito.ArgumentMatchers.eq(3.25))).thenReturn(transition);
         when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
             .thenReturn(List.of("01012345678"));
+        when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(10L)))
+            .thenReturn(List.of("01012345678"));
         var batch = new com.pentaworks.monitoring.alert.AlertDeliveryService.Batch(10, "batch");
         when(deliveries.begin(10, List.of("KAKAO_ALIMTALK:01012345678"), false)).thenReturn(batch);
         when(deliveries.claim(batch, "KAKAO_ALIMTALK:01012345678")).thenReturn(true);
+        when(kakao.send("01012345678", transition)).thenReturn("receipt-1");
 
         new MonitorService(dashboard, alerts, alertEvents, recipients, deliveries, kakao).run();
 
         verify(kakao).send("01012345678", transition);
-        verify(deliveries).complete(batch, "KAKAO_ALIMTALK:01012345678", "SENT", null);
+        verify(deliveries).accepted(batch, "KAKAO_ALIMTALK:01012345678", "receipt-1");
         verify(deliveries).finish(batch);
     }
 
@@ -76,12 +79,15 @@ class MonitorServiceTest {
         when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any()))
             .thenReturn(List.of("01012345678"));
         when(deliveries.begin(10L, List.of("KAKAO_ALIMTALK:01012345678"), true)).thenReturn(null);
+        when(recipients.activePhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.eq(10L)))
+            .thenReturn(List.of("01012345678"));
         var actor = new com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser(
             1L, 1L, "admin@example.com", "관리자", "ADMIN", "ACTIVE");
 
         assertThrows(com.pentaworks.monitoring.common.BadRequestException.class,
             () -> new MonitorService(dashboard, alerts, alertEvents, recipients, deliveries,
                 mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).retry(actor, 10L));
+        verify(deliveries).begin(10L, List.of("KAKAO_ALIMTALK:01012345678"), true);
     }
 
     @Test

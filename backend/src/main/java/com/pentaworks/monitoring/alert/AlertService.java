@@ -94,7 +94,7 @@ public class AlertService {
                 rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active"),
                 rs.getObject("alerts_enabled") == null || rs.getBoolean("alerts_enabled"),
                 rs.getObject("trigger_after_minutes") == null ? 0 : rs.getInt("trigger_after_minutes"),
-                rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
+                rs.getObject("repeat_minutes") == null ? 30 : rs.getInt("repeat_minutes"),
                 localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
                 holidays.getOrDefault(rs.getString("registered_site"), List.of()),
@@ -222,6 +222,9 @@ public class AlertService {
         if ((quietStart == null) != (quietEnd == null)) {
             throw new BadRequestException("알림 제외 시간의 시작과 종료를 모두 입력해주세요.");
         }
+        if (quietStart != null && quietStart.equals(quietEnd)) {
+            throw new BadRequestException("발송 제외 시작과 종료는 다르게 지정해주세요. 항상 받으려면 야간 발송 제외를 해제하세요.");
+        }
         if (holidayDates == null || holidayDates.size() > 100 || holidayDates.stream().anyMatch(java.util.Objects::isNull)) {
             throw new BadRequestException("휴일은 사업장별 최대 100일까지 등록할 수 있습니다.");
         }
@@ -321,7 +324,7 @@ public class AlertService {
                 rs.getObject("no_data_active") != null && rs.getBoolean("no_data_active"),
                 rs.getObject("alerts_enabled") == null || rs.getBoolean("alerts_enabled"),
                 rs.getObject("trigger_after_minutes") == null ? 0 : rs.getInt("trigger_after_minutes"),
-                rs.getObject("repeat_minutes") == null ? 0 : rs.getInt("repeat_minutes"),
+                rs.getObject("repeat_minutes") == null ? 30 : rs.getInt("repeat_minutes"),
                 localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end")),
                 rs.getObject("suppress_weekends") != null && rs.getBoolean("suppress_weekends"),
                 holidayDates(siteId), rs.getObject("is_dashboard_visible") != null &&

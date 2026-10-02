@@ -21,18 +21,16 @@ public class AlertDeliveryService {
 
     @Transactional
     public Batch begin(long eventId, List<String> destinations, boolean retry) {
-        Event event = jdbc.query("SELECT delivery_status,delivery_batch_id,last_notified_at FROM alert_event WHERE id=? FOR UPDATE",
+        Event event = jdbc.query("SELECT delivery_status,delivery_batch_id,last_notified_at FROM alert_event WHERE id=? AND recovered_at IS NULL FOR UPDATE",
             rs -> rs.next() ? new Event(rs.getString(1), rs.getString(2), rs.getTimestamp(3) == null ? null : rs.getTimestamp(3).toInstant()) : null, eventId);
-        if (event == null || "SENDING".equals(event.status())) return null;
+        if (event == null || "SENDING".equals(event.status()) || "UNKNOWN".equals(event.status())) return null;
         if (!retry && event.lastNotifiedAt() != null && event.lastNotifiedAt().plusSeconds(60).isAfter(Instant.now())) return null;
         if (retry && !List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.status())) return null;
         List<String> priorKeys = retry && event.batchId() != null ? jdbc.query("""
             SELECT recipient_key FROM alert_delivery_result
              WHERE event_id=? AND batch_id=? AND channel='KAKAO_ALIMTALK'
             """, (rs, row) -> rs.getString(1), eventId, event.batchId()) : null;
-        Set<String> requestedKeys = destinations.stream().map(tokens::hash).collect(java.util.stream.Collectors.toSet());
-        boolean reuse = priorKeys != null && !priorKeys.isEmpty()
-            && priorKeys.size() == requestedKeys.size() && requestedKeys.equals(Set.copyOf(priorKeys));
+        boolean reuse = priorKeys != null && !priorKeys.isEmpty();
         String batchId = reuse ? event.batchId() : UUID.randomUUID().toString();
         if (reuse) {
             // Successful destinations stay SENT; only known failures are eligible again.
@@ -40,19 +38,27 @@ public class AlertDeliveryService {
                 UPDATE alert_delivery_result SET status='PENDING',error_message=NULL
                  WHERE event_id=? AND batch_id=? AND channel='KAKAO_ALIMTALK' AND status='FAILED'
                 """, eventId, batchId);
-        } else {
-            for (int i = 0; i < destinations.size(); i++) jdbc.update("""
+        }
+        Set<String> existingKeys = reuse ? Set.copyOf(priorKeys) : Set.of();
+        for (int i = 0; i < destinations.size(); i++) {
+            if (existingKeys.contains(tokens.hash(destinations.get(i)))) continue;
+            jdbc.update("""
                 INSERT INTO alert_delivery_result
                     (event_id,batch_id,recipient_key,recipient_label,channel,status)
                 VALUES (?,?,?,?,?,'PENDING')
                 """, eventId, batchId, tokens.hash(destinations.get(i)),
-                "휴대폰 수신처 " + (i + 1), "KAKAO_ALIMTALK");
+                "휴대폰 · " + maskedDestination(destinations.get(i)), "KAKAO_ALIMTALK");
         }
         jdbc.update("""
             UPDATE alert_event SET delivery_status='SENDING',delivery_error=NULL,
                 delivery_batch_id=?,delivery_started_at=CURRENT_TIMESTAMP(6) WHERE id=?
             """, batchId, eventId);
         return new Batch(eventId, batchId);
+    }
+
+    private static String maskedDestination(String destination) {
+        String phone = destination.substring(destination.lastIndexOf(':') + 1);
+        return "••••" + phone.substring(Math.max(0, phone.length() - 4));
     }
 
     public boolean claim(Batch batch, String destination) {
@@ -68,6 +74,42 @@ public class AlertDeliveryService {
             UPDATE alert_delivery_result SET status=?,error_message=?,finished_at=CURRENT_TIMESTAMP(6)
              WHERE event_id=? AND batch_id=? AND recipient_key=? AND status='SENDING'
             """, status, error, batch.eventId(), batch.id(), tokens.hash(destination));
+    }
+
+    public void accepted(Batch batch, String destination, String receipt) {
+        jdbc.update("""
+            UPDATE alert_delivery_result SET status='SENT',error_message=NULL,
+                provider_receipt=?,finished_at=CURRENT_TIMESTAMP(6)
+             WHERE event_id=? AND batch_id=? AND recipient_key=? AND status='SENDING'
+            """, receipt, batch.eventId(), batch.id(), tokens.hash(destination));
+    }
+
+    public List<ProviderReceipt> pendingProviderReceipts() {
+        return jdbc.query("""
+            SELECT id,provider_receipt FROM alert_delivery_result
+             WHERE provider_receipt IS NOT NULL AND provider_final_at IS NULL
+               AND started_at>CURRENT_TIMESTAMP(6)-INTERVAL 2 DAY
+               AND (provider_checked_at IS NULL OR provider_checked_at<CURRENT_TIMESTAMP(6)-INTERVAL 1 MINUTE)
+             ORDER BY provider_checked_at ASC LIMIT 50
+            """, (rs, row) -> new ProviderReceipt(rs.getLong(1), rs.getString(2)));
+    }
+
+    public void recordProviderStatus(ProviderReceipt receipt, BaroKakaoService.ProviderStatus state) {
+        String sms = state.smsSendState();
+        // Barobill does not document a fixed SmsSendState vocabulary. Keep polling
+        // failed Kakao sends so a later SMS fallback outcome is not missed.
+        boolean finalState = state.sendStatus() == 1 || state.sendStatus() == 4;
+        jdbc.update("""
+            UPDATE alert_delivery_result SET provider_send_status=?,provider_result_code=?,
+                provider_result_message=?,sms_send_state=?,provider_checked_at=CURRENT_TIMESTAMP(6),
+                provider_final_at=CASE WHEN ? THEN CURRENT_TIMESTAMP(6) ELSE provider_final_at END
+             WHERE id=? AND provider_receipt=? AND provider_final_at IS NULL
+            """, state.sendStatus(), state.resultCode(), truncate(state.resultMessage(), 500),
+            truncate(sms, 120), finalState, receipt.id(), receipt.value());
+    }
+
+    private static String truncate(String value, int length) {
+        return value == null || value.length() <= length ? value : value.substring(0, length);
     }
 
     @Transactional
@@ -119,12 +161,16 @@ public class AlertDeliveryService {
     public List<Result> results(long eventId) {
         return jdbc.query("""
             SELECT d.id,d.recipient_label,d.channel,d.status,d.attempt_count,d.error_message,d.started_at,d.finished_at,
+                   d.provider_send_status,d.provider_result_code,d.provider_result_message,d.sms_send_state,d.provider_checked_at,
                    d.batch_id=e.delivery_batch_id AS current_batch
               FROM alert_delivery_result d JOIN alert_event e ON e.id=d.event_id
              WHERE d.event_id=? AND d.channel='KAKAO_ALIMTALK' ORDER BY d.id DESC LIMIT 100
             """, (rs, row) -> new Result(rs.getLong(1), rs.getString(2), rs.getString(3), rs.getString(4),
                 rs.getInt(5), rs.getString(6), rs.getTimestamp(7) == null ? null : rs.getTimestamp(7).toInstant(),
-                rs.getTimestamp(8) == null ? null : rs.getTimestamp(8).toInstant(), rs.getBoolean(9)), eventId);
+                rs.getTimestamp(8) == null ? null : rs.getTimestamp(8).toInstant(),
+                rs.getObject(9) == null ? null : rs.getInt(9), rs.getObject(10) == null ? null : rs.getInt(10),
+                rs.getString(11), rs.getString(12),
+                rs.getTimestamp(13) == null ? null : rs.getTimestamp(13).toInstant(), rs.getBoolean(14)), eventId);
     }
 
     @Scheduled(fixedDelay = 60000)
@@ -161,6 +207,9 @@ public class AlertDeliveryService {
 
     private record Event(String status, String batchId, Instant lastNotifiedAt) {}
     public record Batch(long eventId, String id) {}
+    public record ProviderReceipt(long id, String value) {}
     public record Result(long id, String recipientLabel, String channel, String status, int attemptCount,
-                         String errorMessage, Instant startedAt, Instant finishedAt, boolean currentBatch) {}
+                         String errorMessage, Instant startedAt, Instant finishedAt, Integer providerSendStatus,
+                         Integer providerResultCode, String providerResultMessage, String smsSendState,
+                         Instant providerCheckedAt, boolean currentBatch) {}
 }

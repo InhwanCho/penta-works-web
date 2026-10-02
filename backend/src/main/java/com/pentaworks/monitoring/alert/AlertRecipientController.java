@@ -40,14 +40,14 @@ public class AlertRecipientController {
     public RecipientSummary create(@Valid @RequestBody CreateRecipientRequest request,
                                    Authentication authentication) {
         return recipients.create(currentUsers.require(authentication), new CreateRecipient(
-            request.siteId(), request.channel(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled()));
+            request.siteId(), request.channel(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled(), request.userId()));
     }
 
     @PatchMapping("/{id}")
     public RecipientSummary update(@PathVariable long id, @Valid @RequestBody UpdateRecipientRequest request,
                                    Authentication authentication) {
         return recipients.update(currentUsers.require(authentication), id,
-            new UpdateRecipient(request.quietStart(), request.quietEnd(), request.enabled()));
+            new UpdateRecipient(request.quietStart(), request.quietEnd(), request.enabled(), request.destination(), request.userId()));
     }
 
     @DeleteMapping("/{id}")
@@ -57,6 +57,6 @@ public class AlertRecipientController {
     }
 
     public record CreateRecipientRequest(@NotBlank String siteId, String channel, @NotBlank String destination,
-                                         LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled) {}
-    public record UpdateRecipientRequest(LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled) {}
+                                         LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled, Long userId) {}
+    public record UpdateRecipientRequest(LocalTime quietStart, LocalTime quietEnd, @NotNull Boolean enabled, String destination, Long userId) {}
 }

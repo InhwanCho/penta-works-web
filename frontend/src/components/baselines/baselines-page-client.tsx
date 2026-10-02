@@ -25,7 +25,6 @@ export default function BaselinesPageClient() {
   const recipients = useQuery({
     queryKey: ["alert-recipients"],
     queryFn: () => apiFetch<AlertRecipient[]>("/alerts/recipients"),
-    enabled: isAdmin,
   });
   const update = useMutation({
     mutationFn: (entry: SiteAlertSettings) =>
@@ -99,9 +98,11 @@ export default function BaselinesPageClient() {
   });
   const acknowledge = useMutation({
     mutationFn: (eventId: number) => apiFetch<AlertEventSummary>(`/alerts/events/${eventId}/acknowledge`, { method: "PATCH" }),
-    onSuccess: (saved) => queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
-      current.map((event) => event.id === saved.id ? saved : event),
-    ),
+    onSuccess: (saved) => {
+      queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
+        current.map((event) => event.id === saved.id ? saved : event));
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    },
   });
   const acknowledgeMany = useMutation({
     mutationFn: (eventIds: number[]) => apiFetch<{ ok: boolean; count: number }>("/alerts/events/acknowledge", {
@@ -121,13 +122,13 @@ export default function BaselinesPageClient() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-events"] }),
   });
   const createRecipient = useMutation({
-    mutationFn: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
+    mutationFn: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
       apiFetch<AlertRecipient>("/alerts/recipients", { method: "POST", body: JSON.stringify(request) }),
     onSuccess: (saved) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) => [...current, saved]),
   });
   const updateRecipient = useMutation({
-    mutationFn: ({ id, quietStart, quietEnd, enabled }: AlertRecipient) =>
-      apiFetch<AlertRecipient>(`/alerts/recipients/${id}`, { method: "PATCH", body: JSON.stringify({ quietStart, quietEnd, enabled }) }),
+    mutationFn: ({ id, userId, destination, quietStart, quietEnd, enabled }: AlertRecipient) =>
+      apiFetch<AlertRecipient>(`/alerts/recipients/${id}`, { method: "PATCH", body: JSON.stringify({ userId, destination, quietStart, quietEnd, enabled }) }),
     onSuccess: (saved) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) =>
       current.map((recipient) => recipient.id === saved.id ? saved : recipient),
     ),

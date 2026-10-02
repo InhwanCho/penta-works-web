@@ -23,6 +23,68 @@ import static org.mockito.Mockito.when;
 class AlertEventServiceTest {
     @Test
     @SuppressWarnings("unchecked")
+    void skippedOneShotAlertCanBeDeliveredAfterQuietHoursEnd() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.next()).thenReturn(true);
+        when(rs.getLong("id")).thenReturn(5L);
+        when(rs.getString("event_type")).thenReturn("HIGH");
+        when(rs.getString("delivery_status")).thenReturn("SKIPPED", "UNKNOWN", "SENDING", "SENT");
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
+            .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs));
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 0, null, null, false);
+        var threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
+        assertEquals(5L, service.evaluate(site, threshold, 31.0).eventId());
+        assertNull(service.evaluate(site, threshold, 31.0));
+        assertNull(service.evaluate(site, threshold, 31.0));
+        assertNull(service.evaluate(site, threshold, 31.0));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void repeatKeepsSameIncidentEvenIfDeviationChangesDirection() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
+            .thenAnswer(invocation -> {
+                ResultSet rs = mock(ResultSet.class);
+                when(rs.next()).thenReturn(true);
+                when(rs.getLong("id")).thenReturn(5L);
+                when(rs.getString("event_type")).thenReturn("LOW");
+                when(rs.getTimestamp("last_notified_at")).thenReturn(java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(3600)));
+                return ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs);
+            });
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30, null, null, false);
+        var transition = service.evaluate(site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0);
+        assertEquals(5L, transition.eventId());
+        assertEquals("HIGH", transition.eventType());
+        verify(jdbc, never()).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void normalRangeClosesIncidentWithoutSendingRecovery() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
+            .thenAnswer(invocation -> {
+                ResultSet rs = mock(ResultSet.class);
+                when(rs.next()).thenReturn(true);
+                when(rs.getLong("id")).thenReturn(5L);
+                return ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs);
+            });
+        var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
+        var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30, null, null, false);
+        assertNull(service.evaluate(site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 20.0));
+        verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(5L));
+        verify(jdbc, never()).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
     void eventFromAnotherCompanyIsHiddenAsNotFound() throws Exception {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         ResultSet resultSet = mock(ResultSet.class);

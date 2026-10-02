@@ -25,8 +25,11 @@ public class SiteService {
             rs.next() ? new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name")) : null, siteId);
         if (site == null) throw new NotFoundException("사이트를 찾을 수 없습니다.");
         List<SiteResponse.Measurement> rows = jdbcTemplate.query("""
-            SELECT `index`, date, hepres, heleve, actemp, achumi,
-                recosi, coldtp, recoru, gctemp, gcflow, cctemp, ccflow FROM mrtb
+            SELECT `index`, date, hepres_value AS hepres, heleve_value AS heleve,
+                actemp_value AS actemp, achumi_value AS achumi,
+                recosi_value AS recosi, coldtp_value AS coldtp, recoru_value AS recoru,
+                gctemp_value AS gctemp, gcflow_value AS gcflow,
+                cctemp_value AS cctemp, ccflow_value AS ccflow FROM mrtb
             WHERE siteid = ? AND date IS NOT NULL ORDER BY date DESC, `index` DESC LIMIT ?
             """, (rs, row) -> new SiteResponse.Measurement(rs.getInt("index"),
                 rs.getTimestamp("date").toInstant().toString(), DashboardService.parseMeasurement(rs.getString("hepres")),

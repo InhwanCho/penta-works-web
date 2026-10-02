@@ -24,7 +24,8 @@ class RollingAverageServiceTest {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ResultSet rs = mock(ResultSet.class);
         when(rs.getString("siteid")).thenReturn("001");
-        when(rs.getString("hepres")).thenReturn("0", "0.001", "0.01", "1.2", "1.4");
+        when(rs.getBoolean("hepres_unmeasured")).thenReturn(true, true, true, false, false);
+        when(rs.getString("hepres")).thenReturn("1.2", "1.4");
         when(rs.getTimestamp("date")).thenReturn(Timestamp.valueOf("2026-09-29 12:30:00"));
         doAnswer(invocation -> {
             RowCallbackHandler handler = invocation.getArgument(1);
