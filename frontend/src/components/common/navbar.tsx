@@ -86,7 +86,7 @@ export default function Navbar() {
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
                       {session.role === "PLATFORM_ADMIN" && <MenuLink onSelect={() => setMenuOpen(false)} href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
-                      {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>사용자 관리</MenuLink>}
+                      {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>관리 설정</MenuLink>}
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />

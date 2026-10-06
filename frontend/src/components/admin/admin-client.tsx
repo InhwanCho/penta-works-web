@@ -112,7 +112,7 @@ export default function AdminClient() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">워크스페이스 관리</h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">
-            팀을 초대하고 각 사용자가 볼 수 있는 사업장을 간편하게 관리하세요.
+            사용자·사업장과 대시보드 측정항목을 관리하세요.
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <SummaryChip value={users.data?.length ?? 0} label="전체 사용자" />
@@ -123,7 +123,7 @@ export default function AdminClient() {
         </div>
       </header>
 
-      <ManagementTabs label="사용자 관리" value={tab} onChange={setTab} items={[
+      <ManagementTabs label="관리 설정" value={tab} onChange={setTab} items={[
         {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"사업장"},
         {value:"metrics",label:"측정항목"}, {value:"audit",label:"감사 로그"},
       ]} />
