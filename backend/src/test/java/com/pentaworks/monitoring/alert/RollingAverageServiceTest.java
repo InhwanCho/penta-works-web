@@ -111,4 +111,20 @@ class RollingAverageServiceTest {
         assertNull(RollingAverageService.effectiveRange(new RollingAverageService.AverageState(
             false, 20, 10.0, 12, 3, now.minusMinutes(30), now.minusMinutes(10)), now));
     }
+    @Test
+    void explainsFallbackAndSeparatesEligibilityFromSelectedMode() {
+        LocalDateTime now = LocalDateTime.of(2026,10,6,12,0);
+        var insufficient = new RollingAverageService.AverageState(true,60,34.15,6,0,now,now.minusMinutes(4));
+        assertEquals("INSUFFICIENT_SAMPLES",RollingAverageService.unavailableReason(insufficient,now));
+        assertNull(RollingAverageService.effectiveRange(insufficient,now));
+        var ready = new RollingAverageService.AverageState(true,60,34.15,12,0,now,now.minusMinutes(4));
+        assertEquals(13.66,RollingAverageService.effectiveRange(ready,now).min(),0.000001);
+        assertEquals(54.64,RollingAverageService.effectiveRange(ready,now).max(),0.000001);
+        var manual = new RollingAverageService.AverageState(false,60,34.15,12,0,now,now.minusMinutes(4));
+        assertNull(RollingAverageService.unavailableReason(manual,now));
+        assertNull(RollingAverageService.effectiveRange(manual,now));
+        assertEquals("MEASUREMENT_EXPIRED",RollingAverageService.unavailableReason(new RollingAverageService.AverageState(true,60,34.15,12,0,now,now.minusHours(3)),now));
+        assertEquals("AVERAGE_EXPIRED",RollingAverageService.unavailableReason(new RollingAverageService.AverageState(true,60,34.15,12,0,now.minusHours(3),now),now));
+    }
+
 }

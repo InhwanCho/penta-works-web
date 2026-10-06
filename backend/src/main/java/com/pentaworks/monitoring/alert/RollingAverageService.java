@@ -120,14 +120,22 @@ public class RollingAverageService {
         return result;
     }
 
+    /** Eligibility is independent of the user's selected mode so the editor can preview either mode. */
+    public static String unavailableReason(AverageState state, LocalDateTime now) {
+        if (state == null || state.averageValue() == null || !Double.isFinite(state.averageValue()) || state.averageValue() <= 0.0)
+            return "NO_AVERAGE";
+        if (state.sampleCount() < MIN_SAMPLES) return "INSUFFICIENT_SAMPLES";
+        if (state.capturedAt() == null || state.capturedAt().isBefore(now.minusHours(2)) || state.capturedAt().isAfter(now.plusMinutes(5)))
+            return "AVERAGE_EXPIRED";
+        if (state.lastSampleAt() == null || state.lastSampleAt().isBefore(now.minusHours(2)) || state.lastSampleAt().isAfter(now.plusMinutes(5)))
+            return "MEASUREMENT_EXPIRED";
+        if (!Double.isFinite(state.tolerancePercent()) || state.tolerancePercent() <= 0 || state.tolerancePercent() > 100)
+            return "INVALID_TOLERANCE";
+        return null;
+    }
+
     public static Range effectiveRange(AverageState state, LocalDateTime now) {
-        if (state == null || !state.useAverage() || state.averageValue() == null ||
-            !Double.isFinite(state.averageValue()) || state.averageValue() <= 0.0 ||
-            state.sampleCount() < MIN_SAMPLES || state.capturedAt() == null || state.lastSampleAt() == null ||
-            state.capturedAt().isBefore(now.minusHours(2)) || state.capturedAt().isAfter(now.plusMinutes(5)) ||
-            state.lastSampleAt().isBefore(now.minusHours(2)) || state.lastSampleAt().isAfter(now.plusMinutes(5)) ||
-            !Double.isFinite(state.tolerancePercent()) || state.tolerancePercent() <= 0 ||
-            state.tolerancePercent() > 100) return null;
+        if (state == null || !state.useAverage() || unavailableReason(state, now) != null) return null;
         double tolerance = Math.abs(state.averageValue()) * state.tolerancePercent() / 100.0;
         return new Range(state.averageValue() - tolerance, state.averageValue() + tolerance);
     }

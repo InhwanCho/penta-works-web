@@ -449,7 +449,8 @@ public class AlertService {
             thresholds.add(new AlertThreshold(metric.key(), metric.label(), metric.unit(), min, max, active,
                 range == null ? min : range.min(), range == null ? max : range.max(),
                 average.useAverage(), average.tolerancePercent(), average.averageValue(),
-                average.sampleCount(), average.zeroCount(), average.capturedAt(), range != null));
+                average.sampleCount(), average.zeroCount(), average.capturedAt(), range != null,
+                RollingAverageService.unavailableReason(average, RollingAverageService.now())));
         }
         return new SiteAlertSettings(siteId, name, exists, thresholds, collectionIntervalMinutes * missingCollectionThreshold, noDataActive,
             alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,

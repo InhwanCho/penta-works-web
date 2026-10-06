@@ -50,6 +50,7 @@ export type AlertThreshold = {
   excludedZeroCount: number;
   averageCapturedAt: string | null;
   averageApplied: boolean;
+  averageUnavailableReason?: string | null;
 };
 
 export type SiteAlertSettings = {

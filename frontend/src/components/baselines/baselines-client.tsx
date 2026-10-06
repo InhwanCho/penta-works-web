@@ -1,5 +1,6 @@
 "use client";
 
+import { previewAlertRange } from "@/lib/alert-range";
 import ManagementTabs from "@/components/common/management-tabs";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -515,7 +516,8 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
       const latest = entry.thresholds.find(value => value.key === item.key);
       return latest ? {...item, averageValue:latest.averageValue,
         averageSampleCount:latest.averageSampleCount, excludedZeroCount:latest.excludedZeroCount,
-        averageCapturedAt:latest.averageCapturedAt, averageApplied:latest.averageApplied} : item;
+        averageCapturedAt:latest.averageCapturedAt, averageApplied:latest.averageApplied,
+        averageUnavailableReason:latest.averageUnavailableReason} : item;
     }));
   }, [entry.thresholds]);
 
@@ -558,7 +560,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className={`flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">알림값 설정 · 사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최근 24시간 평균에 허용편차(±%)만 설정하세요. 평균은 매시간 자동 갱신됩니다.{onlyMetricKey && " 선택한 항목만 변경됩니다."}</p></div>
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">알림값 설정 · 사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">24시간 평균 + 허용편차 또는 수동 범위를 선택하세요. 평균은 매시간 갱신됩니다.{onlyMetricKey && " 선택한 항목만 변경됩니다."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -613,39 +615,46 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
 }
 
 function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: { threshold: AlertThreshold; disabled: boolean; allowAverage?: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {
-  const center = roundThreshold((threshold.min + threshold.max) / 2);
-  const tolerance = roundThreshold((threshold.max - threshold.min) / 2);
-  function changeCenter(value: number) {
-    const appliedTolerance = Number.isFinite(value) ? Math.min(tolerance, value) : tolerance;
-    onChange({ min: roundThreshold(value - appliedTolerance), max: roundThreshold(value + appliedTolerance) });
-  }
-  function changeTolerance(value: number) {
-    const appliedTolerance = Number.isFinite(value) ? Math.min(value, center) : value;
-    onChange({ min: roundThreshold(center - appliedTolerance), max: roundThreshold(center + appliedTolerance) });
-  }
+  const preview = previewAlertRange(threshold);
+  const unit = threshold.unit ? ` ${threshold.unit}` : "";
+  const formatRange = (min: number, max: number) => `${roundThreshold(min)} – ${roundThreshold(max)}${unit}`;
+  const manualFields = <div className="grid grid-cols-2 gap-3">
+    <NumberField label="최소값" value={threshold.min} disabled={disabled} onChange={min => onChange({min})} />
+    <NumberField label="최대값" value={threshold.max} disabled={disabled} onChange={max => onChange({max})} />
+  </div>;
   return (
     <section className={`rounded-xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50/45 dark:border-sky-900/70 dark:bg-sky-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="font-extrabold">{threshold.label}{threshold.unit && <span className="text-text-secondary ml-1 text-xs font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-xs">{METRIC_DESCRIPTION.get(threshold.key)}</p><code className="mt-1 block text-[10px] text-slate-400">{threshold.key}</code></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
-      {allowAverage && <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <p className="text-xs font-bold">{threshold.useAverage ? "24시간 평균 기준 · 자동 갱신" : "고정 범위 사용 중"}</p>
-        {threshold.useAverage && <div className="mt-2"><label className="block text-xs font-bold">최근 24시간 평균 (자동 계산)<input readOnly value={threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)} ${threshold.unit ?? ""}`} className="mt-1 mb-3 w-full rounded-lg border border-emerald-200 bg-emerald-100/50 px-3 py-3 text-base dark:border-emerald-900 dark:bg-emerald-950/40" /></label><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={(value) => onChange({ tolerancePercent: value })} /><p className="text-text-secondary mt-1 text-[11px]">{threshold.averageValue != null && Number.isFinite(threshold.tolerancePercent) ? `계산 범위 ${roundThreshold(threshold.averageValue - Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} – ${roundThreshold(threshold.averageValue + Math.abs(threshold.averageValue) * threshold.tolerancePercent / 100)} ${threshold.unit ?? ""}` : "평균 데이터가 아직 없습니다."}{" · 평균을 사용할 수 없으면 고급 설정의 고정 범위를 적용합니다."}</p></div>}
-      </div>}
-      <details className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
-        <summary className="min-h-10 cursor-pointer text-xs font-bold">{allowAverage ? "고급 · 기준 방식 / 대체 범위" : "고정 범위 설정"}</summary>
-          {allowAverage && <div className="mb-3"><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={event => onChange({useAverage:event.target.checked})} className="h-5 w-5 accent-emerald-600" />24시간 평균 사용</label><p className="mt-2 text-xs text-text-secondary">매시간 정각에 직전 24시간을 계산해 저장하고 재사용합니다. 미측정(음수·0·0.001·0.01·0.1)은 제외합니다. 유효 {threshold.averageSampleCount}건 · 제외 {threshold.excludedZeroCount}건 · 갱신 {threshold.averageCapturedAt ?? "대기 중"}. 유효 표본 12개 미만이거나 평균/측정이 2시간 이상 오래되면 아래 고정 범위로 판단합니다.</p></div>}
-        <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">{allowAverage ? "고정 기준값 (평균 사용 불가 시 대체) ± 허용편차" : "기준값 ± 허용편차"}</p>
-        <div className="grid grid-cols-2 gap-2">
-          <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />
-          <NumberField label="± 편차" value={tolerance} disabled={disabled} ignoreBlank onChange={changeTolerance} />
+      {allowAverage && <fieldset className="mt-4">
+        <legend className="text-sm font-bold">알림 기준 선택</legend>
+        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          {[{value:true,label:"24시간 평균 + 허용편차",description:"평균이 갱신되면 범위도 자동 변경"}, {value:false,label:"수동 최소·최대 범위",description:"입력한 범위를 계속 사용"}].map(mode =>
+            <label key={String(mode.value)} className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-3 ${threshold.useAverage === mode.value ? "border-sky-500 bg-sky-50 dark:bg-sky-950/30" : "border-slate-200 dark:border-white/10"}`}>
+              <input type="radio" name={`alert-basis-${threshold.key}`} checked={threshold.useAverage === mode.value} disabled={disabled} onChange={()=>onChange({useAverage:mode.value})} className="mt-0.5 h-5 w-5 shrink-0 accent-sky-700" />
+              <span><span className="block text-xs font-bold">{mode.label}</span><span className="mt-1 block text-[11px] text-text-secondary">{mode.description}</span></span>
+            </label>)}
         </div>
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <NumberField label="최소" value={threshold.min} disabled={disabled} onChange={(min) => onChange({ min })} />
-        <NumberField label="최대" value={threshold.max} disabled={disabled} onChange={(max) => onChange({ max })} />
-      </div>
-      </details>
+      </fieldset>}
+      {allowAverage && threshold.useAverage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+        <p className="text-xs font-bold">최근 24시간 평균</p>
+        <p className="mt-1 text-lg font-extrabold">{threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)}${unit}`}</p>
+        <p className="mt-1 text-[11px] text-text-secondary">유효 {threshold.averageSampleCount}건 · 미측정 제외 {threshold.excludedZeroCount}건 · 매시간 자동 갱신</p>
+        <div className="mt-3"><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
+        <div role="status" aria-live="polite" className={`mt-3 rounded-lg p-3 ${preview.averageApplied ? "bg-emerald-100/70 dark:bg-emerald-950/50" : "bg-amber-100/70 dark:bg-amber-950/40"}`}>
+          <p className="text-xs font-bold">저장 후 적용될 범위 · {preview.averageApplied ? "24시간 평균" : "대체 범위"}</p>
+          <p className="mt-1 text-base font-extrabold">{formatRange(preview.min,preview.max)}</p>
+          {!preview.averageApplied && <p className="mt-2 text-xs leading-5">{preview.reason ?? "허용편차를 확인해주세요."} 현재는 아래 대체 범위로 판단합니다. 표본과 최신성 조건이 충족되면 평균 기준으로 자동 전환됩니다.</p>}
+        </div>
+        {threshold.averageValue != null && !preview.averageApplied && <p className="mt-2 text-[11px] text-text-secondary">평균 적용 조건 충족 시 계산 범위: {formatRange(threshold.averageValue - Math.abs(threshold.averageValue)*threshold.tolerancePercent/100, threshold.averageValue + Math.abs(threshold.averageValue)*threshold.tolerancePercent/100)} · 현재 미적용</p>}
+        <details className="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-xs font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-[11px] text-text-secondary">유효 표본이 12건 미만이거나 평균·마지막 유효 측정이 2시간 이상 오래되면 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
+      </div> : <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/5">
+        <p className="mb-3 text-xs font-bold">수동 범위 설정</p>{manualFields}
+        <p role="status" aria-live="polite" className="mt-3 text-sm font-bold">저장 후 적용될 범위: {formatRange(threshold.min,threshold.max)}</p>
+        {allowAverage && <p className="mt-2 text-xs text-text-secondary">24시간 평균과 허용편차는 알림 판단에 사용하지 않습니다.</p>}
+      </div>}
     </section>
   );
 }
@@ -659,7 +668,7 @@ function NumberField({ label, value, disabled, ignoreBlank = false, min = 0, max
 }
 
 function RangePreview({ label, threshold }: { label: string; threshold?: AlertThreshold }) {
-  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}{threshold?.averageApplied ? " · 24h 평균" : ""}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
+  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}{threshold ? threshold.averageApplied ? " · 24시간 평균" : threshold.useAverage ? " · 평균 대기 / 대체 범위" : " · 수동 범위" : ""}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
 }
 
 function StatChip({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {
