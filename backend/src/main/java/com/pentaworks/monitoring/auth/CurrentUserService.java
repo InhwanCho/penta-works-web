@@ -59,13 +59,13 @@ public class CurrentUserService {
 
     public void requireVisibleSiteAccess(CurrentUser user, String siteId) {
         if (!visibleSiteIds(user).contains(siteId)) {
-            throw new ForbiddenException("대시보드에 표시되지 않는 사업장입니다.");
+            throw new ForbiddenException("대시보드에 표시되지 않는 병원입니다.");
         }
     }
 
     public void requireSiteAccess(CurrentUser user, String siteId) {
         if (!allowedSiteIds(user).contains(siteId)) {
-            throw new ForbiddenException("이 사업장에 접근할 권한이 없습니다.");
+            throw new ForbiddenException("이 병원에 접근할 권한이 없습니다.");
         }
     }
 

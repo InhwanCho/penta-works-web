@@ -27,7 +27,7 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     <button type="button" aria-label="항목 정보 닫기" onClick={onClose} className="float-right ml-3 min-h-8 min-w-8 rounded-lg text-lg">×</button>
     <p className="font-bold">{selection.hospital} · {selection.label}</p>
     <p className="mt-1">{settings.isPending ? "알림 범위를 불러오는 중…" : settings.isError ? "알림 범위를 불러오지 못했습니다." : !threshold ? "알림 범위 설정 없음" : `알림 범위: ${format(threshold.effectiveMin)} – ${format(threshold.effectiveMax)} ${threshold.unit ?? ""}`}</p>
-    {threshold && <p className="mt-1 text-xs text-slate-300">{!site?.alertsEnabled ? "사업장 전체 알림 꺼짐" : !threshold.active ? "이 항목 알림 꺼짐" : "이 항목 알림 켜짐"} · {threshold.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균 적용" : "24시간 평균 적용" : threshold.useAverage ? "평균 대기 · 대체 범위 적용" : "수동 범위 적용"}</p>}
+    {threshold && <p className="mt-1 text-xs text-slate-300">{!site?.alertsEnabled ? "병원 전체 알림 꺼짐" : !threshold.active ? "이 항목 알림 꺼짐" : "이 항목 알림 켜짐"} · {threshold.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균 적용" : "24시간 평균 적용" : threshold.useAverage ? "평균 대기 · 대체 범위 적용" : "수동 범위 적용"}</p>}
     {threshold?.useAverage && threshold.historicalAverage && <p className="mt-2 text-xs leading-5 text-amber-200">최근 평균을 사용할 수 없어 마지막 정상 평균을 사용합니다.<br />{averagePeriodMessage(threshold)}</p>}
     {threshold?.useAverage && !threshold.averageApplied && <p className="mt-2 text-xs leading-5 text-amber-200">{averageUnavailableMessage(threshold)} 조건 충족 전까지 대체 범위를 사용합니다.</p>}
     {isAdmin && threshold && <button type="button" onClick={onEdit} className="mt-3 min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-sky-900">이 알림 수정하기</button>}

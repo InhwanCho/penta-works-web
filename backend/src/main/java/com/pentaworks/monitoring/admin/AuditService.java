@@ -46,7 +46,7 @@ public class AuditService {
         try {
             return objectMapper.writeValueAsString(value);
         } catch (JsonProcessingException error) {
-            throw new IllegalStateException("감사 로그를 기록하지 못했습니다.", error);
+            throw new IllegalStateException("활동 기록를 기록하지 못했습니다.", error);
         }
     }
 }

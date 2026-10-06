@@ -8,7 +8,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test:public-auth": "node --test tests/public-auth-query.test.mjs"
+    "test:public-auth": "node --test tests/public-auth-query.test.mjs",
+    "test:alerts": "node --test tests/alert-event-state.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",

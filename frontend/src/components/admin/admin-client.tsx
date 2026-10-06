@@ -114,20 +114,20 @@ export default function AdminClient() {
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">워크스페이스 관리</h1>
           <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">
-            사용자·사업장과 대시보드 측정항목을 관리하세요.
+            사용자·병원과 대시보드 측정항목을 관리하세요.
           </p>
           <div className="mt-5 flex flex-wrap gap-2.5">
             <SummaryChip value={users.data?.length ?? 0} label="전체 사용자" />
             <SummaryChip value={(users.data ?? []).filter((user) => user.status === "ACTIVE").length} label="활성 계정" />
             <SummaryChip value={invitations.data?.length ?? 0} label="대기 중 초대" />
-            <SummaryChip value={sites.data?.length ?? 0} label="사업장" />
+            <SummaryChip value={sites.data?.length ?? 0} label="병원" />
           </div>
         </div>
       </header>
 
       <ManagementTabs label="관리 설정" value={tab} onChange={setTab} items={[
-        {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"사업장"},
-        {value:"metrics",label:"측정항목"}, {value:"audit",label:"감사 로그"},
+        {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"병원"},
+        {value:"metrics",label:"측정항목"}, {value:"audit",label:"활동 기록"},
       ]} />
 
       {tab === "users" && (
@@ -185,7 +185,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
         <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
-      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 사업장별 알림 설정에서 별도로 등록합니다.</p>
+      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 병원별 알림 설정에서 별도로 등록합니다.</p>
       <div className={`${CARD} overflow-x-auto`}>
         <table className="w-full min-w-[900px] text-left text-sm whitespace-nowrap">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary/70">
@@ -195,7 +195,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
               <th scope="col" className="px-3 py-3 font-bold">휴대폰번호</th>
               <th scope="col" className="px-3 py-3 font-bold">권한</th>
               <th scope="col" className="px-3 py-3 font-bold">상태</th>
-              <th scope="col" className="px-3 py-3 font-bold">사업장</th>
+              <th scope="col" className="px-3 py-3 font-bold">병원</th>
               <th scope="col" className="px-3 py-3 font-bold">최근 로그인</th>
               <th scope="col" className="px-3 py-3 font-bold">관리</th>
             </tr>
@@ -473,33 +473,33 @@ function SiteSection({ sites, company, loading }: { sites: SiteOption[]; company
         method: "POST",
         body: JSON.stringify({ id, name, timezone: "Asia/Seoul" }),
       });
-      setId(""); setName(""); setMessage("사업장을 추가했습니다.");
+      setId(""); setName(""); setMessage("병원을 추가했습니다.");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin-sites"] }),
         queryClient.invalidateQueries({ queryKey: ["alert-thresholds"] }),
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
       ]);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "사업장을 추가하지 못했습니다."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "병원을 추가하지 못했습니다."); }
     finally { setSaving(false); }
   }
 
   return <section>
     <form onSubmit={create} className={`${CARD} mb-5 grid gap-3 p-5 sm:grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)_auto] sm:items-end sm:p-6`}>
-      <div className="sm:col-span-3"><h2 className="text-lg font-bold">새 사업장 추가</h2><p className="text-text-secondary mt-1 text-sm">{company ? `${company.name} 회사에 추가됩니다. ` : ""}코드는 생성 후 변경할 수 없습니다. 기존 측정 데이터와 같은 코드를 사용하면 자동으로 연결됩니다.</p></div>
-      <label className="text-text-secondary text-xs font-bold">사업장 코드<input className={`${INPUT} mt-1.5`} required maxLength={32} pattern="[A-Za-z0-9_-]+" placeholder="예: 031" value={id} onChange={(event) => setId(event.target.value)} /></label>
-      <label className="text-text-secondary text-xs font-bold">사업장 이름<input className={`${INPUT} mt-1.5`} required maxLength={20} placeholder="병원 또는 사업장 이름" value={name} onChange={(event) => setName(event.target.value)} /></label>
-      <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{saving ? "추가 중…" : "사업장 추가"}</button>
+      <div className="sm:col-span-3"><h2 className="text-lg font-bold">새 병원 추가</h2><p className="text-text-secondary mt-1 text-sm">{company ? `${company.name} 회사에 추가됩니다. ` : ""}코드는 생성 후 변경할 수 없습니다. 기존 측정 데이터와 같은 코드를 사용하면 자동으로 연결됩니다.</p></div>
+      <label className="text-text-secondary text-xs font-bold">병원 코드<input className={`${INPUT} mt-1.5`} required maxLength={32} pattern="[A-Za-z0-9_-]+" placeholder="예: 031" value={id} onChange={(event) => setId(event.target.value)} /></label>
+      <label className="text-text-secondary text-xs font-bold">병원 이름<input className={`${INPUT} mt-1.5`} required maxLength={20} placeholder="병원 이름" value={name} onChange={(event) => setName(event.target.value)} /></label>
+      <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{saving ? "추가 중…" : "병원 추가"}</button>
       {message && <p className="text-text-secondary text-xs sm:col-span-3">{message}</p>}
     </form>
-    {loading ? <Loading /> : sites.length === 0 ? <Empty>등록된 사업장이 없습니다.</Empty> : (
+    {loading ? <Loading /> : sites.length === 0 ? <Empty>등록된 병원이 없습니다.</Empty> : (
       <div className="space-y-5">
         {groupSites(sites).map((group) => (
           <section key={group.companyId} aria-labelledby={`company-sites-${group.companyId}`}>
             <div className="mb-2.5 flex items-center gap-2 px-1">
               <h2 id={`company-sites-${group.companyId}`} className="font-extrabold">{group.companyName}</h2>
               <span className="rounded-md bg-slate-100 px-2 py-1 text-[11px] font-bold text-slate-500 dark:bg-white/7 dark:text-text-dark-primary/60">{group.companyCode}</span>
-              <span className="text-text-secondary text-xs">사업장 {group.sites.length}곳</span>
+              <span className="text-text-secondary text-xs">병원 {group.sites.length}곳</span>
             </div>
             <div className="grid gap-4 xl:grid-cols-2">{group.sites.map((site) => <SiteEditor key={site.id} site={site} />)}</div>
           </section>
@@ -533,14 +533,14 @@ function SiteEditor({ site }: { site: SiteOption }) {
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
       ]);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "사업장 정보를 저장하지 못했습니다."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "병원 정보를 저장하지 못했습니다."); }
     finally { setSaving(false); }
   }
 
   return <form onSubmit={save} className={`${CARD} p-5`}>
-    <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{site.name ?? "이름 없는 사업장"}</h3><p className="text-text-secondary mt-0.5 text-xs">사업장 코드 {site.id}</p></div><span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">코드 고정</span></div>
+    <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="font-extrabold">{site.name ?? "이름 없는 병원"}</h3><p className="text-text-secondary mt-0.5 text-xs">병원 코드 {site.id}</p></div><span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">코드 고정</span></div>
     <div className="grid gap-3 sm:grid-cols-2">
-      <label className="text-text-secondary text-xs font-bold">사업장 이름<input className={`${INPUT} mt-1.5`} required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label>
+      <label className="text-text-secondary text-xs font-bold">병원 이름<input className={`${INPUT} mt-1.5`} required maxLength={20} value={name} onChange={(event) => setName(event.target.value)} /></label>
       <label className="text-text-secondary text-xs font-bold">시간대<input className={`${INPUT} mt-1.5`} required maxLength={40} value={timezone} onChange={(event) => setTimezone(event.target.value)} /></label>
       <label className="text-text-secondary text-xs font-bold sm:col-span-2">주소<input className={`${INPUT} mt-1.5`} maxLength={255} value={address} onChange={(event) => setAddress(event.target.value)} /></label>
       <label className="text-text-secondary text-xs font-bold">담당자<input className={`${INPUT} mt-1.5`} maxLength={80} value={contactName} onChange={(event) => setContactName(event.target.value)} /></label>
@@ -583,7 +583,7 @@ function SiteChecks({ sites, selected, onChange }: { sites: SiteOption[]; select
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   return (
     <fieldset className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/45 p-3.5 dark:border-white/8 dark:bg-white/3">
-      <legend className="px-1.5 text-xs font-bold text-slate-600 dark:text-text-dark-primary/70">접근 가능 사업장 · {selected.length}곳 선택</legend>
+      <legend className="px-1.5 text-xs font-bold text-slate-600 dark:text-text-dark-primary/70">접근 가능 병원 · {selected.length}곳 선택</legend>
       <div className="mb-2 flex flex-wrap gap-2">
         <button type="button" disabled={sites.length === 0 || sites.every(site => selectedSet.has(site.id))} onClick={() => onChange([...new Set(sites.map(site => site.id))])} className="min-h-11 rounded-lg border border-sky-200 px-3 text-xs font-bold text-sky-700 disabled:opacity-40 dark:border-sky-800 dark:text-sky-300">전체 선택</button>
         <button type="button" disabled={selected.length === 0} onClick={() => onChange([])} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs font-bold disabled:opacity-40 dark:border-white/10">전체 해제</button>
@@ -626,6 +626,6 @@ function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-cent
 function roleLabel(role: Role) { return role === "PLATFORM_ADMIN" ? "플랫폼 관리자" : role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
-function actionLabel(value: string) { return ({ COMPANY_METRICS_UPDATED: "측정항목 표시 변경", PASSWORD_RESET_REQUESTED: "비밀번호 찾기 요청", ALERT_DELIVERY_CONFIRMED: "수신 여부 확인", ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", ACCOUNT_PROFILE_UPDATED: "내 정보 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
+function actionLabel(value: string) { return ({ COMPANY_METRICS_UPDATED: "측정항목 표시 변경", PASSWORD_RESET_REQUESTED: "비밀번호 찾기 요청", ALERT_DELIVERY_CONFIRMED: "수신 여부 확인", ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", ACCOUNT_PROFILE_UPDATED: "내 정보 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "병원 추가", SITE_UPDATED: "병원 정보 변경" } as Record<string, string>)[value] ?? value; }
 function SummaryChip({ value, label }: { value: number; label: string }) { return <div className="rounded-xl border border-white/10 bg-white/10 px-3.5 py-2 backdrop-blur-sm"><span className="text-base font-extrabold">{value}</span><span className="ml-1.5 text-xs font-medium text-white/65">{label}</span></div>; }
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) { return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"}`}><span className={`h-1.5 w-1.5 rounded-full ${status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"}`} />{status === "ACTIVE" ? "활성" : "정지"}</span>; }

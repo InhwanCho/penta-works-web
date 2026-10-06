@@ -105,15 +105,15 @@ public class AdminAccountService {
         requireAdmin(actor);
         String siteId = request.id().trim();
         if (!siteId.matches("[A-Za-z0-9_-]{1,32}")) {
-            throw new BadRequestException("사업장 코드는 영문, 숫자, 밑줄, 하이픈만 사용할 수 있습니다.");
+            throw new BadRequestException("병원 코드는 영문, 숫자, 밑줄, 하이픈만 사용할 수 있습니다.");
         }
         if ("040".equals(siteId)) {
-            throw new BadRequestException("040은 테스트 데이터 코드이므로 사업장으로 등록할 수 없습니다.");
+            throw new BadRequestException("040은 테스트 데이터 코드이므로 병원으로 등록할 수 없습니다.");
         }
         SiteFields fields = validateSiteFields(request.name(), request.address(), request.contactName(),
             request.contactPhone(), request.timezone());
         Integer existing = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM site WHERE site=?", Integer.class, siteId);
-        if (existing != null && existing > 0) throw new ConflictException("이미 등록된 사업장 코드입니다.");
+        if (existing != null && existing > 0) throw new ConflictException("이미 등록된 병원 코드입니다.");
         jdbcTemplate.update("INSERT INTO site (site,name) VALUES (?,?)", siteId, fields.name());
         jdbcTemplate.update("INSERT INTO company_site (company_id,site_id) VALUES (?,?)", actor.companyId(), siteId);
         jdbcTemplate.update("""
@@ -397,26 +397,26 @@ public class AdminAccountService {
         if (normalized.isEmpty()) return normalized;
         Set<String> allowed = new LinkedHashSet<>(jdbcTemplate.query(
             "SELECT site_id FROM company_site WHERE company_id=?", (rs, row) -> rs.getString(1), companyId));
-        if (!allowed.containsAll(normalized)) throw new BadRequestException("유효하지 않은 사업장이 포함되어 있습니다.");
+        if (!allowed.containsAll(normalized)) throw new BadRequestException("유효하지 않은 병원이 포함되어 있습니다.");
         return normalized;
     }
 
     private SiteOption site(CurrentUser actor, String siteId) {
         return sites(actor).stream().filter(site -> site.id().equals(siteId)).findFirst()
-            .orElseThrow(() -> new NotFoundException("사업장을 찾을 수 없습니다."));
+            .orElseThrow(() -> new NotFoundException("병원을 찾을 수 없습니다."));
     }
 
     private void requireManagedSite(CurrentUser actor, String siteId) {
         Integer count = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM company_site WHERE company_id=? AND site_id=?", Integer.class,
             actor.companyId(), siteId);
-        if (count == null || count == 0) throw new NotFoundException("사업장을 찾을 수 없습니다.");
+        if (count == null || count == 0) throw new NotFoundException("병원을 찾을 수 없습니다.");
     }
 
     private SiteFields validateSiteFields(String rawName, String address, String contactName,
                                           String contactPhone, String rawTimezone) {
         String name = rawName == null ? "" : rawName.trim();
-        if (name.isEmpty() || name.length() > 20) throw new BadRequestException("사업장 이름은 20자 이하여야 합니다.");
+        if (name.isEmpty() || name.length() > 20) throw new BadRequestException("병원 이름은 20자 이하여야 합니다.");
         String timezone = rawTimezone == null || rawTimezone.isBlank() ? "Asia/Seoul" : rawTimezone.trim();
         if (timezone.length() > 40) throw new BadRequestException("시간대 값을 확인해주세요.");
         try { ZoneId.of(timezone); } catch (DateTimeException error) {

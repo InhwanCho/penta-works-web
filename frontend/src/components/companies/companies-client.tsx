@@ -78,9 +78,9 @@ function SiteAssignments({ companies }: { companies: Company[] }) {
   const sites = useQuery({ queryKey: ["platform-sites"], queryFn: () => apiFetch<SiteAssignment[]>("/platform/companies/sites") });
   const filtered = (sites.data ?? []).filter((site) => `${site.id} ${site.name ?? ""} ${site.companyName ?? ""}`.toLowerCase().includes(query.trim().toLowerCase()));
   return <section className={`${CARD} mt-6 p-5 sm:p-6`}>
-    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold">사업장 배정</h2><p className="text-text-secondary mt-1 text-sm">회사 간 이동 시 과거 측정 데이터도 새 회사에서 보입니다.</p></div><span className="text-text-secondary text-xs">미배정 {(sites.data ?? []).filter((site) => site.companyId === null).length}개</span></div>
-    <input type="search" className={`${INPUT} mt-4`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="사업장 코드·이름·회사 검색" />
-    {sites.isLoading ? <Loading /> : sites.isError ? <p className="mt-4 text-sm text-rose-600">사업장 목록을 불러오지 못했습니다.</p> : <div className="mt-4 grid gap-2 lg:grid-cols-2">{filtered.map((site) => <SiteAssignmentRow key={site.id} site={site} companies={companies} />)}</div>}
+    <div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-extrabold">병원 배정</h2><p className="text-text-secondary mt-1 text-sm">회사 간 이동 시 과거 측정 데이터도 새 회사에서 보입니다.</p></div><span className="text-text-secondary text-xs">미배정 {(sites.data ?? []).filter((site) => site.companyId === null).length}개</span></div>
+    <input type="search" className={`${INPUT} mt-4`} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원 코드·이름·회사 검색" />
+    {sites.isLoading ? <Loading /> : sites.isError ? <p className="mt-4 text-sm text-rose-600">병원 목록을 불러오지 못했습니다.</p> : <div className="mt-4 grid gap-2 lg:grid-cols-2">{filtered.map((site) => <SiteAssignmentRow key={site.id} site={site} companies={companies} />)}</div>}
     {!sites.isLoading && !sites.isError && filtered.length === 0 && <p className="text-text-secondary mt-4 text-sm">검색 결과가 없습니다.</p>}
   </section>;
 }
@@ -94,13 +94,13 @@ function SiteAssignmentRow({ site, companies }: { site: SiteAssignment; companie
   async function assign() {
     const company = companies.find((item) => String(item.id) === target);
     if (!company) return;
-    if (moving && !window.confirm(`${site.name ?? site.id} 사업장을 ${site.companyName ?? "기존 회사"}에서 ${company.name}(으)로 이동할까요? 과거 측정 데이터도 새 회사에 보이고, 이전 회사의 사용자·초대·알림 수신자 배정은 해제됩니다.`)) return;
+    if (moving && !window.confirm(`${site.name ?? site.id} 병원을 ${site.companyName ?? "기존 회사"}에서 ${company.name}(으)로 이동할까요? 과거 측정 데이터도 새 회사에 보이고, 이전 회사의 사용자·초대·알림 수신자 배정은 해제됩니다.`)) return;
     setBusy(true); setMessage(null);
     try {
       await apiFetch(`/platform/companies/sites/${encodeURIComponent(site.id)}/assignment`, { method: "PATCH", body: JSON.stringify({ companyId: company.id, confirmHistoryTransfer: moving }) });
-      setMessage("사업장을 배정했습니다.");
+      setMessage("병원을 배정했습니다.");
       await Promise.all([queryClient.invalidateQueries({ queryKey: ["platform-sites"] }), queryClient.invalidateQueries({ queryKey: ["platform-companies"] }), queryClient.invalidateQueries({ queryKey: ["platform-company-activity"] })]);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "사업장을 배정하지 못했습니다."); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "병원을 배정하지 못했습니다."); }
     finally { setBusy(false); }
   }
   return <div className="rounded-lg border border-slate-200/80 p-3 dark:border-white/10"><div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{site.name || site.id} <span className="text-text-secondary text-xs font-medium">{site.id}</span></p><p className="text-text-secondary mt-0.5 text-xs">현재: {site.companyName ?? "미배정"}</p></div><div className="flex gap-2"><select aria-label={`${site.id} 배정 회사`} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs dark:border-white/10 dark:bg-background-dark-card" value={target} onChange={(event) => setTarget(event.target.value)}><option value="">회사 선택</option>{companies.filter((item) => item.status !== "SUSPENDED").map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><button type="button" disabled={busy || !target || target === String(site.companyId)} onClick={assign} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{busy ? "처리 중…" : moving ? "이동" : "배정"}</button></div></div>{message && <p className="mt-2 text-xs font-semibold text-sky-700 dark:text-sky-300">{message}</p>}</div>;
@@ -191,7 +191,7 @@ function CompanyCard({ company }: { company: Company }) {
   return <article className={`${CARD} p-5`}>
     <div className="flex flex-wrap items-start justify-between gap-3"><div><div className="flex flex-wrap items-center gap-2"><h3 className="text-lg font-extrabold">{company.name}</h3><Status status={company.status} /><button type="button" className="text-text-secondary text-xs font-bold underline" onClick={() => { setCompanyName(company.name); setEditingName(!editingName); }}>이름 수정</button></div><p className="text-text-secondary mt-1 text-xs">{company.code} · 사업자번호 {formatBusinessNumber(company.businessRegistrationNumber)}</p></div>{company.businessRegistrationUrl && <div className="flex gap-2"><button type="button" disabled={busy} onClick={openDocument} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">등록증 보기</button>{!company.businessRegistrationVerifiedAt && <button type="button" disabled={busy} onClick={verify} className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">확인 완료</button>}</div>}</div>
     {editingName && <form onSubmit={updateName} className="mt-3 flex gap-2"><input aria-label="회사명" className={INPUT} required maxLength={120} value={companyName} onChange={(event) => setCompanyName(event.target.value)} /><button type="submit" disabled={busy} className="shrink-0 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white disabled:opacity-50">저장</button></form>}
-    <dl className="mt-4 grid grid-cols-3 gap-2"><Metric label="사업장" value={company.siteCount} /><Metric label="사용자" value={company.userCount} /><Metric label="최고관리자" value={company.superAdminCount} danger={company.status !== "PENDING" && company.superAdminCount < 1} /></dl>
+    <dl className="mt-4 grid grid-cols-3 gap-2"><Metric label="병원" value={company.siteCount} /><Metric label="사용자" value={company.userCount} /><Metric label="최고관리자" value={company.superAdminCount} danger={company.status !== "PENDING" && company.superAdminCount < 1} /></dl>
     <form onSubmit={uploadRegistration} className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end dark:bg-white/4">
       <label className="text-text-secondary text-[11px] font-bold">사업자등록번호<input className={`${INPUT} mt-1`} required inputMode="numeric" placeholder="000-00-00000" value={registrationNumber} onChange={(event) => setRegistrationNumber(event.target.value)} /></label>
       <label className="text-text-secondary text-[11px] font-bold">등록증 파일 · 최대 10MB<input id={`registration-file-${company.id}`} className={`${INPUT} mt-1 py-2 file:mr-2 file:border-0 file:bg-transparent file:text-xs file:font-bold`} type="file" required accept="application/pdf,image/jpeg,image/png" onChange={(event) => setRegistrationFile(event.target.files?.[0] ?? null)} /></label>
@@ -205,7 +205,7 @@ function CompanyCard({ company }: { company: Company }) {
   </article>;
 }
 
-function activityLabel(action: string) { return ({ COMPANY_CREATED: "회사 등록", COMPANY_PROFILE_UPDATED: "회사명 수정", COMPANY_STATUS_CHANGED: "회사 상태 변경", BUSINESS_REGISTRATION_UPLOADED: "등록증 등록·교체", BUSINESS_REGISTRATION_VERIFIED: "등록증 확인", COMPANY_ADMIN_INVITED: "최고관리자 초대", COMPANY_ADMIN_INVITATION_RESENT: "최고관리자 초대 발송·재발송", COMPANY_ADMIN_INVITATION_REVOKED: "최고관리자 초대 취소", SITE_ASSIGNED: "사업장 배정", SITE_TRANSFERRED_OUT: "사업장 이전" } as Record<string, string>)[action] ?? action; }
+function activityLabel(action: string) { return ({ COMPANY_CREATED: "회사 등록", COMPANY_PROFILE_UPDATED: "회사명 수정", COMPANY_STATUS_CHANGED: "회사 상태 변경", BUSINESS_REGISTRATION_UPLOADED: "등록증 등록·교체", BUSINESS_REGISTRATION_VERIFIED: "등록증 확인", COMPANY_ADMIN_INVITED: "최고관리자 초대", COMPANY_ADMIN_INVITATION_RESENT: "최고관리자 초대 발송·재발송", COMPANY_ADMIN_INVITATION_REVOKED: "최고관리자 초대 취소", SITE_ASSIGNED: "병원 배정", SITE_TRANSFERRED_OUT: "병원 이전" } as Record<string, string>)[action] ?? action; }
 
 function Status({ status }: { status: Company["status"] }) { const label = status === "ACTIVE" ? "활성" : status === "PENDING" ? "가입 대기" : "중지"; const style = status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : status === "PENDING" ? "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300" : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"; return <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${style}`}>{label}</span>; }
 function Metric({ label, value, danger = false }: { label: string; value: number; danger?: boolean }) { return <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-white/4"><dt className="text-text-secondary text-[11px] font-bold">{label}</dt><dd className={`mt-1 text-lg font-extrabold ${danger ? "text-rose-600" : ""}`}>{value}</dd></div>; }

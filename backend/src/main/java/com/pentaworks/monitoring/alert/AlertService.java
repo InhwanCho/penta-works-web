@@ -119,7 +119,7 @@ public class AlertService {
         if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         if (enabled && !currentUsers.visibleSiteIds(actor).contains(siteId)) {
-            throw new BadRequestException("대시보드에 표시되는 사업장만 알림을 켤 수 있습니다.");
+            throw new BadRequestException("대시보드에 표시되는 병원만 알림을 켤 수 있습니다.");
         }
         jdbcTemplate.update("""
             INSERT INTO site_alert_policy (site_id,is_enabled,created_at,updated_at)
@@ -235,7 +235,7 @@ public class AlertService {
             noDataMinutes = collectionIntervalMinutes * missingCollectionThreshold;
         }
         if (Boolean.TRUE.equals(alertsEnabled) && !currentUsers.visibleSiteIds(actor).contains(siteId)) {
-            throw new BadRequestException("대시보드에 표시되는 사업장만 알림을 켤 수 있습니다.");
+            throw new BadRequestException("대시보드에 표시되는 병원만 알림을 켤 수 있습니다.");
         }
         if (updates == null || updates.isEmpty()) throw new BadRequestException("변경할 기준값이 없습니다.");
         if ((noDataMinutes == null) != (noDataActive == null)) {
@@ -260,7 +260,7 @@ public class AlertService {
             throw new BadRequestException("발송 제외 시작과 종료는 다르게 지정해주세요. 항상 받으려면 야간 발송 제외를 해제하세요.");
         }
         if (holidayDates == null || holidayDates.size() > 100 || holidayDates.stream().anyMatch(java.util.Objects::isNull)) {
-            throw new BadRequestException("휴일은 사업장별 최대 100일까지 등록할 수 있습니다.");
+            throw new BadRequestException("휴일은 병원별 최대 100일까지 등록할 수 있습니다.");
         }
         Set<String> seen = new LinkedHashSet<>();
         for (ThresholdUpdate update : updates) {

@@ -106,11 +106,11 @@ public class PlatformCompanyService {
     public SiteAssignment assignSite(CurrentUser actor, String siteId, AssignSiteRequest request) {
         requirePlatformAdmin(actor);
         if (siteId == null || !siteId.matches("[A-Za-z0-9_-]{1,32}") || "040".equals(siteId)) {
-            throw new BadRequestException("올바르지 않은 사업장 코드입니다.");
+            throw new BadRequestException("올바르지 않은 병원 코드입니다.");
         }
         String existingSite = jdbcTemplate.query("SELECT site FROM site WHERE site=? FOR UPDATE",
             rs -> rs.next() ? rs.getString(1) : null, siteId);
-        if (existingSite == null) throw new NotFoundException("사업장을 찾을 수 없습니다.");
+        if (existingSite == null) throw new NotFoundException("병원을 찾을 수 없습니다.");
         Integer destination = jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM company WHERE id=? AND status IN ('PENDING','ACTIVE')",
             Integer.class, request.companyId());
@@ -118,16 +118,16 @@ public class PlatformCompanyService {
         Long previousCompanyId = jdbcTemplate.query("SELECT company_id FROM company_site WHERE site_id=? FOR UPDATE",
             rs -> rs.next() ? rs.getLong(1) : null, siteId);
         if (previousCompanyId != null && previousCompanyId == request.companyId()) {
-            throw new BadRequestException("이미 해당 회사에 배정된 사업장입니다.");
+            throw new BadRequestException("이미 해당 회사에 배정된 병원입니다.");
         }
         if (previousCompanyId != null && !request.confirmHistoryTransfer()) {
-            throw new BadRequestException("기존 회사의 사업장을 이동하려면 과거 데이터 이전을 확인해주세요.");
+            throw new BadRequestException("기존 회사의 병원을 이동하려면 과거 데이터 이전을 확인해주세요.");
         }
         if (previousCompanyId != null) {
             Integer assetSyncs = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM office_asset_sync_state WHERE site_id=?", Integer.class, siteId);
             if (assetSyncs != null && assetSyncs > 0) {
-                throw new BadRequestException("사무실 자산 연동 이력이 있는 사업장은 연동을 정리한 후 이동할 수 있습니다.");
+                throw new BadRequestException("사무실 자산 연동 이력이 있는 병원은 연동을 정리한 후 이동할 수 있습니다.");
             }
         }
         if (previousCompanyId == null) {
@@ -145,7 +145,7 @@ public class PlatformCompanyService {
         audit.recordForCompany(request.companyId(), actor, "SITE_ASSIGNED", "SITE", siteId,
             Map.of("fromCompanyId", previousCompanyId == null ? "unassigned" : previousCompanyId.toString()));
         return sites(actor).stream().filter(site -> site.id().equals(siteId)).findFirst()
-            .orElseThrow(() -> new NotFoundException("사업장을 찾을 수 없습니다."));
+            .orElseThrow(() -> new NotFoundException("병원을 찾을 수 없습니다."));
     }
 
     @Transactional

@@ -75,7 +75,7 @@ public class MonitorService {
         Transition transition = alertEvents.retryTransition(actor, eventId);
         SiteAlertSettings policy = alertService.alertSettings().stream()
             .filter(site -> site.siteid().equals(transition.siteId())).findFirst()
-            .orElseThrow(() -> new BadRequestException("사업장 알림 설정이 없습니다."));
+            .orElseThrow(() -> new BadRequestException("병원 알림 설정이 없습니다."));
         if (!policy.alertsEnabled()) throw new BadRequestException("알림 사용을 먼저 켜주세요.");
         sendNotifications(List.of(transition), Map.of(transition.siteId(), policy), true);
         return Map.of("ok", true, "eventId", eventId);
