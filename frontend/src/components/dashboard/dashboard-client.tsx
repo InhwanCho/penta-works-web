@@ -99,6 +99,7 @@ export default function DashboardClient() {
   const [selectedAlert, setSelectedAlert] = useState<{siteId: string; metricKey?: string} | null>(null);
   const openAlertSettings = useCallback((siteId: string, metricKey?: string) => setSelectedAlert({siteId, metricKey}), []);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [mobileToolsHidden, setMobileToolsHidden] = useState(false);
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
   useEffect(() => {
@@ -106,16 +107,30 @@ export default function DashboardClient() {
     try {
       const saved = localStorage.getItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY);
       if (isViewMode(saved)) setViewMode(saved);
+      setMobileToolsHidden(localStorage.getItem("dashboard-mobile-tools-hidden") === "true");
     } catch { /* Use the device default if storage is unavailable. */ }
   }, []);
 
   const changeViewMode = useCallback((next: ViewMode) => {
     setViewMode(next);
+    setShowMobileFilters(false);
     try {
       const mobile = window.matchMedia("(max-width: 639px)").matches;
       localStorage.setItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY, next);
     } catch { /* The selected view still works without storage. */ }
   }, []);
+
+  const setToolsHidden = (hidden: boolean) => {
+    setMobileToolsHidden(hidden);
+    setShowMobileFilters(false);
+    try { localStorage.setItem("dashboard-mobile-tools-hidden", String(hidden)); } catch { /* Keep the current choice. */ }
+  };
+  useEffect(() => {
+    if (!showMobileFilters) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setShowMobileFilters(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [showMobileFilters]);
 
   const changeStatusFilter = useCallback((next: StatusFilter) => {
     setStatusFilter(next);
@@ -173,28 +188,23 @@ export default function DashboardClient() {
       <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
       <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
       <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
-      <button type="button" onClick={() => changeStatusFilter("configured")} className={`min-h-11 rounded-xl border px-3 py-2 text-sm font-bold ${statusFilter === "configured" ? "border-sky-500 bg-sky-100 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "border-slate-200 bg-white dark:border-white/10 dark:bg-background-dark-card"}`}>알림값 확인</button>
+      <StatusFilterButton active={statusFilter === "configured"} onClick={() => changeStatusFilter("configured")} label="알림값" value="확인" tone="slate" />
     </>
   );
 
   const mobileControls = (
-    <div className={`${viewMode === "basic" ? "mb-3" : "mt-3"} space-y-2 px-1 sm:hidden`}>
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <ViewModeTabs value={viewMode} onChange={changeViewMode} />
-            <button
-              type="button"
-              aria-controls="dashboard-mobile-status-filters"
-              aria-expanded={showMobileFilters}
-              onClick={() => setShowMobileFilters((open) => !open)}
-              className="min-h-10 shrink-0 rounded-xl border border-slate-200 bg-white px-2.5 text-xs font-bold text-text-major dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary"
-            >
-              필터 · {STATUS_FILTER_LABEL[statusFilter]}
-            </button>
-          </div>
-          <section id="dashboard-mobile-status-filters" className={`${showMobileFilters ? "grid" : "hidden"} grid-cols-2 gap-2`} aria-label="상태별 병원 필터">
-            {statusFilterButtons}
-          </section>
-        </div>
+    <div className="sm:hidden" data-ptr-ignore>
+      {showMobileFilters && <section id="dashboard-mobile-tools" aria-label="대시보드 보기·필터" className="fixed right-3 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-3 z-[55] mx-auto max-h-[70dvh] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-background-dark-card">
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">보기·필터</h2><div className="flex gap-2"><button type="button" onClick={() => setToolsHidden(true)} className="min-h-10 rounded-lg px-2 text-xs font-bold text-slate-500 dark:text-slate-300">숨기기</button><button type="button" aria-label="보기·필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
+        <ViewModeTabs value={viewMode} onChange={changeViewMode} />
+        <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
+        <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
+      </section>}
+      {mobileToolsHidden ? <button type="button" aria-label="대시보드 도구 다시 표시" onClick={() => setToolsHidden(false)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">보기 ‹</button> : <button type="button" aria-controls="dashboard-mobile-tools" aria-expanded={showMobileFilters} onClick={() => setShowMobileFilters(open => !open)} className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] inline-flex min-h-12 items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
+        <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6" /></svg>
+        보기·필터{statusFilter !== "all" && <span className="h-2 w-2 rounded-full bg-sky-500" />}
+      </button>}
+    </div>
   );
 
   return (
@@ -229,7 +239,6 @@ export default function DashboardClient() {
           />
         </header>
 
-        {viewMode === "basic" && mobileControls}
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
         <section className="mb-5 hidden shrink-0 grid-cols-6 gap-2 sm:grid" aria-label="상태별 병원 필터">
@@ -347,7 +356,7 @@ export default function DashboardClient() {
             </section>
           </>
         )}
-        {viewMode === "grid" && mobileControls}
+        {mobileControls}
         <p className="text-text-secondary mt-2 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
           마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
@@ -385,7 +394,7 @@ function ViewModeTabs({
   );
 }
 
-function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number; tone: "slate" | "rose" | "amber" | "emerald" }) {
+function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
   const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
   return <button type="button" onClick={onClick} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-400 ring-2 ring-sky-100 dark:border-sky-500 dark:ring-sky-950" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-xl font-extrabold tabular-nums ${colors[tone]}`}>{value}</span></button>;
 }
