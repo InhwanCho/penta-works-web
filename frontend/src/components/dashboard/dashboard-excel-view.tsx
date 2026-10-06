@@ -74,11 +74,13 @@ export default function DashboardExcelView({
   ctrl,
   metrics,
   columns,
+  onOpenAlertSettings,
 }: {
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
   metrics: MetricDef[];
   columns: CompanyMetric[];
+  onOpenAlertSettings: (siteId: string, metricKey?: string) => void;
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
   const [selectedCell, setSelectedCell] = useState<{
@@ -136,7 +138,7 @@ export default function DashboardExcelView({
           </span>
         </h2>
         <p className="text-text-secondary dark:text-text-dark-primary/70 text-xs">
-          병원명 → 상세 보기 · 수치 → 병원·항목 확인
+          병원명 → 상세 보기 · 수치 → 병원·항목 확인 · 우클릭 → 알림값 확인·설정
         </p>
         </div>
         <span className="rounded-full bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">가로로 밀어 더 보기</span>
@@ -235,6 +237,7 @@ export default function DashboardExcelView({
                   <tr
                     key={row.siteDb}
                     id={`site-grid-${row.siteSlug}`}
+                    onContextMenu={(event) => { event.preventDefault(); onOpenAlertSettings(row.siteDb); }}
                     // 고정열은 불투명 배경이라 알파 hover 를 쓸 수 없습니다.
                     // 행 전체와 고정열의 hover 색이 어긋나지 않도록 양쪽 모두
                     // 알파 없는 같은 색(FIXED_BG 의 group-hover)을 사용합니다.
@@ -275,10 +278,15 @@ export default function DashboardExcelView({
                         <td
                           key={m.key}
                           onClick={() => selectCell(row, m.code)}
+                          onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onOpenAlertSettings(row.siteDb, m.key); }}
+                          title="우클릭하여 알림값 확인·설정"
                           tabIndex={0}
                           aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${row.lastAt != null && (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) ? "측정 안됨" : formatMetricMeasurement(value, null, row.lastAt != null)}`}
                           onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
+                            if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
+                              event.preventDefault();
+                              onOpenAlertSettings(row.siteDb, m.key);
+                            } else if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
                               selectCell(row, m.code);
                             }

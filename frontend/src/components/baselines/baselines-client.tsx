@@ -478,14 +478,15 @@ function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHI
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
 function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "접수 완료", PARTIAL: "일부 접수 실패", FAILED: "접수 실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
 
-export function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
+export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose, onSave }: {
   entry: SiteAlertSettings;
   canEdit: boolean;
+  initialMetricKey?: string;
   onClose: () => void;
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
   const [thresholds, setThresholds] = useState(entry.thresholds);
-  const [metricFilter, setMetricFilter] = useState<"active" | "all">(entry.thresholds.some(item => item.active) ? "active" : "all");
+  const [metricFilter, setMetricFilter] = useState<"active" | "all">(initialMetricKey ? "all" : entry.thresholds.some(item => item.active) ? "active" : "all");
   const [collectionIntervalMinutes, setCollectionIntervalMinutes] = useState(entry.collectionIntervalMinutes ?? 10);
   const [missingCollectionThreshold, setMissingCollectionThreshold] = useState(entry.missingCollectionThreshold ?? 2);
   const noDataMinutes = collectionIntervalMinutes * missingCollectionThreshold;
@@ -568,7 +569,13 @@ export function SiteThresholdEditor({ entry, canEdit, onClose, onSave }: {
           </div>
           <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>
           <div className="grid gap-3 md:grid-cols-2">
-            {thresholds.filter(threshold => metricFilter === "all" || threshold.active).map(threshold => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} />)}
+            {thresholds.filter(threshold => metricFilter === "all" || threshold.active)
+              .sort((a, b) => Number(b.key === initialMetricKey) - Number(a.key === initialMetricKey))
+              .map(threshold => <div key={threshold.key} className={threshold.key === initialMetricKey ? "rounded-xl ring-2 ring-sky-500" : undefined}>
+                {threshold.key === initialMetricKey && <p className="px-3 py-2 text-xs font-bold text-sky-700 dark:text-sky-300">선택한 항목</p>}
+                <RangePreview label={entry.thresholds.find(item => item.key === threshold.key)?.active ? "현재 저장된 적용 범위" : "현재 저장된 설정 · 알림 꺼짐"} threshold={entry.thresholds.find(item => item.key === threshold.key)} />
+                <MetricEditor threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} />
+              </div>)}
           </div>
           <details className="mt-5 rounded-xl border p-3 dark:border-white/10">
             <summary className="min-h-11 cursor-pointer font-bold">고급 설정 · 반복 알림 / 수집 누락 / 발송 제외</summary>
@@ -628,7 +635,7 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
       </div>}
       <details className="mt-3 rounded-xl border border-dashed border-sky-200 bg-white/65 p-2.5 dark:border-sky-900/70 dark:bg-white/3">
         <summary className="min-h-10 cursor-pointer text-xs font-bold">{allowAverage ? "고급 · 기준 방식 / 대체 범위" : "고정 범위 설정"}</summary>
-        {allowAverage && <div className="mb-3"><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={event => onChange({useAverage:event.target.checked})} className="h-5 w-5 accent-emerald-600" />24시간 평균 사용</label><p className="mt-2 text-xs text-text-secondary">매시간 정각에 직전 24시간을 계산해 저장하고 재사용합니다. 미측정(0·0.001·0.01)은 제외합니다. 유효 {threshold.averageSampleCount}건 · 제외 {threshold.excludedZeroCount}건 · 갱신 {threshold.averageCapturedAt ?? "대기 중"}. 유효 표본 12개 미만이거나 평균/측정이 2시간 이상 오래되면 아래 고정 범위로 판단합니다.</p></div>}
+          {allowAverage && <div className="mb-3"><label className="flex items-center gap-2 text-xs font-bold"><input type="checkbox" checked={threshold.useAverage} disabled={disabled} onChange={event => onChange({useAverage:event.target.checked})} className="h-5 w-5 accent-emerald-600" />24시간 평균 사용</label><p className="mt-2 text-xs text-text-secondary">매시간 정각에 직전 24시간을 계산해 저장하고 재사용합니다. 미측정(0·0.001·0.01)은 제외합니다. 유효 {threshold.averageSampleCount}건 · 제외 {threshold.excludedZeroCount}건 · 갱신 {threshold.averageCapturedAt ?? "대기 중"}. 유효 표본 12개 미만이거나 평균/측정이 2시간 이상 오래되면 아래 고정 범위로 판단합니다.</p></div>}
         <p className="mb-2 text-[10px] font-extrabold tracking-wide text-sky-700 uppercase dark:text-sky-300">{allowAverage ? "고정 기준값 (평균 사용 불가 시 대체) ± 허용편차" : "기준값 ± 허용편차"}</p>
         <div className="grid grid-cols-2 gap-2">
           <NumberField label="기준값" value={center} disabled={disabled} ignoreBlank onChange={changeCenter} />

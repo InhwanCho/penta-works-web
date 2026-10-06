@@ -1,7 +1,7 @@
 "use client";
 
 import PullToRefresh from "@/components/common/pull-to-refresh";
-import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
+import SiteAlertSettingsButton, { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-settings-button";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import CollectionStatus, { collectionMissing } from "@/components/dashboard/collection-status";
@@ -92,6 +92,8 @@ export default function DashboardClient() {
   // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [selectedAlert, setSelectedAlert] = useState<{siteId: string; metricKey?: string} | null>(null);
+  const openAlertSettings = useCallback((siteId: string, metricKey?: string) => setSelectedAlert({siteId, metricKey}), []);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
@@ -235,12 +237,13 @@ export default function DashboardClient() {
             <div className="p-3"><h2 className="font-extrabold">병원별 알림 적용 항목</h2><p className="mt-1 text-xs text-slate-500 dark:text-slate-300">켜진 항목의 실제 적용 범위입니다. —는 비활성 항목입니다. 전체 알림이 꺼진 병원은 발송되지 않습니다.</p><Link href="/baselines" className="mt-2 inline-block text-sm font-bold text-sky-700 dark:text-sky-300">알림값 설정으로 이동 →</Link></div>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
               <div className="max-h-[70dvh] overflow-auto"><table className="w-full border-collapse whitespace-nowrap text-xs"><thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th className="sticky left-0 z-30 bg-slate-100 p-3 text-left dark:bg-slate-800">병원명</th>{dashboardMetrics.map(metric => <th key={metric.key} className="p-3">{metric.label ?? metric.code}</th>)}<th className="p-3">연속 수집 누락</th><th className="p-3">콜드칠러 정지</th><th className="p-3">반복</th></tr></thead><tbody>
-                {(alertSettings.data ?? []).map(site => <tr key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><div className="my-1"><SiteAlertSettingsButton siteId={site.siteid} /></div><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{formatAlertBound(threshold.effectiveMin)} – {formatAlertBound(threshold.effectiveMax)}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.collectionIntervalMinutes}분 · ${site.missingCollectionThreshold}회` : "—"}</td><td className="p-3 text-center">{site.coldChillerActive ? "IN = OUT" : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
+                {(alertSettings.data ?? []).map(site => <tr onContextMenu={event => { event.preventDefault(); openAlertSettings(site.siteid); }} key={site.siteid} className={`border-t border-slate-200 dark:border-white/10 ${!site.alertsEnabled ? "text-slate-400" : ""}`}><th className="sticky left-0 z-10 bg-white p-3 text-left dark:bg-background-dark-card"><span className="block">{site.name ?? site.siteid}</span><div className="my-1"><SiteAlertSettingsButton siteId={site.siteid} /></div><span className={`text-[10px] ${site.alertsEnabled ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400"}`}>{site.alertsEnabled ? "알림 켜짐" : "전체 알림 꺼짐"}</span></th>{dashboardMetrics.map(metric => { const threshold = site.thresholds.find(item => item.key === metric.key); return <td key={metric.key} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); openAlertSettings(site.siteid, metric.key); }} className="p-3 text-center">{threshold?.active ? <span className={`inline-block rounded-lg px-2 py-1 ${site.alertsEnabled ? "bg-sky-50 text-sky-900 dark:bg-sky-950 dark:text-sky-200" : "bg-slate-100 dark:bg-slate-800"}`}>{formatAlertBound(threshold.effectiveMin)} – {formatAlertBound(threshold.effectiveMax)}<small className="block">{threshold.unit}{threshold.averageApplied ? " · 24h 평균" : ""}</small></span> : "—"}</td>; })}<td className="p-3 text-center">{site.noDataActive ? `${site.collectionIntervalMinutes}분 · ${site.missingCollectionThreshold}회` : "—"}</td><td className="p-3 text-center">{site.coldChillerActive ? "IN = OUT" : "—"}</td><td className="p-3 text-center">{site.repeatMinutes > 0 ? `${site.repeatMinutes}분` : "최초 1회"}</td></tr>)}
               </tbody></table></div>
             )}
           </section>
         ) : viewMode === "grid" ? (
               <DashboardExcelView
+            onOpenAlertSettings={openAlertSettings}
             rows={sortedRows}
             ctrl={ctrl}
             metrics={dashboardMetrics}
@@ -260,6 +263,7 @@ export default function DashboardClient() {
                         key={r.siteDb}
                         row={r}
                         range={ctrl[r.siteDb] ?? null}
+                        onOpenAlertSettings={openAlertSettings}
                         metrics={summaryMetrics}
                       />
                     );
@@ -295,6 +299,7 @@ export default function DashboardClient() {
                           <tr
                             key={r.siteDb}
                             id={`site-d-${r.siteSlug}`}
+                            onContextMenu={event => { event.preventDefault(); openAlertSettings(r.siteDb); }}
                             className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 scroll-mt-[120px] border-b transition-colors last:border-b-0"
                           >
                             <Td className="text-text-major dark:text-text-dark-primary font-medium">
@@ -302,7 +307,7 @@ export default function DashboardClient() {
                               {r.alertIssues[0] && <p className="text-text-secondary mt-1 max-w-72 truncate text-[11px]" title={r.alertIssues.map((issue) => issue.message).join("\n")}>{r.alertIssues[0].message}</p>}
                             </Td>
 
-                            {summaryMetrics.map((metric) => <Td key={metric.key} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
+                            {summaryMetrics.map((metric) => <Td key={metric.key} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); openAlertSettings(r.siteDb, metric.key); }} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
                               {formatMetricMeasurement(r.metrics[metric.key], metric.unit, r.lastAt != null, "-")}
                             </Td>)}
 
@@ -340,6 +345,7 @@ export default function DashboardClient() {
         <p className="text-text-secondary mt-2 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
           마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
+        {selectedAlert && <SiteAlertSettingsDialog key={`${selectedAlert.siteId}:${selectedAlert.metricKey ?? ""}`} siteId={selectedAlert.siteId} initialMetricKey={selectedAlert.metricKey} onClose={() => setSelectedAlert(null)} />}
       </main>
     </PullToRefresh>
   );
@@ -414,7 +420,7 @@ function EmptyState() {
   );
 }
 
-function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | null; metrics: MetricDef[] }) {
+function SiteCard({ row, range, metrics, onOpenAlertSettings }: { row: SiteRow; range: CtrlRange | null; metrics: MetricDef[]; onOpenAlertSettings: (siteId: string, metricKey?: string) => void }) {
   const anyAlert = row.alertStatus !== "NORMAL" || metrics.some((metric) => isMetricOutOfRange(row.metrics[metric.key], metric.bound, range));
   const d = parseIso(row.lastAt);
 
@@ -422,6 +428,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
     <Link
       href={`/sites/${row.siteSlug}`}
       id={`site-m-${row.siteSlug}`}
+      onContextMenu={event => { event.preventDefault(); onOpenAlertSettings(row.siteDb); }}
       aria-label={`${row.name ?? "병원"} 상세 보기`}
       className={[
         "group block scroll-mt-[120px] rounded-2xl border bg-white p-3 shadow-sm transition-colors active:bg-sky-50 dark:active:bg-sky-950/20",
@@ -450,7 +457,7 @@ function SiteCard({ row, range, metrics }: { row: SiteRow; range: CtrlRange | nu
 
       {/* Metrics */}
       <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50/75 p-3 dark:bg-white/3">
-        {metrics.map((metric) => <MetricCol key={metric.key} label={metric.label ?? metric.code}
+        {metrics.map((metric) => <MetricCol key={metric.key} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); onOpenAlertSettings(row.siteDb, metric.key); }} label={metric.label ?? metric.code}
           value={<span className={`text-2xl font-bold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
             {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null, "-")}
           </span>}
@@ -468,14 +475,16 @@ function AlertStatusBadge({ row }: { row: SiteRow }) {
 }
 
 function MetricCol({
+  onContextMenu,
   label,
   value,
 }: {
   label: string;
+  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
   value: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0">
+    <div onContextMenu={onContextMenu} className="min-w-0">
       <div className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
         {label}
       </div>
@@ -504,16 +513,19 @@ function Th({
 }
 
 function Td({
+  onContextMenu,
   children,
   className = "",
   colSpan,
 }: {
   children: React.ReactNode;
+  onContextMenu?: React.MouseEventHandler<HTMLTableCellElement>;
   className?: string;
   colSpan?: number;
 }) {
   return (
     <td
+      onContextMenu={onContextMenu}
       className={["px-4 py-3 whitespace-nowrap", className].join(" ")}
       colSpan={colSpan}
     >
