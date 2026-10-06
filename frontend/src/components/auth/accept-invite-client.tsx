@@ -1,7 +1,8 @@
 "use client";
 
-import { apiFetch } from "@/lib/api";
-import { useAuth } from "@/components/provider/auth-provider";
+import { apiFetch, ApiError } from "@/lib/api";
+import { loadPublicAuth } from "@/lib/public-auth-query";
+import AuthPageLoading from "@/components/auth/auth-page-loading";
 import CircleLoader from "@/components/icons/circle-loader";
 import PasswordFields, { type PasswordValues } from "@/components/auth/password-fields";
 import { useQuery } from "@tanstack/react-query";
@@ -13,13 +14,12 @@ import { useState } from "react";
 type InvitationInfo = { email: string; name: string; role: string; expiresAt: string; companyName: string };
 
 export default function AcceptInviteClient() {
-  const { isLoading: authLoading } = useAuth();
   const token = useSearchParams().get("token") ?? "";
   const router = useRouter();
   const invitation = useQuery({
     queryKey: ["invitation", token],
-    queryFn: () => apiFetch<InvitationInfo>(`/auth/invitations/${encodeURIComponent(token)}`),
-    enabled: Boolean(token) && !authLoading, retry: false,
+    queryFn: ({ signal }) => loadPublicAuth<InvitationInfo>(`/auth/invitations/${encodeURIComponent(token)}`, signal),
+    enabled: Boolean(token), retry: false,
   });
   const form = useForm<PasswordValues>({ mode: "onChange", defaultValues: { password: "", confirm: "" } });
   const [error, setError] = useState<string | null>(null);
@@ -37,8 +37,9 @@ export default function AcceptInviteClient() {
     }
   }
 
-  if (!token || invitation.isError) return <Message title="사용할 수 없는 초대입니다." />;
-  if (!invitation.data) return <main className="flex min-h-[60vh] items-center justify-center"><CircleLoader size="xl" /></main>;
+  if (!token || (invitation.error instanceof ApiError && [400, 403, 404, 410].includes(invitation.error.status))) return <Message title="사용할 수 없는 초대입니다." />;
+  if (invitation.isError) return <main className="mx-auto max-w-md px-4 py-10"><div role="alert" className="rounded-2xl border bg-white p-6 dark:border-white/10 dark:bg-background-dark-card"><h1 className="font-bold">초대 정보를 불러오지 못했습니다</h1><p className="text-text-secondary mt-2 text-sm">{invitation.error.message || "네트워크 연결을 확인해주세요."}</p><button type="button" onClick={() => invitation.refetch()} className="mt-4 min-h-12 w-full rounded-xl bg-button-primary font-bold text-white">다시 시도</button></div></main>;
+  if (!invitation.data) return <AuthPageLoading />;
   return (
     <main className="mx-auto flex w-full items-center justify-center px-4 py-8 lg:min-h-[calc(100dvh-3.5rem)]">
       <form noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-background-dark-card">

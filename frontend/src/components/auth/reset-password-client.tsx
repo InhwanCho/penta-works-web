@@ -1,7 +1,8 @@
 "use client";
 
-import { apiFetch } from "@/lib/api";
-import { useAuth } from "@/components/provider/auth-provider";
+import { apiFetch, ApiError } from "@/lib/api";
+import { loadPublicAuth } from "@/lib/public-auth-query";
+import AuthPageLoading from "@/components/auth/auth-page-loading";
 import CircleLoader from "@/components/icons/circle-loader";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
@@ -13,10 +14,9 @@ import PasswordFields, { type PasswordValues } from "@/components/auth/password-
 type ResetInfo = { email: string; name: string };
 
 export default function ResetPasswordClient() {
-  const { isLoading: authLoading } = useAuth();
   const token = useSearchParams().get("token") ?? "";
   const router = useRouter();
-  const info = useQuery({ queryKey: ["password-reset", token], queryFn: () => apiFetch<ResetInfo>(`/auth/password-resets/${encodeURIComponent(token)}`), enabled: Boolean(token) && !authLoading, retry: false });
+  const info = useQuery({ queryKey: ["password-reset", token], queryFn: ({ signal }) => loadPublicAuth<ResetInfo>(`/auth/password-resets/${encodeURIComponent(token)}`, signal), enabled: Boolean(token), retry: false });
   const form = useForm<PasswordValues>({ mode: "onChange", defaultValues: { password: "", confirm: "" } });
   const [error, setError] = useState<string | null>(null);
   const saving = form.formState.isSubmitting;
@@ -31,8 +31,9 @@ export default function ResetPasswordClient() {
     }
   }
 
-  if (!token || info.isError) return <Message text="사용할 수 없는 재설정 링크입니다." />;
-  if (!info.data) return <main className="flex min-h-[60vh] items-center justify-center lg:min-h-[calc(100dvh-3.5rem)]"><CircleLoader size="xl" /></main>;
+  if (!token || (info.error instanceof ApiError && [400, 403, 404, 410].includes(info.error.status))) return <Message text="사용할 수 없는 재설정 링크입니다." />;
+  if (info.isError) return <main className="mx-auto max-w-md px-4 py-10"><div role="alert" className="rounded-2xl border bg-white p-6 dark:border-white/10 dark:bg-background-dark-card"><h1 className="font-bold">재설정 정보를 불러오지 못했습니다</h1><p className="text-text-secondary mt-2 text-sm">{info.error.message || "네트워크 연결을 확인해주세요."}</p><button type="button" onClick={() => info.refetch()} className="mt-4 min-h-12 w-full rounded-xl bg-button-primary font-bold text-white">다시 시도</button></div></main>;
+  if (!info.data) return <AuthPageLoading title="재설정 정보를 확인하고 있습니다" />;
   return (
     <main className="mx-auto flex w-full items-center justify-center px-4 py-10 lg:min-h-[calc(100dvh-3.5rem)] lg:py-8"><form noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className="w-full max-w-md rounded-xl border bg-white p-6 shadow-sm dark:border-background-dark-secondary dark:bg-background-dark-card">
       <h1 className="text-xl font-bold">비밀번호 재설정</h1><p className="text-text-secondary mt-2 text-sm">{info.data?.name} · {info.data?.email}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { clearPrivateQueries } from "@/lib/public-auth-query";
 import {
   ApiError,
   login as requestLogin,
@@ -83,7 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setSession({ id: current.id, email: current.email, name: current.name, role: current.role });
           } else {
             clearStoredSession();
-            queryClient.clear();
+            clearPrivateQueries(queryClient);
             setSession(null);
           }
         } else if (stored && !accessTokenExpiresSoon(stored, 0)) {
@@ -119,7 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const refreshed = () => setSession(sessionFromStorage());
     const expired = () => {
-      queryClient.clear();
+      clearPrivateQueries(queryClient);
       setSession(null);
     };
     window.addEventListener("auth:refreshed", refreshed);
