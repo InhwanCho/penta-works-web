@@ -6,6 +6,7 @@ import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import CollectionStatus, { collectionMissing } from "@/components/dashboard/collection-status";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
+import DraggableToolsButton from "./draggable-tools-button";
 import DashboardMetricInfo, { type MetricSelection } from "./dashboard-metric-info";
 import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import {
@@ -200,10 +201,10 @@ export default function DashboardClient() {
         <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
         <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
       </section>}
-      {mobileToolsHidden ? <button type="button" aria-label="대시보드 도구 다시 표시" onClick={() => setToolsHidden(false)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">보기 ‹</button> : <button type="button" aria-controls="dashboard-mobile-tools" aria-expanded={showMobileFilters} onClick={() => setShowMobileFilters(open => !open)} className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] inline-flex min-h-12 items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
+      {mobileToolsHidden ? <button type="button" aria-label="대시보드 도구 다시 표시" onClick={() => setToolsHidden(false)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">보기 ‹</button> : <DraggableToolsButton expanded={showMobileFilters} onClick={() => setShowMobileFilters(open => !open)}>
         <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6" /></svg>
         보기·필터{statusFilter !== "all" && <span className="h-2 w-2 rounded-full bg-sky-500" />}
-      </button>}
+      </DraggableToolsButton>}
     </div>
   );
 

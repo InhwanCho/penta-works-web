@@ -189,14 +189,14 @@ export default function PullToRefresh({
       <div
         aria-hidden={!isRefreshing && pullDistance === 0}
         className={[
-          "pointer-events-none fixed right-0 left-0 z-20 flex items-start justify-center overflow-hidden",
+          "pointer-events-none fixed right-0 left-0 z-[65] flex items-start justify-center overflow-hidden",
           // 당김 중에는 손가락을 따라오도록 transition 없음. 놓았을 때만 부드럽게 줄어듦.
           isRefreshing || pullDistance > 0
             ? ""
             : "transition-[height] duration-200 ease-out",
         ].join(" ")}
         style={{
-          top: `${topOffset}px`,
+          top: `calc(${topOffset}px + env(safe-area-inset-top, 0px))`,
           height: `${shownHeight}px`,
         }}
       >
