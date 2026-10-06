@@ -8,10 +8,10 @@ public record AlertThreshold(String key, String label, String unit,
                              boolean useAverage, double tolerancePercent,
                              Double averageValue, int averageSampleCount,
                              int excludedZeroCount, LocalDateTime averageCapturedAt,
-                             boolean averageApplied, String averageUnavailableReason) {
+                             boolean averageApplied, String averageUnavailableReason, boolean historicalAverage) {
     public AlertThreshold(String key, String label, String unit,
                           Double min, Double max, boolean active) {
         this(key, label, unit, min, max, active, min, max,
-            false, RollingAverageService.DEFAULT_TOLERANCE_PERCENT, null, 0, 0, null, false, "NO_AVERAGE");
+            false, RollingAverageService.DEFAULT_TOLERANCE_PERCENT, null, 0, 0, null, false, "NO_AVERAGE", false);
     }
 }

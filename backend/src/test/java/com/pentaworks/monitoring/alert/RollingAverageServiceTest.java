@@ -127,4 +127,86 @@ class RollingAverageServiceTest {
         assertEquals("AVERAGE_EXPIRED",RollingAverageService.unavailableReason(new RollingAverageService.AverageState(true,60,34.15,12,0,now.minusHours(3),now),now));
     }
 
+    @Test
+    void reusesHealthyAverageAcrossMultiDayShutdownAndReturnsToRecentWhenReady() {
+        LocalDateTime now = LocalDateTime.of(2026,10,6,12,0);
+        LocalDateTime captured = now.minusDays(4);
+        var recent = new RollingAverageService.AverageState(true,60,34.15,6,0,now,now.minusMinutes(4));
+        var past = new RollingAverageService.AverageState(true,40,50.0,100,20,captured,captured.minusMinutes(15),true);
+        var selected = RollingAverageService.selectAverage(recent,past,now);
+        assertTrue(selected.historical());
+        assertEquals(60,selected.tolerancePercent());
+        assertEquals(captured,selected.capturedAt());
+        assertEquals(20,RollingAverageService.effectiveRange(selected,now).min());
+        assertEquals(80,RollingAverageService.effectiveRange(selected,now).max());
+        var recovered = new RollingAverageService.AverageState(true,60,34.15,12,0,now,now.minusMinutes(4));
+        assertEquals(recovered,RollingAverageService.selectAverage(recovered,past,now));
+        assertFalse(RollingAverageService.selectAverage(recovered,past,now).historical());
+    }
+
+    @Test
+    void historicalFallbackRejectsInsufficientStaleAtCaptureAndFutureSnapshots() {
+        LocalDateTime now = LocalDateTime.of(2026,10,6,12,0);
+        LocalDateTime past = now.minusDays(3);
+        var missing = RollingAverageService.AverageState.DEFAULT;
+        var sparse = new RollingAverageService.AverageState(true,40,50.0,6,0,past,past.minusMinutes(10),true);
+        var stale = new RollingAverageService.AverageState(true,40,50.0,100,0,past,past.minusHours(3),true);
+        var future = new RollingAverageService.AverageState(true,40,50.0,100,0,now.plusDays(1),now.plusDays(1),true);
+        assertEquals(missing,RollingAverageService.selectAverage(missing,null,now));
+        assertEquals(missing,RollingAverageService.selectAverage(missing,sparse,now));
+        assertEquals(missing,RollingAverageService.selectAverage(missing,stale,now));
+        assertEquals(missing,RollingAverageService.selectAverage(missing,future,now));
+        assertNull(RollingAverageService.effectiveRange(missing,now));
+    }
+
+    @Test
+    void historicalFallbackPreservesManualModeAndSavedTolerance() {
+        LocalDateTime now = LocalDateTime.of(2026,10,6,12,0);
+        var manual = new RollingAverageService.AverageState(false,25,null,0,0,null,null);
+        var past = new RollingAverageService.AverageState(true,40,50.0,100,0,now.minusDays(2),now.minusDays(2),true);
+        var selected = RollingAverageService.selectAverage(manual,past,now);
+        assertFalse(selected.useAverage());
+        assertEquals(25,selected.tolerancePercent());
+        assertNull(RollingAverageService.effectiveRange(selected,now));
+        assertNull(RollingAverageService.unavailableReason(selected,now));
+    }
+
+    @Test
+    void loadsHistoricalFallbackSeparatelyForEachSiteAndMetric() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        LocalDateTime now = RollingAverageService.now();
+        ResultSet rs = mock(ResultSet.class);
+        when(rs.getString("site_id")).thenReturn("001");
+        when(rs.getString("metric_key")).thenReturn("achumi");
+        when(rs.getObject("average_value")).thenReturn(34.15);
+        when(rs.getDouble("average_value")).thenReturn(34.15);
+        when(rs.getInt("sample_count")).thenReturn(6);
+        when(rs.getTimestamp("captured_at")).thenReturn(Timestamp.valueOf(now));
+        when(rs.getTimestamp("last_sample_at")).thenReturn(Timestamp.valueOf(now));
+        doAnswer(invocation -> {
+            invocation.<RowCallbackHandler>getArgument(1).processRow(rs);
+            return null;
+        }).when(jdbc).query(contains("WHERE captured_at>=?"), any(RowCallbackHandler.class),any(Timestamp.class));
+        ResultSet history = mock(ResultSet.class);
+        when(history.getString("site_id")).thenReturn("001","002");
+        when(history.getString("metric_key")).thenReturn("achumi","hepres");
+        when(history.getObject("average_value")).thenReturn(50.0);
+        when(history.getDouble("average_value")).thenReturn(50.0,1.0);
+        when(history.getInt("sample_count")).thenReturn(100);
+        when(history.getTimestamp("captured_at")).thenReturn(Timestamp.valueOf(now.minusDays(4)));
+        when(history.getTimestamp("last_sample_at")).thenReturn(Timestamp.valueOf(now.minusDays(4).minusMinutes(10)));
+        doAnswer(invocation -> {
+            var handler = invocation.<RowCallbackHandler>getArgument(1);
+            handler.processRow(history);
+            handler.processRow(history);
+            return null;
+        }).when(jdbc).query(contains("MAX(captured_at)"),any(RowCallbackHandler.class),any(Timestamp.class));
+        var states = new RollingAverageService(jdbc).states();
+        assertEquals(50.0,states.get("001").get("achumi").averageValue());
+        assertEquals(1.0,states.get("002").get("hepres").averageValue());
+        assertTrue(states.get("001").get("achumi").historical());
+        assertFalse(states.get("001").containsKey("hepres"));
+        verify(jdbc).query(contains("GROUP BY site_id,metric_key"),any(RowCallbackHandler.class),any(Timestamp.class));
+    }
+
 }

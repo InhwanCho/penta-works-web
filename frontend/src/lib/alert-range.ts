@@ -24,3 +24,15 @@ export function previewAlertRange(threshold: AlertThreshold) {
   return { averageApplied, reason, min: averageApplied ? threshold.averageValue! - spread : threshold.min,
     max: averageApplied ? threshold.averageValue! + spread : threshold.max };
 }
+
+export function averagePeriodMessage(threshold: AlertThreshold): string | null {
+  if (!threshold.averageCapturedAt) return null;
+  // API timestamps represent Korean local time and do not carry a zone suffix.
+  const end = new Date(`${threshold.averageCapturedAt}+09:00`);
+  if (!Number.isFinite(end.getTime())) return null;
+  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
+  const format = (date: Date) => date.toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", hour12: false,
+  });
+  return `계산 구간: ${format(start)} – ${format(end)} (한국 시간)`;
+}

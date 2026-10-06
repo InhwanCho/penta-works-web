@@ -1,6 +1,6 @@
 "use client";
 
-import { previewAlertRange } from "@/lib/alert-range";
+import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
 import ManagementTabs from "@/components/common/management-tabs";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -517,7 +517,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
       return latest ? {...item, averageValue:latest.averageValue,
         averageSampleCount:latest.averageSampleCount, excludedZeroCount:latest.excludedZeroCount,
         averageCapturedAt:latest.averageCapturedAt, averageApplied:latest.averageApplied,
-        averageUnavailableReason:latest.averageUnavailableReason} : item;
+        averageUnavailableReason:latest.averageUnavailableReason, historicalAverage:latest.historicalAverage} : item;
     }));
   }, [entry.thresholds]);
 
@@ -639,17 +639,19 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
         </div>
       </fieldset>}
       {allowAverage && threshold.useAverage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
-        <p className="text-xs font-bold">최근 24시간 평균</p>
+        <p className="text-xs font-bold">{threshold.historicalAverage ? "과거 24시간 평균 사용" : "최근 24시간 평균"}</p>
+        {threshold.historicalAverage && <p className="mt-1 text-xs leading-5 text-amber-700 dark:text-amber-300">최근 평균을 사용할 수 없어 마지막 정상 평균을 사용합니다. 최근 표본이 충분해지면 자동 복귀합니다.</p>}
+        {averagePeriodMessage(threshold) && <p className="mt-1 text-[11px] text-text-secondary">{averagePeriodMessage(threshold)}</p>}
         <p className="mt-1 text-lg font-extrabold">{threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)}${unit}`}</p>
         <p className="mt-1 text-[11px] text-text-secondary">유효 {threshold.averageSampleCount}건 · 미측정 제외 {threshold.excludedZeroCount}건 · 매시간 자동 갱신</p>
         <div className="mt-3"><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
         <div role="status" aria-live="polite" className={`mt-3 rounded-lg p-3 ${preview.averageApplied ? "bg-emerald-100/70 dark:bg-emerald-950/50" : "bg-amber-100/70 dark:bg-amber-950/40"}`}>
-          <p className="text-xs font-bold">저장 후 적용될 범위 · {preview.averageApplied ? "24시간 평균" : "대체 범위"}</p>
+          <p className="text-xs font-bold">저장 후 적용될 범위 · {preview.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균" : "24시간 평균" : "대체 범위"}</p>
           <p className="mt-1 text-base font-extrabold">{formatRange(preview.min,preview.max)}</p>
           {!preview.averageApplied && <p className="mt-2 text-xs leading-5">{preview.reason ?? "허용편차를 확인해주세요."} 현재는 아래 대체 범위로 판단합니다. 표본과 최신성 조건이 충족되면 평균 기준으로 자동 전환됩니다.</p>}
         </div>
         {threshold.averageValue != null && !preview.averageApplied && <p className="mt-2 text-[11px] text-text-secondary">평균 적용 조건 충족 시 계산 범위: {formatRange(threshold.averageValue - Math.abs(threshold.averageValue)*threshold.tolerancePercent/100, threshold.averageValue + Math.abs(threshold.averageValue)*threshold.tolerancePercent/100)} · 현재 미적용</p>}
-        <details className="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-xs font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-[11px] text-text-secondary">유효 표본이 12건 미만이거나 평균·마지막 유효 측정이 2시간 이상 오래되면 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
+        <details className="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-xs font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-[11px] text-text-secondary">최근 평균이 부족하거나 오래되면 이전의 정상 24시간 평균을 찾아 사용합니다. 과거에도 유효 표본 12건 이상인 정상 평균이 없으면 이 대체 범위를 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
       </div> : <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/5">
         <p className="mb-3 text-xs font-bold">수동 범위 설정</p>{manualFields}
         <p role="status" aria-live="polite" className="mt-3 text-sm font-bold">저장 후 적용될 범위: {formatRange(threshold.min,threshold.max)}</p>
@@ -660,15 +662,15 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
 }
 
 function roundThreshold(value: number) {
-  return Number.isFinite(value) ? Math.round(value * 1_000_000) / 1_000_000 : value;
+  return Number.isFinite(value) ? Math.round(value * 100) / 100 : value;
 }
 
 function NumberField({ label, value, disabled, ignoreBlank = false, min = 0, max, onChange }: { label: string; value: number; disabled: boolean; ignoreBlank?: boolean; min?: number; max?: number; onChange: (value: number) => void }) {
-  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min={min} max={max} step="any" required value={Number.isFinite(value) ? value : ""} disabled={disabled} onChange={(event) => { if (ignoreBlank && event.target.value === "") return; onChange(event.target.value === "" ? Number.NaN : Number(event.target.value)); }} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
+  return <label className="text-text-secondary text-xs font-bold">{label}<input type="number" min={min} max={max} step="any" required value={Number.isFinite(value) ? roundThreshold(value) : ""} disabled={disabled} onChange={(event) => { if (ignoreBlank && event.target.value === "") return; onChange(event.target.value === "" ? Number.NaN : Number(event.target.value)); }} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums outline-none focus:border-sky-400 disabled:opacity-70 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /></label>;
 }
 
 function RangePreview({ label, threshold }: { label: string; threshold?: AlertThreshold }) {
-  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}{threshold ? threshold.averageApplied ? " · 24시간 평균" : threshold.useAverage ? " · 평균 대기 / 대체 범위" : " · 수동 범위" : ""}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
+  return <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">{label}{threshold ? threshold.averageApplied ? threshold.historicalAverage ? " · 과거 24시간 평균" : " · 24시간 평균" : threshold.useAverage ? " · 평균 대기 / 대체 범위" : " · 수동 범위" : ""}</p><p className="mt-1 text-sm font-extrabold tabular-nums">{threshold ? `${roundThreshold(threshold.effectiveMin)} – ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "-"}</p></div>;
 }
 
 function StatChip({ label, value, accent = false }: { label: string; value: number; accent?: boolean }) {

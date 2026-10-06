@@ -99,7 +99,8 @@ public class RollingAverageService {
                 .computeIfAbsent(rs.getString("site_id"), ignored -> new HashMap<>())
                 .put(rs.getString("metric_key"), new AverageState(rs.getBoolean("use_average"),
                     rs.getDouble("tolerance_percent"), null, 0, 0, null, null)));
-        LocalDateTime earliest = LocalDateTime.now(SEOUL).minusHours(3);
+        LocalDateTime current = now();
+        LocalDateTime earliest = current.minusHours(3);
         jdbcTemplate.query("""
             SELECT site_id,metric_key,average_value,sample_count,zero_count,captured_at,last_sample_at
               FROM site_metric_average_hourly WHERE captured_at>=?
@@ -117,7 +118,41 @@ public class RollingAverageService {
                     rs.getTimestamp("last_sample_at") == null ? null :
                         rs.getTimestamp("last_sample_at").toLocalDateTime()));
             }, Timestamp.valueOf(earliest));
+        // Reuse the newest snapshot that was healthy when captured, even across a shutdown.
+        // No age limit: a hospital can remain powered off for several days.
+        jdbcTemplate.query("""
+            SELECT h.site_id,h.metric_key,h.average_value,h.sample_count,h.zero_count,
+                   h.captured_at,h.last_sample_at
+              FROM site_metric_average_hourly h
+              JOIN (SELECT site_id,metric_key,MAX(captured_at) AS captured_at
+                      FROM site_metric_average_hourly
+                     WHERE captured_at<=? AND average_value>0 AND sample_count>=12
+                       AND last_sample_at>=DATE_SUB(captured_at,INTERVAL 2 HOUR)
+                       AND last_sample_at<=captured_at
+                     GROUP BY site_id,metric_key) valid
+                ON h.site_id=valid.site_id AND h.metric_key=valid.metric_key
+               AND h.captured_at=valid.captured_at
+            """, (RowCallbackHandler) rs -> {
+                Map<String, AverageState> site = result.computeIfAbsent(rs.getString("site_id"),
+                    ignored -> new HashMap<>());
+                String key = rs.getString("metric_key");
+                AverageState prior = site.getOrDefault(key, AverageState.DEFAULT);
+                AverageState historical = new AverageState(prior.useAverage(), prior.tolerancePercent(),
+                    rs.getObject("average_value") == null ? null : rs.getDouble("average_value"),
+                    rs.getInt("sample_count"), rs.getInt("zero_count"),
+                    rs.getTimestamp("captured_at").toLocalDateTime(),
+                    rs.getTimestamp("last_sample_at") == null ? null :
+                        rs.getTimestamp("last_sample_at").toLocalDateTime(), true);
+                site.put(key, selectAverage(prior, historical, current));
+            }, Timestamp.valueOf(current));
         return result;
+    }
+
+    static AverageState selectAverage(AverageState recent, AverageState historical, LocalDateTime now) {
+        if (unavailableReason(recent, now) == null) return recent;
+        if (historical == null || unavailableReason(historical, now) != null) return recent;
+        return new AverageState(recent.useAverage(), recent.tolerancePercent(), historical.averageValue(),
+            historical.sampleCount(), historical.zeroCount(), historical.capturedAt(), historical.lastSampleAt(), true);
     }
 
     /** Eligibility is independent of the user's selected mode so the editor can preview either mode. */
@@ -125,9 +160,10 @@ public class RollingAverageService {
         if (state == null || state.averageValue() == null || !Double.isFinite(state.averageValue()) || state.averageValue() <= 0.0)
             return "NO_AVERAGE";
         if (state.sampleCount() < MIN_SAMPLES) return "INSUFFICIENT_SAMPLES";
-        if (state.capturedAt() == null || state.capturedAt().isBefore(now.minusHours(2)) || state.capturedAt().isAfter(now.plusMinutes(5)))
+        if (state.capturedAt() == null || (!state.historical() && state.capturedAt().isBefore(now.minusHours(2))) || state.capturedAt().isAfter(now.plusMinutes(5)))
             return "AVERAGE_EXPIRED";
-        if (state.lastSampleAt() == null || state.lastSampleAt().isBefore(now.minusHours(2)) || state.lastSampleAt().isAfter(now.plusMinutes(5)))
+        LocalDateTime reference = state.historical() ? state.capturedAt() : now;
+        if (state.lastSampleAt() == null || state.lastSampleAt().isBefore(reference.minusHours(2)) || state.lastSampleAt().isAfter(reference.plusMinutes(5)))
             return "MEASUREMENT_EXPIRED";
         if (!Double.isFinite(state.tolerancePercent()) || state.tolerancePercent() <= 0 || state.tolerancePercent() > 100)
             return "INVALID_TOLERANCE";
@@ -151,7 +187,11 @@ public class RollingAverageService {
 
     public record AverageState(boolean useAverage, double tolerancePercent, Double averageValue,
                                int sampleCount, int zeroCount, LocalDateTime capturedAt,
-                               LocalDateTime lastSampleAt) {
+                               LocalDateTime lastSampleAt, boolean historical) {
+        public AverageState(boolean useAverage, double tolerancePercent, Double averageValue,
+                            int sampleCount, int zeroCount, LocalDateTime capturedAt, LocalDateTime lastSampleAt) {
+            this(useAverage, tolerancePercent, averageValue, sampleCount, zeroCount, capturedAt, lastSampleAt, false);
+        }
         public static final AverageState DEFAULT = new AverageState(true, DEFAULT_TOLERANCE_PERCENT, null, 0, 0, null, null);
     }
     public record Range(double min, double max) {}

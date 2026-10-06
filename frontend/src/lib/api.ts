@@ -51,6 +51,7 @@ export type AlertThreshold = {
   averageCapturedAt: string | null;
   averageApplied: boolean;
   averageUnavailableReason?: string | null;
+  historicalAverage?: boolean;
 };
 
 export type SiteAlertSettings = {

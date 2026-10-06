@@ -83,11 +83,11 @@ export default function Navbar() {
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="py-1.5">
-                      <MenuLink href="/" icon={<HomeIcon />}>대시보드</MenuLink>
-                      <MenuLink href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
-                      {session.role === "PLATFORM_ADMIN" && <MenuLink href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
-                      {isAdmin && <MenuLink href="/admin" icon={<UsersIcon />}>사용자 관리</MenuLink>}
-                      <MenuLink href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
+                      <MenuLink onSelect={() => setMenuOpen(false)} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
+                      <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
+                      {session.role === "PLATFORM_ADMIN" && <MenuLink onSelect={() => setMenuOpen(false)} href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
+                      {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>사용자 관리</MenuLink>}
+                      <MenuLink onSelect={() => setMenuOpen(false)} href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="grid grid-cols-2 gap-2 p-2">
@@ -120,8 +120,8 @@ export default function Navbar() {
   );
 }
 
-function MenuLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
-  return <Link role="menuitem" href={href} className="text-text-major dark:text-text-dark-primary flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-slate-100/80 dark:hover:bg-white/7">
+function MenuLink({ href, icon, children, onSelect }: { href: string; icon: React.ReactNode; children: React.ReactNode; onSelect: () => void }) {
+  return <Link role="menuitem" href={href} onClick={onSelect} className="text-text-major dark:text-text-dark-primary flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-slate-100/80 dark:hover:bg-white/7">
     <span className="text-brand-primary dark:text-sky-300 flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/35">{icon}</span>{children}
   </Link>;
 }

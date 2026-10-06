@@ -450,7 +450,7 @@ public class AlertService {
                 range == null ? min : range.min(), range == null ? max : range.max(),
                 average.useAverage(), average.tolerancePercent(), average.averageValue(),
                 average.sampleCount(), average.zeroCount(), average.capturedAt(), range != null,
-                RollingAverageService.unavailableReason(average, RollingAverageService.now())));
+                RollingAverageService.unavailableReason(average, RollingAverageService.now()), average.historical()));
         }
         return new SiteAlertSettings(siteId, name, exists, thresholds, collectionIntervalMinutes * missingCollectionThreshold, noDataActive,
             alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart, quietEnd, suppressWeekends,
