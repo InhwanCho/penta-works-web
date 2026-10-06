@@ -128,7 +128,7 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="relative flex flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:max-h-[calc(100dvh-180px)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
+    <section className="relative flex flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:min-h-[240px] sm:flex-1 sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
       <div className="hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">

@@ -198,10 +198,10 @@ export default function DashboardClient() {
       onRefresh={handleRefresh}
       topOffset={56}
     >
-      <main className="mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5 ${viewMode === "grid" && statusFilter !== "configured" ? "sm:flex sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] sm:min-h-[32rem] sm:flex-col" : ""}`}>
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
-        <header className="mb-3 hidden flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
+        <header className="mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -228,7 +228,7 @@ export default function DashboardClient() {
         {viewMode === "basic" && mobileControls}
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
-        <section className="mb-5 hidden grid-cols-6 gap-2 sm:grid" aria-label="상태별 병원 필터">
+        <section className="mb-5 hidden shrink-0 grid-cols-6 gap-2 sm:grid" aria-label="상태별 병원 필터">
           {statusFilterButtons}
         </section>
 
