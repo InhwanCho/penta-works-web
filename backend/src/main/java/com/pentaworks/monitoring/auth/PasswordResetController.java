@@ -26,6 +26,6 @@ public class PasswordResetController {
         return ResponseEntity.noContent().build();
     }
 
-    public record ResetRequest(@NotBlank @Size(min = 12, max = 128) String password) {}
+    public record ResetRequest(@NotBlank @Size(min = 8, max = 128) String password) {}
     public record ResetInfo(String email, String name) {}
 }

@@ -70,10 +70,10 @@ export default function AccountClient() {
             <label className="block text-sm font-bold">휴대폰번호<input type="tel" maxLength={30} autoComplete="tel" className={INPUT} value={draft.phone ?? ""} onChange={e=>setDraft({...draft,phone:e.target.value || null})} /></label>
             <p className="text-xs text-text-secondary">알림 수신번호는 사업장별 알림 설정에서 별도로 관리합니다.</p>
           </> : <>
-            <p className="text-xs text-text-secondary">12자 이상으로 설정해 주세요. 변경 후 모든 기기에서 로그아웃됩니다.</p>
+            <p className="text-xs text-text-secondary">8자 이상으로 설정해 주세요. 문자 조합 제한은 없습니다. 변경 후 모든 기기에서 로그아웃됩니다.</p>
             <label className="block text-sm font-bold">현재 비밀번호<input type="password" required autoComplete="current-password" className={INPUT} value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} /></label>
-            <label className="block text-sm font-bold">새 비밀번호<input type="password" required minLength={12} autoComplete="new-password" className={INPUT} value={newPassword} onChange={e=>setNewPassword(e.target.value)} /></label>
-            <label className="block text-sm font-bold">새 비밀번호 확인<input type="password" required minLength={12} autoComplete="new-password" className={INPUT} value={confirm} onChange={e=>setConfirm(e.target.value)} /></label>
+            <label className="block text-sm font-bold">새 비밀번호<input type="password" required minLength={8} maxLength={128} autoComplete="new-password" className={INPUT} value={newPassword} onChange={e=>setNewPassword(e.target.value)} /></label>
+            <label className="block text-sm font-bold">새 비밀번호 확인<input type="password" required minLength={8} maxLength={128} autoComplete="new-password" className={INPUT} value={confirm} onChange={e=>setConfirm(e.target.value)} /></label>
           </>}
           <div className="grid grid-cols-2 gap-2"><button type="button" disabled={saving} onClick={()=>{setMode(null);setMessage(null);}} className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10">취소</button><button disabled={saving} className="min-h-12 rounded-xl bg-button-primary font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "변경 저장"}</button></div>
         </form>}

@@ -31,7 +31,7 @@ public class InvitationService {
 
     public InvitationInfo info(String token) {
         Invitation invitation = find(token, false);
-        return new InvitationInfo(invitation.email(), invitation.name(), invitation.role(), invitation.expiresAt());
+        return new InvitationInfo(invitation.email(), invitation.name(), invitation.role(), invitation.expiresAt(), invitation.companyName());
     }
 
     @Transactional
@@ -75,7 +75,7 @@ public class InvitationService {
         if (token == null || token.isBlank()) throw new NotFoundException("유효한 초대를 찾을 수 없습니다.");
         String suffix = forUpdate ? " FOR UPDATE" : "";
         Invitation result = jdbcTemplate.query("""
-            SELECT i.id,i.company_id,i.email,i.name,i.phone,i.role,i.expires_at
+            SELECT i.id,i.company_id,i.email,i.name,i.phone,i.role,i.expires_at,c.name AS company_name
               FROM account_invitation i JOIN company c ON c.id=i.company_id
              WHERE i.token_hash=? AND i.accepted_at IS NULL AND i.revoked_at IS NULL
                AND i.role IN ('SUPER_ADMIN','ADMIN','USER') AND c.status<>'SUSPENDED'
@@ -84,17 +84,16 @@ public class InvitationService {
                AND i.expires_at>CURRENT_TIMESTAMP(6)
             """ + suffix, rs -> rs.next() ? new Invitation(rs.getString("id"), rs.getLong("company_id"),
                 rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
-                rs.getTimestamp("expires_at").toInstant()) : null, secureTokens.hash(token));
+                rs.getTimestamp("expires_at").toInstant(), rs.getString("company_name")) : null, secureTokens.hash(token));
         if (result == null) throw new NotFoundException("초대가 만료되었거나 사용할 수 없습니다.");
         return result;
     }
 
     static void validatePassword(String password) {
-        if (password.length() < 12 || !password.matches(".*[A-Za-z].*")
-            || !password.matches(".*\\d.*") || !password.matches(".*[^A-Za-z0-9].*")) {
-            throw new BadRequestException("비밀번호는 12자 이상이며 영문, 숫자, 특수문자를 포함해야 합니다.");
+        if (password == null || password.isBlank() || password.length() < 8 || password.length() > 128) {
+            throw new BadRequestException("비밀번호는 8자 이상, 128자 이하로 입력해주세요. 문자 조합 제한은 없습니다.");
         }
     }
 
-    private record Invitation(String id, long companyId, String email, String name, String phone, String role, Instant expiresAt) {}
+    private record Invitation(String id, long companyId, String email, String name, String phone, String role, Instant expiresAt, String companyName) {}
 }

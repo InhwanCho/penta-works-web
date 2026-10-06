@@ -7,6 +7,7 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useForm, useWatch } from "react-hook-form";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 type UserRow = {
@@ -354,17 +355,18 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
   canInviteAdmins: boolean;
 }) {
   const queryClient = useQueryClient();
-  const [email, setEmail] = useState("");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [role, setRole] = useState<Role>("USER");
+  const form = useForm<{ email: string; name: string; phone: string; role: Role }>({
+    mode: "onChange", defaultValues: { email: "", name: "", phone: "", role: "USER" },
+  });
+  const role = useWatch({ control: form.control, name: "role" });
+  const { register, formState: { errors } } = form;
+  const [resendingId, setResendingId] = useState<string | null>(null);
   const [siteIds, setSiteIds] = useState<string[]>([]);
   const [link, setLink] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function submit({ email, name, phone, role }: { email: string; name: string; phone: string; role: Role }) {
     setSaving(true);
     setMessage(null);
     try {
@@ -374,9 +376,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
       });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
       setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
-      setEmail("");
-      setName("");
-      setPhone("");
+      form.reset({ email: "", name: "", phone: "", role });
       setSiteIds([]);
       await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
@@ -393,7 +393,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
   }
 
   async function resend(id: string) {
-    setSaving(true); setMessage(null);
+    setResendingId(id); setSaving(true); setMessage(null);
     try {
       const result = await apiFetch<InvitationCreated>(`/admin/accounts/invitations/${id}/resend`, { method: "POST" });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
@@ -403,32 +403,32 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
         queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
       ]);
     } catch (error) { setMessage(error instanceof Error ? error.message : "초대를 재발송하지 못했습니다."); }
-    finally { setSaving(false); }
+    finally { setResendingId(null); setSaving(false); }
   }
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
-      <form onSubmit={submit} className={`${CARD} space-y-4 p-5 sm:p-6`}>
+      <form noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className={`${CARD} space-y-4 p-5 sm:p-6`}>
         <div><h2 className="text-lg font-bold">새 사용자 초대</h2><p className="text-text-secondary mt-1 text-sm">초대받은 사용자가 직접 비밀번호를 설정합니다.</p></div>
-        <input className={INPUT} type="email" required aria-label="초대 이메일" placeholder="이메일" value={email}
-          onChange={(event) => setEmail(event.target.value)} />
-        <input className={INPUT} required aria-label="초대 이름" placeholder="이름" value={name}
-          onChange={(event) => setName(event.target.value)} />
-        <label className="block text-sm font-bold">휴대폰번호 (카카오 알림용)
-          <input className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} placeholder="010-1234-5678" value={phone} pattern="[0-9\- ]{10,30}" onChange={event => setPhone(event.target.value)} />
-          <span className="text-text-secondary mt-1.5 block text-xs font-normal leading-5">가입 완료 시 연락처에 저장됩니다. 알림관리에서 담당자를 선택하면 이 번호가 입력됩니다. 초대 링크는 이메일로 발송합니다.</span>
-        </label>
-        <select aria-label="초대 권한" className={`${INPUT} select-inset-arrow`} value={role}
-          onChange={(event) => setRole(event.target.value as Role)}>
+        <fieldset disabled={saving} className="space-y-4">
+        <div><label htmlFor="invite-email" className="text-sm font-bold">이메일</label><input id="invite-email" className={`${INPUT} mt-1.5`} type="email" aria-invalid={Boolean(errors.email)} aria-describedby="invite-email-error" placeholder="이메일" {...register("email", { required: "이메일을 입력해주세요.", maxLength: {value:254,message:"이메일은 254자 이하로 입력해주세요."}, pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "올바른 이메일을 입력해주세요." }, setValueAs: value => value.trim() })} />{errors.email && <p id="invite-email-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}</div>
+        <div><label htmlFor="invite-name" className="text-sm font-bold">이름</label><input id="invite-name" className={`${INPUT} mt-1.5`} aria-invalid={Boolean(errors.name)} aria-describedby="invite-name-error" placeholder="이름" maxLength={80} {...register("name", { required: "이름을 입력해주세요.", maxLength: {value:80,message:"이름은 80자 이하로 입력해주세요."}, setValueAs: value => value.trim() })} />{errors.name && <p id="invite-name-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.name.message}</p>}</div>
+        <div><label htmlFor="invite-phone" className="text-sm font-bold">휴대폰번호 (카카오 알림용)</label>
+          <input id="invite-phone" className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} aria-invalid={Boolean(errors.phone)} aria-describedby="invite-phone-help invite-phone-error" placeholder="010-1234-5678" {...register("phone", { validate: value => !value || /^01[016789][0-9]{7,8}$/.test(value.replace(/[-\s]/g, "")) || "휴대폰번호를 확인해주세요. 예: 010-1234-5678" })} />
+          {errors.phone && <p id="invite-phone-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.phone.message}</p>}
+          <p id="invite-phone-help" className="text-text-secondary mt-1.5 text-xs leading-5">가입 완료 시 연락처에 저장됩니다. 알림관리에서 담당자를 선택하면 이 번호가 입력됩니다. 초대 링크는 이메일로 발송합니다.</p>
+        </div>
+        <label className="block text-sm font-bold">권한<select className={`${INPUT} select-inset-arrow mt-1.5`} {...register("role")}>
           <option value="USER">일반 사용자</option>
           {canInviteAdmins && <option value="ADMIN">관리자</option>}
           {canInviteAdmins && <option value="SUPER_ADMIN">최고관리자</option>}
-        </select>
-        {role === "USER" && <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />}
+        </select></label>
+        </fieldset>
+        {role === "USER" && <fieldset disabled={saving}><SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} /></fieldset>}
         {message && <p className="text-sm text-red-600">{message}</p>}
         <button type="submit" disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50">
-          {saving ? "생성 중…" : "7일 초대 링크 생성"}
+          {saving && !resendingId && <CircleLoader className="mr-2 align-middle [&>span]:h-4 [&>span]:w-4 [&>span]:border-white/40 [&>span]:border-t-white" />}{saving && !resendingId ? "초대 발송 중" : "7일 초대 링크 생성"}
         </button>
         {link && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -448,7 +448,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
                 <p className="truncate text-sm font-semibold">{invitation.name} · {invitation.email}</p>
                 <p className="text-text-secondary text-xs">{invitation.phone && `${invitation.phone} · `}{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
               </div>
-              <div className="flex shrink-0 gap-1"><button type="button" disabled={saving || (!canInviteAdmins && invitation.role !== "USER")} onClick={() => resend(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30">재발송</button><button type="button" onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button></div>
+              <div className="flex shrink-0 gap-1"><button type="button" disabled={saving || (!canInviteAdmins && invitation.role !== "USER")} onClick={() => resend(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30">{resendingId === invitation.id && <CircleLoader className="mr-1 align-middle [&>span]:h-3 [&>span]:w-3" />}{resendingId === invitation.id ? "발송 중" : "재발송"}</button><button type="button" disabled={saving} onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button></div>
             </div>
           ))}
           {invitations.length === 0 && <Empty>대기 중인 초대가 없습니다.</Empty>}

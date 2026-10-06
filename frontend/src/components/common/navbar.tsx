@@ -107,11 +107,11 @@ export default function Navbar() {
                   </div>
                 )}
               </div>
-            ) : (
+            ) : pathname !== "/accept-invite" ? (
               <Link href="/login" className="cursor-pointer rounded-full bg-white px-4 py-2 text-sm font-bold text-[#174d70] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                 로그인
               </Link>
-            )}
+            ) : null}
           </nav>
         </div>
       </header>

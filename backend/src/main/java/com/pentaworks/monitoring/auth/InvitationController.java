@@ -28,6 +28,6 @@ public class InvitationController {
         return ResponseEntity.noContent().build();
     }
 
-    public record AcceptRequest(@NotBlank @Size(min = 12, max = 128) String password) {}
-    public record InvitationInfo(String email, String name, String role, Instant expiresAt) {}
+    public record AcceptRequest(@NotBlank @Size(min = 8, max = 128) String password) {}
+    public record InvitationInfo(String email, String name, String role, Instant expiresAt, String companyName) {}
 }
