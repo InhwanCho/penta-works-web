@@ -73,7 +73,7 @@ export default function DraggableToolsButton({ children, expanded, onClick }: {
       }}
       onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
       onClick={event => { if (event.detail === 0 || !suppressClick.current) onClick(); suppressClick.current = false; }}
-      className="pointer-events-auto fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] inline-flex min-h-12 touch-none select-none items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
+      className="pointer-events-auto fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] inline-flex w-max min-h-12 whitespace-nowrap touch-none select-none items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
       {children}
     </button>
   </div>;
