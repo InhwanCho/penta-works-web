@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class RollingAverageService {
-    public static final double DEFAULT_TOLERANCE_PERCENT = 30;
+    public static final double DEFAULT_TOLERANCE_PERCENT = 40;
     private static final Logger log = LoggerFactory.getLogger(RollingAverageService.class);
     private static final ZoneId SEOUL = ZoneId.of("Asia/Seoul");
     private static final List<String> METRIC_KEYS = List.of(
