@@ -213,7 +213,7 @@ export default function DashboardClient() {
       onRefresh={handleRefresh}
       topOffset={56}
     >
-      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5 ${viewMode === "grid" && statusFilter !== "configured" ? "sm:flex sm:h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px))] sm:min-h-[32rem] sm:flex-col" : ""}`}>
+      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] py-[8px] sm:px-4 sm:py-4 lg:px-6 lg:py-5 ${viewMode === "grid" && statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
         <header className="mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
@@ -357,13 +357,13 @@ export default function DashboardClient() {
             </section>
           </>
         )}
-        {mobileControls}
-        <p className="text-text-secondary mt-2 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
+        <p className="text-text-secondary mt-2 shrink-0 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
           마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
         {metricSelection && <DashboardMetricInfo selection={metricSelection} onClose={closeMetricInfo} />}
         {selectedAlert && <SiteAlertSettingsDialog key={`${selectedAlert.siteId}:${selectedAlert.metricKey ?? ""}`} siteId={selectedAlert.siteId} initialMetricKey={selectedAlert.metricKey} onClose={() => setSelectedAlert(null)} />}
       </main>
+      {mobileControls}
     </PullToRefresh>
   );
 }
