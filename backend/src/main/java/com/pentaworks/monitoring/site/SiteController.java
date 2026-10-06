@@ -32,11 +32,12 @@ public class SiteController {
 
     @GetMapping("/{siteid}")
     public SiteResponse detail(@PathVariable String siteid, @RequestParam(defaultValue = "200") int take,
+                               @RequestParam(defaultValue = "1") int page,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
                                Authentication authentication) {
         var user = currentUsers.require(authentication);
         currentUsers.requireVisibleSiteAccess(user, SiteService.normalizeSiteId(siteid));
-        return siteService.detail(siteid, take, from, to).withMetrics(metrics.metrics(user.companyId()));
+        return siteService.detail(siteid, take, from, to, page).withMetrics(metrics.metrics(user.companyId()));
     }
 }

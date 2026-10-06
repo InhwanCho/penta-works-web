@@ -42,27 +42,38 @@ function toPointNumber(v: number | null | undefined): number | null {
   return typeof v === "number" && Number.isFinite(v) && !isUnmeasuredMetricValue(v) ? v : null;
 }
 
+function localDateTime(value: string | null, fallback: Date) {
+  const date = value ? new Date(value) : fallback;
+  if (!Number.isFinite(date.getTime())) return "";
+  return new Intl.DateTimeFormat("sv-SE", {timeZone:"Asia/Seoul", year:"numeric", month:"2-digit", day:"2-digit", hour:"2-digit", minute:"2-digit", hourCycle:"h23"}).format(date).replace(" ","T");
+}
+
 export default function SiteDetailClient({ slug }: { slug: string }) {
   const sp = useSearchParams();
   const router = useRouter();
   const from = sp.get("from");
   const to = sp.get("to");
   const periodActive = !!(from && to);
-  const localDateTime = (value: string | null, fallback: Date) => {
-    const date = value ? new Date(value) : fallback;
-    if (!Number.isFinite(date.getTime())) return "";
-    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-  };
+  const pageRaw = Number(sp.get("page") ?? 1);
+  const page = Number.isFinite(pageRaw) ? Math.max(1, Math.floor(pageRaw)) : 1;
   const [periodStart, setPeriodStart] = useState(() => localDateTime(from, new Date(Date.now() - 86400000)));
   const [periodEnd, setPeriodEnd] = useState(() => localDateTime(to, new Date()));
   const [periodError, setPeriodError] = useState("");
+  useEffect(() => {
+    if (from && to) {
+      setPeriodStart(localDateTime(from, new Date()));
+      setPeriodEnd(localDateTime(to, new Date()));
+    }
+    setPeriodError("");
+  }, [from, to]);
   const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
-  const { data, isLoading, isError, refetch, isFetching } = useSiteDetailQuery(
+  const { data, isLoading, isError, error, refetch, isFetching } = useSiteDetailQuery(
     slug,
     take,
     from,
     to,
+    page,
   );
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
@@ -151,7 +162,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     return (
       <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 lg:px-6">
         <div className="rounded-lg border border-red-200 bg-red-50/60 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-          데이터를 불러오지 못했습니다. 연결 상태를 확인해 주세요.
+          {error instanceof Error ? error.message : "데이터를 불러오지 못했습니다. 다시 시도해주세요."}
+          <Link href={`/sites/${encodeURIComponent(slug)}?take=50`} className="ml-2 inline-flex min-h-11 items-center underline">최신 50건 보기</Link>
           <button
             type="button"
             onClick={() => refetch()}
@@ -166,6 +178,10 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   }
 
   const rowsDesc = data.rows; // desc
+  const totalCount = data.totalCount ?? data.rows.length;
+  const currentPage = data.page ?? page;
+  const totalPages = Math.max(1, Math.ceil(totalCount / 5000));
+  const pageHref = (nextPage: number) => `/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from: from!, to: to!, page: String(nextPage)})}`;
   const points: TimeSeriesPoint[] = rowsDesc
     .slice()
     .reverse()
@@ -246,20 +262,35 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
         <form className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={event => {
           event.preventDefault();
-          const start = new Date(periodStart), end = new Date(periodEnd);
-          if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start >= end || end.getTime() - start.getTime() > 31 * 86400000) {
-            setPeriodError("시작·종료를 확인해주세요. 한 번에 최대 31일까지 조회할 수 있습니다."); return;
+          // Read the actual inputs: native date pickers can update their value before React state.
+          const inputs = new FormData(event.currentTarget);
+          const start = new Date(`${inputs.get("periodStart")}+09:00`);
+          const end = new Date(`${inputs.get("periodEnd")}+09:00`);
+          if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || start >= end) {
+            setPeriodError("종료 일시를 시작 일시보다 늦게 입력해주세요."); return;
           }
+          // Include the entire selected end minute.
+          end.setTime(end.getTime() + 59_999);
           setPeriodError("");
-          router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from: start.toISOString(), to: end.toISOString()})}`);
+          const nextFrom = start.toISOString(), nextTo = end.toISOString();
+          if (from === nextFrom && to === nextTo && page === 1) void refetch();
+          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo})}`);
         }}>
-          <label className="text-xs font-bold">시작 일시<input type="datetime-local" required value={periodStart} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
-          <label className="text-xs font-bold">종료 일시<input type="datetime-local" required value={periodEnd} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
-          <button type="submit" className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">기간 조회</button>
+          <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
+          <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
+          <button type="submit" disabled={isFetching} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? "조회 중…" : "기간 조회"}</button>
         </form>
         {periodError && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{periodError}</p>}
-        {periodActive && <p className="mt-2 text-xs">조회 기간: {fmtDate(from)} ~ {fmtDate(to)} · {data.rows.length.toLocaleString()}건{data.rows.length >= 5000 ? " (최신 5,000건만 표시됩니다. 기간을 줄여주세요.)" : ""}</p>}
-        <p className="text-text-secondary mt-2 text-[11px]">기간 조회는 최대 31일·5,000건입니다. 건수 버튼을 누르면 최신 건수 조회로 돌아갑니다.</p>
+        {periodActive && <div className="mt-3 space-y-2 text-xs">
+          <p>조회 기간: {fmtDate(from)} ~ {fmtDate(to)} · 전체 {totalCount.toLocaleString()}건</p>
+          <p>{data.rows.length ? `현재 차트: ${fmtDate(data.rows[data.rows.length-1].date)} ~ ${fmtDate(data.rows[0].date)} · ${data.rows.length.toLocaleString()}건` : "해당 기간에 수집된 기록이 없습니다."}</p>
+          {totalPages > 1 && <nav aria-label="기간 조회 페이지" className="flex flex-wrap items-center gap-2">
+            {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">이전 기록</Link>}
+            <span>{currentPage}/{totalPages} 페이지 · 최신 기록부터 표시</span>
+            {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">다음 기록</Link>}
+          </nav>}
+        </div>}
+        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준 · 기간 제한 없이 조회합니다. 5,000건이 넘으면 이전·다음 기록으로 나눠 볼 수 있습니다. 건수 버튼을 누르면 최신 건수 조회로 돌아갑니다.</p>
       </fieldset>
 
       <section
