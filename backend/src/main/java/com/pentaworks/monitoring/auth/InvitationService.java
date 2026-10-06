@@ -43,11 +43,11 @@ public class InvitationService {
         if (existing != null && existing > 0) throw new ConflictException("이미 가입된 이메일입니다.");
         jdbcTemplate.update("""
             INSERT INTO app_user
-                (company_id,email,username,password_hash,name,role,status,failed_login_count,
+                (company_id,email,username,password_hash,name,phone,role,status,failed_login_count,
                  password_changed_at,created_at,updated_at)
-            VALUES (?,?,?,?,?,?, 'ACTIVE',0,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            VALUES (?,?,?,?,?,?,?, 'ACTIVE',0,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
             """, invitation.companyId(), invitation.email(), invitation.email(), passwordEncoder.encode(password),
-            invitation.name(), invitation.role());
+            invitation.name(), invitation.phone(), invitation.role());
         Long userId = jdbcTemplate.queryForObject("SELECT id FROM app_user WHERE email=?", Long.class, invitation.email());
         if (userId == null) throw new IllegalStateException("가입 계정을 생성하지 못했습니다.");
         List<String> sites = jdbcTemplate.query("""
@@ -75,7 +75,7 @@ public class InvitationService {
         if (token == null || token.isBlank()) throw new NotFoundException("유효한 초대를 찾을 수 없습니다.");
         String suffix = forUpdate ? " FOR UPDATE" : "";
         Invitation result = jdbcTemplate.query("""
-            SELECT i.id,i.company_id,i.email,i.name,i.role,i.expires_at
+            SELECT i.id,i.company_id,i.email,i.name,i.phone,i.role,i.expires_at
               FROM account_invitation i JOIN company c ON c.id=i.company_id
              WHERE i.token_hash=? AND i.accepted_at IS NULL AND i.revoked_at IS NULL
                AND i.role IN ('SUPER_ADMIN','ADMIN','USER') AND c.status<>'SUSPENDED'
@@ -83,7 +83,7 @@ public class InvitationService {
                     OR c.business_registration_verified_at IS NOT NULL)
                AND i.expires_at>CURRENT_TIMESTAMP(6)
             """ + suffix, rs -> rs.next() ? new Invitation(rs.getString("id"), rs.getLong("company_id"),
-                rs.getString("email"), rs.getString("name"), rs.getString("role"),
+                rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
                 rs.getTimestamp("expires_at").toInstant()) : null, secureTokens.hash(token));
         if (result == null) throw new NotFoundException("초대가 만료되었거나 사용할 수 없습니다.");
         return result;
@@ -96,5 +96,5 @@ public class InvitationService {
         }
     }
 
-    private record Invitation(String id, long companyId, String email, String name, String role, Instant expiresAt) {}
+    private record Invitation(String id, long companyId, String email, String name, String phone, String role, Instant expiresAt) {}
 }

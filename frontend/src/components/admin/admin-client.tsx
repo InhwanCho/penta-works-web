@@ -33,6 +33,7 @@ type SiteOption = {
 };
 type CompanySummary = { id: number; code: string; name: string };
 type Invitation = {
+  phone: string | null;
   id: string;
   email: string;
   name: string;
@@ -355,6 +356,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [role, setRole] = useState<Role>("USER");
   const [siteIds, setSiteIds] = useState<string[]>([]);
   const [link, setLink] = useState<string | null>(null);
@@ -368,12 +370,13 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
     try {
       const result = await apiFetch<InvitationCreated>("/admin/accounts/invitations", {
         method: "POST",
-        body: JSON.stringify({ email, name, role, siteIds }),
+        body: JSON.stringify({ email, name, role, siteIds, phone: phone || null }),
       });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
       setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
       setEmail("");
       setName("");
+      setPhone("");
       setSiteIds([]);
       await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
@@ -407,11 +410,15 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
       <form onSubmit={submit} className={`${CARD} space-y-4 p-5 sm:p-6`}>
         <div><h2 className="text-lg font-bold">새 사용자 초대</h2><p className="text-text-secondary mt-1 text-sm">초대받은 사용자가 직접 비밀번호를 설정합니다.</p></div>
-        <input className={INPUT} type="email" required placeholder="이메일" value={email}
+        <input className={INPUT} type="email" required aria-label="초대 이메일" placeholder="이메일" value={email}
           onChange={(event) => setEmail(event.target.value)} />
-        <input className={INPUT} required placeholder="이름" value={name}
+        <input className={INPUT} required aria-label="초대 이름" placeholder="이름" value={name}
           onChange={(event) => setName(event.target.value)} />
-        <select className={`${INPUT} select-inset-arrow`} value={role}
+        <label className="block text-sm font-bold">휴대폰번호 (카카오 알림용)
+          <input className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} placeholder="010-1234-5678" value={phone} pattern="[0-9\- ]{10,30}" onChange={event => setPhone(event.target.value)} />
+          <span className="text-text-secondary mt-1.5 block text-xs font-normal leading-5">가입 완료 시 연락처에 저장됩니다. 알림관리에서 담당자를 선택하면 이 번호가 입력됩니다. 초대 링크는 이메일로 발송합니다.</span>
+        </label>
+        <select aria-label="초대 권한" className={`${INPUT} select-inset-arrow`} value={role}
           onChange={(event) => setRole(event.target.value as Role)}>
           <option value="USER">일반 사용자</option>
           {canInviteAdmins && <option value="ADMIN">관리자</option>}
@@ -439,7 +446,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
             <div key={invitation.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 dark:border-white/8 dark:bg-white/3 dark:hover:bg-white/5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{invitation.name} · {invitation.email}</p>
-                <p className="text-text-secondary text-xs">{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
+                <p className="text-text-secondary text-xs">{invitation.phone && `${invitation.phone} · `}{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
               </div>
               <div className="flex shrink-0 gap-1"><button type="button" disabled={saving || (!canInviteAdmins && invitation.role !== "USER")} onClick={() => resend(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30">재발송</button><button type="button" onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button></div>
             </div>
@@ -577,6 +584,10 @@ function SiteChecks({ sites, selected, onChange }: { sites: SiteOption[]; select
   return (
     <fieldset className="mt-4 rounded-xl border border-slate-200/80 bg-slate-50/45 p-3.5 dark:border-white/8 dark:bg-white/3">
       <legend className="px-1.5 text-xs font-bold text-slate-600 dark:text-text-dark-primary/70">접근 가능 사업장 · {selected.length}곳 선택</legend>
+      <div className="mb-2 flex flex-wrap gap-2">
+        <button type="button" disabled={sites.length === 0 || sites.every(site => selectedSet.has(site.id))} onClick={() => onChange([...new Set(sites.map(site => site.id))])} className="min-h-11 rounded-lg border border-sky-200 px-3 text-xs font-bold text-sky-700 disabled:opacity-40 dark:border-sky-800 dark:text-sky-300">전체 선택</button>
+        <button type="button" disabled={selected.length === 0} onClick={() => onChange([])} className="min-h-11 rounded-lg border border-slate-200 px-3 text-xs font-bold disabled:opacity-40 dark:border-white/10">전체 해제</button>
+      </div>
       <div className="mt-1 max-h-56 space-y-2 overflow-y-auto">
         {groupSites(sites).map((group) => <div key={group.companyId}>
           <p className="px-2 py-1 text-[11px] font-extrabold text-slate-500 dark:text-text-dark-primary/55">{group.companyName} · {group.companyCode}</p>

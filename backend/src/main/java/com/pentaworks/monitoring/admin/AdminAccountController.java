@@ -107,7 +107,11 @@ public class AdminAccountController {
     }
 
     public record InviteRequest(@NotBlank @Email String email, @NotBlank @Size(max = 80) String name,
-                                @NotBlank String role, List<String> siteIds) {}
+                                @NotBlank String role, List<String> siteIds, @Size(max = 30) String phone) {
+        public InviteRequest(String email, String name, String role, List<String> siteIds) {
+            this(email, name, role, siteIds, null);
+        }
+    }
     public record UpdateUserRequest(@NotBlank @Email String email, @NotBlank @Size(max = 80) String name,
                                     @Size(max = 30) String phone, @NotBlank String role,
                                     @NotBlank String status, List<String> siteIds) {}
@@ -122,7 +126,7 @@ public class AdminAccountController {
     public record SiteOption(String id, String name, String address, String contactName,
                              String contactPhone, String timezone, long companyId,
                              String companyCode, String companyName, boolean dashboardVisible) {}
-    public record InvitationSummary(String id, String email, String name, String role,
+    public record InvitationSummary(String id, String email, String name, String phone, String role,
                                     Instant expiresAt, Instant createdAt, List<String> siteIds) {}
     public record InvitationCreated(String id, String token, String email, Instant expiresAt,
                                     String deliveryStatus) {}

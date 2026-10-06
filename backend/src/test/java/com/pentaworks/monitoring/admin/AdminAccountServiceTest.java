@@ -24,6 +24,36 @@ import static org.mockito.Mockito.when;
 
 class AdminAccountServiceTest {
     @Test
+    void validatesAndNormalizesInvitationMobileNumber() {
+        org.junit.jupiter.api.Assertions.assertEquals("01012345678", AdminAccountService.normalizeInvitationPhone("010-1234-5678"));
+        org.junit.jupiter.api.Assertions.assertEquals("01012345678", AdminAccountService.normalizeInvitationPhone(" 010 1234 5678 "));
+        org.junit.jupiter.api.Assertions.assertNull(AdminAccountService.normalizeInvitationPhone(null));
+        org.junit.jupiter.api.Assertions.assertNull(AdminAccountService.normalizeInvitationPhone(" "));
+        assertThrows(BadRequestException.class, () -> AdminAccountService.normalizeInvitationPhone("010-abc-5678"));
+        assertThrows(BadRequestException.class, () -> AdminAccountService.normalizeInvitationPhone("0212345678"));
+    }
+
+    @Test
+    void invitationPersistsNormalizedPhoneAndKeepsEmailDelivery() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        AccountMailService mail = mock(AccountMailService.class);
+        SecureTokens tokens = mock(SecureTokens.class);
+        when(tokens.create()).thenReturn("test-token");
+        when(tokens.hash("test-token")).thenReturn("test-hash");
+        when(mail.sendInvitation("next@example.com", "Next", "test-token"))
+            .thenReturn(AccountMailService.DeliveryStatus.SENT);
+        AdminAccountService service = new AdminAccountService(jdbc, tokens, mock(AuditService.class),
+            mock(DashboardService.class), mail, mock(SessionRegistry.class),
+            mock(com.pentaworks.monitoring.alert.AlertEventService.class));
+        var result = service.invite(new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE"),
+            new InviteRequest("next@example.com", "Next", "USER", List.of(), "010-1234-5678"));
+        org.mockito.Mockito.verify(jdbc).update(org.mockito.ArgumentMatchers.contains("INSERT INTO account_invitation"),
+            eq(result.id()), eq(1L), eq("next@example.com"), eq("Next"), eq("01012345678"), eq("USER"),
+            eq("test-hash"), eq(1L), any(java.sql.Timestamp.class));
+        org.junit.jupiter.api.Assertions.assertEquals("SENT", result.deliveryStatus());
+    }
+
+    @Test
     void companyAdministratorCannotHideSitesForTheWholeCompany() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AdminAccountService service = new AdminAccountService(jdbc, mock(SecureTokens.class),

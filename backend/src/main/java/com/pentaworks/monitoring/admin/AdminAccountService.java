@@ -170,12 +170,12 @@ public class AdminAccountService {
     public List<InvitationSummary> invitations(CurrentUser actor) {
         requireAdmin(actor);
         return jdbcTemplate.query("""
-            SELECT id,email,name,role,expires_at,created_at
+            SELECT id,email,name,phone,role,expires_at,created_at
               FROM account_invitation
              WHERE company_id=? AND accepted_at IS NULL AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
              ORDER BY created_at DESC
             """, (rs, row) -> new InvitationSummary(rs.getString("id"), rs.getString("email"),
-                rs.getString("name"), rs.getString("role"), rs.getTimestamp("expires_at").toInstant(),
+                rs.getString("name"), rs.getString("phone"), rs.getString("role"), rs.getTimestamp("expires_at").toInstant(),
                 rs.getTimestamp("created_at").toInstant(), invitationSites(rs.getString("id"))), actor.companyId());
     }
 
@@ -195,6 +195,7 @@ public class AdminAccountService {
         requireAdmin(actor);
         String email = request.email().trim().toLowerCase(Locale.ROOT);
         String role = normalizeRole(request.role());
+        String phone = normalizeInvitationPhone(request.phone());
         if (!actor.isSuperAdmin() && !"USER".equals(role)) {
             throw new ForbiddenException("관리자와 최고관리자 초대는 최고관리자만 할 수 있습니다.");
         }
@@ -211,9 +212,9 @@ public class AdminAccountService {
         Instant expiresAt = Instant.now().plus(7, ChronoUnit.DAYS);
         jdbcTemplate.update("""
             INSERT INTO account_invitation
-                (id,company_id,email,name,role,token_hash,invited_by,expires_at,created_at)
-            VALUES (?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))
-            """, id, actor.companyId(), email, request.name().trim(), role, secureTokens.hash(token), actor.id(),
+                (id,company_id,email,name,phone,role,token_hash,invited_by,expires_at,created_at)
+            VALUES (?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP(6))
+            """, id, actor.companyId(), email, request.name().trim(), phone, role, secureTokens.hash(token), actor.id(),
             Timestamp.from(expiresAt));
         for (String siteId : siteIds) {
             jdbcTemplate.update("INSERT INTO account_invitation_site (invitation_id,site_id) VALUES (?,?)", id, siteId);
@@ -380,6 +381,15 @@ public class AdminAccountService {
         audit.record(actor, "PASSWORD_RESET_CREATED", "APP_USER", Long.toString(userId),
             Map.of("email", target.email(), "deliveryStatus", delivery.name()));
         return new PasswordResetCreated(token, target.email(), expiresAt, delivery.name());
+    }
+
+    static String normalizeInvitationPhone(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        String phone = raw.trim().replaceAll("[-\\s]", "");
+        if (!phone.matches("01[016789][0-9]{7,8}")) {
+            throw new BadRequestException("카카오 알림용 휴대폰 번호를 확인해주세요.");
+        }
+        return phone;
     }
 
     private List<String> validateSites(long companyId, List<String> requested) {
