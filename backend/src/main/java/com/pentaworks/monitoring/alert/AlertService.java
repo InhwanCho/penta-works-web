@@ -345,6 +345,35 @@ public class AlertService {
         return settings(siteId);
     }
 
+    @Transactional
+    public SiteAlertSettings updateMetric(CurrentUser actor, String siteId, ThresholdUpdate update) {
+        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        currentUsers.requireSiteAccess(actor, siteId);
+        Metric metric = METRIC_BY_KEY.get(update.key());
+        if (metric == null) throw new BadRequestException("지원하지 않는 측정항목입니다.");
+        validateThreshold(update.min(), update.max());
+        if (update.useAverage() == null || update.tolerancePercent() == null ||
+            !Double.isFinite(update.tolerancePercent()) || update.tolerancePercent() < 0.1 || update.tolerancePercent() > 100) {
+            throw new BadRequestException("자동 평균의 허용편차는 0.1%에서 100% 사이여야 합니다.");
+        }
+        jdbcTemplate.update("INSERT IGNORE INTO alert_settings (siteid) VALUES (?)", siteId);
+        String prefix = metric.storagePrefix();
+        jdbcTemplate.update("UPDATE alert_settings SET " + prefix + "_min=?," + prefix + "_max=?," +
+            prefix + "_active=?,updated_at=CURRENT_TIMESTAMP WHERE siteid=?",
+            update.min(), update.max(), update.active(), siteId);
+        jdbcTemplate.update("""
+            INSERT INTO site_metric_average_policy (site_id,metric_key,use_average,tolerance_percent)
+            VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE use_average=VALUES(use_average),
+                tolerance_percent=VALUES(tolerance_percent),updated_at=CURRENT_TIMESTAMP(6)
+            """, siteId, update.key(), update.useAverage(), update.tolerancePercent());
+        if (!update.active()) alertEvents.disableRule(siteId, update.key());
+        audit.record(actor, "ALERT_THRESHOLDS_UPDATED", "SITE", siteId,
+            Map.of("metricKey", update.key(), "min", update.min(), "max", update.max(),
+                "active", update.active(), "useAverage", update.useAverage(), "tolerancePercent", update.tolerancePercent()));
+        dashboardService.invalidateCache();
+        return settings(siteId);
+    }
+
     static void validateThreshold(Double min, Double max) {
         if (min == null || max == null || !Double.isFinite(min) || !Double.isFinite(max)) {
             throw new BadRequestException("최소값과 최대값을 숫자로 입력해주세요.");

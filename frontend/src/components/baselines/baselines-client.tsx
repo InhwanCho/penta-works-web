@@ -1,5 +1,7 @@
 "use client";
 
+import ManagementTabs from "@/components/common/management-tabs";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -7,7 +9,7 @@ import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import type { AlertEventSummary, AlertRecipient, AlertThreshold, SiteAlertSettings } from "@/lib/api";
 import { formatMetricMeasurement, METRICS } from "@/lib/metrics";
 import Link from "next/link";
-import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 const METRIC_DESCRIPTION = new Map(METRICS.map((metric) => [metric.key, metric.description]));
 
@@ -114,12 +116,11 @@ export default function BaselinesClient({
         </p>
       </header>
 
-      <div className="mb-5 flex max-w-full overflow-x-auto rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
-        <ViewTab active={view === "thresholds"} onClick={() => setView("thresholds")}>알림값 설정</ViewTab>
-        <ViewTab active={view === "sites"} onClick={() => setView("sites")}>사업장 관리</ViewTab>
-        <ViewTab active={view === "events"} onClick={() => setView("events")} badge={events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length}>알림 이력</ViewTab>
-        <ViewTab active={view === "recipients"} onClick={() => setView("recipients")}>{canEdit ? "수신처" : "내 수신 설정"}</ViewTab>
-      </div>
+      <ManagementTabs label="알림 관리" value={view} onChange={setView} items={[
+        {value:"thresholds",label:"알림값 설정"}, {value:"sites",label:"사업장 관리"},
+        {value:"events",label:"알림 이력",badge:events.filter(event => event.eventType !== "RECOVERY" && !event.recoveredAt).length},
+        {value:"recipients",label:canEdit ? "수신처" : "내 수신 설정"},
+      ]} />
 
       {view === "sites" ? <section className="space-y-3">
         <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-100">
@@ -318,10 +319,6 @@ function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecip
 
 function TimeField({ label, value, onChange, optional = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-xs font-bold">{label}<input type="time" required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
 
-function ViewTab({ active, onClick, badge, children }: { active: boolean; onClick: () => void; badge?: number; children: ReactNode }) {
-  return <button type="button" onClick={onClick} className={`flex shrink-0 items-center gap-2 rounded-xl px-3 py-3 sm:px-4 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/5"}`}>{children}{badge ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] ${active ? "bg-white/15 text-white" : "bg-rose-100 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300"}`}>{badge}</span> : null}</button>;
-}
-
 function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledgeMany, onRetryDelivery }: {
   events: AlertEventSummary[];
   loading: boolean;
@@ -478,14 +475,15 @@ function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHI
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${value}${unit ? ` ${unit}` : ""}`; }
 function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "접수 완료", PARTIAL: "일부 접수 실패", FAILED: "접수 실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
 
-export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose, onSave }: {
+export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetricKey, onClose, onSave }: {
   entry: SiteAlertSettings;
   canEdit: boolean;
   initialMetricKey?: string;
+  onlyMetricKey?: string;
   onClose: () => void;
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
-  const [thresholds, setThresholds] = useState(entry.thresholds);
+  const [thresholds, setThresholds] = useState(() => onlyMetricKey ? entry.thresholds.filter(item => item.key === onlyMetricKey) : entry.thresholds);
   const [metricFilter, setMetricFilter] = useState<"active" | "all">(initialMetricKey ? "all" : entry.thresholds.some(item => item.active) ? "active" : "all");
   const [collectionIntervalMinutes, setCollectionIntervalMinutes] = useState(entry.collectionIntervalMinutes ?? 10);
   const [missingCollectionThreshold, setMissingCollectionThreshold] = useState(entry.missingCollectionThreshold ?? 2);
@@ -533,6 +531,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose,
       }
       if (threshold.min > threshold.max) { setError(`${threshold.label}: 최소값이 최대값보다 큽니다.`); return; }
     }
+    if (!onlyMetricKey) {
     if (!Number.isInteger(collectionIntervalMinutes) || collectionIntervalMinutes < 5 || collectionIntervalMinutes > 1440 || !Number.isInteger(missingCollectionThreshold) || missingCollectionThreshold < 1 || missingCollectionThreshold > 288 || noDataMinutes > 1440) {
       setError("수집 주기는 5~1440분, 누락 기준은 1~288회 정수이며 총 대기시간은 1440분 이하여야 합니다."); return;
     }
@@ -542,12 +541,13 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose,
     if (!Number.isInteger(repeatMinutes) || repeatMinutes < 0 || repeatMinutes > 10080 || (repeatMinutes > 0 && repeatMinutes < 5)) {
       setError("반복 알림은 0(사용 안 함) 또는 5분에서 10080분 사이여야 합니다."); return;
     }
+    }
     for (const threshold of thresholds) {
       if (!Number.isFinite(threshold.tolerancePercent) || threshold.tolerancePercent < 0.1 || threshold.tolerancePercent > 100) {
         setError(`${threshold.label}: 자동 평균 허용편차는 0.1%에서 100% 사이여야 합니다.`); return;
       }
     }
-    if (quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("발송 제외 시작과 종료를 서로 다르게 입력해주세요."); return; }
+    if (!onlyMetricKey && quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("발송 제외 시작과 종료를 서로 다르게 입력해주세요."); return; }
     setSaving(true); setError(null);
     try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, coldChillerActive, collectionIntervalMinutes, missingCollectionThreshold, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
@@ -556,19 +556,19 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose,
 
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className="flex max-h-[100dvh] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] sm:max-w-4xl sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card">
+      <form role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className={`flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">알림값 설정 · 사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최근 24시간 평균에 허용편차(±%)만 설정하세요. 평균은 매시간 자동 갱신됩니다.</p></div>
+          <div><p className="text-xs font-bold text-sky-700 dark:text-sky-300">알림값 설정 · 사업장 {entry.siteid}</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 사업장"}</h2><p className="text-text-secondary mt-1 text-sm">최근 24시간 평균에 허용편차(±%)만 설정하세요. 평균은 매시간 자동 갱신됩니다.{onlyMetricKey && " 선택한 항목만 변경됩니다."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
+          {!onlyMetricKey && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
             <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={event => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />사업장 알림 사용</label>
             <label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5 accent-emerald-600" />콜드칠러 정지 의심</label>
             <p className="w-full text-xs text-text-secondary">콜드칠러 IN·OUT 온도가 정확히 같으면 알립니다. 미측정 값은 제외합니다.{!entry.dashboardVisible && " 숨긴 사업장은 알림을 켤 수 없습니다."}</p>
-          </div>
-          <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>
-          <div className="grid gap-3 md:grid-cols-2">
+          </div>}
+          {!onlyMetricKey && <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>}
+          <div className={`grid gap-3 ${onlyMetricKey ? "" : "md:grid-cols-2"}`}>
             {thresholds.filter(threshold => metricFilter === "all" || threshold.active)
               .sort((a, b) => Number(b.key === initialMetricKey) - Number(a.key === initialMetricKey))
               .map(threshold => <div key={threshold.key} className={threshold.key === initialMetricKey ? "rounded-xl ring-2 ring-sky-500" : undefined}>
@@ -577,7 +577,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose,
                 <MetricEditor threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} />
               </div>)}
           </div>
-          <details className="mt-5 rounded-xl border p-3 dark:border-white/10">
+          {!onlyMetricKey && <details className="mt-5 rounded-xl border p-3 dark:border-white/10">
             <summary className="min-h-11 cursor-pointer font-bold">고급 설정 · 반복 알림 / 수집 누락 / 발송 제외</summary>
             <div className="mt-3">
           <section className={`mb-4 rounded-xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
@@ -599,11 +599,11 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onClose,
             <p role="status" className="mt-3 text-sm font-bold">{collectionIntervalMinutes}분마다 수집 · {missingCollectionThreshold}회 연속 누락 시 알림 (마지막 수집 후 {noDataMinutes}분부터)</p>
           </section>
             </div>
-          </details>
+          </details>}
 
         </div>
         {error && <p role="alert" className="shrink-0 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-        <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-white px-5 py-4 sm:flex sm:justify-end sm:px-6 dark:border-white/7 dark:bg-background-dark-card">
+        <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:flex sm:justify-end sm:px-6 dark:border-white/7 dark:bg-background-dark-card">
           <button type="button" disabled={saving} onClick={onClose} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">{canEdit ? "취소" : "닫기"}</button>
           {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover rounded-xl px-6 py-3 text-sm font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? "저장 중…" : "전체 변경 저장"}</button>}
         </footer>

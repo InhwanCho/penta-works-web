@@ -24,6 +24,32 @@ import static org.mockito.Mockito.when;
 
 class AlertServiceTest {
     @Test
+    @SuppressWarnings("unchecked")
+    void singleMetricUpdateDoesNotWriteOtherMetricsOrSitePolicies() {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        CurrentUserService users = mock(CurrentUserService.class);
+        AuditService audit = mock(AuditService.class);
+        DashboardService dashboard = mock(DashboardService.class);
+        RollingAverageService averages = mock(RollingAverageService.class);
+        when(averages.states()).thenReturn(java.util.Map.of());
+        AlertService service = new AlertService(jdbc, users, audit, dashboard, mock(AlertEventService.class), averages);
+        CurrentUser admin = new CurrentUser(1, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
+        SiteAlertSettings saved = new SiteAlertSettings("001", "병원", true,
+            List.of(new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)), 30, false,
+            true, 0, 0, null, null, false);
+        when(jdbc.queryForObject(any(String.class), any(RowMapper.class), eq("001"))).thenReturn(saved);
+        assertEquals(saved, service.updateMetric(admin, "001", new AlertService.ThresholdUpdate("hepres", 0.8, 1.3, true, true, 40.0)));
+        verify(users).requireSiteAccess(admin,"001");
+        org.mockito.ArgumentCaptor<String> sql = org.mockito.ArgumentCaptor.forClass(String.class);
+        org.mockito.Mockito.verify(jdbc,org.mockito.Mockito.times(3)).update(sql.capture(),any(Object[].class));
+        org.junit.jupiter.api.Assertions.assertTrue(sql.getAllValues().stream().noneMatch(value ->
+            value.contains("site_alert_policy") || value.contains("alert_rule") || value.contains("holiday") || value.contains("gctemp")));
+        verify(dashboard).invalidateCache();
+        CurrentUser user = new CurrentUser(2, 1, "user@example.com", "User", "USER", "ACTIVE");
+        assertThrows(ForbiddenException.class, () -> service.updateMetric(user,"001",new AlertService.ThresholdUpdate("hepres",0.8,1.3,true,true,40.0)));
+    }
+
+    @Test
     void validatesPsiRange() {
         assertDoesNotThrow(() -> AlertService.validateThreshold(0.8, 1.3));
         assertThrows(BadRequestException.class, () -> AlertService.validateThreshold(null, 1.3));

@@ -3,6 +3,8 @@ package com.pentaworks.monitoring.auth;
 import com.pentaworks.monitoring.auth.AuthController.LoginResponse;
 import com.pentaworks.monitoring.auth.AuthController.SessionUser;
 import com.pentaworks.monitoring.common.UnauthorizedException;
+import com.pentaworks.monitoring.common.BadRequestException;
+import org.springframework.dao.DuplicateKeyException;
 import com.pentaworks.monitoring.config.AppProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -98,14 +100,54 @@ public class AuthService {
     @Transactional
     public void logout(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) return;
-        String sessionId = jdbcTemplate.query("SELECT id FROM user_session WHERE refresh_token_hash=?",
-            rs -> rs.next() ? rs.getString(1) : null, sha256(refreshToken));
+        Long userId = jdbcTemplate.query("""
+            SELECT user_id FROM user_session WHERE refresh_token_hash=?
+             AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
+            """, rs -> rs.next() ? rs.getLong(1) : null, sha256(refreshToken));
+        if (userId == null) return;
         jdbcTemplate.update("""
             UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6)
-             WHERE refresh_token_hash=? AND revoked_at IS NULL
-            """, sha256(refreshToken));
-        sessions.invalidate(sessionId);
+             WHERE user_id=? AND revoked_at IS NULL
+            """, userId);
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                new org.springframework.transaction.support.TransactionSynchronization() {
+                    @Override public void afterCommit() { sessions.invalidateUser(userId); }
+                });
+        } else sessions.invalidateUser(userId);
     }
+
+    public Profile profile(String email) {
+        UserRow user = findUserByEmail(normalizeEmail(email));
+        if (user == null) throw expiredSession();
+        return jdbcTemplate.query("SELECT email,name,phone FROM app_user WHERE id=?",
+            rs -> rs.next() ? new Profile(rs.getString("email"), rs.getString("name"), rs.getString("phone")) : null,
+            user.id());
+    }
+
+    @Transactional
+    public Profile updateProfile(String email, String nextEmail, String name, String phone) {
+        UserRow user = findUserByEmail(normalizeEmail(email));
+        if (user == null) throw expiredSession();
+        String normalized = normalizeEmail(nextEmail);
+        String trimmedName = name.trim();
+        String trimmedPhone = phone == null || phone.isBlank() ? null : phone.trim();
+        if (trimmedName.isBlank()) throw new BadRequestException("이름을 입력해주세요.");
+        try {
+            jdbcTemplate.update("""
+                UPDATE app_user SET email=?,username=?,name=?,phone=?,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?
+                """, normalized, normalized, trimmedName, trimmedPhone, user.id());
+        } catch (DuplicateKeyException error) {
+            throw new BadRequestException("이미 사용 중인 이메일입니다.");
+        }
+        jdbcTemplate.update("""
+            INSERT INTO audit_log (company_id,actor_user_id,actor_name,action,target_type,target_id,created_at)
+            VALUES (?,?,?,'ACCOUNT_PROFILE_UPDATED','APP_USER',?,CURRENT_TIMESTAMP(6))
+            """, user.companyId(), user.id(), trimmedName, Long.toString(user.id()));
+        return new Profile(normalized, trimmedName, trimmedPhone);
+    }
+
+    public record Profile(String email, String name, String phone) {}
 
     public List<SessionSummary> sessions(String email, String refreshToken) {
         UserRow user = findUserByEmail(normalizeEmail(email));

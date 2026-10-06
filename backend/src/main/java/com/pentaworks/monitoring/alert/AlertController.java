@@ -77,6 +77,14 @@ public class AlertController {
         return alertService.setAlertsEnabled(currentUsers.require(authentication), siteId, request.enabled());
     }
 
+    @PatchMapping("/thresholds/{siteId}/metrics/{metricKey}")
+    public SiteAlertSettings updateMetric(@PathVariable String siteId, @PathVariable String metricKey,
+                                           @Valid @RequestBody ThresholdRequest request, Authentication authentication) {
+        return alertService.updateMetric(currentUsers.require(authentication), siteId,
+            new AlertService.ThresholdUpdate(metricKey, request.min(), request.max(), request.active(),
+                request.useAverage(), request.tolerancePercent()));
+    }
+
     @PatchMapping("/thresholds/{siteId}")
     public SiteAlertSettings updateThresholds(@PathVariable String siteId,
                                               @Valid @RequestBody UpdateAlertThresholdsRequest request,
@@ -163,6 +171,8 @@ public class AlertController {
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
                                          @NotNull Boolean active, Boolean useAverage,
                                          Double tolerancePercent) {}
+    public record ThresholdRequest(@NotNull Double min, @NotNull Double max, @NotNull Boolean active,
+                                   Boolean useAverage, Double tolerancePercent) {}
     public record UpdatePolicyRequest(@NotNull Boolean enabled) {}
     public record AcknowledgeEventsRequest(@NotEmpty List<@NotNull Long> eventIds) {}
 }

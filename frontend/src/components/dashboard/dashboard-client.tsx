@@ -97,7 +97,7 @@ export default function DashboardClient() {
   const [metricSelection, setMetricSelection] = useState<MetricSelection | null>(null);
   const closeMetricInfo = useCallback(() => setMetricSelection(null), []);
   const inspectMetric = useCallback((row: SiteRow, metric: MetricDef) => setMetricSelection({siteId: row.siteDb, hospital: row.name ?? "병원명 없음", metricKey: metric.key, label: metric.label ?? metric.code}), []);
-  const [selectedAlert, setSelectedAlert] = useState<{siteId: string; metricKey?: string} | null>(null);
+  const [selectedAlert, setSelectedAlert] = useState<{siteId: string; metricKey?: string; onlyMetric?: boolean} | null>(null);
   const openAlertSettings = useCallback((siteId: string, metricKey?: string) => setSelectedAlert({siteId, metricKey}), []);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [mobileToolsHidden, setMobileToolsHidden] = useState(false);
@@ -357,11 +357,11 @@ export default function DashboardClient() {
             </section>
           </>
         )}
-        <p className="text-text-secondary mt-2 shrink-0 px-1 text-xs sm:hidden dark:text-text-dark-primary/70">
+        <p className="text-text-secondary mt-2 shrink-0 px-4 text-center text-[11px] leading-4 sm:hidden dark:text-text-dark-primary/70">
           마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
-        {metricSelection && <DashboardMetricInfo selection={metricSelection} onClose={closeMetricInfo} />}
-        {selectedAlert && <SiteAlertSettingsDialog key={`${selectedAlert.siteId}:${selectedAlert.metricKey ?? ""}`} siteId={selectedAlert.siteId} initialMetricKey={selectedAlert.metricKey} onClose={() => setSelectedAlert(null)} />}
+        {metricSelection && <DashboardMetricInfo selection={metricSelection} onClose={closeMetricInfo} onEdit={() => { setSelectedAlert({siteId: metricSelection.siteId, metricKey: metricSelection.metricKey, onlyMetric: true}); closeMetricInfo(); }} />}
+        {selectedAlert && <SiteAlertSettingsDialog key={`${selectedAlert.siteId}:${selectedAlert.metricKey ?? ""}`} siteId={selectedAlert.siteId} initialMetricKey={selectedAlert.metricKey} onlyMetricKey={selectedAlert.onlyMetric ? selectedAlert.metricKey : undefined} onClose={() => setSelectedAlert(null)} />}
       </main>
       {mobileControls}
     </PullToRefresh>

@@ -235,9 +235,10 @@ export async function login(email: string, password: string) {
 }
 
 export async function logout() {
-  await fetch(`${API_BASE_URL}/auth/logout`, {
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
     method: "POST",
     credentials: "include",
     cache: "no-store",
-  }).catch(() => undefined);
+  });
+  if (!response.ok) throw new Error("모든 기기에서 로그아웃하지 못했습니다. 다시 시도해주세요.");
 }

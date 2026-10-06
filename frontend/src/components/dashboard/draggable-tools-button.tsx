@@ -44,7 +44,7 @@ export default function DraggableToolsButton({ children, expanded, onClick }: {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(position)); } catch { /* Keep the current position. */ }
   }, [position]);
 
-  return <div ref={boundsRef} className="pointer-events-none fixed inset-0 z-[45] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+  return <div ref={boundsRef} className="pointer-events-none fixed inset-0 z-[45] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
     <button ref={buttonRef} type="button" aria-controls="dashboard-mobile-tools" aria-expanded={expanded} title="눌러 열기 · 드래그하여 위치 이동"
       style={position ? {left: position.x, top: position.y, right: "auto", bottom: "auto"} : undefined}
       onPointerDown={event => {
@@ -73,7 +73,7 @@ export default function DraggableToolsButton({ children, expanded, onClick }: {
       }}
       onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
       onClick={event => { if (event.detail === 0 || !suppressClick.current) onClick(); suppressClick.current = false; }}
-      className="pointer-events-auto fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] inline-flex w-max min-h-12 whitespace-nowrap touch-none select-none items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
+      className="pointer-events-auto fixed right-2 bottom-[calc(0.5rem+env(safe-area-inset-bottom,0px))] inline-flex w-max min-h-12 whitespace-nowrap touch-none select-none items-center gap-2 rounded-full border border-sky-200 bg-white px-4 text-sm font-bold text-sky-900 shadow-lg dark:border-sky-800 dark:bg-slate-800 dark:text-sky-100">
       {children}
     </button>
   </div>;

@@ -20,9 +20,10 @@ export default function SiteAlertSettingsButton({ siteId }: { siteId: string }) 
   </>;
 }
 
-export function SiteAlertSettingsDialog({ siteId, initialMetricKey, onClose }: {
+export function SiteAlertSettingsDialog({ siteId, initialMetricKey, onlyMetricKey, onClose }: {
   siteId: string;
   initialMetricKey?: string;
+  onlyMetricKey?: string;
   onClose: () => void;
 }) {
   const { isAdmin } = useAuth();
@@ -36,9 +37,16 @@ export function SiteAlertSettingsDialog({ siteId, initialMetricKey, onClose }: {
   });
   const entry = settings.data?.find(site => site.siteid === siteId);
   async function save(value: SiteAlertSettings) {
-    const saved = await apiFetch<SiteAlertSettings>(`/alerts/thresholds/${encodeURIComponent(siteId)}`, {
+    const metric = value.thresholds.find(item => item.key === onlyMetricKey);
+    if (onlyMetricKey && !metric) throw new Error("선택한 항목을 찾을 수 없습니다.");
+    const saved = await apiFetch<SiteAlertSettings>(onlyMetricKey
+      ? `/alerts/thresholds/${encodeURIComponent(siteId)}/metrics/${encodeURIComponent(onlyMetricKey)}`
+      : `/alerts/thresholds/${encodeURIComponent(siteId)}`, {
       method: "PATCH",
-      body: JSON.stringify({
+      body: JSON.stringify(onlyMetricKey && metric ? {
+        min: metric.min, max: metric.max, active: metric.active,
+        useAverage: metric.useAverage, tolerancePercent: metric.tolerancePercent,
+      } : {
         thresholds: value.thresholds.map(({key,min,max,active,useAverage,tolerancePercent}) =>
           ({key,min,max,active,useAverage,tolerancePercent})),
         noDataMinutes: value.noDataMinutes,
@@ -65,7 +73,7 @@ export function SiteAlertSettingsDialog({ siteId, initialMetricKey, onClose }: {
     return saved;
   }
   return createPortal(<>
-      {entry && !settings.isError && <SiteThresholdEditor entry={entry} canEdit={isAdmin} initialMetricKey={initialMetricKey} onClose={onClose} onSave={save} />}
+      {entry && !settings.isError && <SiteThresholdEditor entry={entry} canEdit={isAdmin} initialMetricKey={initialMetricKey} onlyMetricKey={onlyMetricKey} onClose={onClose} onSave={save} />}
       {(!entry || settings.isError) && <div role="dialog" aria-modal="true" aria-label="알림값 설정 불러오기" className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"><div className="w-full max-w-sm rounded-xl bg-white p-5 dark:bg-background-dark-card"><p role="status">{settings.isPending ? "알림 설정을 불러오는 중…" : settings.isError ? "알림 설정을 불러오지 못했습니다." : "이 사업장의 알림 설정에 접근할 수 없습니다."}</p><div className="mt-4 flex gap-3">{settings.isError && <button type="button" onClick={() => settings.refetch()} className="min-h-11 font-bold">다시 시도</button>}<button type="button" onClick={onClose} className="min-h-11 font-bold">닫기</button></div></div></div>}
     </>, document.body);
 }

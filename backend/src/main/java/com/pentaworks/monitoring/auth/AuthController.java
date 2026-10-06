@@ -6,6 +6,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import org.springframework.web.bind.annotation.PatchMapping;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -61,6 +63,16 @@ public class AuthController {
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }
 
+    @GetMapping("/profile")
+    public AuthService.Profile profile(Authentication authentication) {
+        return authService.profile(authentication.getName());
+    }
+
+    @PatchMapping("/profile")
+    public AuthService.Profile updateProfile(@Valid @RequestBody ProfileRequest request, Authentication authentication) {
+        return authService.updateProfile(authentication.getName(), request.email(), request.name(), request.phone());
+    }
+
     @GetMapping("/sessions")
     public List<AuthService.SessionSummary> sessions(Authentication authentication,
                                                      HttpServletRequest request) {
@@ -102,6 +114,8 @@ public class AuthController {
         return request.getRemoteAddr();
     }
 
+    public record ProfileRequest(@NotBlank @Email @Size(max = 254) String email,
+                                 @NotBlank @Size(max = 80) String name, @Size(max = 30) String phone) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
     public record LoginResponse(String accessToken, Instant accessTokenExpiresAt, SessionUser user) {}

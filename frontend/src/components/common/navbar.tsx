@@ -23,6 +23,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => {
@@ -95,10 +96,11 @@ export default function Navbar() {
                         {isDark ? "밝게" : "어둡게"}
                       </PreferenceButton>
                     </div>
-                    <button type="button" role="menuitem" onClick={async () => {
-                      setMenuOpen(false);
-                      await logout();
-                      router.replace("/login");
+                    {logoutError && <p role="alert" className="px-3 py-2 text-xs text-rose-600">{logoutError}</p>}
+                    <button type="button" role="menuitem" title="모든 기기에서 로그아웃" onClick={async () => {
+                      setLogoutError(null);
+                      try { await logout(); setMenuOpen(false); router.replace("/login"); }
+                      catch { setLogoutError("로그아웃하지 못했습니다. 다시 시도해주세요."); }
                     }} className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">
                       <LogoutIcon /> 로그아웃
                     </button>

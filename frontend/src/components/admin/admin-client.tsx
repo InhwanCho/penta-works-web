@@ -1,5 +1,6 @@
 "use client";
 
+import ManagementTabs from "@/components/common/management-tabs";
 import CircleLoader from "@/components/icons/circle-loader";
 import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -63,7 +64,7 @@ type PasswordResetCreated = { token: string; email: string; expiresAt: string; d
 const CARD =
   "rounded-xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card";
 const INPUT =
-  "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
+  "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
@@ -122,13 +123,10 @@ export default function AdminClient() {
         </div>
       </header>
 
-      <div className="mb-5 flex w-fit max-w-full flex-wrap rounded-xl border border-slate-200/80 bg-white p-1.5 shadow-[0_2px_8px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
-        <Tab active={tab === "users"} onClick={() => setTab("users")}>사용자</Tab>
-        <Tab active={tab === "invitations"} onClick={() => setTab("invitations")}>초대</Tab>
-        <Tab active={tab === "sites"} onClick={() => setTab("sites")}>사업장</Tab>
-        <Tab active={tab === "metrics"} onClick={() => setTab("metrics")}>측정항목</Tab>
-        <Tab active={tab === "audit"} onClick={() => setTab("audit")}>감사 로그</Tab>
-      </div>
+      <ManagementTabs label="사용자 관리" value={tab} onChange={setTab} items={[
+        {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"사업장"},
+        {value:"metrics",label:"측정항목"}, {value:"audit",label:"감사 로그"},
+      ]} />
 
       {tab === "users" && (
         <UserSection
@@ -180,14 +178,14 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
   if (loading) return <Loading />;
   return (
     <section>
-      <div className={`${CARD} mb-4 grid gap-2 p-3 sm:grid-cols-[1fr_auto_auto]`}>
+      <div className={`${CARD} mb-4 grid min-w-0 gap-2 p-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]`}>
         <input type="search" className={INPUT} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="이름·이메일·휴대폰번호 검색" />
         <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
       <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 사업장별 알림 설정에서 별도로 등록합니다.</p>
       <div className={`${CARD} overflow-x-auto`}>
-        <table className="w-full min-w-[760px] text-left text-sm">
+        <table className="w-full min-w-[900px] text-left text-sm whitespace-nowrap">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary/70">
             <tr>
               <th scope="col" className="px-3 py-3 font-bold">이름</th>
@@ -218,7 +216,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
         {filtered.length === 0 && <Empty>조건에 맞는 사용자가 없습니다.</Empty>}
       </div>
       {editingUser && <div className="mt-4"><UserEditor key={editingUser.id} user={editingUser} sites={sites} canManageAdmins={canManageAdmins} currentUserId={currentUserId} /></div>}
-      {filtered.length > 0 && <div className="mt-4 flex items-center justify-between"><span className="text-text-secondary text-xs">총 {filtered.length}명 · {page}/{pageCount} 페이지</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">이전</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">다음</button></div></div>}
+      {filtered.length > 0 && <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-text-secondary text-xs">총 {filtered.length}명 · {page}/{pageCount} 페이지</span><div className="flex gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">이전</button><button type="button" disabled={page >= pageCount} onClick={() => setPage((value) => value + 1)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10">다음</button></div></div>}
     </section>
   );
 }
@@ -304,7 +302,7 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
           </p>
           </div>
         </div>
-        <div className="flex min-w-[13rem] flex-1 gap-2 sm:max-w-sm">
+        <div className="grid w-full min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,1fr)] gap-2 sm:max-w-sm">
           <select className={INPUT} value={role} disabled={immutable}
             onChange={(event) => setRole(event.target.value as Role)}>
             {user.role === "PLATFORM_ADMIN" && <option value="PLATFORM_ADMIN">플랫폼 관리자</option>}
@@ -611,15 +609,12 @@ function groupSites(sites: SiteOption[]) {
   return [...groups.values()];
 }
 
-function Tab({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
-  return <button type="button" onClick={onClick} className={`cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold transition ${active ? "bg-[#174d70] text-white shadow-sm dark:bg-sky-700" : "text-slate-500 hover:bg-slate-100 dark:text-text-dark-primary/55 dark:hover:bg-white/5"}`}>{children}</button>;
-}
 function Loading() { return <main className="flex min-h-[50vh] items-center justify-center"><CircleLoader size="xl" /></main>; }
 function Empty({ children }: { children: React.ReactNode }) { return <p className="text-text-secondary p-5 text-center text-sm">{children}</p>; }
 function AccessDenied() { return <main className="mx-auto max-w-md p-8 text-center"><h1 className="text-xl font-bold">접근 권한이 없습니다</h1><Link href="/" className="mt-4 inline-block underline">대시보드로 이동</Link></main>; }
 function roleLabel(role: Role) { return role === "PLATFORM_ADMIN" ? "플랫폼 관리자" : role === "SUPER_ADMIN" ? "최고관리자" : role === "ADMIN" ? "관리자" : "일반 사용자"; }
 function formatDate(value: string | null) { return value ? new Date(value).toLocaleDateString("ko-KR") : "-"; }
 function formatDateTime(value: string) { return new Date(value).toLocaleString("ko-KR"); }
-function actionLabel(value: string) { return ({ COMPANY_METRICS_UPDATED: "측정항목 표시 변경", PASSWORD_RESET_REQUESTED: "비밀번호 찾기 요청", ALERT_DELIVERY_CONFIRMED: "수신 여부 확인", ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
+function actionLabel(value: string) { return ({ COMPANY_METRICS_UPDATED: "측정항목 표시 변경", PASSWORD_RESET_REQUESTED: "비밀번호 찾기 요청", ALERT_DELIVERY_CONFIRMED: "수신 여부 확인", ACCOUNT_INVITED: "사용자 초대", INVITATION_RESENT: "초대 재발송", INVITATION_REVOKED: "초대 취소", INVITATION_ACCEPTED: "가입 완료", ACCOUNT_UPDATED: "계정 변경", ACCOUNT_DELETED: "계정 삭제", PASSWORD_CHANGED: "비밀번호 변경", ACCOUNT_PROFILE_UPDATED: "내 정보 변경", PASSWORD_RESET_CREATED: "초기화 링크 생성", PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료", PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경", ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경", ALERT_ACKNOWLEDGED: "알림 확인", ALERT_RECIPIENT_CREATED: "알림 수신자 추가", ALERT_RECIPIENT_UPDATED: "알림 수신자 변경", ALERT_RECIPIENT_DELETED: "알림 수신자 삭제", SITE_CREATED: "사업장 추가", SITE_UPDATED: "사업장 정보 변경" } as Record<string, string>)[value] ?? value; }
 function SummaryChip({ value, label }: { value: number; label: string }) { return <div className="rounded-xl border border-white/10 bg-white/10 px-3.5 py-2 backdrop-blur-sm"><span className="text-base font-extrabold">{value}</span><span className="ml-1.5 text-xs font-medium text-white/65">{label}</span></div>; }
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) { return <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${status === "ACTIVE" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" : "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300"}`}><span className={`h-1.5 w-1.5 rounded-full ${status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"}`} />{status === "ACTIVE" ? "활성" : "정지"}</span>; }
