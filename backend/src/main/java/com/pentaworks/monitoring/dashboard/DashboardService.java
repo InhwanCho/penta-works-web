@@ -264,7 +264,7 @@ public class DashboardService {
         return isUnmeasured(parsed) ? null : parsed;
     }
     public static boolean isUnmeasured(Double value) {
-        return value != null && (value == 0.0 || value == 0.001 || value == 0.01);
+        return value != null && (value <= 0.0 || value == 0.001 || value == 0.01 || value == 0.1);
     }
     private static String siteSlug(String id) { return id.matches("\\d+") ? String.valueOf(Integer.parseInt(id)) : id; }
     private record Site(String id, String name) {}

@@ -75,11 +75,13 @@ export default function DashboardExcelView({
   metrics,
   columns,
   onOpenAlertSettings,
+  onInspectMetric,
 }: {
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
   metrics: MetricDef[];
   columns: CompanyMetric[];
+  onInspectMetric: (row: SiteRow, metric: MetricDef) => void;
   onOpenAlertSettings: (siteId: string, metricKey?: string) => void;
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
@@ -87,6 +89,7 @@ export default function DashboardExcelView({
     key: string;
     hospital: string;
     column: string;
+    metric: boolean;
   } | null>(null);
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -109,12 +112,14 @@ export default function DashboardExcelView({
     setOpenMetric(null);
   };
 
-  const selectCell = (row: SiteRow, column: string) => {
+  const selectCell = (row: SiteRow, column: string, metric?: MetricDef) => {
+    if (metric) onInspectMetric(row, metric);
     if (selectionTimer.current) clearTimeout(selectionTimer.current);
     setSelectedCell({
       key: `${row.siteDb}:${column}`,
       hospital: row.name ?? "병원명 없음",
       column,
+      metric: Boolean(metric),
     });
     selectionTimer.current = setTimeout(() => setSelectedCell(null), 2000);
   };
@@ -277,7 +282,7 @@ export default function DashboardExcelView({
                       return (
                         <td
                           key={m.key}
-                          onClick={() => selectCell(row, m.code)}
+                          onClick={() => selectCell(row, m.code, m)}
                           onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onOpenAlertSettings(row.siteDb, m.key); }}
                           title="우클릭하여 알림값 확인·설정"
                           tabIndex={0}
@@ -288,7 +293,7 @@ export default function DashboardExcelView({
                               onOpenAlertSettings(row.siteDb, m.key);
                             } else if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              selectCell(row, m.code);
+                              selectCell(row, m.code, m);
                             }
                           }}
                           className={[
@@ -324,7 +329,7 @@ export default function DashboardExcelView({
         </p>
       </div>
 
-      {selectedCell ? (
+      {selectedCell && !selectedCell.metric ? (
         <div
           role="status"
           aria-live="polite"

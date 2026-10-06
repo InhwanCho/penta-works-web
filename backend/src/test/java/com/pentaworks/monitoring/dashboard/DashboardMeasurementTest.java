@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class DashboardMeasurementTest {
     @Test
     void parsesOnlyMeasuredMrtbValues() {
-        for (String unmeasured : new String[] {"0", "0.000", "0.001", "0.01", "0.010"}) {
+        for (String unmeasured : new String[] {"0", "0.000", "0.001", "0.01", "0.010", "0.1", "0.100", "-0.1", "-3258.2"}) {
             assertNull(DashboardService.parseMeasurement(unmeasured));
         }
         assertNull(DashboardService.parseMeasurement(null));

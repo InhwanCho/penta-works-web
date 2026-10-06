@@ -49,7 +49,7 @@ class AlertEventServiceTest {
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
             null, null, false, List.of(), true, true);
-        for (double value : new double[]{0, 0.001, 0.01, Double.NaN, Double.POSITIVE_INFINITY}) {
+        for (double value : new double[]{0, 0.001, 0.01, 0.1, -0.1, -3258.2, Double.NaN, Double.POSITIVE_INFINITY}) {
             assertNull(service.evaluateColdChiller(site, value, value));
         }
         assertNull(service.evaluateColdChiller(site, null, 20.0));
@@ -193,6 +193,8 @@ class AlertEventServiceTest {
         assertNull(AlertEventService.direction(0.0, 0.0, 999.0));
         assertNull(AlertEventService.direction(0.001, 1.0, 999.0));
         assertNull(AlertEventService.direction(0.01, 1.0, 999.0));
+        assertNull(AlertEventService.direction(0.1, 1.0, 999.0));
+        assertNull(AlertEventService.direction(-3258.2, 1.0, 999.0));
         assertNull(AlertEventService.direction(1.0, 0.0, 999.0));
         assertEquals("low", AlertEventService.direction(0.011, 1.0, 999.0));
     }
@@ -206,7 +208,8 @@ class AlertEventServiceTest {
             true, 0, 0, null, null, false);
         AlertThreshold threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
 
-        assertNull(service.evaluate(site, threshold, 0.001));
+        for (double value : new double[]{0.001, 0.1, -0.1, -3258.2})
+            assertNull(service.evaluate(site, threshold, value));
 
         verifyNoInteractions(jdbcTemplate);
     }

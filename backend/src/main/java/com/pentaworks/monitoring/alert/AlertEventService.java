@@ -247,6 +247,8 @@ public class AlertEventService {
         currentUsers.requireVisibleSiteAccess(actor, event.siteId());
         if (!List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.deliveryStatus()))
             throw new BadRequestException("미발송 또는 전송에 실패한 알림만 재전송할 수 있습니다.");
+        if (!"__data__".equals(event.metricKey()) && DashboardService.isUnmeasured(event.value()))
+            throw new BadRequestException("미측정 값으로 발생한 알림은 재전송할 수 없습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
             "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (IN=OUT)" : event.metricKey(),
             "__cold_chiller__".equals(event.metricKey()) ? "°C" : null,

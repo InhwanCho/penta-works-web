@@ -141,7 +141,7 @@ export const METRIC_KEYS: readonly MetricKey[] = METRICS.map((m) => m.key);
 
 /** mrtb에서 측정 실패를 나타내는 값. 서버가 null로 내려주기 전 데이터도 방어합니다. */
 export function isUnmeasuredMetricValue(value: number | null | undefined): boolean {
-  return value === 0 || value === 0.001 || value === 0.01;
+  return value != null && (value <= 0 || value === 0.001 || value === 0.01 || value === 0.1);
 }
 
 export function formatMetricMeasurement(

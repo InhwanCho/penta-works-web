@@ -66,6 +66,7 @@ public class RollingAverageService {
                         accumulator.zeroCount++;
                     } else {
                         Double value = DashboardService.parseNumber(rs.getString(key));
+                        if (DashboardService.isUnmeasured(value)) { accumulator.zeroCount++; continue; }
                         if (value == null || !Double.isFinite(value)) continue;
                         accumulator.sum += value;
                         accumulator.sampleCount++;
@@ -121,7 +122,7 @@ public class RollingAverageService {
 
     public static Range effectiveRange(AverageState state, LocalDateTime now) {
         if (state == null || !state.useAverage() || state.averageValue() == null ||
-            !Double.isFinite(state.averageValue()) || state.averageValue() == 0.0 ||
+            !Double.isFinite(state.averageValue()) || state.averageValue() <= 0.0 ||
             state.sampleCount() < MIN_SAMPLES || state.capturedAt() == null || state.lastSampleAt() == null ||
             state.capturedAt().isBefore(now.minusHours(2)) || state.capturedAt().isAfter(now.plusMinutes(5)) ||
             state.lastSampleAt().isBefore(now.minusHours(2)) || state.lastSampleAt().isAfter(now.plusMinutes(5)) ||
