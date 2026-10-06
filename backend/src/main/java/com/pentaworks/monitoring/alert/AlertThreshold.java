@@ -12,6 +12,6 @@ public record AlertThreshold(String key, String label, String unit,
     public AlertThreshold(String key, String label, String unit,
                           Double min, Double max, boolean active) {
         this(key, label, unit, min, max, active, min, max,
-            false, 20, null, 0, 0, null, false);
+            false, RollingAverageService.DEFAULT_TOLERANCE_PERCENT, null, 0, 0, null, false);
     }
 }
