@@ -25,7 +25,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void collectionAlertStartsAtSecondMissAndClosesWhenDataReturns() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"))).thenReturn(7L);
         when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(9L);
         ResultSet rs = mock(ResultSet.class);
         when(rs.next()).thenReturn(false, false, true);
@@ -62,7 +62,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void coldChillerCreatesNewIncidentWhenEqual() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
         when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(9L);
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
             .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(mock(ResultSet.class)));
@@ -77,7 +77,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void coldChillerExactEqualityRepeatsSameIncidentAndDifferentValuesCloseIt() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
         ResultSet rs = mock(ResultSet.class);
         when(rs.next()).thenReturn(true);
         when(rs.getLong("id")).thenReturn(5L);
@@ -99,7 +99,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void skippedOneShotAlertCanBeDeliveredAfterQuietHoursEnd() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("actemp"))).thenReturn(7L);
         ResultSet rs = mock(ResultSet.class);
         when(rs.next()).thenReturn(true);
         when(rs.getLong("id")).thenReturn(5L);
@@ -120,7 +120,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void repeatKeepsSameIncidentEvenIfDeviationChangesDirection() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("actemp"))).thenReturn(7L);
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
             .thenAnswer(invocation -> {
                 ResultSet rs = mock(ResultSet.class);
@@ -142,7 +142,7 @@ class AlertEventServiceTest {
     @SuppressWarnings("unchecked")
     void normalRangeClosesIncidentWithoutSendingRecovery() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
-        when(jdbc.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("actemp"))).thenReturn(7L);
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH")))
             .thenAnswer(invocation -> {
                 ResultSet rs = mock(ResultSet.class);
@@ -220,7 +220,7 @@ class AlertEventServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         AlertEventService service = new AlertEventService(jdbcTemplate,
             mock(CurrentUserService.class), mock(AuditService.class));
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq("001"), eq("actemp"))).thenReturn(7L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("actemp"))).thenReturn(7L);
         when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class), eq(7L), eq("LOW"), eq("HIGH"))).thenAnswer(invocation -> {
             ResultSet resultSet = mock(ResultSet.class);
             when(resultSet.next()).thenReturn(true);
@@ -244,7 +244,7 @@ class AlertEventServiceTest {
         JdbcTemplate jdbcTemplate = mock(JdbcTemplate.class);
         AlertEventService service = new AlertEventService(jdbcTemplate,
             mock(CurrentUserService.class), mock(AuditService.class));
-        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq("001"))).thenReturn(9L);
+        when(jdbcTemplate.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"))).thenReturn(9L);
         when(jdbcTemplate.query(anyString(), any(ResultSetExtractor.class), eq(9L), eq("NO_DATA")))
             .thenAnswer(invocation -> {
                 ResultSet resultSet = mock(ResultSet.class);

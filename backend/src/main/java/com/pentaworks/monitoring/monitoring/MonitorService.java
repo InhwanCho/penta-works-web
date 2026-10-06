@@ -34,10 +34,14 @@ public class MonitorService {
     private final AlertRecipientService recipients;
     private final AlertDeliveryService deliveries;
     private final BaroKakaoService kakao;
+    private final com.pentaworks.monitoring.alert.PersonalAlertService personal;
+    private final com.pentaworks.monitoring.alert.RollingAverageService averages;
 
     public MonitorService(DashboardService dashboardService, AlertService alertService,
                           AlertEventService alertEvents, AlertRecipientService recipients,
-                          AlertDeliveryService deliveries, BaroKakaoService kakao) {
+                          AlertDeliveryService deliveries, BaroKakaoService kakao,
+                          com.pentaworks.monitoring.alert.PersonalAlertService personal, com.pentaworks.monitoring.alert.RollingAverageService averages) {
+        this.personal=personal;this.averages=averages;
         this.dashboardService = dashboardService;
         this.alertService = alertService;
         this.alertEvents = alertEvents;
@@ -47,41 +51,47 @@ public class MonitorService {
     }
 
     public Map<String, Object> run() {
-        Map<String, SiteAlertSettings> settings = new LinkedHashMap<>();
-        alertService.alertSettings().forEach(value -> settings.put(value.siteid(), value));
-        List<Transition> transitions = new ArrayList<>();
-        for (DashboardResponse.DashboardRow row : dashboardService.getDashboard().rows()) {
-            SiteAlertSettings site = settings.get(row.siteDb());
-            if (row.name() == null || site == null || !site.dashboardVisible() || !site.alertsEnabled()) continue;
-            Transition noData = alertEvents.evaluateNoData(site, row.lagMin());
-            if (noData != null) transitions.add(noData);
-            if (site.noDataActive() && com.pentaworks.monitoring.alert.CollectionHealth.isMissing(
-                row.lagMin(), site.collectionIntervalMinutes(), site.missingCollectionThreshold())) continue;
-            Transition coldChiller = alertEvents.evaluateColdChiller(site, row.metrics().get("cctemp"), row.metrics().get("ccflow"));
-            if (coldChiller != null) transitions.add(coldChiller);
-            for (AlertThreshold threshold : site.thresholds()) {
-                Double value = row.metrics().get(threshold.key());
-                if (!threshold.active()) continue;
-                Transition transition = alertEvents.evaluate(site, threshold, value);
-                if (transition != null) transitions.add(transition);
+        var base=alertService.alertSettings();
+        var states=averages.states();
+        var rows=dashboardService.getDashboard().rows();
+        List<Transition> all=new ArrayList<>();
+        for(CurrentUser user:personal.activeUsers()) {
+            Map<String,SiteAlertSettings> settings=new LinkedHashMap<>();
+            personal.settings(user,base,states).forEach(value->settings.put(value.siteid(),value));
+            List<Transition> transitions=new ArrayList<>();
+            for(var row:rows) {
+                SiteAlertSettings site=settings.get(row.siteDb());
+                if(row.name()==null||site==null||!site.dashboardVisible()||!site.alertsEnabled())continue;
+                Transition noData=alertEvents.evaluateNoData(user.id(),site,row.lagMin());
+                if(noData!=null)transitions.add(noData);
+                if(site.noDataActive()&&com.pentaworks.monitoring.alert.CollectionHealth.isMissing(row.lagMin(),site.collectionIntervalMinutes(),site.missingCollectionThreshold()))continue;
+                Transition chiller=alertEvents.evaluateColdChiller(user.id(),site,row.metrics().get("cctemp"),row.metrics().get("ccflow"));
+                if(chiller!=null)transitions.add(chiller);
+                for(AlertThreshold threshold:site.thresholds()) {
+                    if(!threshold.active())continue;
+                    Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()));
+                    if(event!=null)transitions.add(event);
+                }
             }
+            sendNotifications(transitions,settings,false,user.id());
+            all.addAll(transitions);
         }
-        if (!transitions.isEmpty()) dashboardService.invalidateCache();
-        sendNotifications(transitions, settings, false);
-        return Map.of("ok", true, "count", transitions.size(), "alerts", transitions);
+        if(!all.isEmpty())dashboardService.invalidateCache();
+        return Map.of("ok",true,"count",all.size(),"alerts",all);
     }
 
     public Map<String, Object> retry(CurrentUser actor, long eventId) {
         Transition transition = alertEvents.retryTransition(actor, eventId);
-        SiteAlertSettings policy = alertService.alertSettings().stream()
+        if(alertEvents.owner(eventId)!=actor.id())throw new BadRequestException("이전 공통 알림은 재전송할 수 없습니다. 내 알림 이력에서 재시도해주세요.");
+        SiteAlertSettings policy = personal.settings(actor).stream()
             .filter(site -> site.siteid().equals(transition.siteId())).findFirst()
             .orElseThrow(() -> new BadRequestException("병원 알림 설정이 없습니다."));
         if (!policy.alertsEnabled()) throw new BadRequestException("알림 사용을 먼저 켜주세요.");
-        sendNotifications(List.of(transition), Map.of(transition.siteId(), policy), true);
+        sendNotifications(List.of(transition), Map.of(transition.siteId(), policy), true, actor.id());
         return Map.of("ok", true, "eventId", eventId);
     }
 
-    private void sendNotifications(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual) {
+    private void sendNotifications(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual, long userId) {
         if (alerts.isEmpty()) return;
         List<Transition> recoveries = alerts.stream().filter(alert -> "RECOVERY".equals(alert.eventType())).toList();
         if (!recoveries.isEmpty()) {
@@ -101,12 +111,12 @@ public class MonitorService {
                 alertEvents.markDelivery(eventIds, "SKIPPED", "알림 제외 시간", 0);
                 continue;
             }
-            List<String> phones = recipients.activePhones(entry.getKey(), now.toLocalTime());
+            List<String> phones = recipients.personalPhones(entry.getKey(), userId, null);
             List<String> destinations = new ArrayList<>();
             phones.forEach(phone -> destinations.add("KAKAO_ALIMTALK:" + phone));
             if (destinations.isEmpty()) {
                 String reason = recipients.hasConfiguredPhones(entry.getKey())
-                    ? "사용 가능한 수신 채널이 없습니다. 채널 사용 여부와 제외 시간을 확인해주세요."
+                    ? "사용 가능한 수신 채널이 없습니다. 수신처 번호를 확인해주세요."
                     : "등록된 수신 채널이 없습니다.";
                 if (manual) throw new BadRequestException(reason);
                 alertEvents.markDelivery(eventIds, "SKIPPED", reason, 0);
@@ -115,7 +125,7 @@ public class MonitorService {
             Map<Long, AlertDeliveryService.Batch> batches = new LinkedHashMap<>();
             Map<Long, List<String>> eligible = new LinkedHashMap<>();
             for (Transition alert : siteAlerts) {
-                List<String> eventPhones = recipients.activePhones(entry.getKey(), now.toLocalTime(), alert.eventId());
+                List<String> eventPhones = recipients.personalPhones(entry.getKey(), userId, alert.eventId());
                 eligible.put(alert.eventId(), eventPhones);
                 if (eventPhones.isEmpty()) continue;
                 var batch = deliveries.begin(alert.eventId(), eventPhones.stream().map(phone -> "KAKAO_ALIMTALK:" + phone).toList(), manual);

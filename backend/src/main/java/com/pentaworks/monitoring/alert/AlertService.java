@@ -84,7 +84,7 @@ public class AlertService {
                    p.quiet_start,p.quiet_end,p.suppress_weekends,p.cold_chiller_active,p.collection_interval_minutes,p.missing_collection_threshold
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN company_site cs ON cs.site_id=s.site
-              LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
+              LEFT JOIN alert_rule nd ON nd.user_id=0 AND nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
               LEFT JOIN site_alert_policy p ON p.site_id=s.site
              ORDER BY s.site
@@ -398,7 +398,7 @@ public class AlertService {
                    p.quiet_start,p.quiet_end,p.suppress_weekends,p.cold_chiller_active,p.collection_interval_minutes,p.missing_collection_threshold
               FROM site s LEFT JOIN alert_settings a ON a.siteid=s.site
               LEFT JOIN company_site cs ON cs.site_id=s.site
-              LEFT JOIN alert_rule nd ON nd.site_id=s.site AND nd.metric_key='__data__'
+              LEFT JOIN alert_rule nd ON nd.user_id=0 AND nd.site_id=s.site AND nd.metric_key='__data__'
                                       AND nd.rule_type='NO_DATA'
               LEFT JOIN site_alert_policy p ON p.site_id=s.site
              WHERE s.site=?

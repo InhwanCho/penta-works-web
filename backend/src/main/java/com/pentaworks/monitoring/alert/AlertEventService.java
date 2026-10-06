@@ -45,6 +45,7 @@ public class AlertEventService {
         List<Object> args = new ArrayList<>();
         args.add(actorId);
         args.addAll(allowedSiteIds);
+        args.add(actorId);
         if (eventId != null) args.add(eventId);
         args.add(limit);
         return jdbcTemplate.query("""
@@ -59,7 +60,7 @@ public class AlertEventService {
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
               LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
-             WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) %s
+             WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND (r.user_id=0 OR r.user_id=?) %s
              ORDER BY e.occurred_at DESC,e.id DESC LIMIT ?
             """.formatted(placeholders, eventId == null ? "" : "AND e.id=?"), (rs, row) -> new AlertEventSummary(
                 rs.getLong("id"), rs.getString("site_id"), rs.getString("name"), rs.getString("metric_key"),
@@ -77,22 +78,44 @@ public class AlertEventService {
         if (siteId == null || !allowedSiteIds.contains(siteId)) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
     }
 
+    public void requireEventAccess(long eventId, CurrentUser actor) {
+        requireEventAccess(eventId,currentUsers.allowedSiteIds(actor));
+        Long owner=jdbcTemplate.query("SELECT r.user_id FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id WHERE e.id=?", rs->rs.next()?rs.getLong(1):null,eventId);
+        if(owner==null || owner!=0 && owner!=actor.id()) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
+    }
+
+    public long owner(long eventId) {
+        Long owner=jdbcTemplate.query("SELECT r.user_id FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id WHERE e.id=?",rs->rs.next()?rs.getLong(1):null,eventId);
+        if(owner==null)throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
+        return owner;
+    }
+
     @Transactional
     public Transition evaluate(SiteAlertSettings site, AlertThreshold threshold, Double value) {
-        return evaluateCondition(site, threshold, value, false, null);
+        return evaluate(0, site, threshold, value);
+    }
+
+    @Transactional
+    public Transition evaluate(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value) {
+        return evaluateCondition(userId, site, threshold, value, false, null);
     }
 
     @Transactional
     public Transition evaluateColdChiller(SiteAlertSettings site, Double inlet, Double outlet) {
+        return evaluateColdChiller(0,site,inlet,outlet);
+    }
+
+    @Transactional
+    public Transition evaluateColdChiller(long userId, SiteAlertSettings site, Double inlet, Double outlet) {
         if (!site.coldChillerActive() || inlet == null || outlet == null ||
             !Double.isFinite(inlet) || !Double.isFinite(outlet) ||
             DashboardService.isUnmeasured(inlet) || DashboardService.isUnmeasured(outlet)) return null;
-        return evaluateCondition(site,
+        return evaluateCondition(userId, site,
             new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (IN=OUT)", "°C", null, null, true),
             inlet, true, Double.compare(inlet, outlet) == 0 ? "HIGH" : null);
     }
 
-    private Transition evaluateCondition(SiteAlertSettings site, AlertThreshold threshold, Double value,
+    private Transition evaluateCondition(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value,
                                          boolean coldChiller, String conditionDirection) {
         if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active() ||
             value == null || DashboardService.isUnmeasured(value)) return null;
@@ -100,14 +123,14 @@ public class AlertEventService {
         Double max = threshold.effectiveMax();
         jdbcTemplate.update("""
             INSERT INTO alert_rule
-                (site_id,metric_key,rule_type,min_value,max_value,severity,is_enabled,created_at,updated_at)
-            VALUES (?,?, 'RANGE', ?,?, 'WARNING', TRUE, CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+                (user_id,site_id,metric_key,rule_type,min_value,max_value,severity,is_enabled,created_at,updated_at)
+            VALUES (?,?,?, 'RANGE', ?,?, 'WARNING', TRUE, CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
             ON DUPLICATE KEY UPDATE min_value=VALUES(min_value),max_value=VALUES(max_value),
                                     severity=VALUES(severity),is_enabled=TRUE,updated_at=CURRENT_TIMESTAMP(6)
-            """, site.siteid(), threshold.key(), min, max);
+            """, userId, site.siteid(), threshold.key(), min, max);
         long ruleId = jdbcTemplate.queryForObject("""
-            SELECT id FROM alert_rule WHERE site_id=? AND metric_key=? AND rule_type='RANGE' FOR UPDATE
-            """, Long.class, site.siteid(), threshold.key());
+            SELECT id FROM alert_rule WHERE user_id=? AND site_id=? AND metric_key=? AND rule_type='RANGE' FOR UPDATE
+            """, Long.class, userId, site.siteid(), threshold.key());
         OpenEvent open = openEvent(ruleId);
         String direction = coldChiller ? conditionDirection : direction(value, min, max);
         if (direction == null) {
@@ -141,18 +164,23 @@ public class AlertEventService {
 
     @Transactional
     public Transition evaluateNoData(SiteAlertSettings site, Long lagMinutes) {
+        return evaluateNoData(0,site,lagMinutes);
+    }
+
+    @Transactional
+    public Transition evaluateNoData(long userId, SiteAlertSettings site, Long lagMinutes) {
         if (!site.dashboardVisible()) return null;
         if (!site.alertsEnabled() || !site.noDataActive()) return null;
         jdbcTemplate.update("""
             INSERT INTO alert_rule
-                (site_id,metric_key,rule_type,no_data_minutes,severity,is_enabled,created_at,updated_at)
-            VALUES (?,'__data__','NO_DATA',?,'WARNING',TRUE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+                (user_id,site_id,metric_key,rule_type,no_data_minutes,severity,is_enabled,created_at,updated_at)
+            VALUES (?,?,'__data__','NO_DATA',?,'WARNING',TRUE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
             ON DUPLICATE KEY UPDATE no_data_minutes=VALUES(no_data_minutes),severity=VALUES(severity),
                                     is_enabled=TRUE,updated_at=CURRENT_TIMESTAMP(6)
-            """, site.siteid(), site.noDataMinutes());
+            """, userId, site.siteid(), site.noDataMinutes());
         long ruleId = jdbcTemplate.queryForObject("""
-            SELECT id FROM alert_rule WHERE site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' FOR UPDATE
-            """, Long.class, site.siteid());
+            SELECT id FROM alert_rule WHERE user_id=? AND site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' FOR UPDATE
+            """, Long.class, userId, site.siteid());
         OpenEvent open = openEvent(ruleId, "NO_DATA");
         boolean stale = CollectionHealth.isMissing(lagMinutes, site.collectionIntervalMinutes(), site.missingCollectionThreshold());
         Long missedCount = CollectionHealth.missedCount(lagMinutes, site.collectionIntervalMinutes());
@@ -202,6 +230,7 @@ public class AlertEventService {
 
     @Transactional
     public AlertEventSummary acknowledge(CurrentUser actor, long eventId) {
+        requireEventAccess(eventId,actor);
         String siteId = jdbcTemplate.query("SELECT site_id FROM alert_event WHERE id=?",
             rs -> rs.next() ? rs.getString(1) : null, eventId);
         if (siteId == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
@@ -229,7 +258,7 @@ public class AlertEventService {
     }
 
     public Transition retryTransition(CurrentUser actor, long eventId) {
-        if (!actor.isAdmin()) throw new ForbiddenException("관리자 권한이 필요합니다.");
+        requireEventAccess(eventId,actor);
         RetryEvent event = jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.measured_value,
                    e.threshold_min AS min_value,e.threshold_max AS max_value,e.message,e.delivery_status
@@ -259,12 +288,12 @@ public class AlertEventService {
     public void disableRule(String siteId, String metricKey) {
         jdbcTemplate.update("""
             UPDATE alert_rule SET is_enabled=FALSE,updated_at=CURRENT_TIMESTAMP(6)
-             WHERE site_id=? AND metric_key=? AND rule_type='RANGE' AND is_enabled=TRUE
+             WHERE user_id=0 AND site_id=? AND metric_key=? AND rule_type='RANGE' AND is_enabled=TRUE
             """, siteId, metricKey);
         jdbcTemplate.update("""
             UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id
                SET e.recovered_at=CURRENT_TIMESTAMP(6)
-             WHERE r.site_id=? AND r.metric_key=? AND r.rule_type='RANGE'
+             WHERE r.user_id=0 AND r.site_id=? AND r.metric_key=? AND r.rule_type='RANGE'
                AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH')
             """, siteId, metricKey);
     }
@@ -273,12 +302,12 @@ public class AlertEventService {
     public void disableNoDataRule(String siteId) {
         jdbcTemplate.update("""
             UPDATE alert_rule SET is_enabled=FALSE,updated_at=CURRENT_TIMESTAMP(6)
-             WHERE site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' AND is_enabled=TRUE
+             WHERE user_id=0 AND site_id=? AND metric_key='__data__' AND rule_type='NO_DATA' AND is_enabled=TRUE
             """, siteId);
         jdbcTemplate.update("""
             UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id
                SET e.recovered_at=CURRENT_TIMESTAMP(6)
-             WHERE r.site_id=? AND r.metric_key='__data__' AND r.rule_type='NO_DATA'
+             WHERE r.user_id=0 AND r.site_id=? AND r.metric_key='__data__' AND r.rule_type='NO_DATA'
                AND e.recovered_at IS NULL AND e.event_type='NO_DATA'
             """, siteId);
     }

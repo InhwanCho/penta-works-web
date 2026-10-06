@@ -149,7 +149,7 @@ export default function BaselinesPageClient() {
     <BaselinesClient
       entries={query.data ?? []}
       loadFailed={query.isError}
-      canEdit={isAdmin}
+      canEdit={true}
       canEditCompany={role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN"}
       companyThresholds={companyThresholds.data ?? []}
       onSaveCompany={(thresholds) => updateCompanyThresholds.mutateAsync(thresholds)}

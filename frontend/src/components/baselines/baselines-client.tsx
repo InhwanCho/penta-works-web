@@ -2,6 +2,7 @@
 
 import { DEFAULT_ALERT_EVENT_FILTER, matchesAlertEventFilter, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
+import AlertPatternInbox, { SharePatternButton } from "./alert-pattern-sharing";
 import ManagementTabs from "@/components/common/management-tabs";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -62,7 +63,7 @@ export default function BaselinesClient({
   onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
   onDeleteRecipient: (id: number) => Promise<void>;
 }) {
-  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients">("thresholds");
+  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients" | "patterns">("thresholds");
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoringSite, setRestoringSite] = useState<string | null>(null);
@@ -104,7 +105,7 @@ export default function BaselinesClient({
   }
 
   async function restoreCompany(entry: SiteAlertSettings) {
-    if (!window.confirm(`${entry.name ?? entry.siteid}의 병원별 측정 기준을 지우고 회사 공통 기준으로 되돌릴까요?`)) return;
+    if (!window.confirm(`${entry.name ?? entry.siteid}의 내 알림 패턴을 초기 기준으로 되돌릴까요? 내 기준값·반복 주기·발송 제외 설정이 바뀝니다.`)) return;
     setRestoringSite(entry.siteid); setActionError(null);
     try { await onRestoreCompany(entry.siteid); }
     catch (error) { setActionError(error instanceof Error ? error.message : "회사 기준으로 복원하지 못했습니다."); }
@@ -123,20 +124,20 @@ export default function BaselinesClient({
         <p className="mb-1 text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">Alert settings</p>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">알림 관리</h1>
         <p className="mt-2 max-w-2xl text-sm font-medium text-white/70">
-          병원별 24시간 평균과 허용편차를 설정하세요. 반복 주기와 발송 제외는 고급 설정에서 관리합니다.
+          내 병원별 알림 패턴을 설정하세요. 기준값·반복 주기·조용한 시간·지정 휴일은 본인에게만 적용됩니다.
         </p>
       </header>
 
       <ManagementTabs label="알림 관리" value={view} onChange={setView} items={[
-        {value:"thresholds",label:"알림값 설정"}, {value:"sites",label:"병원 관리"},
+        {value:"thresholds",label:"내 알림 패턴"}, {value:"sites",label:"병원 관리"},
         {value:"events",label:"알림 이력",badge:events.filter(needsAcknowledgement).length},
-        {value:"recipients",label:canEdit ? "수신처" : "내 수신 설정"},
+        {value:"recipients",label:"수신처"}, {value:"patterns",label:"패턴 공유"},
       ]} />
 
       {view === "sites" ? <section className="space-y-3">
         <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-100">
           <p className="font-bold">병원 표시 → 알림 사용 → 상세 기준값</p>
-          <p className="mt-1 text-xs opacity-75">표시를 끄면 대시보드에서 사라지고 진행 중인 알림도 종료됩니다. 다시 표시해도 알림은 직접 켜야 합니다.</p>
+          <p className="mt-1 text-xs opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 다시 표시하면 각 담당자의 개인 설정을 따릅니다.</p>
         </div>
         {actionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
         {loadFailed && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">병원 설정을 불러오지 못했습니다.</p>}
@@ -178,15 +179,15 @@ export default function BaselinesClient({
                   <RangePreview label="He Level" threshold={level} />
                   <div className="rounded-xl bg-slate-50 p-2.5 dark:bg-white/4"><p className="text-text-secondary truncate text-[11px] font-bold">수신 중단</p><p className="mt-1 text-sm font-extrabold tabular-nums">{entry.noDataActive ? `${entry.noDataMinutes}분` : "사용 안 함"}</p></div>
                 </div>
-                <p className="text-text-secondary mt-3 text-xs">{entry.configured ? "병원별 기준 적용 중" : "회사 공통 기준 적용 중"}</p>
-                <div className="mt-3 flex gap-2"><button type="button" onClick={() => openSettings(entry)} className="min-h-10 flex-1 cursor-pointer rounded-lg border border-slate-200 px-3 text-sm font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:text-sky-200 dark:hover:bg-sky-950/30">{canEdit ? "상세 설정" : "기준값 보기"}</button>{canEdit && entry.configured && <button type="button" disabled={restoringSite === entry.siteid} onClick={() => restoreCompany(entry)} className="min-h-10 cursor-pointer rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:text-white/70">회사 기준 복원</button>}</div>
+                <p className="text-text-secondary mt-3 text-xs">{entry.configured ? "내 알림 패턴 적용 중" : "초기 기준 적용 중"}</p>
+                <div className="mt-3 flex flex-wrap gap-2"><button type="button" onClick={() => openSettings(entry)} className="min-h-10 flex-1 cursor-pointer rounded-lg border border-slate-200 px-3 text-sm font-bold text-sky-700 transition hover:border-sky-200 hover:bg-sky-50 dark:border-white/10 dark:text-sky-200 dark:hover:bg-sky-950/30">{canEdit ? "상세 설정" : "기준값 보기"}</button><SharePatternButton entry={entry}/>{canEdit && entry.configured && <button type="button" disabled={restoringSite === entry.siteid} onClick={() => restoreCompany(entry)} className="min-h-10 cursor-pointer rounded-lg border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:text-white/70">초기 기준 복원</button>}</div>
               </article>
             );
           })}
         </section>
       )}
       </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries.map(entry => entry.siteid)} events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
-        : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
+        : view === "patterns" ? <AlertPatternInbox/> : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
 
       {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} initialMetricKey={editorMetric} onlyMetricKey={selected.thresholds.some(item => item.key === editorMetric) ? editorMetric : undefined} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
@@ -216,7 +217,7 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
   }
   if (thresholds.length === 0) return null;
   return <section className="mb-4 rounded-xl border border-sky-200/80 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/15">
-    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">회사 공통 기준</h2><p className="text-text-secondary mt-1 text-xs">개별 기준이 없는 병원에 적용됩니다. 병원별 기준을 저장하면 그 병원에는 회사 기준 변경이 자동 적용되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">신규 사용자의 초기 기준</h2><p className="text-text-secondary mt-1 text-xs">개인 패턴을 처음 만들 때 참고하는 기준입니다. 이미 만들어진 다른 사용자의 패턴은 변경되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
     {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "회사 기준 저장"}</button></div>}</>}
   </section>;
 }
@@ -231,9 +232,6 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
   const [selectedSites, setSelectedSites] = useState<string[]>([]);
   const [owner, setOwner] = useState<number>(session?.id ?? 0);
   const [destination, setDestination] = useState("");
-  const [quietEnabled, setQuietEnabled] = useState(false);
-  const [quietStart, setQuietStart] = useState("22:00");
-  const [quietEnd, setQuietEnd] = useState("08:00");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [siteFilter, setSiteFilter] = useState("");
@@ -244,7 +242,6 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
     event.preventDefault();
     const phone = destination.replace(/[-\s]/g, "");
     if (!/^01[016789][0-9]{7,8}$/.test(phone)) { setError("휴대폰 번호를 확인해주세요."); return; }
-    if (quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("조용한 시간의 시작과 종료를 서로 다르게 입력해주세요."); return; }
     setSaving(true); setError(null); setResultMessage("");
     let created = 0, skipped = 0;
     const failures: { id: string; message: string }[] = [];
@@ -258,7 +255,7 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
           continue;
         }
         try {
-          await onCreate({ siteId, userId: owner || undefined, channel: "KAKAO_ALIMTALK", destination: phone, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, enabled: true });
+          await onCreate({ siteId, userId: owner || undefined, channel: "KAKAO_ALIMTALK", destination: phone, quietStart: null, quietEnd: null, enabled: true });
           created++;
         } catch (err) { failures.push({ id: siteId, message: err instanceof Error ? err.message : "등록 실패" }); }
       }
@@ -273,15 +270,14 @@ function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate
       <h2 className="text-lg font-extrabold">{isAdmin ? "담당자 수신처 등록" : "내 수신처 등록"}</h2>
       <fieldset disabled={saving || loading || failed} className="min-w-0 disabled:opacity-60">
       <p className="text-text-secondary mt-2 text-sm">병원마다 여러 담당자를 등록할 수 있습니다. 각 번호로 알림톡을 보내고 실패하면 문자로 대체합니다.</p>
+      {!isAdmin && <p className="mt-4 text-sm font-bold">담당자 · {session?.name} (본인)</p>}
       {isAdmin && <label className="mt-4 block text-sm font-bold">담당자<select value={owner} onChange={event => { const id = Number(event.target.value); setOwner(id); setSelectedSites([]); setDestination(users.data?.find(user => user.id === id)?.phone ?? ""); }} className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10"><option value={session?.id}>{session?.name} (본인)</option>{users.data?.filter(user => user.id !== session?.id && user.status === "ACTIVE").map(user => <option value={user.id} key={user.id}>{user.name} · {user.email}</option>)}</select></label>}
       <fieldset className="mt-4"><legend className="text-sm font-bold">받을 병원 ({selectedSites.length}개 선택)</legend>
         <label className="my-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={availableSites.length > 0 && availableSites.every(site => selectedSites.includes(site.siteid))} onChange={event => setSelectedSites(event.target.checked ? availableSites.map(site => site.siteid) : [])} />전체 사이트 선택</label>
         <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-white/10">{availableSites.map(site => <label className="flex min-h-11 items-center gap-2 text-sm" key={site.siteid}><input type="checkbox" className="h-5 w-5" checked={selectedSites.includes(site.siteid)} onChange={event => setSelectedSites(current => event.target.checked ? [...current, site.siteid] : current.filter(id => id !== site.siteid))} />{site.name} <span className="text-text-secondary">{site.siteid}</span></label>)}</div>
       </fieldset>
       <label className="mt-4 block text-sm font-bold">수신 휴대폰 번호<input required type="tel" value={destination} onChange={event => setDestination(event.target.value)} placeholder="010-1234-5678" className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label>
-      <label className="mt-4 flex min-h-11 items-center gap-2 text-sm font-bold"><input type="checkbox" checked={quietEnabled} onChange={event => setQuietEnabled(event.target.checked)} className="h-5 w-5" />조용한 시간 사용</label>
-      <p className="text-text-secondary text-xs leading-5">설정한 시간에는 이 담당자에게 알림톡·문자를 보내지 않습니다. 예: 22:00–08:00은 밤 10시부터 다음 날 오전 8시까지입니다. 다른 담당자는 각자의 설정을 따릅니다.</p>
-      {quietEnabled && <div className="mt-3 grid grid-cols-2 gap-2"><TimeField label="시작" value={quietStart} onChange={setQuietStart} /><TimeField label="종료" value={quietEnd} onChange={setQuietEnd} /></div>}
+      <p className="text-text-secondary mt-3 text-xs leading-5">알림 기준·조용한 시간·지정 휴일은 담당자 본인의 ‘내 알림 패턴’에서 설정합니다.</p>
       {resultMessage && <p role="status" className="mt-3 text-sm font-bold text-sky-700 dark:text-sky-300">{resultMessage}</p>}
       {error && <p role="alert" className="mt-3 whitespace-pre-line text-sm text-rose-600 dark:text-rose-300">{error}</p>}
       <button disabled={saving || selectedSites.length === 0} className="mt-4 min-h-11 w-full rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">{saving ? "등록 중…" : `선택한 ${selectedSites.length}개 병원에 등록`}</button>
@@ -301,20 +297,16 @@ function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecip
   const [owner, setOwner] = useState(recipient.userId);
   const [editing, setEditing] = useState(false);
   const [phone, setPhone] = useState(recipient.destination);
-  const [start, setStart] = useState(recipient.quietStart?.slice(0, 5) ?? "");
-  const [end, setEnd] = useState(recipient.quietEnd?.slice(0, 5) ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   function toggleEditing() {
     setPhone(recipient.destination); setOwner(recipient.userId);
-    setStart(recipient.quietStart?.slice(0, 5) ?? ""); setEnd(recipient.quietEnd?.slice(0, 5) ?? "");
     setError(null); setEditing(!editing);
   }
-  async function update(toggleOnly = false) {
-    if (!toggleOnly && start && start === end) { setError("시작과 종료를 다르게 입력하거나 조용한 시간을 해제해주세요."); return; }
+  async function update() {
     setSaving(true); setError(null);
     try {
-      await onUpdate(toggleOnly ? { ...recipient, enabled: !recipient.enabled } : { ...recipient, userId: owner, destination: phone, quietStart: start || null, quietEnd: end || null });
+      await onUpdate({ ...recipient, userId: owner, destination: phone, quietStart: null, quietEnd: null, enabled: true });
       setEditing(false);
     } catch (err) { setError(err instanceof Error ? err.message : "변경하지 못했습니다."); }
     finally { setSaving(false); }
@@ -322,8 +314,8 @@ function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecip
   async function remove() { if (!window.confirm("이 병원의 수신처를 삭제할까요?")) return; setSaving(true); try { await onDelete(recipient.id); } catch (err) { setError(err instanceof Error ? err.message : "삭제하지 못했습니다."); } finally { setSaving(false); } }
   return <article className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-background-dark-card">
     {editing && isAdmin && <label className="mb-3 block text-xs font-bold">수신 담당자<select value={owner} onChange={event => setOwner(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 px-3 dark:border-white/10 dark:bg-background-dark-primary"><option value={recipient.userId}>{recipient.userName}</option>{users.data?.filter(user => user.id !== recipient.userId && user.status === "ACTIVE" && (user.role !== "USER" || user.siteIds.includes(recipient.siteId))).map(user => <option key={user.id} value={user.id}>{user.name} · {user.email}</option>)}</select></label>}
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{recipient.userName} · {recipient.destination}</p><p className="text-text-secondary mt-1 text-xs">{recipient.enabled ? "알림톡 → 실패 시 문자" : "수신 중지"} · {recipient.quietStart ? `발송 제외 ${recipient.quietStart.slice(0,5)}–${recipient.quietEnd?.slice(0,5)}` : "시간 제한 없음"}</p></div><button type="button" disabled={saving} onClick={toggleEditing} className="min-h-11 rounded-lg border px-3 text-xs font-bold">{editing ? "접기" : "수정"}</button></div>
-    {editing && <div className="mt-3 space-y-3"><label className="block text-xs font-bold">휴대폰 번호<input type="tel" value={phone} onChange={event => setPhone(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label><div className="grid grid-cols-2 gap-2"><TimeField label="발송 제외 시작" value={start} onChange={setStart} optional /><TimeField label="종료" value={end} onChange={setEnd} optional /></div><button type="button" onClick={() => { setStart(""); setEnd(""); }} className="min-h-10 text-xs underline">조용한 시간 해제</button><div className="flex flex-wrap gap-2"><button type="button" disabled={saving || (!!start !== !!end)} onClick={() => update()} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">저장</button><button type="button" disabled={saving} onClick={() => update(true)} className="min-h-11 rounded-lg border px-3 text-sm">{recipient.enabled ? "수신 중지" : "수신 시작"}</button><button type="button" disabled={saving} onClick={remove} className="min-h-11 px-3 text-sm text-rose-600 dark:text-rose-300">삭제</button></div></div>}
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{recipient.userName} · {recipient.destination}</p><p className="text-text-secondary mt-1 text-xs">알림톡 → 실패 시 문자 · 담당자의 내 알림 패턴 적용</p></div><button type="button" disabled={saving} onClick={toggleEditing} className="min-h-11 rounded-lg border px-3 text-xs font-bold">{editing ? "접기" : "수정"}</button></div>
+    {editing && <div className="mt-3 space-y-3"><label className="block text-xs font-bold">휴대폰 번호<input type="tel" value={phone} onChange={event => setPhone(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label><div className="flex flex-wrap gap-2"><button type="button" disabled={saving} onClick={() => update()} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">저장</button><button type="button" disabled={saving} onClick={remove} className="min-h-11 px-3 text-sm text-rose-600 dark:text-rose-300">삭제</button></div></div>}
     {error && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{error}</p>}
   </article>;
 }
@@ -515,6 +507,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
   const [suppressWeekends, setSuppressWeekends] = useState(entry.suppressWeekends);
   const [holidayDates, setHolidayDates] = useState(entry.holidayDates);
   const [holidayDate, setHolidayDate] = useState("");
+  const holidayInput = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -580,9 +573,9 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
           {!onlyMetricKey && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
-            <div className="flex items-center gap-1"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={event => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />병원 알림 사용</label><button type="button" aria-label="병원 알림 사용 설명" aria-expanded={policyHelp === "site"} aria-controls="alert-policy-help" onClick={() => setPolicyHelp(current => current === "site" ? null : "site")} className="flex h-11 w-11 items-center justify-center rounded-full text-sky-700 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-white/10"><span className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold">?</span></button></div>
+            <div className="flex items-center gap-1"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={event => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />내 병원 알림 사용</label><button type="button" aria-label="내 병원 알림 사용 설명" aria-expanded={policyHelp === "site"} aria-controls="alert-policy-help" onClick={() => setPolicyHelp(current => current === "site" ? null : "site")} className="flex h-11 w-11 items-center justify-center rounded-full text-sky-700 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-white/10"><span className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold">?</span></button></div>
             <div className="flex items-center gap-1"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5 accent-emerald-600" />콜드칠러 정지 의심</label><button type="button" aria-label="콜드칠러 정지 의심 설명" aria-expanded={policyHelp === "chiller"} aria-controls="alert-policy-help" onClick={() => setPolicyHelp(current => current === "chiller" ? null : "chiller")} className="flex h-11 w-11 items-center justify-center rounded-full text-sky-700 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-white/10"><span className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold">?</span></button></div>
-            {policyHelp && <div id="alert-policy-help" role="note" className="flex w-full items-start gap-2 rounded-xl border border-sky-200 bg-white p-3 text-xs leading-6 dark:border-sky-900 dark:bg-background-dark-card"><div className="flex-1"><p className="font-bold">{policyHelp === "site" ? "병원 전체 알림을 켜고 끄는 스위치" : "콜드칠러 IN·OUT 온도 비교 알림"}</p><p>{policyHelp === "site" ? "끄면 이 병원의 범위 이탈, 수집 누락, 콜드칠러 정지 의심 알림을 모두 중지합니다. 각 측정항목의 설정값은 유지됩니다. 대시보드에서 숨긴 병원은 알림을 켤 수 없습니다." : "콜드칠러 IN·OUT 온도가 정확히 같으면 냉각이 멈췄을 가능성을 알립니다. 고장이 확정된다는 뜻은 아닙니다. 0, 0.001, 0.01, 0.1, 음수 등 미측정 값은 제외하며, 병원 알림이 켜져 있어야 발송됩니다. 고급 설정의 이상 지속 시간과 반복·발송 제외 설정을 따릅니다."}</p></div><button type="button" aria-label="알림 설명 닫기" onClick={() => setPolicyHelp(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-slate-100 dark:hover:bg-white/10">×</button></div>}
+            {policyHelp && <div id="alert-policy-help" role="note" className="flex w-full items-start gap-2 rounded-xl border border-sky-200 bg-white p-3 text-xs leading-6 dark:border-sky-900 dark:bg-background-dark-card"><div className="flex-1"><p className="font-bold">{policyHelp === "site" ? "내 병원 알림을 켜고 끄는 스위치" : "콜드칠러 IN·OUT 온도 비교 알림"}</p><p>{policyHelp === "site" ? "끄면 본인이 받을 이 병원의 범위 이탈, 수집 누락, 콜드칠러 정지 의심 알림을 모두 중지합니다. 다른 담당자의 알림에는 영향을 주지 않습니다. 각 측정항목의 설정값은 유지됩니다. 대시보드에서 숨긴 병원은 알림을 켤 수 없습니다." : "콜드칠러 IN·OUT 온도가 정확히 같으면 냉각이 멈췄을 가능성을 알립니다. 고장이 확정된다는 뜻은 아닙니다. 0, 0.001, 0.01, 0.1, 음수 등 미측정 값은 제외하며, 병원 알림이 켜져 있어야 발송됩니다. 고급 설정의 이상 지속 시간과 반복·발송 제외 설정을 따릅니다."}</p></div><button type="button" aria-label="알림 설명 닫기" onClick={() => setPolicyHelp(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-slate-100 dark:hover:bg-white/10">×</button></div>}
             {!entry.dashboardVisible && <p className="w-full text-xs text-text-secondary">숨긴 병원은 알림을 켤 수 없습니다.</p>}
           </div>}
           {!onlyMetricKey && <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>}
@@ -599,14 +592,14 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
             <summary className="min-h-11 cursor-pointer font-bold">고급 설정 · 반복 알림 / 수집 누락 / 발송 제외</summary>
             <div className="mt-3">
           <section className={`mb-4 rounded-xl border p-4 transition ${alertsEnabled ? "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/60 dark:bg-emerald-950/15" : "border-rose-200 bg-rose-50/60 dark:border-rose-900/60 dark:bg-rose-950/20"}`}>
-            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">병원 알림 운영</h3><p className="text-text-secondary mt-1 text-xs">{entry.dashboardVisible ? "전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 관리합니다." : "숨긴 병원은 알림을 켤 수 없습니다. 먼저 대시보드 표시를 켜주세요."}</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
+            <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">내 알림 운영 · 발송 제외</h3><p className="text-text-secondary mt-1 text-xs">{entry.dashboardVisible ? "전체 알림, 이상 지속 시간, 반복 주기와 발송 제외 시간을 관리합니다." : "숨긴 병원은 알림을 켤 수 없습니다. 먼저 대시보드 표시를 켜주세요."}</p></div><label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={(event) => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />{alertsEnabled ? "알림 사용" : "전체 중지"}</label></div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <label className="text-text-secondary text-xs font-bold">이상 지속 후 알림 (분)<input type="number" min="0" max="1440" step="1" required value={triggerAfterMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setTriggerAfterMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 이상 감지 즉시 알립니다.</span></label>
               <label className="text-text-secondary text-xs font-bold">반복 알림 주기 (분)<input type="number" min="0" max="10080" step="1" required value={repeatMinutes} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setRepeatMinutes(Number(event.target.value))} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base font-semibold tabular-nums dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary" /><span className="mt-1 block font-medium">0이면 최초 1회만 발송합니다. 5분 이상 입력하면 확인완료 전까지 반복합니다.</span></label>
             </div>
-            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2"><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={quietEnabled} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-4 w-4 accent-sky-700" />야간 발송 제외</label><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={suppressWeekends} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setSuppressWeekends(event.target.checked)} className="h-4 w-4 accent-sky-700" />주말 발송 제외</label></div>
+            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2"><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={quietEnabled} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setQuietEnabled(event.target.checked)} className="h-4 w-4 accent-sky-700" />조용한 시간 사용</label><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={suppressWeekends} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setSuppressWeekends(event.target.checked)} className="h-4 w-4 accent-sky-700" />주말 발송 제외</label></div>
             {quietEnabled && <div className="mt-3 grid max-w-md grid-cols-2 gap-2"><TimeField label="제외 시작" value={quietStart} onChange={setQuietStart} /><TimeField label="제외 종료" value={quietEnd} onChange={setQuietEnd} /></div>}
-            <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!holidayDate || !canEdit || saving || holidayDates.includes(holidayDate)} onClick={() => { setHolidayDates((current) => [...current, holidayDate].sort()); setHolidayDate(""); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
+            <div className="mt-4 rounded-xl border border-slate-200/80 bg-white/70 p-3 dark:border-white/8 dark:bg-white/3"><p className="text-xs font-extrabold">지정 휴일 발송 제외</p><div className="mt-2 flex gap-2"><input ref={holidayInput} aria-label="지정 휴일" type="date" value={holidayDate} disabled={!canEdit || saving || !alertsEnabled} onChange={(event) => setHolidayDate(event.target.value)} className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm dark:border-white/10 dark:bg-background-dark-primary" /><button type="button" disabled={!canEdit || saving} onClick={() => { const date = holidayInput.current?.value ?? holidayDate; if (!date || !holidayInput.current?.validity.valid) { setError("지정 휴일 날짜를 입력해주세요."); return; } setHolidayDates(current => current.includes(date) ? current : [...current, date].sort()); setHolidayDate(""); setError(null); }} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">휴일 추가</button></div>{holidayDates.length > 0 ? <div className="mt-2 flex flex-wrap gap-1.5">{holidayDates.map((date) => <button key={date} type="button" disabled={!canEdit || saving} onClick={() => setHolidayDates((current) => current.filter((item) => item !== date))} className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600 hover:bg-rose-50 hover:text-rose-600 dark:bg-white/7 dark:text-white/70">{date} ×</button>)}</div> : <p className="text-text-secondary mt-2 text-[11px]">추가한 날짜에는 알림을 발송하지 않습니다.</p>}</div>
           </section>
           <section ref={noDataSection} className={`mb-4 rounded-xl border p-4 transition ${noDataActive ? "border-amber-200 bg-amber-50/60 dark:border-amber-900/70 dark:bg-amber-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
             <div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="font-extrabold">연속 수집 누락 알림</h3><p className="text-text-secondary mt-1 text-xs leading-5">마지막 수집 시각부터 예정된 수집이 연속으로 빠진 횟수를 계산합니다. 1시간 건수와는 별개이며, 다시 수집되면 누락 횟수는 0으로 돌아갑니다. 반복 주기는 위 설정을 따릅니다.</p></div><label className="flex cursor-pointer items-center gap-2 text-xs font-bold"><input type="checkbox" checked={noDataActive} disabled={!canEdit || saving} onChange={(event) => setNoDataActive(event.target.checked)} className="h-5 w-5 accent-amber-600" />사용</label></div>

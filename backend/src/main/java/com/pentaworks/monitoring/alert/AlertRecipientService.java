@@ -58,7 +58,7 @@ public class AlertRecipientService {
         String channel = request.channel();
         if (!KAKAO.equals(channel)) throw new BadRequestException("알림톡 수신처만 등록할 수 있습니다.");
         String destination = validatePhone(request.destination());
-        validateQuietHours(request.quietStart(), request.quietEnd());
+        if(request.quietStart()!=null || request.quietEnd()!=null) throw new BadRequestException("조용한 시간은 내 병원 알림 패턴에서 설정해주세요.");
         long owner = request.userId() == null ? actor.id() : request.userId();
         if (!actor.isAdmin() && owner != actor.id()) throw new ForbiddenException("본인 수신처만 등록할 수 있습니다.");
         CurrentUser assigned = jdbcTemplate.query("SELECT id,company_id,email,name,role,status FROM app_user WHERE id=? AND status='ACTIVE'",
@@ -77,8 +77,8 @@ public class AlertRecipientService {
             INSERT INTO site_alert_recipient
                 (site_id,user_id,channel,destination,priority,quiet_start,quiet_end,is_enabled,created_at,updated_at)
             VALUES (?,?,?, ?,0,?,?,?,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
-            """, request.siteId(), owner, channel, destination, time(request.quietStart()),
-            time(request.quietEnd()), request.enabled());
+            """, request.siteId(), owner, channel, destination, null,
+            null, request.enabled());
         long id = jdbcTemplate.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
         audit.record(actor, "ALERT_RECIPIENT_CREATED", "SITE_ALERT_RECIPIENT", Long.toString(id),
             Map.of("siteId", request.siteId(), "channel", channel));
@@ -98,7 +98,7 @@ public class AlertRecipientService {
             if (assigned == null || assigned.companyId() != actor.companyId()) throw new BadRequestException("같은 회사의 활성 담당자를 선택해주세요.");
             currentUsers.requireSiteAccess(assigned, target.siteId());
         }
-        validateQuietHours(request.quietStart(), request.quietEnd());
+        if(request.quietStart()!=null || request.quietEnd()!=null) throw new BadRequestException("조용한 시간은 내 병원 알림 패턴에서 설정해주세요.");
         String destination = request.destination() == null ? target.destination() : validatePhone(request.destination());
         Integer duplicates = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM site_alert_recipient WHERE site_id=? AND channel=? AND destination=? AND id<>?", Integer.class, target.siteId(), KAKAO, destination, id);
         if (duplicates != null && duplicates > 0) throw new ConflictException("이미 등록된 수신 번호입니다.");
@@ -107,7 +107,7 @@ public class AlertRecipientService {
                SET user_id=?,destination=?,quiet_start=?,quiet_end=?,is_enabled=?,updated_at=CURRENT_TIMESTAMP(6)
              WHERE id=?
             """, owner, destination,
-            time(request.quietStart()), time(request.quietEnd()), request.enabled(), id);
+            null, null, request.enabled(), id);
         audit.record(actor, "ALERT_RECIPIENT_UPDATED", "SITE_ALERT_RECIPIENT", Long.toString(id),
             Map.of("siteId", target.siteId(), "enabled", request.enabled()));
         return recipient(actor, id);
@@ -151,8 +151,20 @@ public class AlertRecipientService {
             """, (rs, row) -> new RecipientWindow(rs.getString("destination"),
                 localTime(rs.getTime("quiet_start")), localTime(rs.getTime("quiet_end"))), siteId, channel);
         LinkedHashSet<String> result = new LinkedHashSet<>();
-        rows.stream().filter(row -> !isQuiet(now, row.start(), row.end())).forEach(row -> result.add(row.destination()));
+        rows.stream().forEach(row -> result.add(row.destination()));
         return List.copyOf(result);
+    }
+
+    public List<String> personalPhones(String siteId,long userId,Long eventId) {
+        return jdbcTemplate.query("""
+            SELECT DISTINCT r.destination FROM site_alert_recipient r
+            JOIN app_user u ON u.id=r.user_id AND u.status='ACTIVE'
+            JOIN company c ON c.id=u.company_id AND c.status='ACTIVE'
+            JOIN company_site cs ON cs.site_id=r.site_id AND cs.company_id=u.company_id AND cs.is_dashboard_visible=TRUE
+            WHERE r.site_id=? AND r.user_id=? AND r.channel='KAKAO_ALIMTALK' AND r.is_enabled=TRUE
+              AND (u.role IN ('PLATFORM_ADMIN','SUPER_ADMIN','ADMIN') OR EXISTS(SELECT 1 FROM user_site us WHERE us.user_id=u.id AND us.site_id=r.site_id))
+              AND NOT EXISTS(SELECT 1 FROM alert_event_acknowledgement a WHERE a.user_id=u.id AND a.event_id=?)
+            """,(rs,n)->rs.getString(1),siteId,userId,eventId==null?-1:eventId);
     }
 
     public boolean hasConfiguredPhones(String siteId) {

@@ -148,7 +148,7 @@ public class DashboardService {
             SELECT e.id,e.site_id,r.metric_key,e.event_type,e.message,e.occurred_at,e.acknowledged_at
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
-             WHERE e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+             WHERE r.user_id=0 AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
              ORDER BY e.occurred_at DESC,e.id DESC
             """, (RowCallbackHandler) rs -> issuesBySite.computeIfAbsent(rs.getString("site_id"), ignored -> new ArrayList<>())
                 .add(new AlertIssue(rs.getLong("id"), rs.getString("metric_key"), rs.getString("event_type"),

@@ -49,6 +49,12 @@ class SecurityTest {
         @GetMapping("/api/v1/auth/invitations/token") String invitation() { return "ok"; }
         @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/psi-thresholds/001")
         String updateThreshold() { return "ok"; }
+        @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/company-thresholds")
+        String updateCompanyThreshold() { return "ok"; }
+        @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/thresholds/001/metrics/hepres")
+        String updatePersonalMetric() { return "ok"; }
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/alerts/patterns/001/share")
+        String sharePattern() { return "ok"; }
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/change-password")
         String changePassword() { return "ok"; }
     }
@@ -100,16 +106,24 @@ class SecurityTest {
             .andExpect(status().isOk());
     }
 
-    @Test void onlyAdministratorsCanUpdateAlertThresholds() throws Exception {
+    @Test void allAuthenticatedRolesCanUpdatePersonalThresholds() throws Exception {
         mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
                 .header("Authorization", "Bearer " + issue("USER")))
-            .andExpect(status().isForbidden());
+            .andExpect(status().isOk());
         mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
                 .header("Authorization", "Bearer " + issue("ADMIN")))
             .andExpect(status().isOk());
         mvc.perform(patch("/api/v1/alerts/psi-thresholds/001")
                 .header("Authorization", "Bearer " + issue("SUPER_ADMIN")))
             .andExpect(status().isOk());
+    }
+
+    @Test void personalMetricAndPeerSharingAreAvailableToEngineersWhileCompanyDefaultsStayProtected() throws Exception {
+        mvc.perform(patch("/api/v1/alerts/thresholds/001/metrics/hepres").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isOk());
+        mvc.perform(post("/api/v1/alerts/patterns/001/share").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/alerts/company-thresholds").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/v1/alerts/thresholds/001/metrics/hepres")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/api/v1/alerts/patterns/001/share")).andExpect(status().isUnauthorized());
     }
 
     @Test void expiredTokenIsRejected() throws Exception {

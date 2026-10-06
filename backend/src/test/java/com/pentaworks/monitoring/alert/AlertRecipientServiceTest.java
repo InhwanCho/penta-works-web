@@ -82,7 +82,7 @@ class AlertRecipientServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void excludesPhoneDuringOvernightQuietHours() throws Exception {
+    void recipientNoLongerFiltersQuietHoursBecausePersonalPolicyOwnsThem() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         AlertRecipientService service = new AlertRecipientService(jdbc,
             mock(CurrentUserService.class), mock(AuditService.class));
@@ -96,7 +96,7 @@ class AlertRecipientServiceTest {
                 return List.of(mapper.mapRow(resultSet, 0));
             });
 
-        assertEquals(List.of(), service.activePhones("001", LocalTime.of(23, 0)));
+        assertEquals(List.of("01012345678"), service.activePhones("001", LocalTime.of(23, 0)));
         assertEquals(List.of("01012345678"), service.activePhones("001", LocalTime.of(12, 0)));
     }
 

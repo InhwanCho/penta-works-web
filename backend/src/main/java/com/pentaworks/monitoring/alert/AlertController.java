@@ -24,12 +24,14 @@ import org.springframework.web.bind.annotation.PostMapping;
 @RequestMapping("/api/v1/alerts")
 public class AlertController {
     private final AlertService alertService;
+    private final PersonalAlertService personal;
     private final AlertEventService alertEvents;
     private final CurrentUserService currentUsers;
     private final MonitorService monitorService;
     private final AlertDeliveryService deliveries;
     public AlertController(AlertService alertService, AlertEventService alertEvents, CurrentUserService currentUsers,
-                           MonitorService monitorService, AlertDeliveryService deliveries) {
+                           MonitorService monitorService, AlertDeliveryService deliveries, PersonalAlertService personal) {
+        this.personal=personal;
         this.alertService = alertService;
         this.alertEvents = alertEvents;
         this.currentUsers = currentUsers;
@@ -39,15 +41,13 @@ public class AlertController {
     @GetMapping("/psi-thresholds")
     public List<PsiThreshold> psiThresholds(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return alertService.psiThresholds(user.isAdmin()
-            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user));
+        return personal.settings(user).stream().map(s->{var t=s.thresholds().stream().filter(v->v.key().equals("hepres")).findFirst().orElseThrow();return new PsiThreshold(s.siteid(),s.name(),t.effectiveMin(),t.effectiveMax(),t.active());}).toList();
     }
 
     @GetMapping("/thresholds")
     public List<SiteAlertSettings> thresholds(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return alertService.alertSettings(user.isAdmin()
-            ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user));
+        return personal.settings(user);
     }
 
     @GetMapping("/company-thresholds")
@@ -67,37 +67,27 @@ public class AlertController {
     @PostMapping("/thresholds/{siteId}/restore-company")
     public SiteAlertSettings restoreCompanyThresholds(@PathVariable String siteId,
                                                        Authentication authentication) {
-        return alertService.restoreCompanyThresholds(currentUsers.require(authentication), siteId);
+        return personal.reset(currentUsers.require(authentication), siteId);
     }
 
     @PatchMapping("/policy/{siteId}")
     public SiteAlertSettings updatePolicy(@PathVariable String siteId,
                                           @Valid @RequestBody UpdatePolicyRequest request,
                                           Authentication authentication) {
-        return alertService.setAlertsEnabled(currentUsers.require(authentication), siteId, request.enabled());
+        return personal.enabled(currentUsers.require(authentication), siteId, request.enabled());
     }
 
     @PatchMapping("/thresholds/{siteId}/metrics/{metricKey}")
     public SiteAlertSettings updateMetric(@PathVariable String siteId, @PathVariable String metricKey,
                                            @Valid @RequestBody ThresholdRequest request, Authentication authentication) {
-        return alertService.updateMetric(currentUsers.require(authentication), siteId,
-            new AlertService.ThresholdUpdate(metricKey, request.min(), request.max(), request.active(),
-                request.useAverage(), request.tolerancePercent()));
+        return personal.metric(currentUsers.require(authentication), siteId, metricKey, request);
     }
 
     @PatchMapping("/thresholds/{siteId}")
     public SiteAlertSettings updateThresholds(@PathVariable String siteId,
                                               @Valid @RequestBody UpdateAlertThresholdsRequest request,
                                               Authentication authentication) {
-        List<AlertService.ThresholdUpdate> updates = request.thresholds().stream()
-            .map(value -> new AlertService.ThresholdUpdate(value.key(), value.min(), value.max(),
-                value.active(), value.useAverage(), value.tolerancePercent()))
-            .toList();
-        return alertService.updateAlertSettings(currentUsers.require(authentication), siteId, updates,
-            request.noDataMinutes(), request.noDataActive(), request.alertsEnabled(),
-            request.triggerAfterMinutes(), request.repeatMinutes(), request.quietStart(), request.quietEnd(),
-            request.suppressWeekends(), request.holidayDates(), request.coldChillerActive(),
-            request.collectionIntervalMinutes(), request.missingCollectionThreshold());
+        return personal.save(currentUsers.require(authentication),siteId,request);
     }
 
     @GetMapping("/events")
@@ -117,7 +107,7 @@ public class AlertController {
     public List<AlertDeliveryService.Result> deliveryResults(@PathVariable long eventId, Authentication authentication) {
         var user = currentUsers.require(authentication);
         var allowed = user.isAdmin() ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user);
-        alertEvents.requireEventAccess(eventId, allowed);
+        alertEvents.requireEventAccess(eventId, user);
         return deliveries.results(eventId);
     }
 
@@ -133,7 +123,7 @@ public class AlertController {
                                                @Valid @RequestBody DeliveryConfirmation request,
                                                Authentication authentication) {
         var user = currentUsers.require(authentication);
-        alertEvents.requireEventAccess(eventId, currentUsers.allowedSiteIds(user));
+        alertEvents.requireEventAccess(eventId, user);
         deliveries.resolve(user, eventId, resultId, request.received());
         return Map.of("ok", true);
     }
@@ -149,9 +139,28 @@ public class AlertController {
     public PsiThreshold updatePsiThreshold(@PathVariable String siteId,
                                            @Valid @RequestBody UpdatePsiThresholdRequest request,
                                            Authentication authentication) {
-        return alertService.updatePsiThreshold(currentUsers.require(authentication), siteId,
-            request.min(), request.max(), request.active());
+        var s=personal.metric(currentUsers.require(authentication),siteId,"hepres",new ThresholdRequest(request.min(),request.max(),request.active(),null,null));
+        var t=s.thresholds().stream().filter(v->v.key().equals("hepres")).findFirst().orElseThrow();
+        return new PsiThreshold(s.siteid(),s.name(),t.effectiveMin(),t.effectiveMax(),t.active());
     }
+
+    @GetMapping("/patterns/targets")
+    public List<PersonalAlertService.ShareTarget> targets(@RequestParam String siteId,Authentication authentication) {
+        return personal.targets(currentUsers.require(authentication),siteId);
+    }
+    @GetMapping("/patterns/shared")
+    public List<PersonalAlertService.Share> shared(@RequestParam(defaultValue="true") boolean inbox,Authentication authentication) {
+        return personal.shares(currentUsers.require(authentication),inbox);
+    }
+    @PostMapping("/patterns/{siteId}/share")
+    public PersonalAlertService.Share share(@PathVariable String siteId,@Valid @RequestBody ShareRequest request,Authentication authentication) {
+        return personal.share(currentUsers.require(authentication),siteId,request.recipientId());
+    }
+    @PostMapping("/patterns/shared/{id}/apply")
+    public SiteAlertSettings apply(@PathVariable long id,Authentication authentication) {
+        return personal.apply(currentUsers.require(authentication),id);
+    }
+    public record ShareRequest(@NotNull Long recipientId) {}
 
     public record UpdatePsiThresholdRequest(@NotNull Double min, @NotNull Double max,
                                             @NotNull Boolean active) {}

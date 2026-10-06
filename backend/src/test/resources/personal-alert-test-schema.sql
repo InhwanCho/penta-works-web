@@ -1,0 +1,18 @@
+CREATE TABLE company(id BIGINT UNSIGNED PRIMARY KEY,status VARCHAR(20));
+CREATE TABLE app_user(id BIGINT UNSIGNED PRIMARY KEY,company_id BIGINT UNSIGNED,email VARCHAR(100),name VARCHAR(80),role VARCHAR(30),status VARCHAR(20));
+CREATE TABLE site(site VARCHAR(32) PRIMARY KEY,name VARCHAR(80));
+CREATE TABLE company_site(company_id BIGINT UNSIGNED,site_id VARCHAR(32),is_dashboard_visible BOOLEAN,PRIMARY KEY(company_id,site_id));
+CREATE TABLE user_site(user_id BIGINT UNSIGNED,site_id VARCHAR(32),PRIMARY KEY(user_id,site_id));
+CREATE TABLE site_alert_recipient(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,site_id VARCHAR(32),user_id BIGINT UNSIGNED,channel VARCHAR(30),destination VARCHAR(100),priority INT,quiet_start TIME,quiet_end TIME,is_enabled BOOLEAN);
+CREATE TABLE alert_rule(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,site_id VARCHAR(32),metric_key VARCHAR(50),rule_type VARCHAR(30),min_value DECIMAL(18,6),max_value DECIMAL(18,6),no_data_minutes INT,severity VARCHAR(20),is_enabled BOOLEAN,created_at DATETIME(6),updated_at DATETIME(6),UNIQUE KEY uq_alert_rule_site_metric_type(site_id,metric_key,rule_type));
+CREATE TABLE alert_event(id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,rule_id BIGINT UNSIGNED,site_id VARCHAR(32),event_type VARCHAR(30),severity VARCHAR(20),measured_value DECIMAL(18,6),threshold_min DECIMAL(18,6),threshold_max DECIMAL(18,6),message VARCHAR(500),recipient_snapshot JSON,delivery_status VARCHAR(20),delivery_error TEXT,delivery_batch_id VARCHAR(100),delivery_started_at DATETIME(6),occurred_at DATETIME(6),recovered_at DATETIME(6),last_notified_at DATETIME(6),notification_count INT DEFAULT 0,created_at DATETIME(6));
+CREATE TABLE alert_event_acknowledgement(event_id BIGINT UNSIGNED,user_id BIGINT UNSIGNED,acknowledged_at DATETIME(6) DEFAULT CURRENT_TIMESTAMP(6),PRIMARY KEY(event_id,user_id));
+CREATE TABLE alert_pending_state(rule_id BIGINT UNSIGNED PRIMARY KEY,event_type VARCHAR(30),first_seen_at DATETIME(6),last_seen_at DATETIME(6));
+INSERT INTO company VALUES(1,'ACTIVE'),(2,'ACTIVE');
+INSERT INTO app_user VALUES(1,1,'a@example.com','엔지니어 A','USER','ACTIVE'),(2,1,'b@example.com','엔지니어 B','USER','ACTIVE'),(3,1,'admin@example.com','관리자','ADMIN','ACTIVE'),(4,2,'outside@example.com','다른 회사','USER','ACTIVE'),(5,1,'no-access@example.com','권한 없음','USER','ACTIVE');
+INSERT INTO site VALUES('001','테스트 병원'),('002','다른 병원');
+INSERT INTO company_site VALUES(1,'001',TRUE),(2,'002',TRUE);
+INSERT INTO user_site VALUES(1,'001'),(2,'001'),(4,'002'),(5,'002');
+INSERT INTO site_alert_recipient(site_id,user_id,channel,destination,priority,is_enabled) VALUES('001',1,'KAKAO_ALIMTALK','01011112222',0,TRUE),('001',2,'KAKAO_ALIMTALK','01033334444',0,TRUE);
+INSERT INTO alert_rule(id,site_id,metric_key,rule_type,min_value,max_value,is_enabled) VALUES(99,'002','hepres','RANGE',0.5,2,TRUE);
+INSERT INTO alert_event(id,rule_id,site_id,event_type,severity,measured_value,message,recipient_snapshot,delivery_status,occurred_at,notification_count) VALUES(99,99,'002','HIGH','WARNING',3,'기존 공통 이력','{}','SENT',CURRENT_TIMESTAMP(6),2);

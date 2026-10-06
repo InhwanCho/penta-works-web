@@ -13,7 +13,9 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final CurrentUserService currentUsers;
     private final CompanyMetricService metrics;
-    public DashboardController(DashboardService dashboardService, CurrentUserService currentUsers, CompanyMetricService metrics) {
+    private final com.pentaworks.monitoring.alert.PersonalAlertService personal;
+    public DashboardController(DashboardService dashboardService, CurrentUserService currentUsers, CompanyMetricService metrics, com.pentaworks.monitoring.alert.PersonalAlertService personal) {
+        this.personal=personal;
         this.dashboardService = dashboardService;
         this.currentUsers = currentUsers;
         this.metrics = metrics;
@@ -22,6 +24,6 @@ public class DashboardController {
     @GetMapping
     public DashboardResponse getDashboard(Authentication authentication) {
         var user = currentUsers.require(authentication);
-        return dashboardService.getDashboard(currentUsers.visibleSiteIds(user), user.id()).withMetrics(metrics.metrics(user.companyId()));
+        return personal.dashboard(user,dashboardService.getDashboard(currentUsers.visibleSiteIds(user))).withMetrics(metrics.metrics(user.companyId()));
     }
 }
