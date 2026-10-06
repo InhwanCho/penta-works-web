@@ -39,6 +39,11 @@ export default function DraggableToolsButton({ children, expanded, onClick }: {
     return () => window.removeEventListener("resize", resize);
   }, []);
 
+  useEffect(() => {
+    if (!position) return;
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(position)); } catch { /* Keep the current position. */ }
+  }, [position]);
+
   return <div ref={boundsRef} className="pointer-events-none fixed inset-0 z-[45] pt-[calc(3.5rem+env(safe-area-inset-top,0px))] pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
     <button ref={buttonRef} type="button" aria-controls="dashboard-mobile-tools" aria-expanded={expanded} title="눌러 열기 · 드래그하여 위치 이동"
       style={position ? {left: position.x, top: position.y, right: "auto", bottom: "auto"} : undefined}
@@ -63,9 +68,6 @@ export default function DraggableToolsButton({ children, expanded, onClick }: {
         const drag = gesture.current;
         if (!drag || drag.pointerId !== event.pointerId) return;
         suppressClick.current = drag.moved;
-        if (drag.moved) {
-          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(drag.last)); } catch { /* Keep the current position. */ }
-        }
         gesture.current = null;
         event.currentTarget.releasePointerCapture(event.pointerId);
       }}
