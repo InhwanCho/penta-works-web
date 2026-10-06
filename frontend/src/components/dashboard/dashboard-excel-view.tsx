@@ -169,7 +169,7 @@ export default function DashboardExcelView({
                 <th
                   scope="col"
                   className={[
-                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[3px] py-[5px] text-left align-bottom text-xs leading-tight font-bold tracking-wide lg:px-3 lg:py-2.5 lg:text-sm",
+                    "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 left-0 px-[3px] py-[5px] text-left align-middle text-xs leading-tight font-bold tracking-wide lg:px-3 lg:py-2.5 lg:text-sm",
                     COL_NAME,
                     CELL_BORDER,
                     HEAD_BG,
@@ -180,15 +180,14 @@ export default function DashboardExcelView({
                 </th>
                 {columns.map((column) => {
                   const m = metrics.find(metric => metric.key === column.key);
-                  if (!m) return <HeadCell key={column.key} className="min-w-[72px] text-right">{column.displayName}</HeadCell>;
+                  if (!m) return <HeadCell key={column.key} className="min-w-[72px] text-center">{column.displayName}</HeadCell>;
                   const sub = metricSubLabel(m.label, m.unit);
                   return (
                     <th
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-right whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2",
-                        sub ? "align-top" : "align-middle",
+                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
                         CELL_BORDER,
                         HEAD_BG,
                         openMetric === m.key ? "z-50" : Z_HEAD,
@@ -361,7 +360,7 @@ function HeadCell({
     <th
       scope="col"
       className={[
-        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[3px] py-[5px] align-bottom text-xs leading-tight font-bold tracking-wide whitespace-nowrap lg:px-3 lg:py-2.5 lg:text-sm",
+        "text-text-secondary dark:text-text-dark-primary/80 sticky top-0 px-[3px] py-[5px] align-middle text-xs leading-tight font-bold tracking-wide whitespace-nowrap lg:px-3 lg:py-2.5 lg:text-sm",
         CELL_BORDER,
         HEAD_BG,
         Z_HEAD,

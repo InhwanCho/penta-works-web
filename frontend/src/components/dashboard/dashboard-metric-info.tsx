@@ -14,10 +14,10 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     staleTime: 60_000,
   });
   useEffect(() => {
-    if (settings.isPending || settings.isFetching) return;
+    if (settings.isPending) return;
     const timer = setTimeout(onClose, 5000);
     return () => clearTimeout(timer);
-  }, [selection, onClose, settings.isPending, settings.isFetching]);
+  }, [selection, onClose, settings.isPending]);
   const site = settings.data?.find(item => item.siteid === selection.siteId);
   const threshold = site?.thresholds.find(item => item.key === selection.metricKey);
   const format = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("ko-KR", {maximumFractionDigits: 2});
