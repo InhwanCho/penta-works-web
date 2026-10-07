@@ -36,7 +36,7 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
 };
 
 const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
-const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v2";
+const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v3";
 
 function isViewMode(v: unknown): v is ViewMode {
   return v === "basic" || v === "grid";
@@ -89,7 +89,7 @@ function fmtYmdHms(ms: number) {
 export default function DashboardClient() {
   const { data, isLoading, isError, error, refetch } = useDashboardQuery();
 
-  // 전체 지표를 한눈에 보는 관리자 뷰를 기본으로 사용합니다.
+  // Mobile starts with readable summary cards; desktop keeps the full table.
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [metricSelection, setMetricSelection] = useState<MetricSelection | null>(null);
@@ -102,10 +102,11 @@ export default function DashboardClient() {
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
   useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 639px)").matches;
+    const mobile = window.matchMedia("(max-width: 767px)").matches;
+    setViewMode(mobile ? "basic" : "grid");
     try {
       const saved = localStorage.getItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY);
-      if (isViewMode(saved)) setViewMode(saved);
+      setViewMode(isViewMode(saved) ? saved : mobile ? "basic" : "grid");
       setMobileToolsHidden(localStorage.getItem("dashboard-mobile-tools-hidden") === "true");
     } catch { /* Use the device default if storage is unavailable. */ }
   }, []);
@@ -114,7 +115,7 @@ export default function DashboardClient() {
     setViewMode(next);
     setShowMobileFilters(false);
     try {
-      const mobile = window.matchMedia("(max-width: 639px)").matches;
+      const mobile = window.matchMedia("(max-width: 767px)").matches;
       localStorage.setItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY, next);
     } catch { /* The selected view still works without storage. */ }
   }, []);
@@ -237,6 +238,11 @@ export default function DashboardClient() {
             onChange={changeViewMode}
           />
         </header>
+
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 sm:hidden">
+          <ViewModeTabs value={viewMode} onChange={changeViewMode} />
+          <Link href="/baselines" className="min-h-12 rounded-xl border border-sky-200 bg-white px-4 py-3 text-base font-bold text-sky-800 dark:border-sky-800 dark:bg-background-dark-card dark:text-sky-200">알림 관리</Link>
+        </div>
 
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
