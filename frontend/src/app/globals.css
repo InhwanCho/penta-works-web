@@ -199,12 +199,19 @@
   }
 }
 
-/* 네이티브 셀렉트 화살표를 카드 가장자리에서 살짝 안쪽으로 배치합니다. */
+/* 단일 선택 입력의 화살표와 텍스트에 일정한 오른쪽 여백을 둡니다. */
+select:not([multiple]):not([size]),
 .select-inset-arrow {
+  -webkit-appearance: none;
   appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%2364758b' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-position: right 1rem center;
   background-repeat: no-repeat;
   background-size: 1rem;
   padding-right: 3rem;
+}
+
+html.dark select:not([multiple]):not([size]),
+html.dark .select-inset-arrow {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%23b9ccdb' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
