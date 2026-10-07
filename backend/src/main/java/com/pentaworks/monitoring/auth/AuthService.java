@@ -4,7 +4,6 @@ import com.pentaworks.monitoring.auth.AuthController.LoginResponse;
 import com.pentaworks.monitoring.auth.AuthController.SessionUser;
 import com.pentaworks.monitoring.common.UnauthorizedException;
 import com.pentaworks.monitoring.common.BadRequestException;
-import org.springframework.dao.DuplicateKeyException;
 import com.pentaworks.monitoring.config.AppProperties;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -126,25 +125,18 @@ public class AuthService {
     }
 
     @Transactional
-    public Profile updateProfile(String email, String nextEmail, String name, String phone) {
+    public Profile updateProfile(String email, String phone) {
         UserRow user = findUserByEmail(normalizeEmail(email));
         if (user == null) throw expiredSession();
-        String normalized = normalizeEmail(nextEmail);
-        String trimmedName = name.trim();
         String trimmedPhone = phone == null || phone.isBlank() ? null : phone.trim();
-        if (trimmedName.isBlank()) throw new BadRequestException("이름을 입력해주세요.");
-        try {
-            jdbcTemplate.update("""
-                UPDATE app_user SET email=?,username=?,name=?,phone=?,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?
-                """, normalized, normalized, trimmedName, trimmedPhone, user.id());
-        } catch (DuplicateKeyException error) {
-            throw new BadRequestException("이미 사용 중인 이메일입니다.");
-        }
+        jdbcTemplate.update("""
+            UPDATE app_user SET phone=?,updated_at=CURRENT_TIMESTAMP(6) WHERE id=?
+            """, trimmedPhone, user.id());
         jdbcTemplate.update("""
             INSERT INTO audit_log (company_id,actor_user_id,actor_name,action,target_type,target_id,created_at)
             VALUES (?,?,?,'ACCOUNT_PROFILE_UPDATED','APP_USER',?,CURRENT_TIMESTAMP(6))
-            """, user.companyId(), user.id(), trimmedName, Long.toString(user.id()));
-        return new Profile(normalized, trimmedName, trimmedPhone);
+            """, user.companyId(), user.id(), user.name(), Long.toString(user.id()));
+        return new Profile(user.email(), user.name(), trimmedPhone);
     }
 
     public record Profile(String email, String name, String phone) {}

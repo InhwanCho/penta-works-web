@@ -31,7 +31,7 @@ export default function AcceptInviteClient() {
       await apiFetch(`/auth/invitations/${encodeURIComponent(token)}/accept`, {
         method: "POST", body: JSON.stringify({ password }),
       });
-      router.replace(`/login?email=${encodeURIComponent(invitation.data?.email ?? "")}`);
+      router.replace(`/login?reauthenticate=1&email=${encodeURIComponent(invitation.data?.email ?? "")}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "가입하지 못했습니다. 다시 시도해주세요.");
     }

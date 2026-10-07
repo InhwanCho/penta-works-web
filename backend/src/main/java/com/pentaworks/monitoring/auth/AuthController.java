@@ -70,7 +70,7 @@ public class AuthController {
 
     @PatchMapping("/profile")
     public AuthService.Profile updateProfile(@Valid @RequestBody ProfileRequest request, Authentication authentication) {
-        return authService.updateProfile(authentication.getName(), request.email(), request.name(), request.phone());
+        return authService.updateProfile(authentication.getName(), request.phone());
     }
 
     @GetMapping("/sessions")
@@ -114,8 +114,7 @@ public class AuthController {
         return request.getRemoteAddr();
     }
 
-    public record ProfileRequest(@NotBlank @Email @Size(max = 254) String email,
-                                 @NotBlank @Size(max = 80) String name, @Size(max = 30) String phone) {}
+    public record ProfileRequest(@Size(max = 30) String phone) {}
     public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
     public record ChangePasswordRequest(@NotBlank String currentPassword, @NotBlank String newPassword) {}
     public record LoginResponse(String accessToken, Instant accessTokenExpiresAt, SessionUser user) {}

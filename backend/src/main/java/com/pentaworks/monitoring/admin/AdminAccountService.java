@@ -313,7 +313,7 @@ public class AdminAccountService {
     }
 
     @Transactional
-    public void deleteUser(CurrentUser actor, long userId) {
+    public void deleteUser(CurrentUser actor, long userId, String confirmationEmail) {
         requireAdmin(actor);
         ManagedUser target = jdbcTemplate.query("""
             SELECT id,company_id,email,name,phone,role,status FROM app_user
@@ -323,6 +323,8 @@ public class AdminAccountService {
                 rs.getString("status")) : null,
             userId, actor.companyId());
         if (target == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
+        if (confirmationEmail == null || !target.email().equalsIgnoreCase(confirmationEmail.trim()))
+            throw new BadRequestException("삭제할 계정의 이메일을 정확히 입력해주세요.");
         if (target.id() == actor.id()) throw new BadRequestException("현재 로그인한 본인 계정은 삭제할 수 없습니다.");
         if ("PLATFORM_ADMIN".equals(target.role())) throw new ForbiddenException("플랫폼 관리자 계정은 삭제할 수 없습니다.");
         if ("SUPER_ADMIN".equals(target.role())) {

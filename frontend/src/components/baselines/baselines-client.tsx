@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
-import type { AlertEventSummary, AlertRecipient, AlertThreshold, SiteAlertSettings } from "@/lib/api";
+import type { AlertEventSummary, AlertThreshold, SiteAlertSettings } from "@/lib/api";
 import { formatMetricMeasurement, METRICS } from "@/lib/metrics";
 import Link from "next/link";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -33,12 +33,6 @@ export default function BaselinesClient({
   onAcknowledge,
   onAcknowledgeMany,
   onRetryDelivery,
-  recipients,
-  recipientsLoading = false,
-  recipientsFailed = false,
-  onCreateRecipient,
-  onUpdateRecipient,
-  onDeleteRecipient,
 }: {
   entries: SiteAlertSettings[];
   loadFailed?: boolean;
@@ -56,14 +50,9 @@ export default function BaselinesClient({
   onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
   onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
-  recipients: AlertRecipient[];
-  recipientsLoading?: boolean;
-  recipientsFailed?: boolean;
-  onCreateRecipient: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
-  onUpdateRecipient: (recipient: AlertRecipient) => Promise<AlertRecipient>;
-  onDeleteRecipient: (id: number) => Promise<void>;
+
 }) {
-  const [view, setView] = useState<"sites" | "thresholds" | "events" | "recipients" | "patterns">("thresholds");
+  const [view, setView] = useState<"sites" | "thresholds" | "events" | "patterns">("thresholds");
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoringSite, setRestoringSite] = useState<string | null>(null);
@@ -131,7 +120,7 @@ export default function BaselinesClient({
       <ManagementTabs label="알림 관리" value={view} onChange={setView} items={[
         {value:"thresholds",label:"내 알림 패턴"}, {value:"sites",label:"병원 관리"},
         {value:"events",label:"알림 이력",badge:events.filter(needsAcknowledgement).length},
-        {value:"recipients",label:"수신처"}, {value:"patterns",label:"패턴 공유"},
+        {value:"patterns",label:"패턴 공유"},
       ]} />
 
       {view === "sites" ? <section className="space-y-3">
@@ -187,7 +176,7 @@ export default function BaselinesClient({
         </section>
       )}
       </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries.map(entry => entry.siteid)} events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
-        : view === "patterns" ? <AlertPatternInbox/> : <RecipientPanel sites={entries} recipients={recipients} loading={recipientsLoading} failed={recipientsFailed} onCreate={onCreateRecipient} onUpdate={onUpdateRecipient} onDelete={onDeleteRecipient} />}
+        : <AlertPatternInbox/>}
 
       {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} initialMetricKey={editorMetric} onlyMetricKey={selected.thresholds.some(item => item.key === editorMetric) ? editorMetric : undefined} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
@@ -220,104 +209,6 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">신규 사용자의 초기 기준</h2><p className="text-text-secondary mt-1 text-xs">개인 패턴을 처음 만들 때 참고하는 기준입니다. 이미 만들어진 다른 사용자의 패턴은 변경되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
     {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "회사 기준 저장"}</button></div>}</>}
   </section>;
-}
-
-function RecipientPanel({ sites, recipients, loading, failed, onCreate, onUpdate, onDelete }: {
-  sites: SiteAlertSettings[]; recipients: AlertRecipient[]; loading: boolean; failed: boolean;
-  onCreate: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) => Promise<AlertRecipient>;
-  onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>; onDelete: (id: number) => Promise<void>;
-}) {
-  const { isAdmin, session } = useAuth();
-  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => apiFetch<{ id: number; name: string; email: string; phone: string | null; siteIds: string[]; role: string; status: string }[]>("/admin/accounts/users"), enabled: isAdmin });
-  const [selectedSites, setSelectedSites] = useState<string[]>([]);
-  const [owner, setOwner] = useState<number>(session?.id ?? 0);
-  const [destination, setDestination] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [siteFilter, setSiteFilter] = useState("");
-  const [resultMessage, setResultMessage] = useState("");
-  const chosenUser = users.data?.find(user => user.id === owner);
-  const availableSites = chosenUser?.role === "USER" ? sites.filter(site => chosenUser.siteIds.includes(site.siteid)) : sites;
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const phone = destination.replace(/[-\s]/g, "");
-    if (!/^01[016789][0-9]{7,8}$/.test(phone)) { setError("휴대폰 번호를 확인해주세요."); return; }
-    setSaving(true); setError(null); setResultMessage("");
-    let created = 0, skipped = 0;
-    const failures: { id: string; message: string }[] = [];
-    try {
-      for (const siteId of selectedSites) {
-        if (!availableSites.some(site => site.siteid === siteId)) { failures.push({ id: siteId, message: "담당자의 병원 접근 권한을 확인해주세요." }); continue; }
-        const existing = recipients.find(row => row.siteId === siteId && row.destination.replace(/[-\s]/g, "") === phone);
-        if (existing) {
-          if (existing.userId !== (owner || session?.id) || !existing.enabled) failures.push({ id: siteId, message: "같은 번호가 다른 담당자 또는 수신 중지 상태로 등록되어 있습니다. 기존 수신처를 수정해주세요." });
-          else skipped++;
-          continue;
-        }
-        try {
-          await onCreate({ siteId, userId: owner || undefined, channel: "KAKAO_ALIMTALK", destination: phone, quietStart: null, quietEnd: null, enabled: true });
-          created++;
-        } catch (err) { failures.push({ id: siteId, message: err instanceof Error ? err.message : "등록 실패" }); }
-      }
-      setResultMessage(`신규 등록 ${created}개 · 기존 등록 ${skipped}개 · 확인 필요 ${failures.length}개`);
-      setSelectedSites(failures.map(item => item.id));
-      if (failures.length) setError(failures.map(item => `${sites.find(site => site.siteid === item.id)?.name ?? item.id}: ${item.message}`).join("\n"));
-      else setDestination("");
-    } finally { setSaving(false); }
-  }
-  return <section className="grid gap-4 xl:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)]">
-    <form onSubmit={submit} className="h-fit rounded-xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-background-dark-card">
-      <h2 className="text-lg font-extrabold">{isAdmin ? "담당자 수신처 등록" : "내 수신처 등록"}</h2>
-      <fieldset disabled={saving || loading || failed} className="min-w-0 disabled:opacity-60">
-      <p className="text-text-secondary mt-2 text-sm">병원마다 여러 담당자를 등록할 수 있습니다. 각 번호로 알림톡을 보내고 실패하면 문자로 대체합니다.</p>
-      {!isAdmin && <p className="mt-4 text-sm font-bold">담당자 · {session?.name} (본인)</p>}
-      {isAdmin && <label className="mt-4 block text-sm font-bold">담당자<select value={owner} onChange={event => { const id = Number(event.target.value); setOwner(id); setSelectedSites([]); setDestination(users.data?.find(user => user.id === id)?.phone ?? ""); }} className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10"><option value={session?.id}>{session?.name} (본인)</option>{users.data?.filter(user => user.id !== session?.id && user.status === "ACTIVE").map(user => <option value={user.id} key={user.id}>{user.name} · {user.email}</option>)}</select></label>}
-      <fieldset className="mt-4"><legend className="text-sm font-bold">받을 병원 ({selectedSites.length}개 선택)</legend>
-        <label className="my-2 flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={availableSites.length > 0 && availableSites.every(site => selectedSites.includes(site.siteid))} onChange={event => setSelectedSites(event.target.checked ? availableSites.map(site => site.siteid) : [])} />전체 사이트 선택</label>
-        <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-white/10">{availableSites.map(site => <label className="flex min-h-11 items-center gap-2 text-sm" key={site.siteid}><input type="checkbox" className="h-5 w-5" checked={selectedSites.includes(site.siteid)} onChange={event => setSelectedSites(current => event.target.checked ? [...current, site.siteid] : current.filter(id => id !== site.siteid))} />{site.name} <span className="text-text-secondary">{site.siteid}</span></label>)}</div>
-      </fieldset>
-      <label className="mt-4 block text-sm font-bold">수신 휴대폰 번호<input required type="tel" value={destination} onChange={event => setDestination(event.target.value)} placeholder="010-1234-5678" className="mt-1 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label>
-      <p className="text-text-secondary mt-3 text-xs leading-5">알림 기준·조용한 시간·지정 휴일은 담당자 본인의 ‘내 알림 패턴’에서 설정합니다.</p>
-      {resultMessage && <p role="status" className="mt-3 text-sm font-bold text-sky-700 dark:text-sky-300">{resultMessage}</p>}
-      {error && <p role="alert" className="mt-3 whitespace-pre-line text-sm text-rose-600 dark:text-rose-300">{error}</p>}
-      <button disabled={saving || selectedSites.length === 0} className="mt-4 min-h-11 w-full rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">{saving ? "등록 중…" : `선택한 ${selectedSites.length}개 병원에 등록`}</button>
-      </fieldset>
-    </form>
-    <div><h2 className="text-lg font-extrabold">{isAdmin ? "병원별 담당자 · 번호" : "내 등록 현황"}</h2>
-      <select aria-label="수신처 병원 필터" value={siteFilter} onChange={event => setSiteFilter(event.target.value)} className="my-3 min-h-11 w-full rounded-lg border bg-white px-3 dark:bg-background-dark-card dark:border-white/10"><option value="">전체 병원 · {recipients.length}개 수신처</option>{sites.map(site => <option key={site.siteid} value={site.siteid}>{site.name} · {recipients.filter(row => row.siteId === site.siteid).length}명</option>)}</select>
-      {failed && <p role="alert">수신처를 불러오지 못했습니다.</p>}
-      {loading ? <p>불러오는 중…</p> : sites.filter(site => !siteFilter || site.siteid === siteFilter).map(site => <section key={site.siteid} className="mb-4"><h3 className="mb-2 font-bold">{site.name} · {site.siteid}</h3>{recipients.filter(row => row.siteId === site.siteid).length === 0 ? <p className="text-text-secondary rounded-lg border border-dashed p-3 text-sm">등록된 수신처 없음</p> : <div className="space-y-2">{recipients.filter(row => row.siteId === site.siteid).map(row => <RecipientRow key={row.id} recipient={row} onUpdate={onUpdate} onDelete={onDelete} />)}</div>}</section>)}
-    </div>
-  </section>;
-}
-
-function RecipientRow({ recipient, onUpdate, onDelete }: { recipient: AlertRecipient; onUpdate: (recipient: AlertRecipient) => Promise<AlertRecipient>; onDelete: (id: number) => Promise<void> }) {
-  const { isAdmin } = useAuth();
-  const users = useQuery({ queryKey: ["admin-users"], queryFn: () => apiFetch<{ id: number; name: string; email: string; phone: string | null; siteIds: string[]; role: string; status: string }[]>("/admin/accounts/users"), enabled: isAdmin });
-  const [owner, setOwner] = useState(recipient.userId);
-  const [editing, setEditing] = useState(false);
-  const [phone, setPhone] = useState(recipient.destination);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  function toggleEditing() {
-    setPhone(recipient.destination); setOwner(recipient.userId);
-    setError(null); setEditing(!editing);
-  }
-  async function update() {
-    setSaving(true); setError(null);
-    try {
-      await onUpdate({ ...recipient, userId: owner, destination: phone, quietStart: null, quietEnd: null, enabled: true });
-      setEditing(false);
-    } catch (err) { setError(err instanceof Error ? err.message : "변경하지 못했습니다."); }
-    finally { setSaving(false); }
-  }
-  async function remove() { if (!window.confirm("이 병원의 수신처를 삭제할까요?")) return; setSaving(true); try { await onDelete(recipient.id); } catch (err) { setError(err instanceof Error ? err.message : "삭제하지 못했습니다."); } finally { setSaving(false); } }
-  return <article className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-background-dark-card">
-    {editing && isAdmin && <label className="mb-3 block text-xs font-bold">수신 담당자<select value={owner} onChange={event => setOwner(Number(event.target.value))} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 px-3 dark:border-white/10 dark:bg-background-dark-primary"><option value={recipient.userId}>{recipient.userName}</option>{users.data?.filter(user => user.id !== recipient.userId && user.status === "ACTIVE" && (user.role !== "USER" || user.siteIds.includes(recipient.siteId))).map(user => <option key={user.id} value={user.id}>{user.name} · {user.email}</option>)}</select></label>}
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><p className="text-sm font-bold">{recipient.userName} · {recipient.destination}</p><p className="text-text-secondary mt-1 text-xs">알림톡 → 실패 시 문자 · 담당자의 내 알림 패턴 적용</p></div><button type="button" disabled={saving} onClick={toggleEditing} className="min-h-11 rounded-lg border px-3 text-xs font-bold">{editing ? "접기" : "수정"}</button></div>
-    {editing && <div className="mt-3 space-y-3"><label className="block text-xs font-bold">휴대폰 번호<input type="tel" value={phone} onChange={event => setPhone(event.target.value)} className="mt-1 min-h-11 w-full rounded-lg border bg-slate-50 p-3 dark:bg-background-dark-primary dark:border-white/10" /></label><div className="flex flex-wrap gap-2"><button type="button" disabled={saving} onClick={() => update()} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white">저장</button><button type="button" disabled={saving} onClick={remove} className="min-h-11 px-3 text-sm text-rose-600 dark:text-rose-300">삭제</button></div></div>}
-    {error && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{error}</p>}
-  </article>;
 }
 
 function TimeField({ label, value, onChange, optional = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-xs font-bold">{label}<input type="time" required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
@@ -575,7 +466,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, onlyMetr
           {!onlyMetricKey && <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/20">
             <div className="flex items-center gap-1"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={event => setAlertsEnabled(event.target.checked)} className="h-5 w-5 accent-emerald-600" />내 병원 알림 사용</label><button type="button" aria-label="내 병원 알림 사용 설명" aria-expanded={policyHelp === "site"} aria-controls="alert-policy-help" onClick={() => setPolicyHelp(current => current === "site" ? null : "site")} className="flex h-11 w-11 items-center justify-center rounded-full text-sky-700 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-white/10"><span className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold">?</span></button></div>
             <div className="flex items-center gap-1"><label className="flex items-center gap-2 text-sm font-bold"><input type="checkbox" checked={coldChillerActive} disabled={!canEdit || saving} onChange={event => setColdChillerActive(event.target.checked)} className="h-5 w-5 accent-emerald-600" />콜드칠러 정지 의심</label><button type="button" aria-label="콜드칠러 정지 의심 설명" aria-expanded={policyHelp === "chiller"} aria-controls="alert-policy-help" onClick={() => setPolicyHelp(current => current === "chiller" ? null : "chiller")} className="flex h-11 w-11 items-center justify-center rounded-full text-sky-700 hover:bg-sky-100 dark:text-sky-300 dark:hover:bg-white/10"><span className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-bold">?</span></button></div>
-            {policyHelp && <div id="alert-policy-help" role="note" className="flex w-full items-start gap-2 rounded-xl border border-sky-200 bg-white p-3 text-xs leading-6 dark:border-sky-900 dark:bg-background-dark-card"><div className="flex-1"><p className="font-bold">{policyHelp === "site" ? "내 병원 알림을 켜고 끄는 스위치" : "콜드칠러 IN·OUT 온도 비교 알림"}</p><p>{policyHelp === "site" ? "끄면 본인이 받을 이 병원의 범위 이탈, 수집 누락, 콜드칠러 정지 의심 알림을 모두 중지합니다. 다른 담당자의 알림에는 영향을 주지 않습니다. 각 측정항목의 설정값은 유지됩니다. 대시보드에서 숨긴 병원은 알림을 켤 수 없습니다." : "콜드칠러 IN·OUT 온도가 정확히 같으면 냉각이 멈췄을 가능성을 알립니다. 고장이 확정된다는 뜻은 아닙니다. 0, 0.001, 0.01, 0.1, 음수 등 미측정 값은 제외하며, 병원 알림이 켜져 있어야 발송됩니다. 고급 설정의 이상 지속 시간과 반복·발송 제외 설정을 따릅니다."}</p></div><button type="button" aria-label="알림 설명 닫기" onClick={() => setPolicyHelp(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-slate-100 dark:hover:bg-white/10">×</button></div>}
+            {policyHelp && <div id="alert-policy-help" role="note" className="flex w-full items-start gap-2 rounded-xl border border-sky-200 bg-white p-3 text-xs leading-6 dark:border-sky-900 dark:bg-background-dark-card"><div className="flex-1"><p className="font-bold">{policyHelp === "site" ? "내 병원 알림을 켜고 끄는 스위치" : "콜드칠러 IN·OUT 온도 비교 알림"}</p><p>{policyHelp === "site" ? "끄면 본인이 받을 이 병원의 범위 이탈, 수집 누락, 콜드칠러 정지 의심 알림을 모두 중지합니다. 다른 담당자의 알림에는 영향을 주지 않습니다. 각 측정항목의 설정값은 유지됩니다. 대시보드에서 숨긴 병원은 알림을 켤 수 없습니다." : "콜드칠러 IN·OUT 온도가 정확히 같으면 냉각이 멈췄을 가능성을 알립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외하며, 병원 알림이 켜져 있어야 발송됩니다. 고급 설정의 이상 지속 시간과 반복·발송 제외 설정을 따릅니다."}</p></div><button type="button" aria-label="알림 설명 닫기" onClick={() => setPolicyHelp(null)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-lg hover:bg-slate-100 dark:hover:bg-white/10">×</button></div>}
             {!entry.dashboardVisible && <p className="w-full text-xs text-text-secondary">숨긴 병원은 알림을 켤 수 없습니다.</p>}
           </div>}
           {!onlyMetricKey && <div className="mb-3 flex flex-wrap items-center gap-2">{(["active", "all"] as const).map(value => <button type="button" key={value} onClick={() => setMetricFilter(value)} className={`min-h-11 rounded-lg px-4 text-sm font-bold ${metricFilter === value ? "bg-sky-700 text-white" : "bg-slate-100 dark:bg-white/10"}`}>{value === "active" ? "사용 중 항목" : "전체 항목"}</button>)}<button type="button" disabled={!canEdit || saving} onClick={() => setThresholds(current => current.map(item => ({...item, useAverage: true})))} className="min-h-11 rounded-lg border px-3 text-xs font-bold dark:border-white/10">모든 항목을 24시간 평균으로</button></div>}

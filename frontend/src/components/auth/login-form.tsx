@@ -36,6 +36,8 @@ export default function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { session, isLoading, login } = useAuth();
+  // Invitation signup must require credentials even when this browser has another session.
+  const reauthenticate = searchParams.get("reauthenticate") === "1";
 
   const [email, setEmail] = useState(() => searchParams.get("email") ?? "");
   const [rememberEmail, setRememberEmail] = useState(false);
@@ -65,8 +67,8 @@ export default function LoginForm() {
   );
 
   useEffect(() => {
-    if (!isLoading && session) goAfterLogin();
-  }, [goAfterLogin, isLoading, session]);
+    if (!isLoading && session && !reauthenticate) goAfterLogin();
+  }, [goAfterLogin, isLoading, session, reauthenticate]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -78,13 +80,14 @@ export default function LoginForm() {
         if (rememberEmail) window.localStorage.setItem(REMEMBERED_EMAIL_KEY, email.trim().toLowerCase());
         else window.localStorage.removeItem(REMEMBERED_EMAIL_KEY);
         setError(null);
+        goAfterLogin();
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "로그인에 실패했습니다.",
         );
       } finally { setSubmitting(false); }
     },
-    [canSubmit, email, login, password, rememberEmail],
+    [canSubmit, email, login, password, rememberEmail, goAfterLogin],
   );
 
   return (
@@ -105,12 +108,12 @@ export default function LoginForm() {
               MrEyes
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
-              계속하려면 로그인하세요.
+              {reauthenticate ? "가입한 계정으로 로그인하세요." : "계속하려면 로그인하세요."}
             </p>
           </header>
 
           <div className="mt-6">
-            {isLoading || session ? (
+            {isLoading || (session && !reauthenticate) ? (
               <div className="flex min-h-[220px] items-center justify-center">
                 <CircleLoader size="xl" />
               </div>

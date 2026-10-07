@@ -3,11 +3,15 @@
 import ManagementTabs from "@/components/common/management-tabs";
 import CircleLoader from "@/components/icons/circle-loader";
 import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
+import RecipientManagement from "@/components/admin/recipient-management";
+import DeleteAccountDialog from "@/components/admin/delete-account-dialog";
+import PhoneInput from "@/components/forms/phone-input";
+import { formatPhone, phoneDigits } from "@/lib/phone";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { useForm, useWatch } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 type UserRow = {
@@ -70,7 +74,7 @@ const INPUT =
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
-  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "metrics" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "metrics" | "recipients" | "audit">("users");
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => apiFetch<UserRow[]>("/admin/accounts/users"),
@@ -127,7 +131,7 @@ export default function AdminClient() {
 
       <ManagementTabs label="관리 설정" value={tab} onChange={setTab} items={[
         {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"병원"},
-        {value:"metrics",label:"측정항목"}, {value:"audit",label:"활동 기록"},
+        {value:"metrics",label:"측정항목"}, {value:"recipients",label:"수신처"}, {value:"audit",label:"활동 기록"},
       ]} />
 
       {tab === "users" && (
@@ -149,6 +153,7 @@ export default function AdminClient() {
       {tab === "sites" && <SiteSection sites={sites.data ?? []} company={company.data ?? null} loading={sites.isLoading || company.isLoading} />}
       {tab === "audit" && <AuditSection rows={audits.data ?? []} loading={audits.isLoading} />}
       {tab === "metrics" && <CompanyMetricsEditor />}
+      {tab === "recipients" && <RecipientManagement sites={(sites.data ?? []).map(site => ({siteid: site.id, name: site.name}))} />}
     </main>
   );
 }
@@ -185,7 +190,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
         <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
-      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 병원별 알림 설정에서 별도로 등록합니다.</p>
+      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 관리 설정의 수신처에서 별도로 등록합니다.</p>
       <div className={`${CARD} overflow-x-auto`}>
         <table className="w-full min-w-[900px] text-left text-sm whitespace-nowrap">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary/70">
@@ -205,7 +210,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
               <tr key={user.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5">
                 <td className="px-3 py-3 font-bold">{user.name}</td>
                 <td className="px-3 py-3">{user.email}</td>
-                <td className="px-3 py-3 whitespace-nowrap">{user.phone || "미등록"}</td>
+                <td className="px-3 py-3 whitespace-nowrap">{formatPhone(user.phone) || "미등록"}</td>
                 <td className="px-3 py-3 whitespace-nowrap">{roleLabel(user.role)}</td>
                 <td className="px-3 py-3"><StatusPill status={user.status} /></td>
                 <td className="px-3 py-3 whitespace-nowrap">{user.role === "USER" ? `${user.siteIds.length}곳` : "전체"}</td>
@@ -249,7 +254,7 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
     try {
       await apiFetch(`/admin/accounts/users/${user.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ email, name, phone: phone || null, role, status, siteIds }),
+        body: JSON.stringify({ email, name, phone: phoneDigits(phone) || null, role, status, siteIds }),
       });
       await queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
@@ -261,16 +266,16 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
     }
   }
 
-  async function remove() {
-    if (!confirmDelete) { setConfirmDelete(true); return; }
+  async function remove(confirmationEmail: string) {
+    if (!canDelete || saving || confirmationEmail.trim().toLowerCase() !== user.email.toLowerCase()) return;
     setSaving(true); setMessage(null);
     try {
-      await apiFetch(`/admin/accounts/users/${user.id}`, { method: "DELETE" });
+      await apiFetch(`/admin/accounts/users/${user.id}`, { method: "DELETE", body: JSON.stringify({ confirmationEmail }) });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["admin-users"] }),
         queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
       ]);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "계정을 삭제하지 못했습니다."); setSaving(false); }
+    } finally { setSaving(false); }
   }
 
   async function createPasswordReset() {
@@ -319,7 +324,7 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
           </select>
         </div>
       </div>
-      {!immutable && <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-text-secondary text-xs font-bold">이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold">이메일 (아이디)<input className={`${INPUT} mt-1.5`} type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold sm:col-span-2">휴대폰번호<input className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label></div>}
+      {!immutable && <div className="mt-4 grid gap-3 sm:grid-cols-2"><label className="text-text-secondary text-xs font-bold">이름<input className={`${INPUT} mt-1.5`} required maxLength={80} value={name} onChange={(event) => setName(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold">이메일 (아이디)<input className={`${INPUT} mt-1.5`} type="email" required maxLength={254} value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="text-text-secondary text-xs font-bold sm:col-span-2">휴대폰번호<PhoneInput className={`${INPUT} mt-1.5`} value={phone} onValueChange={setPhone} placeholder="010-1234-5678" /></label></div>}
       {role === "USER" && !immutable && (
         <SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} />
       )}
@@ -334,10 +339,11 @@ function UserEditor({ user, sites, canManageAdmins, currentUserId }: {
             className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50">
             {saving ? "저장 중…" : "변경 저장"}
           </button>
-          {canDelete && <button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : "계정 삭제"}</button>}
+          {canDelete && <button type="button" disabled={saving} onClick={() => setConfirmDelete(true)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">계정 삭제</button>}
         </div>
       )}
-      {immutable && canDelete && <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">{message && <span className="text-text-secondary text-xs">{message}</span>}<button type="button" disabled={saving} onClick={remove} onBlur={() => setConfirmDelete(false)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{confirmDelete ? "정말 삭제" : user.role === "SUPER_ADMIN" ? "최고관리자 삭제" : "계정 삭제"}</button></div>}
+      {immutable && canDelete && <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">{message && <span className="text-text-secondary text-xs">{message}</span>}<button type="button" disabled={saving} onClick={() => setConfirmDelete(true)} className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30">{user.role === "SUPER_ADMIN" ? "최고관리자 삭제" : "계정 삭제"}</button></div>}
+      {confirmDelete && canDelete && <DeleteAccountDialog email={user.email} name={user.name} onClose={() => setConfirmDelete(false)} onConfirm={remove} />}
       {resetLink && (
         <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
           <p className="mb-2 text-xs font-semibold">1시간 동안 유효한 비밀번호 재설정 링크</p>
@@ -372,7 +378,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
     try {
       const result = await apiFetch<InvitationCreated>("/admin/accounts/invitations", {
         method: "POST",
-        body: JSON.stringify({ email, name, role, siteIds, phone: phone || null }),
+        body: JSON.stringify({ email, name, role, siteIds, phone: phoneDigits(phone) || null }),
       });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
       setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
@@ -414,7 +420,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
         <div><label htmlFor="invite-email" className="text-sm font-bold">이메일</label><input id="invite-email" className={`${INPUT} mt-1.5`} type="email" aria-invalid={Boolean(errors.email)} aria-describedby="invite-email-error" placeholder="이메일" {...register("email", { required: "이메일을 입력해주세요.", maxLength: {value:254,message:"이메일은 254자 이하로 입력해주세요."}, pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "올바른 이메일을 입력해주세요." }, setValueAs: value => value.trim() })} />{errors.email && <p id="invite-email-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}</div>
         <div><label htmlFor="invite-name" className="text-sm font-bold">이름</label><input id="invite-name" className={`${INPUT} mt-1.5`} aria-invalid={Boolean(errors.name)} aria-describedby="invite-name-error" placeholder="이름" maxLength={80} {...register("name", { required: "이름을 입력해주세요.", maxLength: {value:80,message:"이름은 80자 이하로 입력해주세요."}, setValueAs: value => value.trim() })} />{errors.name && <p id="invite-name-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.name.message}</p>}</div>
         <div><label htmlFor="invite-phone" className="text-sm font-bold">휴대폰번호 (카카오 알림용)</label>
-          <input id="invite-phone" className={`${INPUT} mt-1.5`} type="tel" inputMode="tel" maxLength={30} aria-invalid={Boolean(errors.phone)} aria-describedby="invite-phone-help invite-phone-error" placeholder="010-1234-5678" {...register("phone", { validate: value => !value || /^01[016789][0-9]{7,8}$/.test(value.replace(/[-\s]/g, "")) || "휴대폰번호를 확인해주세요. 예: 010-1234-5678" })} />
+          <Controller control={form.control} name="phone" rules={{ validate: value => !value || /^01[016789][0-9]{7,8}$/.test(value) || "휴대폰번호를 확인해주세요. 예: 010-1234-5678" }} render={({ field }) => <PhoneInput id="invite-phone" name={field.name} onBlur={field.onBlur} value={field.value} onValueChange={field.onChange} className={`${INPUT} mt-1.5`} aria-invalid={Boolean(errors.phone)} aria-describedby="invite-phone-help invite-phone-error" placeholder="010-1234-5678" />} />
           {errors.phone && <p id="invite-phone-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.phone.message}</p>}
           <p id="invite-phone-help" className="text-text-secondary mt-1.5 text-xs leading-5">가입 완료 시 연락처에 저장됩니다. 알림관리에서 담당자를 선택하면 이 번호가 입력됩니다. 초대 링크는 이메일로 발송합니다.</p>
         </div>
@@ -446,7 +452,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
             <div key={invitation.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 dark:border-white/8 dark:bg-white/3 dark:hover:bg-white/5">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{invitation.name} · {invitation.email}</p>
-                <p className="text-text-secondary text-xs">{invitation.phone && `${invitation.phone} · `}{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
+                <p className="text-text-secondary text-xs">{invitation.phone && `${formatPhone(invitation.phone)} · `}{roleLabel(invitation.role)} · 만료 {formatDate(invitation.expiresAt)}</p>
               </div>
               <div className="flex shrink-0 gap-1"><button type="button" disabled={saving || (!canInviteAdmins && invitation.role !== "USER")} onClick={() => resend(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30">{resendingId === invitation.id && <CircleLoader className="mr-1 align-middle [&>span]:h-3 [&>span]:w-3" />}{resendingId === invitation.id ? "발송 중" : "재발송"}</button><button type="button" disabled={saving} onClick={() => revoke(invitation.id)} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30">취소</button></div>
             </div>
@@ -559,7 +565,7 @@ function AuditSection({ rows, loading }: { rows: AuditRow[]; loading: boolean })
       <div className="overflow-x-auto">
         <table className="w-full min-w-[680px] text-sm">
           <thead className="bg-slate-50/80 dark:bg-white/4">
-            <tr><th className="p-3 text-left">시각</th><th className="p-3 text-left">작업자</th><th className="p-3 text-left">작업</th><th className="p-3 text-left">대상</th><th className="p-3 text-right">상세</th></tr>
+            <tr><th className="p-3 text-left">시각</th><th className="p-3 text-left">작업자</th><th className="p-3 text-left">작업</th><th className="p-3 text-left">대상</th><th className="w-20 p-3 text-center whitespace-nowrap">상세</th></tr>
           </thead>
           <tbody>{rows.map((row) => <AuditRows key={row.id} row={row} open={expanded === row.id} onToggle={() => setExpanded((current) => current === row.id ? null : row.id)} />)}</tbody>
         </table>
@@ -570,7 +576,7 @@ function AuditSection({ rows, loading }: { rows: AuditRow[]; loading: boolean })
 }
 
 function AuditRows({ row, open, onToggle }: { row: AuditRow; open: boolean; onToggle: () => void }) {
-  return <><tr className="border-t dark:border-background-dark-secondary"><td className="p-3">{formatDateTime(row.createdAt)}</td><td className="p-3">{row.actorName}</td><td className="p-3 font-medium">{actionLabel(row.action)}</td><td className="p-3">{row.targetType} {row.targetId ?? ""}</td><td className="p-3 text-right"><button type="button" onClick={onToggle} className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/30">{open ? "닫기" : "보기"}</button></td></tr>{open && <tr className="bg-slate-50/70 dark:bg-white/3"><td colSpan={5} className="p-4"><div className="grid gap-3 sm:grid-cols-2"><AuditData label="변경 전" value={row.beforeData} /><AuditData label="변경 후" value={row.afterData} /></div>{row.ipAddress && <p className="text-text-secondary mt-3 text-xs">IP {row.ipAddress}</p>}</td></tr>}</>;
+  return <><tr className="border-t dark:border-background-dark-secondary"><td className="p-3">{formatDateTime(row.createdAt)}</td><td className="p-3">{row.actorName}</td><td className="p-3 font-medium">{actionLabel(row.action)}</td><td className="p-3">{row.targetType} {row.targetId ?? ""}</td><td className="w-20 p-3 text-center whitespace-nowrap"><button type="button" onClick={onToggle} className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-sky-700 hover:bg-sky-50 dark:text-sky-300 dark:hover:bg-sky-950/30">{open ? "닫기" : "보기"}</button></td></tr>{open && <tr className="bg-slate-50/70 dark:bg-white/3"><td colSpan={5} className="p-4"><div className="grid gap-3 sm:grid-cols-2"><AuditData label="변경 전" value={row.beforeData} /><AuditData label="변경 후" value={row.afterData} /></div>{row.ipAddress && <p className="text-text-secondary mt-3 text-xs">IP {row.ipAddress}</p>}</td></tr>}</>;
 }
 
 function AuditData({ label, value }: { label: string; value: string | null }) {

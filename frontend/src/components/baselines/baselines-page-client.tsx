@@ -1,12 +1,13 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-provider";
-import { apiFetch, type AlertEventSummary, type AlertRecipient, type AlertThreshold, type SiteAlertSettings } from "@/lib/api";
+import { apiFetch, type AlertEventSummary, type AlertThreshold, type SiteAlertSettings } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import BaselinesClient from "./baselines-client";
 
 export default function BaselinesPageClient() {
-  const { isAdmin, role } = useAuth();
+  const { isAdmin, role, session } = useAuth();
+  const eventQueryKey = ["alert-events", session?.id];
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["alert-thresholds"],
@@ -20,13 +21,10 @@ export default function BaselinesPageClient() {
     enabled: isAdmin,
   });
   const events = useQuery({
-    queryKey: ["alert-events"],
+    queryKey: eventQueryKey,
     queryFn: () => apiFetch<AlertEventSummary[]>("/alerts/events?limit=500"),
     refetchInterval: 60_000,
-  });
-  const recipients = useQuery({
-    queryKey: ["alert-recipients"],
-    queryFn: () => apiFetch<AlertRecipient[]>("/alerts/recipients"),
+    enabled: Boolean(session),
   });
   const update = useMutation({
     mutationFn: (entry: SiteAlertSettings) =>
@@ -104,7 +102,7 @@ export default function BaselinesPageClient() {
   const acknowledge = useMutation({
     mutationFn: (eventId: number) => apiFetch<AlertEventSummary>(`/alerts/events/${eventId}/acknowledge`, { method: "PATCH" }),
     onSuccess: (saved) => {
-      queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
+      queryClient.setQueryData<AlertEventSummary[]>(eventQueryKey, (current = []) =>
         current.map((event) => event.id === saved.id ? saved : event));
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
@@ -116,7 +114,7 @@ export default function BaselinesPageClient() {
     }),
     onSuccess: (_, eventIds) => {
       const acknowledgedAt = new Date().toISOString();
-      queryClient.setQueryData<AlertEventSummary[]>(["alert-events"], (current = []) =>
+      queryClient.setQueryData<AlertEventSummary[]>(eventQueryKey, (current = []) =>
         current.map((event) => eventIds.includes(event.id) ? { ...event, acknowledgedAt: event.acknowledgedAt ?? acknowledgedAt } : event),
       );
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
@@ -125,24 +123,6 @@ export default function BaselinesPageClient() {
   const retryDelivery = useMutation({
     mutationFn: (eventId: number) => apiFetch<{ ok: boolean; eventId: number }>(`/alerts/events/${eventId}/retry`, { method: "POST" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["alert-events"] }),
-  });
-  const createRecipient = useMutation({
-    mutationFn: (request: { siteId: string; channel: AlertRecipient["channel"]; destination: string; userId?: number; quietStart: string | null; quietEnd: string | null; enabled: boolean }) =>
-      apiFetch<AlertRecipient>("/alerts/recipients", { method: "POST", body: JSON.stringify(request) }),
-    onSuccess: (saved) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) => [...current, saved]),
-  });
-  const updateRecipient = useMutation({
-    mutationFn: ({ id, userId, destination, quietStart, quietEnd, enabled }: AlertRecipient) =>
-      apiFetch<AlertRecipient>(`/alerts/recipients/${id}`, { method: "PATCH", body: JSON.stringify({ userId, destination, quietStart, quietEnd, enabled }) }),
-    onSuccess: (saved) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) =>
-      current.map((recipient) => recipient.id === saved.id ? saved : recipient),
-    ),
-  });
-  const deleteRecipient = useMutation({
-    mutationFn: (id: number) => apiFetch<void>(`/alerts/recipients/${id}`, { method: "DELETE" }),
-    onSuccess: (_, id) => queryClient.setQueryData<AlertRecipient[]>(["alert-recipients"], (current = []) =>
-      current.filter((recipient) => recipient.id !== id),
-    ),
   });
 
   return (
@@ -163,12 +143,7 @@ export default function BaselinesPageClient() {
       onAcknowledge={(eventId) => acknowledge.mutateAsync(eventId)}
       onAcknowledgeMany={(eventIds) => acknowledgeMany.mutateAsync(eventIds)}
       onRetryDelivery={(eventId) => retryDelivery.mutateAsync(eventId)}
-      recipients={recipients.data ?? []}
-      recipientsLoading={recipients.isLoading}
-      recipientsFailed={recipients.isError}
-      onCreateRecipient={(request) => createRecipient.mutateAsync(request)}
-      onUpdateRecipient={(recipient) => updateRecipient.mutateAsync(recipient)}
-      onDeleteRecipient={(id) => deleteRecipient.mutateAsync(id)}
+
     />
   );
 }

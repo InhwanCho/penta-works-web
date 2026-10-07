@@ -1,7 +1,9 @@
 "use client";
 
+import PhoneInput from "@/components/forms/phone-input";
+import { formatPhone, phoneDigits } from "@/lib/phone";
 import { useAuth } from "@/components/provider/auth-provider";
-import { apiFetch, refreshAccessToken } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -28,9 +30,8 @@ export default function AccountClient() {
     setSaving(true);
     try {
       if (mode === "profile") {
-        const saved = await apiFetch<Profile>("/auth/profile", {method:"PATCH",body:JSON.stringify(draft)});
+        const saved = await apiFetch<Profile>("/auth/profile", {method:"PATCH",body:JSON.stringify({phone: phoneDigits(draft.phone) || null})});
         client.setQueryData(["my-profile",session?.id],saved);
-        await refreshAccessToken();
         await client.invalidateQueries({queryKey:["admin-users"]});
         setMode(null); setMessage("내 정보를 저장했습니다.");
       } else {
@@ -55,7 +56,7 @@ export default function AccountClient() {
         <dl className="space-y-4 text-sm">
           <div><dt className="text-xs text-text-secondary">이름</dt><dd className="mt-1 font-bold break-words">{profile.data?.name ?? session?.name}</dd></div>
           <div><dt className="text-xs text-text-secondary">이메일 (아이디)</dt><dd className="mt-1 font-bold break-all">{profile.data?.email ?? session?.email}</dd></div>
-          <div><dt className="text-xs text-text-secondary">휴대폰번호</dt><dd className="mt-1 font-bold">{profile.data?.phone || "미등록"}</dd></div>
+          <div><dt className="text-xs text-text-secondary">휴대폰번호</dt><dd className="mt-1 font-bold">{formatPhone(profile.data?.phone) || "미등록"}</dd></div>
         </dl>
         {profile.isError && <p role="alert" className="mt-3 text-sm text-rose-600">내 정보를 불러오지 못했습니다. <button type="button" onClick={() => profile.refetch()} className="underline">다시 시도</button></p>}
         <div className="mt-6 grid grid-cols-2 gap-2">
@@ -65,10 +66,8 @@ export default function AccountClient() {
         {mode && <form onSubmit={submit} className="mt-5 space-y-4 border-t border-slate-100 pt-5 dark:border-white/10">
           <h2 className="font-bold">{mode === "profile" ? "내 정보 변경" : "비밀번호 변경"}</h2>
           {mode === "profile" ? <>
-            <label className="block text-sm font-bold">이름<input required maxLength={80} autoComplete="name" className={INPUT} value={draft.name} onChange={e=>setDraft({...draft,name:e.target.value})} /></label>
-            <label className="block text-sm font-bold">이메일 (아이디)<input required type="email" maxLength={254} autoComplete="email" className={INPUT} value={draft.email} onChange={e=>setDraft({...draft,email:e.target.value})} /></label>
-            <label className="block text-sm font-bold">휴대폰번호<input type="tel" maxLength={30} autoComplete="tel" className={INPUT} value={draft.phone ?? ""} onChange={e=>setDraft({...draft,phone:e.target.value || null})} /></label>
-            <p className="text-xs text-text-secondary">알림 수신번호는 병원별 알림 설정에서 별도로 관리합니다.</p>
+            <label className="block text-sm font-bold">휴대폰번호<PhoneInput className={INPUT} value={draft.phone} onValueChange={phone=>setDraft({...draft,phone:phone || null})} placeholder="010-3333-3333" /></label>
+            <p className="text-xs text-text-secondary">알림 수신번호는 관리자가 관리 설정의 수신처에서 별도로 등록합니다.</p>
           </> : <>
             <p className="text-xs text-text-secondary">8자 이상으로 설정해 주세요. 문자 조합 제한은 없습니다. 변경 후 모든 기기에서 로그아웃됩니다.</p>
             <label className="block text-sm font-bold">현재 비밀번호<input type="password" required autoComplete="current-password" className={INPUT} value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} /></label>

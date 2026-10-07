@@ -6,6 +6,8 @@ import {
   type StoredSession,
 } from "@/lib/auth";
 import type { MetricKey } from "@/lib/metrics";
+import { mutationSuccessMessage } from "@/lib/mutation-feedback";
+import { showToast } from "@/lib/toast";
 
 const API_BASE_URL = (
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api/v1"
@@ -166,6 +168,21 @@ export async function apiFetch<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const feedback = mutationSuccessMessage(path, options, undefined);
+  try {
+    const result = await requestApi<T>(path, options);
+    const message = mutationSuccessMessage(path, options, result);
+    if (message) showToast(message);
+    return result;
+  } catch (error) {
+    if (feedback && !(error instanceof Error && error.name === "AbortError")) {
+      showToast(error instanceof Error ? error.message : "변경하지 못했습니다. 다시 시도해주세요.", "error");
+    }
+    throw error;
+  }
+}
+
+async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
   const headers = new Headers(options.headers);
   if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type"))
     headers.set("Content-Type", "application/json");

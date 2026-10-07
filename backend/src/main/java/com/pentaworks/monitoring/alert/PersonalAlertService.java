@@ -203,6 +203,9 @@ public class PersonalAlertService {
             FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
             LEFT JOIN alert_event_acknowledgement a ON a.event_id=e.id AND a.user_id=?
             WHERE r.user_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+              AND EXISTS (SELECT 1 FROM site_alert_recipient recipient
+                           WHERE recipient.site_id=e.site_id AND recipient.user_id=r.user_id
+                             AND recipient.is_enabled=TRUE)
             ORDER BY e.occurred_at DESC,e.id DESC
             """,(org.springframework.jdbc.core.RowCallbackHandler) rs->bySite.computeIfAbsent(rs.getString(2),ignored->new ArrayList<>()).add(new com.pentaworks.monitoring.dashboard.DashboardResponse.AlertIssue(rs.getLong(1),rs.getString(3),rs.getString(4),rs.getString(5),rs.getTimestamp(6).toInstant().toString(),rs.getTimestamp(7)!=null)),actor.id(),actor.id());
         var rows=data.rows().stream().map(row->{

@@ -93,6 +93,31 @@ class PersonalAlertDatabaseTest {
         assertThrows(BadRequestException.class,()->personal.share(b,"001",5));
         });
     }
+    @Test void historyExcludesSharedAndUnassignedEventsEvenForAdministrators() {
+        transaction.executeWithoutResult(status->{
+            var first=personal.settings(a,"001");
+            var second=personal.settings(b,"001");
+            var mine=events.evaluate(a.id(),first,first.thresholds().get(0),3.0);
+            var theirs=events.evaluate(b.id(),second,second.thresholds().get(0),3.0);
+            var shared=events.evaluate(0,first,first.thresholds().get(0),3.0);
+            assertEquals(List.of(mine.eventId()),events.events(Set.of("001"),500,a.id()).stream().map(AlertEventSummary::id).toList());
+            assertEquals(List.of(theirs.eventId()),events.events(Set.of("001"),500,b.id()).stream().map(AlertEventSummary::id).toList());
+            assertThrows(NotFoundException.class,()->events.acknowledge(a,shared.eventId()));
+            assertThrows(NotFoundException.class,()->events.retryTransition(a,theirs.eventId()));
+            assertEquals(0,jdbc.queryForObject("SELECT COUNT(*) FROM alert_event_acknowledgement",Integer.class));
+
+            var admin=new CurrentUser(3,1,"admin@example.com","관리자","ADMIN","ACTIVE");
+            var ownAdminEvent=events.evaluate(admin.id(),first,first.thresholds().get(0),3.0);
+            assertTrue(events.events(Set.of("001"),500,admin.id()).isEmpty());
+            assertThrows(NotFoundException.class,()->events.requireEventAccess(ownAdminEvent.eventId(),admin));
+            jdbc.update("INSERT INTO site_alert_recipient(site_id,user_id,channel,destination,priority,is_enabled) VALUES('001',3,'KAKAO_ALIMTALK','01055556666',0,TRUE)");
+            assertEquals(List.of(ownAdminEvent.eventId()),events.events(Set.of("001"),500,admin.id()).stream().map(AlertEventSummary::id).toList());
+            jdbc.update("DELETE FROM site_alert_recipient WHERE user_id=1");
+            assertTrue(events.events(Set.of("001"),500,a.id()).isEmpty());
+            assertThrows(NotFoundException.class,()->events.acknowledge(a,mine.eventId()));
+            assertEquals(1,events.events(Set.of("001"),500,b.id()).size());
+        });
+    }
     @Test void initialSnapshotMovesLegacyWindowsAndDisabledSwitchWithoutDeletingHistory() {
         transaction.executeWithoutResult(status->{
             jdbc.update("UPDATE site_alert_recipient SET quiet_start='22:00',quiet_end='08:00' WHERE user_id=1");

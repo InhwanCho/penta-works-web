@@ -5,6 +5,7 @@ import { ModalProvider } from "@/components/provider/modal-provider";
 import { QueryProviders } from "@/components/provider/query-provider";
 import { ThemeProvider } from "@/components/provider/theme-provider";
 import PwaProvider from "@/components/provider/pwa-provider";
+import ToastViewport from "@/components/provider/toast-viewport";
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -99,6 +100,7 @@ export default function RootLayout({
             <AuthProvider>
               <ModalProvider>
                 <Navbar />
+                <ToastViewport />
                 <AuthGate>{children}</AuthGate>
               </ModalProvider>
             </AuthProvider>

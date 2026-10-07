@@ -148,7 +148,7 @@ class AdminAccountServiceTest {
             return extractor.extractData(rs);
         });
 
-        assertThrows(BadRequestException.class, () -> service.deleteUser(superAdmin, 1L));
+        assertThrows(BadRequestException.class, () -> service.deleteUser(superAdmin, 1L, "root@example.com"));
         verifyNoInteractions(audit);
     }
 
@@ -175,7 +175,7 @@ class AdminAccountServiceTest {
         when(jdbc.queryForObject(anyString(), eq(Integer.class), eq(1L))).thenReturn(1);
         when(jdbc.queryForObject(anyString(), eq(Long.class), eq(1L))).thenReturn(1L);
 
-        assertThrows(BadRequestException.class, () -> service.deleteUser(superAdmin, 2L));
+        assertThrows(BadRequestException.class, () -> service.deleteUser(superAdmin, 2L, "other@example.com"));
         verifyNoInteractions(audit);
     }
 }

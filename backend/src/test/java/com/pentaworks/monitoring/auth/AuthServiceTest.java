@@ -66,20 +66,21 @@ class AuthServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void profileUpdateUsesTheAuthenticatedAccountAndPreservesItsRole() throws Exception {
+    void profileUpdateChangesOnlyPhoneForTheAuthenticatedAccount() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         ResultSet resultSet = mock(ResultSet.class);
         when(resultSet.next()).thenReturn(true);
         when(resultSet.getLong("id")).thenReturn(7L);
         when(resultSet.getLong("company_id")).thenReturn(1L);
         when(resultSet.getString("email")).thenReturn("alice@example.com");
+        when(resultSet.getString("name")).thenReturn("Alice");
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), any(Object[].class)))
             .thenAnswer(invocation -> ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(resultSet));
         AuthService service = new AuthService(jdbc, mock(JwtTokens.class), new BCryptPasswordEncoder(4), properties(), mock(SessionRegistry.class));
-        assertEquals(new AuthService.Profile("new@example.com", "Alice", "010-1234-5678"),
-            service.updateProfile("alice@example.com", " New@Example.com ", " Alice ", " 010-1234-5678 "));
-        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("UPDATE app_user SET email=?,username=?,name=?,phone=?,"),
-            eq("new@example.com"),eq("new@example.com"),eq("Alice"),eq("010-1234-5678"),eq(7L));
+        assertEquals(new AuthService.Profile("alice@example.com", "Alice", "010-1234-5678"),
+            service.updateProfile("alice@example.com", " 010-1234-5678 "));
+        verify(jdbc).update(org.mockito.ArgumentMatchers.contains("UPDATE app_user SET phone=?,"),
+            eq("010-1234-5678"),eq(7L));
     }
 
     private static AppProperties properties() {

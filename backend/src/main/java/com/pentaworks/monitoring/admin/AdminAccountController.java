@@ -96,10 +96,13 @@ public class AdminAccountController {
     }
 
     @DeleteMapping("/users/{id}")
-    public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
-        service.deleteUser(currentUsers.require(authentication), id);
+    public ResponseEntity<Void> delete(@PathVariable long id, @Valid @RequestBody DeleteUserRequest request,
+                                       Authentication authentication) {
+        service.deleteUser(currentUsers.require(authentication), id, request.confirmationEmail());
         return ResponseEntity.noContent().build();
     }
+
+    public record DeleteUserRequest(@NotBlank @Email @Size(max = 254) String confirmationEmail) {}
 
     @PostMapping("/users/{id}/password-reset")
     public PasswordResetCreated passwordReset(@PathVariable long id, Authentication authentication) {

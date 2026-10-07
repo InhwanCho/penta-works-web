@@ -4,6 +4,8 @@ import com.pentaworks.monitoring.alert.AlertRecipientService.CreateRecipient;
 import com.pentaworks.monitoring.alert.AlertRecipientService.RecipientSummary;
 import com.pentaworks.monitoring.alert.AlertRecipientService.UpdateRecipient;
 import com.pentaworks.monitoring.auth.CurrentUserService;
+import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
+import com.pentaworks.monitoring.common.ForbiddenException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,27 +35,33 @@ public class AlertRecipientController {
 
     @GetMapping
     public List<RecipientSummary> recipients(Authentication authentication) {
-        return recipients.recipients(currentUsers.require(authentication));
+        return recipients.recipients(requireAdmin(authentication));
     }
 
     @PostMapping
     public RecipientSummary create(@Valid @RequestBody CreateRecipientRequest request,
                                    Authentication authentication) {
-        return recipients.create(currentUsers.require(authentication), new CreateRecipient(
+        return recipients.create(requireAdmin(authentication), new CreateRecipient(
             request.siteId(), request.channel(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled(), request.userId()));
     }
 
     @PatchMapping("/{id}")
     public RecipientSummary update(@PathVariable long id, @Valid @RequestBody UpdateRecipientRequest request,
                                    Authentication authentication) {
-        return recipients.update(currentUsers.require(authentication), id,
+        return recipients.update(requireAdmin(authentication), id,
             new UpdateRecipient(request.quietStart(), request.quietEnd(), request.enabled(), request.destination(), request.userId()));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
-        recipients.delete(currentUsers.require(authentication), id);
+        recipients.delete(requireAdmin(authentication), id);
         return ResponseEntity.noContent().build();
+    }
+
+    private CurrentUser requireAdmin(Authentication authentication) {
+        CurrentUser actor = currentUsers.require(authentication);
+        if (!actor.isAdmin()) throw new ForbiddenException("수신처 관리는 관리자만 사용할 수 있습니다.");
+        return actor;
     }
 
     public record CreateRecipientRequest(@NotBlank String siteId, String channel, @NotBlank String destination,
