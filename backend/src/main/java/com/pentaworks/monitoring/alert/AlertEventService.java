@@ -57,9 +57,7 @@ public class AlertEventService {
               LEFT JOIN site s ON s.site=e.site_id
               LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
              WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND r.user_id=?
-               AND EXISTS (SELECT 1 FROM site_alert_recipient recipient
-                            WHERE recipient.site_id=e.site_id AND recipient.user_id=r.user_id
-                              AND recipient.is_enabled=TRUE) %s
+               %s
              ORDER BY e.occurred_at DESC,e.id DESC LIMIT ?
             """.formatted(placeholders, eventId == null ? "" : "AND e.id=?"), (rs, row) -> new AlertEventSummary(
                 rs.getLong("id"), rs.getString("site_id"), rs.getString("name"), rs.getString("metric_key"),
@@ -82,9 +80,6 @@ public class AlertEventService {
         Long owner=jdbcTemplate.query("""
             SELECT r.user_id FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
              WHERE e.id=? AND r.user_id=?
-               AND EXISTS (SELECT 1 FROM site_alert_recipient recipient
-                            WHERE recipient.site_id=e.site_id AND recipient.user_id=r.user_id
-                              AND recipient.is_enabled=TRUE)
             """, rs->rs.next()?rs.getLong(1):null,eventId,actor.id());
         if(owner==null || owner!=actor.id()) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
     }

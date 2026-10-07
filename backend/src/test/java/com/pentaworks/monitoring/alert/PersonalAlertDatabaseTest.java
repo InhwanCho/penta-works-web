@@ -122,7 +122,7 @@ class PersonalAlertDatabaseTest {
         assertThrows(BadRequestException.class,()->personal.share(b,"001",5));
         });
     }
-    @Test void historyExcludesSharedAndUnassignedEventsEvenForAdministrators() {
+    @Test void historyKeepsOwnEventsWithoutRecipientsAndExcludesOtherOwners() {
         transaction.executeWithoutResult(status->{
             var first=personal.settings(a,"001");
             var second=personal.settings(b,"001");
@@ -137,13 +137,19 @@ class PersonalAlertDatabaseTest {
 
             var admin=new CurrentUser(3,1,"admin@example.com","관리자","ADMIN","ACTIVE");
             var ownAdminEvent=events.evaluate(admin.id(),first,first.thresholds().get(0),3.0);
-            assertTrue(events.events(Set.of("001"),500,admin.id()).isEmpty());
-            assertThrows(NotFoundException.class,()->events.requireEventAccess(ownAdminEvent.eventId(),admin));
+            assertEquals(List.of(ownAdminEvent.eventId()),events.events(Set.of("001"),500,admin.id()).stream().map(AlertEventSummary::id).toList());
+            assertDoesNotThrow(()->events.requireEventAccess(ownAdminEvent.eventId(),admin));
+            assertThrows(NotFoundException.class,()->events.requireEventAccess(mine.eventId(),admin));
             jdbc.update("INSERT INTO site_alert_recipient(site_id,user_id,channel,destination,priority,is_enabled) VALUES('001',3,'KAKAO_ALIMTALK','01055556666',0,TRUE)");
             assertEquals(List.of(ownAdminEvent.eventId()),events.events(Set.of("001"),500,admin.id()).stream().map(AlertEventSummary::id).toList());
             jdbc.update("DELETE FROM site_alert_recipient WHERE user_id=1");
-            assertTrue(events.events(Set.of("001"),500,a.id()).isEmpty());
-            assertThrows(NotFoundException.class,()->events.acknowledge(a,mine.eventId()));
+            events.markDelivery(List.of(mine.eventId()),"SKIPPED","등록된 수신 채널이 없습니다.",0);
+            var history=events.events(Set.of("001"),500,a.id());
+            assertEquals(List.of(mine.eventId()),history.stream().map(AlertEventSummary::id).toList());
+            assertEquals("SKIPPED",history.get(0).deliveryStatus());
+            assertEquals("등록된 수신 채널이 없습니다.",history.get(0).deliveryError());
+            assertDoesNotThrow(()->events.acknowledge(a,mine.eventId()));
+            assertTrue(events.events(Set.of(),500,a.id()).isEmpty());
             assertEquals(1,events.events(Set.of("001"),500,b.id()).size());
         });
     }
