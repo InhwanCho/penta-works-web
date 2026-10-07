@@ -1,7 +1,5 @@
 "use client";
 
-import { showToast } from "@/lib/toast";
-
 import {
   type ReactNode,
   createContext,
@@ -90,7 +88,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setIsDarkState(t === "dark");
       applyTheme(t);
     }
-    showToast(t === "system" ? "시스템 테마를 적용했습니다." : t === "dark" ? "어두운 화면으로 변경했습니다." : "밝은 화면으로 변경했습니다.");
   };
 
   // 토글 함수
@@ -101,7 +98,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setIsLargeText(next);
     document.documentElement.classList.toggle("large-text", next);
     localStorage.setItem("text-size", next ? "large" : "normal");
-    showToast(next ? "큰 글씨를 켰습니다." : "기본 글씨 크기로 변경했습니다.");
   };
 
   return (

@@ -3,6 +3,7 @@
 import { DEFAULT_ALERT_EVENT_FILTER, matchesAlertEventFilter, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
 import AlertPatternInbox, { SharePatternButton } from "./alert-pattern-sharing";
+import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
 import ManagementTabs from "@/components/common/management-tabs";
 
@@ -161,21 +162,8 @@ export default function BaselinesClient({
         <p className="pb-3 text-base text-text-secondary">{entries.length}개 병원 · {activeCount}개 알림 사용</p>
       </div>
       <p className="mb-5 text-base leading-7 text-text-secondary">설정은 내 계정에만 적용됩니다. 다른 담당자의 설정과 알림 이력은 바뀌지 않습니다.</p>
-      {filtered.length === 0 ? <EmptyState /> : <section className="space-y-4">{filtered.map(entry => {
-        const active = entry.thresholds.filter(item => item.active);
-        return <article key={entry.siteid} className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 dark:border-white/15 dark:bg-background-dark-card">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div><h2 className="text-xl font-bold">{entry.name ?? entry.siteid}</h2><p className="mt-1 text-sm text-text-secondary">{entry.dashboardVisible ? "내가 받을 알림" : "대시보드에서 숨긴 병원 · 알림 중지"}</p></div>
-            <AlertSwitch label={`${entry.name ?? entry.siteid} 내 알림`} checked={entry.alertsEnabled && entry.dashboardVisible} disabled={!canEdit || busySite === entry.siteid || !entry.dashboardVisible} onChange={() => toggleAlerts(entry)} />
-          </div>
-          <dl className="mt-5 grid gap-4 border-y border-slate-100 py-5 sm:grid-cols-3 dark:border-white/10">
-            <div><dt className="text-base font-bold">수치 이상 · 항목 누락</dt><dd className="mt-2 text-base leading-7 text-text-secondary">{active.length ? `수치 ${active.length}개 항목` : "수치 알림 꺼짐"}<br/>항목 누락 {entry.thresholds.filter(t=>t.missingActive).length}개 감시</dd></div>
-            <div><dt className="text-base font-bold">병원 전체 수집 중단</dt><dd className="mt-2 text-base leading-7 text-text-secondary">{entry.noDataActive ? `${entry.noDataMinutes}분 동안 새 데이터가 없으면 알림` : "사용 안 함"}</dd></div>
-            <div><dt className="text-base font-bold">알림 받지 않는 시간</dt><dd className="mt-2 text-base leading-7 text-text-secondary">{entry.quietStart && entry.quietEnd ? `${entry.quietStart.slice(0,5)} ~ ${entry.quietEnd.slice(0,5)}` : "시간 제한 없음"}{entry.suppressWeekends && " · 토·일 제외"}{entry.holidayDates.length > 0 && ` · 지정 날짜 ${entry.holidayDates.length}일 제외`}</dd></div>
-          </dl>
-          <div className="mt-5 flex flex-wrap items-center gap-3"><button type="button" onClick={() => openSettings(entry)} className="min-h-12 flex-1 rounded-xl bg-sky-700 px-5 py-3 text-base font-bold text-white sm:flex-none">알림 설정하기</button><button type="button" onClick={() => openSettings(entry, undefined, "schedule")} className="min-h-12 w-full rounded-xl border border-sky-300 px-4 py-3 text-base font-bold text-sky-800 sm:w-auto dark:border-sky-800 dark:text-sky-200">알림 받지 않는 시간·휴일</button><details className="sm:ml-auto"><summary className="min-h-12 cursor-pointer py-3 text-base font-semibold text-sky-800 dark:text-sky-300">공유 · 초기 설정</summary><div className="mt-2 flex flex-wrap gap-3"><SharePatternButton entry={entry}/>{canEdit && entry.configured && <button type="button" disabled={restoringSite === entry.siteid} onClick={() => restoreCompany(entry)} className="min-h-12 rounded-xl border px-4 text-base font-bold dark:border-white/20">처음 설정으로 되돌리기</button>}</div></details></div>
-        </article>;
-      })}</section>}
+      {filtered.length === 0 ? <EmptyState /> : <AlertSettingsTable entries={filtered} canEdit={canEdit} busySite={busySite} onToggle={toggleAlerts} onOpen={openSettings} actions={entry=><details className="mt-2"><summary className="min-h-12 cursor-pointer py-3 text-base font-bold text-sky-800 dark:text-sky-200">공유 · 초기 설정</summary><SharePatternButton entry={entry}/>{canEdit && entry.configured && <button type="button" disabled={restoringSite===entry.siteid} onClick={()=>restoreCompany(entry)} className="mt-2 min-h-12 rounded-lg border px-3 text-base dark:border-white/15">처음 설정으로</button>}</details>} />}
+
       {canEditCompany && <div className="mt-8"><CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} /></div>}
 
       </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries.map(entry => entry.siteid)} events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
@@ -477,7 +465,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form ref={dialogForm} role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className={`flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">확인할 내용과 알림 받을 시간을 나눠 설정하세요.{onlyMetricKey && " 선택한 항목만 변경됩니다."}</p></div>
+          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "확인할 내용과 알림 받을 시간을 나눠 설정하세요."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
@@ -499,6 +487,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
           </div>
           {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도가 같으면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive} disabled={!canEdit || saving} onChange={setColdChillerActive} /></AlertSection></div>}
           </>}
+          {onlyMetricKey && <div className="mt-5 space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>}
           {!onlyMetricKey && pane === "schedule" && <div className="space-y-5">
             <AlertSection title="알림 받지 않는 시간·휴일" description="이 병원에서 내가 받을 알림만 쉬게 합니다. 다른 담당자의 설정에는 영향을 주지 않습니다.">
               <div className="space-y-4">
@@ -523,7 +512,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
             </AlertSection>
             <AlertSection title="특정 측정항목 누락" description="데이터는 들어오는데 필요한 항목만 비어 있거나 미측정일 때 알려드립니다. 정상 값이 한 번 들어오면 누락 횟수는 다시 0회가 됩니다.">
               <p className="mb-4 text-base leading-7 text-text-secondary">1~2회 누락은 알리지 않습니다. 감시할 항목을 켜고, 몇 회 연속 빠지면 알릴지 정하세요. 병원 전체 수집이 중단된 동안에는 항목별 누락 알림을 보내지 않습니다.</p>
-              <div className="space-y-3">{thresholds.map(threshold => <section key={threshold.key} className="rounded-xl border border-slate-200 p-4 dark:border-white/15"><h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)}</h4><AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={threshold.missingActive ?? false} disabled={!canEdit || saving} onChange={missingActive => update(threshold.key,{missingActive,missingThreshold:threshold.missingThreshold ?? 3})} />{threshold.missingActive && <div className="mt-4"><NumberField label={`${metricName(threshold.key,threshold.label)} 몇 회 연속 빠지면 알릴까요?`} value={threshold.missingThreshold ?? 3} min={3} max={288} disabled={!canEdit || saving} onChange={missingThreshold => update(threshold.key,{missingThreshold})}/><p className="mt-2 text-base leading-7 text-text-secondary">실제 수집 데이터에서 {threshold.missingThreshold ?? 3}회 연속 누락되면 알립니다.</p></div>}</section>)}</div>
+              <div className="space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>
             </AlertSection>
             <div className="rounded-xl bg-sky-50 p-5 text-base leading-7 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><p className="font-bold">퇴근 후 공유기를 끄는 병원인가요?</p><p className="mt-2">‘시간·휴일’에서 퇴근부터 출근까지 알림을 받지 않도록 설정할 수 있습니다. 이 시간에는 수치 이상을 포함한 모든 알림 발송이 쉬어갑니다.</p></div>
           </div>}
@@ -537,6 +526,10 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
       </form>
     </div>, document.body
   );
+}
+
+function MetricMissingEditor({threshold,disabled,onChange}:{threshold:AlertThreshold;disabled:boolean;onChange:(patch:Partial<AlertThreshold>)=>void}) {
+  return <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15"><h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락</h4><AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={threshold.missingActive ?? false} disabled={disabled} onChange={missingActive=>onChange({missingActive,missingThreshold:threshold.missingThreshold ?? 3})}/>{threshold.missingActive && <div className="mt-4"><NumberField label="몇 회 연속 빠지면 알릴까요?" value={threshold.missingThreshold ?? 3} min={3} max={288} disabled={disabled} onChange={missingThreshold=>onChange({missingThreshold})}/><p className="mt-2 text-base leading-7 text-text-secondary">1~2회는 알리지 않고, {threshold.missingThreshold ?? 3}회 연속 누락되면 알립니다. 정상 값이 들어오면 다시 0회가 됩니다.</p></div>}</section>;
 }
 
 function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: { threshold: AlertThreshold; disabled: boolean; allowAverage?: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {
