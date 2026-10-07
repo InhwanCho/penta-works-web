@@ -35,7 +35,7 @@ class PersonalAlertDatabaseTest {
         jdbc=new JdbcTemplate(ds);
         transaction=new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds));
         jdbc.execute("SET FOREIGN_KEY_CHECKS=0");
-        for(String table:List.of("alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
+        for(String table:List.of("mrtb","alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
         jdbc.execute("SET FOREIGN_KEY_CHECKS=1");
         try(var connection=ds.getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("personal-alert-test-schema.sql"));
@@ -53,6 +53,35 @@ class PersonalAlertDatabaseTest {
     }
     private SiteAlertSettings save(CurrentUser actor,double max,LocalTime start,LocalTime end) {
         return personal.save(actor,"001",new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest("hepres",0.5,max,true,false,40.0)),20,false,true,0,30,start,end,true,List.of(LocalDate.of(2026,12,25)),false,10,2));
+    }
+    @Test void recentMetricQueryReadsLatestRealRowsAndNormalizesMissingValues() {
+        var keys=List.of("recosi","coldtp","recoru","hepres","heleve","actemp","achumi","gctemp","gcflow","cctemp","ccflow");
+        jdbc.execute("CREATE TABLE mrtb (`index` BIGINT PRIMARY KEY,siteid VARCHAR(20),date DATETIME,"+keys.stream().map(k->k+"_value VARCHAR(50)").collect(java.util.stream.Collectors.joining(","))+")");
+        jdbc.update("INSERT INTO mrtb (`index`,siteid,date,hepres_value,heleve_value) VALUES(1,'001','2026-10-07 02:40:00','1.2','80'),(2,'001','2026-10-07 02:50:00','0.001','80'),(3,'001','2026-10-07 03:00:00',NULL,'80'),(4,'002','2026-10-07 03:00:00','3','90')");
+        var samples=new com.pentaworks.monitoring.dashboard.DashboardService(jdbc,mock(RollingAverageService.class)).recentMetricSamples("001",3);
+        assertEquals(3,samples.size());assertNull(samples.get(0).metrics().get("hepres"));assertNull(samples.get(1).metrics().get("hepres"));
+        assertEquals(1.2,samples.get(2).metrics().get("hepres"));assertEquals(80.0,samples.get(0).metrics().get("heleve"));
+        assertTrue(samples.get(0).at().isAfter(samples.get(1).at()));
+    }
+    @Test void missingMetricSettingsPersistAndOperateIndependentlyOfRangeAndOtherUsers() {
+        transaction.executeWithoutResult(status->{
+            var request=new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest("hepres",0.5,2.0,false,false,40.0,true,3)),20,false,true,0,0,null,null,false,List.of(),false,10,2);
+            var first=personal.save(a,"001",request);
+            assertTrue(first.thresholds().get(0).missingActive());assertEquals(3,first.thresholds().get(0).missingThreshold());
+            assertFalse(personal.settings(b,"001").thresholds().get(0).missingActive());
+            assertNull(events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),2));
+            var event=events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),3);
+            assertNotNull(event);assertEquals("METRIC_MISSING",events.events(Set.of("001"),500,a.id()).get(0).eventType());
+            assertTrue(events.events(Set.of("001"),500,b.id()).isEmpty());
+            personal.save(a,"001",request); // Saving disabled range must not close the enabled missing incident.
+            assertNull(events.events(Set.of("001"),500,a.id()).get(0).recoveredAt());
+            events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),0);
+            assertNotNull(events.events(Set.of("001"),500,a.id()).get(0).recoveredAt());
+            var again=events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),3);
+            assertNotEquals(event.eventId(),again.eventId());
+            personal.metric(a,"001","hepres",new AlertController.ThresholdRequest(0.5,2.0,false,false,40.0,false,3));
+            assertTrue(events.events(Set.of("001"),500,a.id()).stream().allMatch(e->e.recoveredAt()!=null));
+        });
     }
     @Test void mysqlMigrationAndPersonalEventsAreIsolatedForEngineersAndAdministrators() {
         transaction.executeWithoutResult(status->{

@@ -121,11 +121,12 @@ public class PersonalAlertService {
         for(var item:request.thresholds()) {
             if(updates.put(item.key(),item)!=null || current.thresholds().stream().noneMatch(t->t.key().equals(item.key()))) throw new BadRequestException("지원하지 않거나 중복된 측정항목입니다.");
             validateMetric(item.min(),item.max(),item.useAverage(),item.tolerancePercent());
+            if(item.missingThreshold()!=null && (item.missingThreshold()<3 || item.missingThreshold()>288))throw new BadRequestException("항목 누락 횟수는 3회에서 288회 사이여야 합니다.");
         }
         List<AlertThreshold> thresholds=current.thresholds().stream().map(t->{
             var u=updates.get(t.key());
             if(u==null)return t;
-            return new AlertThreshold(t.key(),t.label(),t.unit(),u.min(),u.max(),u.active(),u.min(),u.max(),u.useAverage()==null?t.useAverage():u.useAverage(),u.tolerancePercent()==null?t.tolerancePercent():u.tolerancePercent(),null,0,0,null,false,"NO_AVERAGE",false);
+            return new AlertThreshold(t.key(),t.label(),t.unit(),u.min(),u.max(),u.active(),u.min(),u.max(),u.useAverage()==null?t.useAverage():u.useAverage(),u.tolerancePercent()==null?t.tolerancePercent():u.tolerancePercent(),null,0,0,null,false,"NO_AVERAGE",false,u.missingActive()==null?t.missingActive():u.missingActive(),u.missingThreshold()==null?t.missingThreshold():u.missingThreshold());
         }).toList();
         int interval=request.collectionIntervalMinutes()==null?current.collectionIntervalMinutes():request.collectionIntervalMinutes();
         int missing=request.missingCollectionThreshold()==null?current.missingCollectionThreshold():request.missingCollectionThreshold();
@@ -138,7 +139,7 @@ public class PersonalAlertService {
     @Transactional
     public SiteAlertSettings metric(CurrentUser actor,String siteId,String key,AlertController.ThresholdRequest r) {
         SiteAlertSettings s=currentForUpdate(actor,siteId);
-        return save(actor,siteId,new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest(key,r.min(),r.max(),r.active(),r.useAverage(),r.tolerancePercent())),s.noDataMinutes(),s.noDataActive(),s.alertsEnabled(),s.triggerAfterMinutes(),s.repeatMinutes(),s.quietStart(),s.quietEnd(),s.suppressWeekends(),s.holidayDates(),s.coldChillerActive(),s.collectionIntervalMinutes(),s.missingCollectionThreshold()));
+        return save(actor,siteId,new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest(key,r.min(),r.max(),r.active(),r.useAverage(),r.tolerancePercent(),r.missingActive(),r.missingThreshold())),s.noDataMinutes(),s.noDataActive(),s.alertsEnabled(),s.triggerAfterMinutes(),s.repeatMinutes(),s.quietStart(),s.quietEnd(),s.suppressWeekends(),s.holidayDates(),s.coldChillerActive(),s.collectionIntervalMinutes(),s.missingCollectionThreshold()));
     }
     @Transactional
     public SiteAlertSettings enabled(CurrentUser actor,String siteId,boolean enabled) {
@@ -164,8 +165,9 @@ public class PersonalAlertService {
         if(!value.coldChillerActive())disabled.add("__cold_chiller__");
         List<Object> args=new ArrayList<>(List.of(actor.id(),value.siteid(),value.alertsEnabled()));
         args.addAll(disabled);
-        String clause=disabled.isEmpty()?"":" OR r.metric_key IN ("+String.join(",",Collections.nCopies(disabled.size(),"?"))+")";
+        String clause=disabled.isEmpty()?"":" OR (r.rule_type<>'METRIC_MISSING' AND r.metric_key IN ("+String.join(",",Collections.nCopies(disabled.size(),"?"))+"))";
         jdbc.update("UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id SET e.recovered_at=CURRENT_TIMESTAMP(6) WHERE r.user_id=? AND r.site_id=? AND e.recovered_at IS NULL AND (?=FALSE"+clause+")",args.toArray());
+        for(var t:value.thresholds()) if(!t.missingActive()) jdbc.update("UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id SET e.recovered_at=CURRENT_TIMESTAMP(6) WHERE r.user_id=? AND r.site_id=? AND r.metric_key=? AND r.rule_type='METRIC_MISSING' AND e.recovered_at IS NULL",actor.id(),value.siteid(),t.key());
         audit.record(actor,"PERSONAL_ALERT_PATTERN_UPDATED","SITE",value.siteid(),Map.of("ownerId",actor.id()));
     }
     static void validateMetric(Double min,Double max,Boolean average,Double tolerance) {
@@ -188,7 +190,7 @@ public class PersonalAlertService {
             var a=states.getOrDefault(t.key(),RollingAverageService.AverageState.DEFAULT);
             var state=new RollingAverageService.AverageState(t.useAverage(),t.tolerancePercent(),a.averageValue(),a.sampleCount(),a.zeroCount(),a.capturedAt(),a.lastSampleAt(),a.historical());
             var range=RollingAverageService.effectiveRange(state,RollingAverageService.now());
-            return new AlertThreshold(t.key(),meta.label(),meta.unit(),t.min(),t.max(),t.active(),range==null?t.min():range.min(),range==null?t.max():range.max(),t.useAverage(),t.tolerancePercent(),a.averageValue(),a.sampleCount(),a.zeroCount(),a.capturedAt(),range!=null,RollingAverageService.unavailableReason(state,RollingAverageService.now()),a.historical());
+            return new AlertThreshold(t.key(),meta.label(),meta.unit(),t.min(),t.max(),t.active(),range==null?t.min():range.min(),range==null?t.max():range.max(),t.useAverage(),t.tolerancePercent(),a.averageValue(),a.sampleCount(),a.zeroCount(),a.capturedAt(),range!=null,RollingAverageService.unavailableReason(state,RollingAverageService.now()),a.historical(),t.missingActive(),t.missingThreshold());
         }).toList();
         return new SiteAlertSettings(base.siteid(),base.name(),true,thresholds,config.noDataMinutes(),config.noDataActive(),config.alertsEnabled(),config.triggerAfterMinutes(),config.repeatMinutes(),config.quietStart(),config.quietEnd(),config.suppressWeekends(),config.holidayDates(),base.dashboardVisible(),config.coldChillerActive(),config.collectionIntervalMinutes(),config.missingCollectionThreshold());
     }
@@ -202,7 +204,7 @@ public class PersonalAlertService {
             SELECT e.id,e.site_id,r.metric_key,e.event_type,e.message,e.occurred_at,a.acknowledged_at
             FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
             LEFT JOIN alert_event_acknowledgement a ON a.event_id=e.id AND a.user_id=?
-            WHERE r.user_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+            WHERE r.user_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA','METRIC_MISSING')
               AND EXISTS (SELECT 1 FROM site_alert_recipient recipient
                            WHERE recipient.site_id=e.site_id AND recipient.user_id=r.user_id
                              AND recipient.is_enabled=TRUE)

@@ -148,7 +148,7 @@ public class DashboardService {
             SELECT e.id,e.site_id,r.metric_key,e.event_type,e.message,e.occurred_at,e.acknowledged_at
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
-             WHERE r.user_id=0 AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+             WHERE r.user_id=0 AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA','METRIC_MISSING')
              ORDER BY e.occurred_at DESC,e.id DESC
             """, (RowCallbackHandler) rs -> issuesBySite.computeIfAbsent(rs.getString("site_id"), ignored -> new ArrayList<>())
                 .add(new AlertIssue(rs.getLong("id"), rs.getString("metric_key"), rs.getString("event_type"),
@@ -214,6 +214,14 @@ public class DashboardService {
             new Stats(rows.size(), active1h, rows.size() - active24h, total24h,
                 normalSites, warningSites, noDataSites, openAlerts), rows, ctrl, ctrl.get("000"));
     }
+
+    /** Read actual collection records, never scheduler ticks. Index matches the dashboard latest record. */
+    public List<MetricSample> recentMetricSamples(String siteId, int limit) {
+        return jdbcTemplate.query("SELECT `index`,date," + METRICS.stream().map(k->k+"_value AS "+k).collect(Collectors.joining(",")) +
+            " FROM mrtb WHERE siteid=? AND date IS NOT NULL ORDER BY `index` DESC LIMIT ?",
+            (rs,n)->new MetricSample(rs.getTimestamp("date").toInstant(),metricMap(rs)),siteId,Math.min(576,Math.max(1,limit)));
+    }
+    public record MetricSample(Instant at, Map<String,Double> metrics) {}
 
     private Map<String, Double> metricMap(ResultSet rs) throws SQLException {
         Map<String, Double> result = new LinkedHashMap<>();

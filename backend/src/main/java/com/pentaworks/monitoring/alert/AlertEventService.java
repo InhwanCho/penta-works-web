@@ -215,6 +215,30 @@ public class AlertEventService {
             "NO_DATA", measured, null, (double) site.noDataMinutes(), message);
     }
 
+    @Transactional
+    public Transition evaluateMetricMissing(long userId, SiteAlertSettings site, AlertThreshold threshold, int count) {
+        if(count<0 || !site.dashboardVisible() || !site.alertsEnabled() || !threshold.missingActive()) return null;
+        jdbcTemplate.update("""
+            INSERT INTO alert_rule(user_id,site_id,metric_key,rule_type,max_value,severity,is_enabled,created_at,updated_at)
+            VALUES(?,?,?,'METRIC_MISSING',?,'WARNING',TRUE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE max_value=VALUES(max_value),is_enabled=TRUE,updated_at=CURRENT_TIMESTAMP(6)
+            """,userId,site.siteid(),threshold.key(),threshold.missingThreshold());
+        long ruleId=jdbcTemplate.queryForObject("SELECT id FROM alert_rule WHERE user_id=? AND site_id=? AND metric_key=? AND rule_type='METRIC_MISSING' FOR UPDATE",Long.class,userId,site.siteid(),threshold.key());
+        OpenEvent open=openEvent(ruleId,"METRIC_MISSING");
+        if(count<threshold.missingThreshold()) {
+            if(open!=null)jdbcTemplate.update("UPDATE alert_event SET recovered_at=? WHERE id=?",Timestamp.from(Instant.now()),open.id());
+            return null;
+        }
+        String message=site.name()+" · "+threshold.label()+" 측정값이 "+count+"회 연속 누락되었습니다. 측정 연결 상태를 확인해주세요.";
+        long eventId;
+        if(open!=null) {
+            jdbcTemplate.update("UPDATE alert_event SET measured_value=?,threshold_max=?,message=? WHERE id=?",count,threshold.missingThreshold(),message,open.id());
+            if(!repeatDue(open,site.repeatMinutes()))return null;
+            eventId=open.id();
+        } else eventId=insertEvent(ruleId,site.siteid(),"METRIC_MISSING",(double)count,message,Instant.now(),null);
+        return new Transition(eventId,site.siteid(),site.name(),threshold.key(),threshold.label()+" 측정 누락","회","METRIC_MISSING",(double)count,null,(double)threshold.missingThreshold(),message);
+    }
+
     public void markDelivery(List<Long> eventIds, String status, String error) {
         markDelivery(eventIds, status, error, 0);
     }
@@ -284,8 +308,8 @@ public class AlertEventService {
         if (!"__data__".equals(event.metricKey()) && DashboardService.isUnmeasured(event.value()))
             throw new BadRequestException("미측정 값으로 발생한 알림은 재전송할 수 없습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
-            "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (IN=OUT)" : event.metricKey(),
-            "__cold_chiller__".equals(event.metricKey()) ? "°C" : null,
+            "METRIC_MISSING".equals(event.eventType()) ? event.metricKey()+" 측정 누락" : "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (IN=OUT)" : event.metricKey(),
+            "METRIC_MISSING".equals(event.eventType()) ? "회" : "__cold_chiller__".equals(event.metricKey()) ? "°C" : null,
             event.eventType(), event.value(), event.min(), event.max(), event.message());
     }
 
@@ -323,7 +347,7 @@ public class AlertEventService {
         jdbcTemplate.update("""
             UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id
                SET e.recovered_at=CURRENT_TIMESTAMP(6)
-             WHERE r.site_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA')
+             WHERE r.site_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA','METRIC_MISSING')
             """, siteId);
     }
 

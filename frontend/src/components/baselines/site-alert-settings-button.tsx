@@ -43,10 +43,10 @@ export function SiteAlertSettingsDialog({ siteId, initialMetricKey, onlyMetricKe
       method: "PATCH",
       body: JSON.stringify(onlyMetricKey && metric ? {
         min: metric.min, max: metric.max, active: metric.active,
-        useAverage: metric.useAverage, tolerancePercent: metric.tolerancePercent,
+        useAverage: metric.useAverage, tolerancePercent: metric.tolerancePercent, missingActive: metric.missingActive, missingThreshold: metric.missingThreshold,
       } : {
-        thresholds: value.thresholds.map(({key,min,max,active,useAverage,tolerancePercent}) =>
-          ({key,min,max,active,useAverage,tolerancePercent})),
+        thresholds: value.thresholds.map(({key,min,max,active,useAverage,tolerancePercent,missingActive,missingThreshold}) =>
+          ({key,min,max,active,useAverage,tolerancePercent,missingActive,missingThreshold})),
         noDataMinutes: value.noDataMinutes,
         noDataActive: value.noDataActive,
         alertsEnabled: value.alertsEnabled,

@@ -22,6 +22,37 @@ import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
     @Test
+    void existingSavedJsonKeepsMissingAlertsOffWithThreeCollectionDefault() throws Exception {
+        var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
+        var old=json.valueToTree(new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,true));
+        ((com.fasterxml.jackson.databind.node.ObjectNode)old).remove(List.of("missingActive","missingThreshold"));
+        var restored=json.treeToValue(old,AlertThreshold.class);
+        org.junit.jupiter.api.Assertions.assertFalse(restored.missingActive());assertEquals(3,restored.missingThreshold());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void missingMetricWaitsForThreeCollectionsAndClosesOnRecovery() throws Exception {
+        var jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Long.class),eq(1L),eq("001"),eq("hepres"))).thenReturn(7L);
+        when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"),eq(Long.class))).thenReturn(9L);
+        var rs=mock(ResultSet.class);
+        when(rs.next()).thenReturn(false,false,false,true);
+        when(rs.getLong("id")).thenReturn(9L);
+        when(jdbc.query(anyString(),any(ResultSetExtractor.class),eq(7L),eq("METRIC_MISSING")))
+            .thenAnswer(invocation->((ResultSetExtractor<?>)invocation.getArgument(1)).extractData(rs));
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var t=new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,false,0.5,2.0,false,40,null,0,0,null,false,"NO_AVERAGE",false,true,3);
+        var site=new SiteAlertSettings("001","병원",true,List.of(t),20,true,true,60,0,null,null,false);
+        assertNull(service.evaluateMetricMissing(1,site,t,1));
+        assertNull(service.evaluateMetricMissing(1,site,t,2));
+        var event=service.evaluateMetricMissing(1,site,t,3);
+        assertEquals("METRIC_MISSING",event.eventType());assertEquals(3.0,event.value());assertEquals("회",event.unit());
+        assertNull(service.evaluateMetricMissing(1,site,t,0));
+        verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"),any(java.sql.Timestamp.class),eq(9L));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void collectionAlertStartsAtSecondMissAndClosesWhenDataReturns() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);

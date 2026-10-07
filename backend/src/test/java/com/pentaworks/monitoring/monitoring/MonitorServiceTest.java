@@ -196,6 +196,26 @@ class MonitorServiceTest {
     }
 
     @Test
+    void missingMetricUsesCollectionHistoryAndPausesWhenWholeHospitalStops() {
+        var dashboard=mock(DashboardService.class);var defaults=mock(AlertService.class);var events=mock(AlertEventService.class);
+        var recipients=mock(AlertRecipientService.class);
+        var threshold=new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,false,0.5,2.0,false,40,null,0,0,null,false,"NO_AVERAGE",false,true,3);
+        var policy=new SiteAlertSettings("001","병원",true,List.of(threshold),20,false,true,0,0,null,null,false,List.of(),true,false,10,2);
+        when(defaults.alertSettings()).thenReturn(List.of(policy));
+        var at=java.time.Instant.parse("2026-10-07T03:00:00Z");
+        var values=new java.util.HashMap<String,Double>();values.put("hepres",null);
+        when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(new DashboardService.MetricSample(at,values),new DashboardService.MetricSample(at.minusSeconds(600),values),new DashboardService.MetricSample(at.minusSeconds(1200),values)));
+        for(long lag:List.of(0L,20L)) {
+            var row=new DashboardResponse.DashboardRow("001","1","병원",at.toString(),lag,3,3,null,null,values,"NORMAL",0,0,List.of());
+            when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,1,0,3,1,0,0,0),List.of(row),Map.of(),null));
+            monitor(dashboard,defaults,events,recipients,mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run();
+        }
+        verify(events).evaluateMetricMissing(1,policy,threshold,3); // exactly once, including when site-wide alarm is disabled
+        verify(dashboard).recentMetricSamples("001",576);
+        verify(events,org.mockito.Mockito.never()).evaluate(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
     void appliesOvernightWeekendAndCustomHolidayWindows() {
         SiteAlertSettings overnight = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
             true, 0, 0, LocalTime.of(22, 0), LocalTime.of(8, 0), false, List.of());

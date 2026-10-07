@@ -55,6 +55,7 @@ public class MonitorService {
         var states=averages.states();
         var rows=dashboardService.getDashboard().rows();
         List<Transition> all=new ArrayList<>();
+        Map<String,List<DashboardService.MetricSample>> samples=new LinkedHashMap<>();
         for(CurrentUser user:personal.activeUsers()) {
             Map<String,SiteAlertSettings> settings=new LinkedHashMap<>();
             personal.settings(user,base,states).forEach(value->settings.put(value.siteid(),value));
@@ -64,10 +65,16 @@ public class MonitorService {
                 if(row.name()==null||site==null||!site.dashboardVisible()||!site.alertsEnabled())continue;
                 Transition noData=alertEvents.evaluateNoData(user.id(),site,row.lagMin());
                 if(noData!=null)transitions.add(noData);
-                if(site.noDataActive()&&com.pentaworks.monitoring.alert.CollectionHealth.isMissing(row.lagMin(),site.collectionIntervalMinutes(),site.missingCollectionThreshold()))continue;
+                if(com.pentaworks.monitoring.alert.CollectionHealth.isMissing(row.lagMin(),site.collectionIntervalMinutes(),site.missingCollectionThreshold()))continue;
                 Transition chiller=alertEvents.evaluateColdChiller(user.id(),site,row.metrics().get("cctemp"),row.metrics().get("ccflow"));
                 if(chiller!=null)transitions.add(chiller);
                 for(AlertThreshold threshold:site.thresholds()) {
+                    if(threshold.missingActive()) {
+                        var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576));
+                        Transition missing=alertEvents.evaluateMetricMissing(user.id(),site,threshold,
+                            consecutiveMissing(history,threshold.key(),site.collectionIntervalMinutes(),row.lastAt()));
+                        if(missing!=null)transitions.add(missing);
+                    }
                     if(!threshold.active())continue;
                     Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()));
                     if(event!=null)transitions.add(event);
@@ -157,6 +164,23 @@ public class MonitorService {
             }
             batches.values().forEach(deliveries::finish);
         }
+    }
+
+    static int consecutiveMissing(List<DashboardService.MetricSample> samples, String key, int interval, String expectedLatest) {
+        if(samples.isEmpty() || expectedLatest==null || !samples.get(0).at().equals(java.time.Instant.parse(expectedLatest)))return -1;
+        int count=0;
+        java.time.Instant previous=null;
+        for(var sample:samples) {
+            // Duplicate collection timestamps count once; a hospital-wide gap breaks the streak.
+            if(previous!=null && sample.at().equals(previous))continue;
+            if(previous!=null && (sample.at().isAfter(previous) || java.time.Duration.between(sample.at(),previous).toSeconds()>interval*90L))break;
+            Double value=sample.metrics().get(key);
+            if(value!=null && Double.isFinite(value) && !DashboardService.isUnmeasured(value))break;
+            count++;
+            previous=sample.at();
+            if(count==288)break;
+        }
+        return count;
     }
 
     static boolean deliveryAllowed(SiteAlertSettings policy, ZonedDateTime now) {

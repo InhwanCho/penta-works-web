@@ -54,6 +54,8 @@ export type AlertThreshold = {
   averageApplied: boolean;
   averageUnavailableReason?: string | null;
   historicalAverage?: boolean;
+  missingActive?: boolean;
+  missingThreshold?: number;
 };
 
 export type SiteAlertSettings = {
@@ -81,7 +83,7 @@ export type AlertEventSummary = {
   siteId: string;
   siteName: string | null;
   metricKey: MetricKey | "__data__" | "__cold_chiller__";
-  eventType: "LOW" | "HIGH" | "NO_DATA" | "RECOVERY";
+  eventType: "LOW" | "HIGH" | "NO_DATA" | "METRIC_MISSING" | "RECOVERY";
   severity: string;
   measuredValue: number | null;
   min: number | null;

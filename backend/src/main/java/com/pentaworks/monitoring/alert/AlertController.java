@@ -179,9 +179,17 @@ public class AlertController {
                                                Integer missingCollectionThreshold) {}
     public record ThresholdUpdateRequest(@NotBlank String key, @NotNull Double min, @NotNull Double max,
                                          @NotNull Boolean active, Boolean useAverage,
-                                         Double tolerancePercent) {}
+                                         Double tolerancePercent, Boolean missingActive, Integer missingThreshold) {
+        public ThresholdUpdateRequest(String key, Double min, Double max, Boolean active, Boolean useAverage, Double tolerancePercent) {
+            this(key,min,max,active,useAverage,tolerancePercent,null,null);
+        }
+    }
     public record ThresholdRequest(@NotNull Double min, @NotNull Double max, @NotNull Boolean active,
-                                   Boolean useAverage, Double tolerancePercent) {}
+                                   Boolean useAverage, Double tolerancePercent, Boolean missingActive, Integer missingThreshold) {
+        public ThresholdRequest(Double min, Double max, Boolean active, Boolean useAverage, Double tolerancePercent) {
+            this(min,max,active,useAverage,tolerancePercent,null,null);
+        }
+    }
     public record UpdatePolicyRequest(@NotNull Boolean enabled) {}
     public record AcknowledgeEventsRequest(@NotEmpty List<@NotNull Long> eventIds) {}
 }

@@ -32,7 +32,7 @@ export type SiteRow = {
   alertIssues: {
     id: number;
     metricKey: MetricKey | "__data__" | "__cold_chiller__";
-    eventType: "LOW" | "HIGH" | "NO_DATA";
+    eventType: "LOW" | "HIGH" | "NO_DATA" | "METRIC_MISSING";
     message: string;
     occurredAt: string;
     acknowledged: boolean;

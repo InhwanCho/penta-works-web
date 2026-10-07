@@ -31,8 +31,8 @@ export default function BaselinesPageClient() {
       apiFetch<SiteAlertSettings>(`/alerts/thresholds/${encodeURIComponent(entry.siteid)}`, {
         method: "PATCH",
         body: JSON.stringify({
-          thresholds: entry.thresholds.map(({ key, min, max, active, useAverage, tolerancePercent }) =>
-            ({ key, min, max, active, useAverage, tolerancePercent })),
+          thresholds: entry.thresholds.map(({ key, min, max, active, useAverage, tolerancePercent, missingActive, missingThreshold }) =>
+            ({ key, min, max, active, useAverage, tolerancePercent, missingActive, missingThreshold })),
           noDataMinutes: entry.noDataMinutes,
           noDataActive: entry.noDataActive,
           alertsEnabled: entry.alertsEnabled,
