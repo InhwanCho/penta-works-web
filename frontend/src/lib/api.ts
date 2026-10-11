@@ -89,7 +89,14 @@ export type AlertEventSummary = {
   min: number | null;
   max: number | null;
   message: string;
-  deliveryStatus: "PENDING" | "SENDING" | "SENT" | "PARTIAL" | "FAILED" | "SKIPPED" | "UNKNOWN";
+  deliveryStatus:
+    | "PENDING"
+    | "SENDING"
+    | "SENT"
+    | "PARTIAL"
+    | "FAILED"
+    | "SKIPPED"
+    | "UNKNOWN";
   deliveryError: string | null;
   lastNotifiedAt: string | null;
   notificationCount: number;
@@ -115,19 +122,33 @@ export type AlertRecipient = {
 let refreshPromise: Promise<StoredSession> | null = null;
 
 function isPublicAuthPath(path: string) {
-  return path === "/auth/login" || path === "/auth/refresh" || path === "/auth/logout" ||
-    path.startsWith("/auth/invitations/") || path.startsWith("/auth/password-resets/");
+  path = path.split("?")[0];
+  return (
+    path === "/auth/login" ||
+    path === "/auth/refresh" ||
+    path === "/auth/logout" ||
+    path.startsWith("/auth/invitations/") ||
+    path.startsWith("/auth/password-resets/")
+  );
 }
 
 export class ApiError extends Error {
-  constructor(message: string, readonly status: number) { super(message); }
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
 }
 
 async function errorFrom(response: Response): Promise<ApiError> {
   const body = (await response.json().catch(() => null)) as {
     message?: string;
   } | null;
-  return new ApiError(body?.message ?? `API request failed (${response.status})`, response.status);
+  return new ApiError(
+    body?.message ?? `API request failed (${response.status})`,
+    response.status,
+  );
 }
 
 function storeAuthResponse(result: AuthResponse): StoredSession {
@@ -141,29 +162,106 @@ function storeAuthResponse(result: AuthResponse): StoredSession {
   return stored;
 }
 
+// Serialize cookie-changing auth requests, including across tabs when Web Locks exist.
+let authQueue: Promise<unknown> = Promise.resolve();
+function withAuthLock<T>(operation: () => Promise<T>): Promise<T> {
+  const run = async (): Promise<T> => {
+    if (typeof navigator !== "undefined" && navigator.locks)
+      return await navigator.locks.request("mreyes-auth", operation);
+    return operation();
+  };
+  const pending = authQueue.then(run, run);
+  authQueue = pending.catch(() => {});
+  return pending;
+}
+
+async function authRequest<T>(
+  path: string,
+  options: RequestInit,
+  consume: (response: Response, signal: AbortSignal) => Promise<T>,
+): Promise<T> {
+  const controller = new AbortController();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      fetch(`${API_BASE_URL}${path}`, {
+        ...options,
+        credentials: "include",
+        cache: "no-store",
+        signal: controller.signal,
+      }).then((response) => {
+        if (controller.signal.aborted)
+          throw new ApiError("서버 연결 시간이 초과되었습니다.", 0);
+        return consume(response, controller.signal);
+      }),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+          controller.abort();
+          reject(
+            new ApiError(
+              "서버 연결이 지연되고 있습니다. 연결을 확인한 뒤 다시 시도해주세요.",
+              0,
+            ),
+          );
+        }, 15_000);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function refreshAccessToken(): Promise<StoredSession> {
   if (refreshPromise) return refreshPromise;
-  const previousToken = readStoredSession()?.accessToken;
-  refreshPromise = (async () => {
-    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-      method: "POST",
-      credentials: "include",
-      cache: "no-store",
-    });
-    if (!response.ok) {
-      const error = await errorFrom(response);
-      if ((error.status === 401 || error.status === 403) &&
-          readStoredSession()?.accessToken === previousToken) {
-        clearStoredSession();
-        window.dispatchEvent(new Event("auth:expired"));
-      }
-      throw error;
-    }
-    return storeAuthResponse((await response.json()) as AuthResponse);
-  })().finally(() => {
+  refreshPromise = withAuthLock(async () => {
+    const previousToken = readStoredSession()?.accessToken;
+    return authRequest(
+      "/auth/refresh",
+      { method: "POST" },
+      async (response, signal) => {
+        if (!response.ok) {
+          const error = await errorFrom(response);
+          if (signal.aborted)
+            throw new ApiError("서버 연결 시간이 초과되었습니다.", 0);
+          if (
+            error.status === 401 &&
+            readStoredSession()?.accessToken === previousToken
+          ) {
+            clearStoredSession();
+            window.dispatchEvent(new Event("auth:expired"));
+          }
+          throw error;
+        }
+        const result = (await response.json()) as AuthResponse;
+        if (signal.aborted)
+          throw new ApiError("서버 연결 시간이 초과되었습니다.", 0);
+        if (readStoredSession()?.accessToken !== previousToken) {
+          const current = readStoredSession();
+          if (current) return current;
+          throw new ApiError("세션이 변경되었습니다.", 409);
+        }
+        return storeAuthResponse(result);
+      },
+    );
+  }).finally(() => {
     refreshPromise = null;
   });
   return refreshPromise;
+}
+
+async function sessionForRequest(
+  stored: StoredSession,
+): Promise<StoredSession> {
+  try {
+    return await refreshAccessToken();
+  } catch (error) {
+    if (
+      !(error instanceof ApiError && error.status === 401) &&
+      !accessTokenExpiresSoon(stored, 0)
+    )
+      return stored;
+    throw error;
+  }
 }
 
 export async function apiFetch<T>(
@@ -178,7 +276,12 @@ export async function apiFetch<T>(
     return result;
   } catch (error) {
     if (feedback && !(error instanceof Error && error.name === "AbortError")) {
-      showToast(error instanceof Error ? error.message : "변경하지 못했습니다. 다시 시도해주세요.", "error");
+      showToast(
+        error instanceof Error
+          ? error.message
+          : "변경하지 못했습니다. 다시 시도해주세요.",
+        "error",
+      );
     }
     throw error;
   }
@@ -186,11 +289,15 @@ export async function apiFetch<T>(
 
 async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
   const headers = new Headers(options.headers);
-  if (options.body && !(options.body instanceof FormData) && !headers.has("Content-Type"))
+  if (
+    options.body &&
+    !(options.body instanceof FormData) &&
+    !headers.has("Content-Type")
+  )
     headers.set("Content-Type", "application/json");
   let stored = readStoredSession();
   if (stored && !isPublicAuthPath(path) && accessTokenExpiresSoon(stored)) {
-    stored = await refreshAccessToken();
+    stored = await sessionForRequest(stored);
   }
   const token = stored?.accessToken;
   if (token && !isPublicAuthPath(path))
@@ -203,15 +310,13 @@ async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
   });
 
   if (response.status === 401 && !isPublicAuthPath(path)) {
-    try {
-      const refreshed = await refreshAccessToken();
-      headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
-      response = await fetch(`${API_BASE_URL}${path}`, {
-        ...options,
-        credentials: "include",
-        headers,
-      });
-    } catch { /* The refresh request handles invalid sessions. */ }
+    const refreshed = await refreshAccessToken();
+    headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...options,
+      credentials: "include",
+      headers,
+    });
   }
 
   if (!response.ok) throw await errorFrom(response);
@@ -222,7 +327,8 @@ async function requestApi<T>(path: string, options: RequestInit): Promise<T> {
 export async function apiFetchBlob(path: string): Promise<Blob> {
   const headers = new Headers();
   let stored = readStoredSession();
-  if (stored && accessTokenExpiresSoon(stored)) stored = await refreshAccessToken();
+  if (stored && accessTokenExpiresSoon(stored))
+    stored = await sessionForRequest(stored);
   const token = stored?.accessToken;
   if (token) headers.set("Authorization", `Bearer ${token}`);
   let response = await fetch(`${API_BASE_URL}${path}`, {
@@ -230,36 +336,47 @@ export async function apiFetchBlob(path: string): Promise<Blob> {
     headers,
   });
   if (response.status === 401) {
-    try {
-      const refreshed = await refreshAccessToken();
-      headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
-      response = await fetch(`${API_BASE_URL}${path}`, {
-        credentials: "include",
-        headers,
-      });
-    } catch { /* The refresh request handles invalid sessions. */ }
+    const refreshed = await refreshAccessToken();
+    headers.set("Authorization", `Bearer ${refreshed.accessToken}`);
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      credentials: "include",
+      headers,
+    });
   }
   if (!response.ok) throw await errorFrom(response);
   return response.blob();
 }
 
 export async function login(email: string, password: string) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  });
-  if (!response.ok) throw await errorFrom(response);
-  return storeAuthResponse((await response.json()) as AuthResponse);
+  return withAuthLock(() =>
+    authRequest(
+      "/auth/login",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      },
+      async (response, signal) => {
+        if (!response.ok) throw await errorFrom(response);
+        const result = (await response.json()) as AuthResponse;
+        if (signal.aborted)
+          throw new ApiError("서버 연결 시간이 초과되었습니다.", 0);
+        return storeAuthResponse(result);
+      },
+    ),
+  );
 }
 
-export async function logout() {
-  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("모든 기기에서 로그아웃하지 못했습니다. 다시 시도해주세요.");
+export async function logout(allDevices = false) {
+  return withAuthLock(() =>
+    authRequest(
+      `/auth/logout?allDevices=${allDevices}`,
+      { method: "POST" },
+      async (response) => {
+        if (!response.ok) throw await errorFrom(response);
+        clearStoredSession();
+        window.dispatchEvent(new Event("auth:expired"));
+      },
+    ),
+  );
 }

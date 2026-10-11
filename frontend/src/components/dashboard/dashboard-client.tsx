@@ -1,30 +1,26 @@
 "use client";
 
+import { useAuth } from "@/components/provider/auth-provider";
+import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-settings-button";
 import AlertSettingsTable, { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
-import CollectionStatus, { collectionMissing } from "@/components/dashboard/collection-status";
-import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 import DraggableToolsButton from "./draggable-tools-button";
 import DashboardMetricInfo, { type MetricSelection } from "./dashboard-metric-info";
 import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import {
-  type CtrlRange,
   type SiteRow,
   useDashboardQuery,
 } from "@/hooks/use-dashboard-query";
 import Link from "next/link";
-import type React from "react";
 import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
-import { formatMetricMeasurement, isMetricOutOfRange, type MetricDef } from "@/lib/metrics";
+import type { MetricDef } from "@/lib/metrics";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 
-/** 기본 뷰 / 관리자 뷰(엑셀형 전체 지표) */
-type ViewMode = "basic" | "grid";
 type StatusFilter = "all" | "issues" | "warning" | "no-data" | "normal" | "configured";
 const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
   all: "전체",
@@ -34,13 +30,6 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
   normal: "정상",
   configured: "알림값 확인",
 };
-
-const VIEW_MODE_STORAGE_KEY = "dashboard-view-mode-v2";
-const MOBILE_VIEW_MODE_STORAGE_KEY = "dashboard-mobile-view-mode-v3";
-
-function isViewMode(v: unknown): v is ViewMode {
-  return v === "basic" || v === "grid";
-}
 
 function compareSite(a: SiteRow, b: SiteRow) {
   const aSlug = a.siteSlug ?? "";
@@ -54,13 +43,6 @@ function compareSite(a: SiteRow, b: SiteRow) {
   if (bIsNum) return 1;
 
   return aSlug.localeCompare(bSlug);
-}
-
-function parseIso(iso: string | null) {
-  if (!iso) return null;
-  const ms = Date.parse(iso);
-  if (Number.isNaN(ms)) return null;
-  return new Date(ms);
 }
 
 function fmtYmd(d: Date | null) {
@@ -87,10 +69,16 @@ function fmtYmdHms(ms: number) {
 
 
 export default function DashboardClient() {
-  const { data, isLoading, isError, error, refetch } = useDashboardQuery();
+  const { data, isLoading, isError, error, refetch, isFetching } = useDashboardQuery();
 
-  // Mobile starts with readable summary cards; desktop keeps the full table.
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const { session } = useAuth();
+  const userId = session?.id;
+  const [preferences, setPreferences] = useState<DashboardPreferences>(defaultPreferences);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [showColumns, setShowColumns] = useState(false);
+  useEffect(() => { setPreferences(userId === undefined ? defaultPreferences : readDashboardPreferences(userId)); setFavoritesOnly(false); }, [userId]);
+  const updatePreferences = (next: DashboardPreferences) => { setPreferences(next); if (session) writeDashboardPreferences(session.id, next); };
+  const toggleFavorite = (siteId: string) => updatePreferences({ ...preferences, favorites: preferences.favorites.includes(siteId) ? preferences.favorites.filter(id => id !== siteId) : [...preferences.favorites, siteId] });
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [metricSelection, setMetricSelection] = useState<MetricSelection | null>(null);
   const closeMetricInfo = useCallback(() => setMetricSelection(null), []);
@@ -102,22 +90,9 @@ export default function DashboardClient() {
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
   useEffect(() => {
-    const mobile = window.matchMedia("(max-width: 767px)").matches;
-    setViewMode(mobile ? "basic" : "grid");
     try {
-      const saved = localStorage.getItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY);
-      setViewMode(isViewMode(saved) ? saved : mobile ? "basic" : "grid");
       setMobileToolsHidden(localStorage.getItem("dashboard-mobile-tools-hidden") === "true");
     } catch { /* Use the device default if storage is unavailable. */ }
-  }, []);
-
-  const changeViewMode = useCallback((next: ViewMode) => {
-    setViewMode(next);
-    setShowMobileFilters(false);
-    try {
-      const mobile = window.matchMedia("(max-width: 767px)").matches;
-      localStorage.setItem(mobile ? MOBILE_VIEW_MODE_STORAGE_KEY : VIEW_MODE_STORAGE_KEY, next);
-    } catch { /* The selected view still works without storage. */ }
   }, []);
 
   const setToolsHidden = (hidden: boolean) => {
@@ -145,12 +120,12 @@ export default function DashboardClient() {
 
   const filteredRows = useMemo(() => {
     const currentRows = data?.rows ?? [];
-    return currentRows.filter((row) => statusFilter === "all" || statusFilter === "configured" ||
+    return currentRows.filter(row => !favoritesOnly || preferences.favorites.includes(row.siteDb)).filter((row) => statusFilter === "all" || statusFilter === "configured" ||
       (statusFilter === "issues" && row.alertStatus !== "NORMAL") ||
       (statusFilter === "warning" && row.alertStatus === "WARNING") ||
       (statusFilter === "no-data" && row.alertStatus === "NO_DATA") ||
       (statusFilter === "normal" && row.alertStatus === "NORMAL"));
-  }, [data?.rows, statusFilter]);
+  }, [data?.rows, statusFilter, favoritesOnly, preferences.favorites]);
 
   const sortedRows = useMemo(
     () => filteredRows.slice().sort((a, b) => {
@@ -178,9 +153,19 @@ export default function DashboardClient() {
 
   const { meta, ctrl } = data;
   const metrics = companyMetrics(data.metricConfig);
-  const helium = ["hepres", "heleve"].flatMap((key) => metrics.filter((metric) => metric.key === key));
   const dashboardMetrics = metrics;
-  const summaryMetrics = helium.length ? helium : metrics.slice(0, 2);
+  const allColumns = dashboardColumns(data.metricConfig);
+  const visibleColumns = preferences.columns === null ? allColumns : allColumns.filter(column => preferences.columns!.includes(column.key));
+  const viewOptions = <div className="mt-3 space-y-2 text-sm">
+    <button type="button" aria-pressed={favoritesOnly} onClick={() => setFavoritesOnly(value => !value)} className="min-h-11 rounded-lg border px-3">{favoritesOnly ? "★ 즐겨찾기만 표시 중" : "☆ 즐겨찾기만 보기"}</button>
+    <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="ml-2 min-h-11 rounded-lg border px-3">표시할 열 ({visibleColumns.length})</button>
+    {showColumns && <fieldset className="rounded-xl border p-3"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
+      const keys = visibleColumns.map(item => item.key);
+      updatePreferences({ ...preferences, columns: event.target.checked ? [...keys, column.key] : keys.filter(key => key !== column.key) });
+    }} />{column.displayName}</label>)}</div><button type="button" onClick={() => updatePreferences({ ...preferences, columns: null })} className="min-h-11 text-sky-700 underline">전체 열 복원</button></fieldset>}
+    <button type="button" onClick={() => {setFavoritesOnly(false);setStatusFilter("all");}} className="min-h-11 px-3 underline">병원 필터 초기화</button>
+  </div>;
+
   const statusFilterButtons = (
     <>
       <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
@@ -196,13 +181,14 @@ export default function DashboardClient() {
     <div className="sm:hidden" data-ptr-ignore>
       {showMobileFilters && <section id="dashboard-mobile-tools" aria-label="대시보드 보기·필터" className="fixed right-3 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-3 z-[55] mx-auto max-h-[70dvh] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-background-dark-card">
         <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">보기·필터</h2><div className="flex gap-2"><button type="button" onClick={() => setToolsHidden(true)} className="min-h-10 rounded-lg px-2 text-xs font-bold text-slate-500 dark:text-slate-300">숨기기</button><button type="button" aria-label="보기·필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
-        <ViewModeTabs value={viewMode} onChange={changeViewMode} />
         <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
         <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
+        <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
+        {viewOptions}
       </section>}
       {mobileToolsHidden ? <button type="button" aria-label="대시보드 도구 다시 표시" onClick={() => setToolsHidden(false)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[45] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">보기 ‹</button> : <DraggableToolsButton expanded={showMobileFilters} onClick={() => setShowMobileFilters(open => !open)}>
         <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 6h16M4 12h16M4 18h16M8 3v6M16 9v6M10 15v6" /></svg>
-        보기·필터{statusFilter !== "all" && <span className="h-2 w-2 rounded-full bg-sky-500" />}
+        보기·필터{(statusFilter !== "all" || favoritesOnly) && <span className="text-xs"> · {favoritesOnly ? "★ " : ""}{STATUS_FILTER_LABEL[statusFilter]} {sortedRows.length}</span>}
       </DraggableToolsButton>}
     </div>
   );
@@ -212,7 +198,7 @@ export default function DashboardClient() {
       onRefresh={handleRefresh}
       topOffset={56}
     >
-      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] sm:px-4 sm:py-4 lg:px-6 lg:py-5 ${viewMode === "grid" && statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
+      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] sm:px-4 sm:py-4 lg:px-6 lg:py-5 ${statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
         <header className="mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm sm:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
@@ -223,26 +209,19 @@ export default function DashboardClient() {
             </span>
             <div className="min-w-0">
             <h1 className="text-text-major dark:text-text-dark-primary text-xl font-extrabold tracking-tight sm:text-2xl">
-              실시간 현황
+              수집 현황
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 text-[0.8125rem] font-medium">
-              마지막 갱신{" "}
+              화면 갱신{" "}
               <span className="tabular-nums">{fmtYmdHms(meta.nowMs)}</span>{data.stats.openAlerts > 0 && <span className="ml-2 font-bold text-rose-600 dark:text-rose-300">· 진행 중 알림 {data.stats.openAlerts}건</span>}
             </p>
             {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
-
-          <ViewModeTabs
-            value={viewMode}
-            onChange={changeViewMode}
-          />
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
         </header>
-
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1 sm:hidden">
-          <ViewModeTabs value={viewMode} onChange={changeViewMode} />
-          <Link href="/baselines" className="min-h-12 rounded-xl border border-sky-200 bg-white px-4 py-3 text-base font-bold text-sky-800 dark:border-sky-800 dark:bg-background-dark-card dark:text-sky-200">알림 관리</Link>
-        </div>
+        <details className="mb-3 hidden shrink-0 rounded-xl border p-3 sm:block"><summary className="cursor-pointer text-sm font-bold">내 보기 설정 · 즐겨찾기·열 선택</summary>{viewOptions}</details>
+        <div className="mb-1 flex shrink-0 items-center justify-between px-1 text-[11px] sm:hidden"><span>가로로 밀어 더 보기 · 수집 시각은 병원별 표시</span><button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 px-2 font-bold text-sky-700 dark:text-sky-300">{isFetching ? "갱신 중…" : "새로고침"}</button></div>
 
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 sm:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
@@ -252,115 +231,27 @@ export default function DashboardClient() {
 
         {statusFilter === "configured" ? (
           <section className="space-y-3">
-            <Link href="/baselines" className="inline-block min-h-12 py-3 text-base font-bold text-sky-700 dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
+            <Link href="/baselines" className="hidden min-h-12 py-3 text-base font-bold text-sky-700 sm:inline-block dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
               <AlertSettingsTable entries={alertSettings.data ?? []} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
             )}
           </section>
-        ) : viewMode === "grid" ? (
-              <DashboardExcelView
+        ) : (
+          <DashboardExcelView
             onInspectMetric={inspectMetric}
             onOpenAlertSettings={openAlertSettings}
             rows={sortedRows}
             ctrl={ctrl}
             metrics={dashboardMetrics}
-            columns={dashboardColumns(data.metricConfig)}
+            columns={visibleColumns}
+            emptyMessage={data.rows.length === 0 ? "표시할 병원이 없습니다. 병원 표시 설정이나 연결 상태를 확인해주세요." : favoritesOnly ? "즐겨찾기에 해당하는 병원이 없습니다. 전체 병원에서 별표를 눌러 추가해주세요." : `${STATUS_FILTER_LABEL[statusFilter]} 조건에 맞는 병원이 없습니다.`}
+            favorites={preferences.favorites}
+            onToggleFavorite={toggleFavorite}
+            onResetFilters={() => {setStatusFilter("all");setFavoritesOnly(false);}}
           />
-        ) : (
-          <>
-            {/* Mobile: cards */}
-            <section className="md:hidden">
-              {sortedRows.length === 0 ? (
-                <EmptyState />
-              ) : (
-                <div className="space-y-2 px-1">
-                  {sortedRows.map((r) => {
-                    return (
-                      <SiteCard
-                        key={r.siteDb}
-                        row={r}
-                        range={ctrl[r.siteDb] ?? null}
-                        onInspectMetric={inspectMetric}
-                        onOpenAlertSettings={openAlertSettings}
-                        metrics={summaryMetrics}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-
-            {/* Desktop: table */}
-            <section className="hidden overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_30px_rgba(22,58,82,0.06)] md:block dark:border-white/8 dark:bg-background-dark-card">
-              {sortedRows.length === 0 ? (
-                <div className="py-12">
-        <EmptyState />
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] border-collapse text-sm">
-                    <thead className="bg-background-primary/60 text-text-secondary dark:border-background-dark-secondary dark:bg-background-dark-secondary/40 dark:text-text-dark-primary/70 border-b">
-                      <tr>
-                        <Th>병원명</Th>
-                        {summaryMetrics.map((metric) => <Th key={metric.key} className="text-right">{metric.label ?? metric.code}</Th>)}
-                        <Th>최신 시각</Th>
-                        <Th className="text-right" />
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {sortedRows.map((r) => {
-                        const lastAtDate = parseIso(r.lastAt);
-                        const range = ctrl[r.siteDb] ?? null;
-
-                        return (
-                          <tr
-                            key={r.siteDb}
-                            id={`site-d-${r.siteSlug}`}
-                            onContextMenu={event => { event.preventDefault(); openAlertSettings(r.siteDb); }}
-                            className="dark:border-background-dark-secondary hover:bg-background-primary/40 dark:hover:bg-background-dark-secondary/30 scroll-mt-[120px] border-b transition-colors last:border-b-0"
-                          >
-                            <Td className="text-text-major dark:text-text-dark-primary font-medium">
-                              <div className="flex items-center gap-2"><span>{r.name ?? "-"}</span><AlertStatusBadge row={r} /></div>
-                              {r.alertIssues[0] && <p className="text-text-secondary mt-1 max-w-72 truncate text-[11px]" title={r.alertIssues.map((issue) => issue.message).join("\n")}>{r.alertIssues[0].message}</p>}
-                            </Td>
-
-                            {summaryMetrics.map((metric) => <Td key={metric.key} onClick={() => inspectMetric(r, metric)} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); openAlertSettings(r.siteDb, metric.key); }} className={`text-right whitespace-nowrap tabular-nums ${isMetricOutOfRange(r.metrics[metric.key], metric.bound, range) ? "font-semibold text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary/90"}`}>
-                              {formatMetricMeasurement(r.metrics[metric.key], metric.unit, r.lastAt != null, "-")}
-                            </Td>)}
-
-                            <Td className="text-text-secondary dark:text-text-dark-primary/70 whitespace-nowrap tabular-nums">
-                              <div className="leading-tight">
-                                <div className="text-xs font-medium">
-                                  {fmtYmd(lastAtDate)}
-                                </div>
-                                <div className="mt-0.5 text-[11px] opacity-70">
-                                  {fmtHms(lastAtDate)}
-                                </div>
-                              </div>
-                            </Td>
-
-                            <Td className="text-right">
-                              <Link
-                                className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors"
-                                href={`/sites/${r.siteSlug}`}
-                                aria-label={`${r.name ?? "병원"} 상세 보기`}
-                              >
-                                <ChevronRightIcon className="h-4 w-4" />
-                              </Link>
-                            </Td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </section>
-          </>
         )}
         <p className="text-text-secondary mt-1 shrink-0 px-1 text-center text-[10px] leading-3 sm:hidden dark:text-text-dark-primary/70">
-          마지막 갱신 {fmtYmdHms(meta.nowMs)}{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
+          화면 갱신 {fmtYmdHms(meta.nowMs)} · 5분마다 자동 갱신{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
         {metricSelection && <DashboardMetricInfo selection={metricSelection} onClose={closeMetricInfo} onEdit={() => { setSelectedAlert({siteId: metricSelection.siteId, metricKey: metricSelection.metricKey, onlyMetric: true}); closeMetricInfo(); }} />}
         {selectedAlert && <SiteAlertSettingsDialog key={`${selectedAlert.siteId}:${selectedAlert.metricKey ?? ""}`} siteId={selectedAlert.siteId} initialMetricKey={selectedAlert.metricKey} initialPane={selectedAlert.pane} onlyMetricKey={selectedAlert.onlyMetric ? selectedAlert.metricKey : undefined} onClose={() => setSelectedAlert(null)} />}
@@ -370,190 +261,7 @@ export default function DashboardClient() {
   );
 }
 
-function ViewModeTabs({
-  value,
-  onChange,
-}: {
-  value: ViewMode;
-  onChange: (next: ViewMode) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="대시보드 보기 방식"
-      className="inline-flex min-h-10 items-center rounded-2xl border border-slate-200/80 bg-slate-100/80 p-1 text-sm dark:border-white/8 dark:bg-white/5"
-    >
-      <ViewModeTab
-        active={value === "grid"}
-        onClick={() => onChange("grid")}
-        label="전체 표"
-      />
-      <ViewModeTab
-        active={value === "basic"}
-        onClick={() => onChange("basic")}
-        label="요약 보기"
-      />
-    </div>
-  );
-}
-
 function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
   const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
   return <button type="button" onClick={onClick} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-400 ring-2 ring-sky-100 dark:border-sky-500 dark:ring-sky-950" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-xl font-extrabold tabular-nums ${colors[tone]}`}>{value}</span></button>;
-}
-
-function ViewModeTab({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={[
-        "inline-flex min-h-8 shrink-0 cursor-pointer items-center justify-center rounded-xl px-2.5 text-sm font-bold whitespace-nowrap transition-all sm:px-3",
-        active
-          ? "bg-white text-[#174d70] shadow-sm dark:bg-sky-800 dark:text-white"
-          : "text-text-secondary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
-      ].join(" ")}
-    >
-      {label}
-    </button>
-  );
-}
-
-/* ---- 이하 UI 컴포넌트 ---- */
-
-function EmptyState() {
-  return (
-    <div className="text-text-secondary dark:text-text-dark-primary/60 py-12 text-center text-sm">
-      데이터가 없습니다.
-    </div>
-  );
-}
-
-function SiteCard({ row, range, metrics, onOpenAlertSettings, onInspectMetric }: { row: SiteRow; range: CtrlRange | null; metrics: MetricDef[]; onOpenAlertSettings: (siteId: string, metricKey?: string) => void; onInspectMetric: (row: SiteRow, metric: MetricDef) => void }) {
-  const anyAlert = row.alertStatus !== "NORMAL" || metrics.some((metric) => isMetricOutOfRange(row.metrics[metric.key], metric.bound, range));
-  const d = parseIso(row.lastAt);
-
-  return (
-    <Link
-      href={`/sites/${row.siteSlug}`}
-      id={`site-m-${row.siteSlug}`}
-      onContextMenu={event => { event.preventDefault(); onOpenAlertSettings(row.siteDb); }}
-      aria-label={`${row.name ?? "병원"} 상세 보기`}
-      className={[
-        "group block scroll-mt-[120px] rounded-2xl border bg-white p-3 shadow-sm transition-colors active:bg-sky-50 dark:active:bg-sky-950/20",
-        "hover:-translate-y-0.5 hover:border-sky-200 hover:shadow-[0_12px_34px_rgba(22,58,82,0.1)] dark:hover:border-sky-900/60",
-        "dark:border-background-dark-secondary dark:bg-background-dark-card",
-        collectionMissing(row) ? "border-rose-400 ring-2 ring-rose-200 dark:ring-rose-900" : anyAlert ? "border-red-300/80 dark:border-red-900/50" : "border-border",
-      ].join(" ")}
-    >
-      {/* Header row */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-col items-start">
-          <span
-            className="text-text-major dark:text-text-dark-primary line-clamp-2 text-base font-bold"
-            title={row.name ?? ""}
-          >
-            {row.name ?? "-"}
-          </span>
-          <span className="text-text-secondary mt-1 text-[11px] tabular-nums dark:text-text-dark-primary/70">최근 수집 {fmtYmd(d)} {fmtHms(d)}</span>
-          <CollectionStatus row={row} />
-        </div>
-        <div className="flex shrink-0 items-center gap-1.5">
-          <AlertStatusBadge row={row} />
-          <ChevronRightIcon className="text-text-secondary/60 dark:text-text-dark-primary/40 h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-        </div>
-      </div>
-
-      {/* Metrics */}
-      <div className="mt-3 grid grid-cols-2 gap-3 rounded-xl bg-slate-50/75 p-3 dark:bg-white/3">
-        {metrics.map((metric) => <MetricCol key={metric.key} onClick={event => { event.preventDefault(); event.stopPropagation(); onInspectMetric(row, metric); }} onContextMenu={event => { event.preventDefault(); event.stopPropagation(); onOpenAlertSettings(row.siteDb, metric.key); }} label={metric.label ?? metric.code}
-          value={<span className={`text-2xl font-bold tabular-nums ${isMetricOutOfRange(row.metrics[metric.key], metric.bound, range) ? "text-red-600 dark:text-red-400" : "text-text-major dark:text-text-dark-primary"}`}>
-            {formatMetricMeasurement(row.metrics[metric.key], metric.unit, row.lastAt != null, "-")}
-          </span>}
-        />)}
-      </div>
-      {row.alertIssues.length > 0 && <p className="mt-2 line-clamp-2 text-xs font-semibold leading-relaxed text-rose-700 dark:text-rose-300">{row.alertIssues[0].message}{row.alertIssues.length > 1 ? ` · 외 ${row.alertIssues.length - 1}건` : ""}</p>}
-    </Link>
-  );
-}
-
-function AlertStatusBadge({ row }: { row: SiteRow }) {
-  if (row.alertStatus === "NO_DATA") return <span className="rounded-full bg-rose-100 px-2 py-1 text-[10px] font-extrabold text-rose-700 dark:bg-rose-950/50 dark:text-rose-300">수신 중단 {row.openAlertCount}</span>;
-  if (row.alertStatus === "WARNING") return <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-extrabold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">기준 이탈 {row.openAlertCount}</span>;
-  return <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-extrabold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">정상</span>;
-}
-
-function MetricCol({
-  onClick,
-  onContextMenu,
-  label,
-  value,
-}: {
-  label: string;
-  onContextMenu?: React.MouseEventHandler<HTMLDivElement>;
-  onClick?: React.MouseEventHandler<HTMLDivElement>;
-  value: React.ReactNode;
-}) {
-  return (
-    <div onClick={onClick} onContextMenu={onContextMenu} className="min-w-0">
-      <div className="text-text-secondary dark:text-text-dark-primary/70 text-sm font-medium">
-        {label}
-      </div>
-      <div className="mt-1">{value}</div>
-    </div>
-  );
-}
-
-function Th({
-  children,
-  className = "",
-}: {
-  children?: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <th
-      className={[
-        "px-4 py-2.5 text-left text-sm font-bold tracking-wide whitespace-nowrap",
-        className,
-      ].join(" ")}
-    >
-      {children}
-    </th>
-  );
-}
-
-function Td({
-  onClick,
-  onContextMenu,
-  children,
-  className = "",
-  colSpan,
-}: {
-  children: React.ReactNode;
-  onContextMenu?: React.MouseEventHandler<HTMLTableCellElement>;
-  onClick?: React.MouseEventHandler<HTMLTableCellElement>;
-  className?: string;
-  colSpan?: number;
-}) {
-  return (
-    <td
-      onClick={onClick}
-      onContextMenu={onContextMenu}
-      className={["px-4 py-3 whitespace-nowrap", className].join(" ")}
-      colSpan={colSpan}
-    >
-      {children}
-    </td>
-  );
 }

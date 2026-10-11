@@ -49,8 +49,9 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
-        authService.logout(cookie(request, REFRESH_COOKIE));
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response,
+                                       @org.springframework.web.bind.annotation.RequestParam(defaultValue="false") boolean allDevices) {
+        authService.logout(cookie(request, REFRESH_COOKIE), allDevices);
         response.addHeader(HttpHeaders.SET_COOKIE, authService.clearRefreshCookie().toString());
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
     }

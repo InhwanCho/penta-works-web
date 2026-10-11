@@ -73,48 +73,59 @@ public class AuthService {
         if (refreshToken == null || refreshToken.isBlank()) throw expiredSession();
         String oldHash = sha256(refreshToken);
         SessionRow session = jdbcTemplate.query("""
-            SELECT s.id AS session_id, u.id, u.company_id, u.email, u.password_hash, u.name, u.role, u.status,
+            SELECT s.id AS session_id, s.refresh_token_hash,
+                   u.id, u.company_id, u.email, u.password_hash, u.name, u.role, u.status,
                    u.failed_login_count, u.locked_until
               FROM user_session s
               JOIN app_user u ON u.id = s.user_id
               JOIN company c ON c.id = u.company_id AND c.status='ACTIVE'
                             AND (u.role<>'PLATFORM_ADMIN' OR c.code='PENTAWORKS')
-             WHERE s.refresh_token_hash=? AND s.revoked_at IS NULL
+             WHERE s.refresh_token_hash=?
+               AND s.revoked_at IS NULL
                AND s.expires_at > CURRENT_TIMESTAMP(6) AND u.status='ACTIVE'
-            """, rs -> rs.next() ? new SessionRow(rs.getString("session_id"), userRow(rs)) : null, oldHash);
+             FOR UPDATE
+            """, rs -> rs.next() ? new SessionRow(rs.getString("session_id"), userRow(rs),
+                rs.getString("refresh_token_hash")) : null, oldHash);
         if (session == null) throw expiredSession();
 
-        String nextToken = randomToken();
+        // Preserve the opaque device credential: a lost response must remain recoverable
+        // after a phone sleeps or a deployment replaces this process.
+        if (!oldHash.equals(session.tokenHash())) throw expiredSession();
         Instant expiresAt = Instant.now().plus(refreshExpirationDays, ChronoUnit.DAYS);
         int updated = jdbcTemplate.update("""
             UPDATE user_session
-               SET refresh_token_hash=?, ip_address=?, device_name=?, last_used_at=CURRENT_TIMESTAMP(6), expires_at=?
+               SET ip_address=?, device_name=?, last_used_at=CURRENT_TIMESTAMP(6), expires_at=?
              WHERE id=? AND refresh_token_hash=? AND revoked_at IS NULL
-            """, sha256(nextToken), trim(ipAddress, 45), trim(userAgent, 120), Timestamp.from(expiresAt),
+            """, trim(ipAddress, 45), trim(userAgent, 120), Timestamp.from(expiresAt),
             session.sessionId(), oldHash);
         if (updated != 1) throw expiredSession();
-        return result(session.user(), session.sessionId(), nextToken);
+        return result(session.user(), session.sessionId(), refreshToken);
     }
 
     @Transactional
-    public void logout(String refreshToken) {
+    public void logout(String refreshToken) { logout(refreshToken, false); }
+
+    @Transactional
+    public void logout(String refreshToken, boolean allDevices) {
         if (refreshToken == null || refreshToken.isBlank()) return;
-        Long userId = jdbcTemplate.query("""
-            SELECT user_id FROM user_session WHERE refresh_token_hash=?
-             AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
-            """, rs -> rs.next() ? rs.getLong(1) : null, sha256(refreshToken));
-        if (userId == null) return;
-        jdbcTemplate.update("""
-            UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6)
-             WHERE user_id=? AND revoked_at IS NULL
-            """, userId);
+        LogoutOwner owner = jdbcTemplate.query("""
+            SELECT id,user_id FROM user_session WHERE refresh_token_hash=?
+               AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
+            """, rs -> rs.next() ? new LogoutOwner(rs.getString("id"), rs.getLong("user_id")) : null,
+            sha256(refreshToken));
+        if (owner == null) return;
+        if (allDevices) jdbcTemplate.update("UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6) WHERE user_id=? AND revoked_at IS NULL", owner.userId());
+        else jdbcTemplate.update("UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6) WHERE id=? AND revoked_at IS NULL", owner.id());
+        Runnable invalidate = () -> { if (allDevices) sessions.invalidateUser(owner.userId()); else sessions.invalidate(owner.id()); };
         if (org.springframework.transaction.support.TransactionSynchronizationManager.isSynchronizationActive()) {
             org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
                 new org.springframework.transaction.support.TransactionSynchronization() {
-                    @Override public void afterCommit() { sessions.invalidateUser(userId); }
+                    @Override public void afterCommit() { invalidate.run(); }
                 });
-        } else sessions.invalidateUser(userId);
+        } else invalidate.run();
     }
+
+    private record LogoutOwner(String id, long userId) {}
 
     public Profile profile(String email) {
         UserRow user = findUserByEmail(normalizeEmail(email));
@@ -153,7 +164,7 @@ public class AuthService {
             """, (rs, row) -> new SessionSummary(rs.getString("id"), rs.getString("device_name"),
                 rs.getString("ip_address"), rs.getTimestamp("last_used_at").toInstant(),
                 rs.getTimestamp("expires_at").toInstant(), rs.getTimestamp("created_at").toInstant(),
-                currentHash != null && currentHash.equals(rs.getString("refresh_token_hash"))), user.id());
+                currentHash != null && matchesRefreshToken(rs.getString("refresh_token_hash"), refreshToken)), user.id());
     }
 
     @Transactional
@@ -167,7 +178,7 @@ public class AuthService {
         if (targetHash == null) return false;
         jdbcTemplate.update("UPDATE user_session SET revoked_at=CURRENT_TIMESTAMP(6) WHERE id=?", sessionId);
         sessions.invalidate(sessionId);
-        return refreshToken != null && targetHash.equals(sha256(refreshToken));
+        return refreshToken != null && matchesRefreshToken(targetHash, refreshToken);
     }
 
     @Transactional
@@ -175,7 +186,9 @@ public class AuthService {
         UserRow user = findUserByEmail(normalizeEmail(email));
         if (user == null) throw expiredSession();
         String currentId = refreshToken == null || refreshToken.isBlank() ? null : jdbcTemplate.query("""
-            SELECT id FROM user_session WHERE user_id=? AND refresh_token_hash=? AND revoked_at IS NULL
+            SELECT id FROM user_session WHERE user_id=?
+               AND refresh_token_hash=?
+               AND revoked_at IS NULL AND expires_at>CURRENT_TIMESTAMP(6)
             """, rs -> rs.next() ? rs.getString(1) : null, user.id(), sha256(refreshToken));
         if (currentId == null) throw expiredSession();
         jdbcTemplate.update("""
@@ -276,6 +289,10 @@ public class AuthService {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
+    private boolean matchesRefreshToken(String hash, String token) {
+        return hash.equals(sha256(token));
+    }
+
     private static String sha256(String value) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
@@ -300,7 +317,7 @@ public class AuthService {
 
     record UserRow(long id, long companyId, String email, String passwordHash, String name, String role, String status,
                    int failedLoginCount, Instant lockedUntil) {}
-    private record SessionRow(String sessionId, UserRow user) {}
+    private record SessionRow(String sessionId, UserRow user, String tokenHash) {}
     public record SessionSummary(String id, String deviceName, String ipAddress, Instant lastUsedAt,
                                  Instant expiresAt, Instant createdAt, boolean current) {}
     public record AuthResult(LoginResponse response, String refreshToken) {}

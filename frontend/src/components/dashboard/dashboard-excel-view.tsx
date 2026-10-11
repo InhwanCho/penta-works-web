@@ -15,8 +15,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * 모바일에서는 큰글씨 모드에서도 여백이 함께 커지지 않도록 px 단위를 씁니다.
  */
 const COL_NAME =
-  "w-[80px] min-w-[80px] max-w-[80px] sm:w-[130px] lg:w-[190px] sm:min-w-[130px] lg:min-w-[190px] sm:max-w-[130px] lg:max-w-[190px]";
-const COL_NAME_INNER = "block w-[74px] truncate sm:w-[118px] lg:w-[166px]";
+  "w-[120px] min-w-[120px] max-w-[120px] sm:w-[130px] lg:w-[190px] sm:min-w-[130px] lg:min-w-[190px] sm:max-w-[130px] lg:max-w-[190px]";
+const COL_NAME_INNER = "block w-[112px] line-clamp-2 break-words sm:w-[118px] lg:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -76,7 +76,15 @@ export default function DashboardExcelView({
   columns,
   onOpenAlertSettings,
   onInspectMetric,
+  favorites,
+  onToggleFavorite,
+  onResetFilters,
+  emptyMessage,
 }: {
+  emptyMessage: string;
+  favorites: string[];
+  onToggleFavorite: (siteId: string) => void;
+  onResetFilters: () => void;
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
   metrics: MetricDef[];
@@ -151,15 +159,18 @@ export default function DashboardExcelView({
 
       {rows.length === 0 ? (
         <div className="text-text-secondary dark:text-text-dark-primary/60 py-12 text-center text-sm">
-          데이터가 없습니다.
+          {emptyMessage}
+          <button type="button" onClick={onResetFilters} className="mx-auto mt-3 block min-h-11 px-4 text-sky-700 underline">전체 병원 보기</button>
         </div>
       ) : (
         // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
         <div
           data-dashboard-scroll
-          className="min-h-0 overflow-auto overscroll-contain"
+          tabIndex={0}
+          aria-label="병원별 전체표, 가로와 세로로 스크롤할 수 있습니다"
+          className="min-h-0 overflow-auto overscroll-contain pb-16 sm:pb-0"
         >
-          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 80 + columns.length * 64 }}>
+          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 120 + columns.length * 64 }}>
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
             </caption>
@@ -187,7 +198,7 @@ export default function DashboardExcelView({
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
+                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[120px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
                         CELL_BORDER,
                         HEAD_BG,
                         openMetric === m.key ? "z-50" : Z_HEAD,
@@ -198,7 +209,7 @@ export default function DashboardExcelView({
                           type="button"
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
-                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
+                          className="text-text-major dark:text-text-dark-primary min-h-11 cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
                           onClick={() => showMetricHelp(m.key, true)}
                           onMouseEnter={() => showMetricHelp(m.key)}
                           onMouseLeave={hideMetricHelp}
@@ -221,7 +232,7 @@ export default function DashboardExcelView({
                         ) : null}
                       </span>
                       {sub ? (
-                        <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 hidden text-xs font-medium sm:block">
+                        <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-[10px] font-medium">
                           {m.key === "cctemp" ? "cc-in" : m.key === "ccflow" ? "cc-out" : m.code}{m.unit ? ` (${m.unit})` : ""}
                         </span>
                       ) : null}
@@ -259,15 +270,17 @@ export default function DashboardExcelView({
                       title={row.name ?? undefined}
                     >
                       <Link
-                        className="text-text-major dark:text-text-dark-primary font-bold underline decoration-transparent underline-offset-4 hover:decoration-current"
+                        className="text-text-major dark:text-text-dark-primary block min-h-11 font-bold underline decoration-transparent underline-offset-4 hover:decoration-current"
                         href={`/sites/${row.siteSlug}`}
                       >
                         <span className={COL_NAME_INNER}>
                           {row.name ?? "-"}
                         </span>
                       </Link>
+                      <div className="flex items-center justify-between"><span className="text-[10px] text-slate-500 dark:text-slate-300">#{row.siteSlug}</span><button type="button" aria-label={`${row.name ?? row.siteSlug} 즐겨찾기 ${favorites.includes(row.siteDb) ? "해제" : "추가"}`} aria-pressed={favorites.includes(row.siteDb)} onClick={() => onToggleFavorite(row.siteDb)} className="min-h-11 min-w-11 text-lg text-amber-600">{favorites.includes(row.siteDb) ? "★" : "☆"}</button></div>
+                      <span className="block text-[10px] text-slate-500 sm:hidden dark:text-slate-300">수집 {lastAtDate ? `${lastAtDate.getMonth() + 1}/${lastAtDate.getDate()} ${fmtHms(lastAtDate).slice(0,5)}` : "없음"}</span>
                       <CollectionStatus row={row} />
-                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[74px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
+                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[112px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
                     </td>
 
                     {columns.map((column) => {

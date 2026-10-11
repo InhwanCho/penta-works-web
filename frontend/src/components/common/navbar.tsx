@@ -84,7 +84,7 @@ export default function Navbar() {
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="py-1.5">
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
-                      <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
+                      <div className="hidden sm:block"><MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink></div>
                       {session.role === "PLATFORM_ADMIN" && <MenuLink onSelect={() => setMenuOpen(false)} href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
                       {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>관리 설정</MenuLink>}
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/account" icon={<PersonIcon />}>내 계정</MenuLink>
@@ -97,7 +97,7 @@ export default function Navbar() {
                       </PreferenceButton>
                     </div>
                     {logoutError && <p role="alert" className="px-3 py-2 text-xs text-rose-600">{logoutError}</p>}
-                    <button type="button" role="menuitem" title="모든 기기에서 로그아웃" onClick={async () => {
+                    <button type="button" role="menuitem" title="이 기기에서 로그아웃" onClick={async () => {
                       setLogoutError(null);
                       try { await logout(); setMenuOpen(false); router.replace("/login"); }
                       catch { setLogoutError("로그아웃하지 못했습니다. 다시 시도해주세요."); }

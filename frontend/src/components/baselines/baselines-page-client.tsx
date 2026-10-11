@@ -6,8 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import BaselinesClient from "./baselines-client";
 
 export default function BaselinesPageClient() {
-  const { isAdmin, role, session } = useAuth();
-  const eventQueryKey = ["alert-events", session?.id];
+  const { isAdmin, role } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["alert-thresholds"],
@@ -19,12 +18,6 @@ export default function BaselinesPageClient() {
     queryKey: ["company-alert-thresholds"],
     queryFn: () => apiFetch<AlertThreshold[]>("/alerts/company-thresholds"),
     enabled: isAdmin,
-  });
-  const events = useQuery({
-    queryKey: eventQueryKey,
-    queryFn: () => apiFetch<AlertEventSummary[]>("/alerts/events?limit=500"),
-    refetchInterval: 60_000,
-    enabled: Boolean(session),
   });
   const update = useMutation({
     mutationFn: (entry: SiteAlertSettings) =>
@@ -101,9 +94,8 @@ export default function BaselinesPageClient() {
   });
   const acknowledge = useMutation({
     mutationFn: (eventId: number) => apiFetch<AlertEventSummary>(`/alerts/events/${eventId}/acknowledge`, { method: "PATCH" }),
-    onSuccess: (saved) => {
-      queryClient.setQueryData<AlertEventSummary[]>(eventQueryKey, (current = []) =>
-        current.map((event) => event.id === saved.id ? saved : event));
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alert-events"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -112,11 +104,8 @@ export default function BaselinesPageClient() {
       method: "PATCH",
       body: JSON.stringify({ eventIds }),
     }),
-    onSuccess: (_, eventIds) => {
-      const acknowledgedAt = new Date().toISOString();
-      queryClient.setQueryData<AlertEventSummary[]>(eventQueryKey, (current = []) =>
-        current.map((event) => eventIds.includes(event.id) ? { ...event, acknowledgedAt: event.acknowledgedAt ?? acknowledgedAt } : event),
-      );
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["alert-events"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -137,9 +126,6 @@ export default function BaselinesPageClient() {
       onSave={(entry) => update.mutateAsync(entry)}
       onToggleVisibility={(siteId, visible) => updateVisibility.mutateAsync({ siteId, visible }).then(() => undefined)}
       onToggleAlerts={(siteId, enabled) => updatePolicy.mutateAsync({ siteId, enabled }).then(() => undefined)}
-      events={events.data ?? []}
-      eventsLoading={events.isLoading}
-      eventsFailed={events.isError}
       onAcknowledge={(eventId) => acknowledge.mutateAsync(eventId)}
       onAcknowledgeMany={(eventIds) => acknowledgeMany.mutateAsync(eventIds)}
       onRetryDelivery={(eventId) => retryDelivery.mutateAsync(eventId)}

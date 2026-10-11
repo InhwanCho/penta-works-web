@@ -30,10 +30,11 @@ function warmShell() {
 self.addEventListener("install", event => {
   event.waitUntil(warmShell());
 });
+self.addEventListener("message", event => { if (event.data?.type === "SKIP_WAITING") self.skipWaiting(); });
 self.addEventListener("activate", event => {
   event.waitUntil((async () => {
     const names = await caches.keys();
-    await Promise.all(names.filter(name => name.startsWith("mreyes-shell-") && name !== CACHE).map(name => caches.delete(name)));
+    await Promise.all(names.filter(name => name.startsWith("mreyes-shell-") && name !== CACHE).slice(0, -1).map(name => caches.delete(name)));
     await self.clients.claim();
   })());
 });
@@ -51,7 +52,7 @@ self.addEventListener("fetch", event => {
   } else if (url.pathname.startsWith("/_next/static/")) {
     event.respondWith((async () => {
       const cache = await caches.open(CACHE);
-      const cached = await cache.match(request);
+      const cached = await caches.match(request);
       if (cached) return cached;
       const response = await fetch(request);
       if (response.ok) {

@@ -35,6 +35,10 @@ public class AlertEventService {
     }
 
     private List<AlertEventSummary> events(Set<String> allowedSiteIds, int requestedLimit, long actorId, Long eventId) {
+        return queryEvents(allowedSiteIds, requestedLimit, actorId, eventId, "", List.of(), 0);
+    }
+
+    private List<AlertEventSummary> queryEvents(Set<String> allowedSiteIds, int requestedLimit, long actorId, Long eventId, String conditions, List<Object> filters, int offset) {
         if (allowedSiteIds.isEmpty()) return List.of();
         int limit = Math.min(Math.max(requestedLimit, 1), 500);
         String placeholders = String.join(",", Collections.nCopies(allowedSiteIds.size(), "?"));
@@ -43,7 +47,9 @@ public class AlertEventService {
         args.addAll(allowedSiteIds);
         args.add(actorId);
         if (eventId != null) args.add(eventId);
+        args.addAll(filters);
         args.add(limit);
+        args.add(offset);
         return jdbcTemplate.query("""
             SELECT e.id,e.site_id,s.name,r.metric_key,e.event_type,e.severity,e.measured_value,
                    e.threshold_min AS min_value,e.threshold_max AS max_value,
@@ -58,8 +64,8 @@ public class AlertEventService {
               LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
              WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND r.user_id=?
                %s
-             ORDER BY e.occurred_at DESC,e.id DESC LIMIT ?
-            """.formatted(placeholders, eventId == null ? "" : "AND e.id=?"), (rs, row) -> new AlertEventSummary(
+             ORDER BY e.occurred_at DESC,e.id DESC LIMIT ? OFFSET ?
+            """.formatted(placeholders, (eventId == null ? "" : "AND e.id=?") + conditions), (rs, row) -> new AlertEventSummary(
                 rs.getLong("id"), rs.getString("site_id"), rs.getString("name"), rs.getString("metric_key"),
                 rs.getString("event_type"), rs.getString("severity"), number(rs.getObject("measured_value")),
                 number(rs.getObject("min_value")), number(rs.getObject("max_value")), rs.getString("message"),
@@ -67,6 +73,50 @@ public class AlertEventService {
                 instant(rs.getTimestamp("acknowledged_at")), instant(rs.getTimestamp("recovered_at")),
                 rs.getString("safe_delivery_error"), instant(rs.getTimestamp("last_notified_at")), rs.getInt("notification_count")),
             args.toArray());
+    }
+
+    public record EventPage(List<AlertEventSummary> events, long total, int page, int size) {}
+
+    public EventPage search(Set<String> allowedSiteIds, long actorId, int page, int size,
+                            String keyword, String siteId, String status, String kind, Instant from, Instant to) {
+        if (page < 1 || size < 1 || size > 100 || page > 100000) throw new BadRequestException("조회 페이지를 확인해주세요.");
+        if (from != null && to != null && from.isAfter(to)) throw new BadRequestException("시작일은 종료일보다 이전이어야 합니다.");
+        StringBuilder where = new StringBuilder();
+        List<Object> filters = new ArrayList<>();
+        switch (status) {
+            case "all" -> {}
+            case "unacknowledged" -> where.append(" AND ack.acknowledged_at IS NULL");
+            case "open" -> where.append(" AND e.recovered_at IS NULL");
+            case "failed" -> where.append(" AND e.delivery_status IN ('FAILED','PARTIAL','UNKNOWN')");
+            case "skipped" -> where.append(" AND e.delivery_status='SKIPPED'");
+            default -> throw new BadRequestException("알림 상태를 확인해주세요.");
+        }
+        switch (kind) {
+            case "all" -> {}
+            case "site" -> where.append(" AND r.metric_key='__data__'");
+            case "chiller" -> where.append(" AND r.metric_key='__cold_chiller__'");
+            case "missing" -> where.append(" AND e.event_type='METRIC_MISSING'");
+            case "range" -> where.append(" AND LEFT(r.metric_key,2)<>'__' AND e.event_type<>'METRIC_MISSING'");
+            default -> throw new BadRequestException("알림 종류를 확인해주세요.");
+        }
+        if (siteId != null && !siteId.isBlank()) { where.append(" AND e.site_id=?"); filters.add(siteId); }
+        if (from != null) { where.append(" AND e.occurred_at>=?"); filters.add(Timestamp.from(from)); }
+        if (to != null) { where.append(" AND e.occurred_at<=?"); filters.add(Timestamp.from(to)); }
+        if (keyword != null && !keyword.isBlank()) {
+            if (keyword.length() > 200) throw new BadRequestException("검색어는 200자 이내로 입력해주세요.");
+            where.append(" AND LOCATE(LOWER(?), LOWER(CONCAT_WS(' ',s.name,e.site_id,e.message,r.metric_key)))>0");
+            filters.add(keyword.trim());
+        }
+        if (allowedSiteIds.isEmpty()) return new EventPage(List.of(), 0, page, size);
+        String placeholders = String.join(",", Collections.nCopies(allowedSiteIds.size(), "?"));
+        List<Object> args = new ArrayList<>(); args.add(actorId); args.addAll(allowedSiteIds); args.add(actorId); args.addAll(filters);
+        Long total = jdbcTemplate.queryForObject("""
+            SELECT COUNT(*) FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
+            LEFT JOIN site s ON s.site=e.site_id
+            LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
+            WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND r.user_id=? %s
+            """.formatted(placeholders, where), Long.class, args.toArray());
+        return new EventPage(queryEvents(allowedSiteIds, size, actorId, null, where.toString(), filters, (page-1)*size), total == null ? 0 : total, page, size);
     }
 
     public void requireEventAccess(long eventId, Set<String> allowedSiteIds) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { DEFAULT_ALERT_EVENT_FILTER, matchesAlertEventFilter, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
+import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
 import AlertPatternInbox, { SharePatternButton } from "./alert-pattern-sharing";
 import AlertSettingsTable from "./alert-settings-table";
@@ -38,9 +38,6 @@ export default function BaselinesClient({
   onSave,
   onToggleVisibility,
   onToggleAlerts,
-  events,
-  eventsLoading = false,
-  eventsFailed = false,
   onAcknowledge,
   onAcknowledgeMany,
   onRetryDelivery,
@@ -55,15 +52,16 @@ export default function BaselinesClient({
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
   onToggleVisibility: (siteId: string, visible: boolean) => Promise<void>;
   onToggleAlerts: (siteId: string, enabled: boolean) => Promise<void>;
-  events: AlertEventSummary[];
-  eventsLoading?: boolean;
-  eventsFailed?: boolean;
   onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
   onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
 
 }) {
   const [view, setView] = useState<"sites" | "thresholds" | "events" | "patterns">("events");
+  useEffect(() => {
+    const requested = new URLSearchParams(window.location.search).get("view");
+    if (requested === "thresholds" || requested === "events" || requested === "patterns") setView(requested);
+  }, []);
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoringSite, setRestoringSite] = useState<string | null>(null);
@@ -130,7 +128,7 @@ export default function BaselinesClient({
       </header>
 
       <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
-        {value:"events",label:"알림 확인",badge:events.filter(needsAcknowledgement).length},
+        {value:"events",label:"알림 확인",},
         {value:"thresholds",label:"알림 설정"}, {value:"patterns",label:"설정 공유"},
         ...(canEditCompany ? [{value:"sites" as const,label:"병원 표시"}] : []),
       ]} />
@@ -166,7 +164,7 @@ export default function BaselinesClient({
 
       {canEditCompany && <div className="mt-8"><CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} /></div>}
 
-      </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries.map(entry => entry.siteid)} events={events} loading={eventsLoading} failed={eventsFailed} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
+      </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
         : <AlertPatternInbox/>}
 
       {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} initialMetricKey={editorMetric} initialPane={editorPane} onlyMetricKey={selected.thresholds.some(item => item.key === editorMetric) ? editorMetric : undefined} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
@@ -204,12 +202,9 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
 
 function TimeField({ label, value, onChange, optional = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean; disabled?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-sm font-bold">{label}<input type="time" disabled={disabled} required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
 
-function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledgeMany, onRetryDelivery, onOpenSettings, availableSites }: {
+function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, onOpenSettings, availableSites }: {
   onOpenSettings: (event: AlertEventSummary) => void;
-  availableSites: string[];
-  events: AlertEventSummary[];
-  loading: boolean;
-  failed: boolean;
+  availableSites: Pick<SiteAlertSettings, "siteid" | "name">[];
   onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
   onAcknowledgeMany: (eventIds: number[]) => Promise<{ ok: boolean; count: number }>;
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
@@ -228,31 +223,26 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
   const [bulkSaving, setBulkSaving] = useState(false);
   const [retrying, setRetrying] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const sites = useMemo(() => Array.from(new Map(events.map((event) => [event.siteId, event.siteName ?? event.siteId])).entries()), [events]);
-  const filtered = useMemo(() => {
-    const keyword = query.trim().toLowerCase();
-    const from = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
-    const to = toDate ? new Date(`${toDate}T23:59:59.999`).getTime() : null;
-    return events.filter((event) => {
-      const occurred = new Date(event.occurredAt).getTime();
-      const statusMatches = matchesAlertEventFilter(event, filter);
-      const queryMatches = !keyword || `${event.siteName ?? ""} ${event.siteId} ${event.message} ${event.metricKey}`.toLowerCase().includes(keyword);
-      const kindMatches = kind === "all" || (kind === "site" ? event.metricKey === "__data__" : kind === "chiller" ? event.metricKey === "__cold_chiller__" : kind === "missing" ? event.eventType === "METRIC_MISSING" : !event.metricKey.startsWith("__") && event.eventType !== "METRIC_MISSING");
-      return event.eventType !== "RECOVERY" && kindMatches && statusMatches && (!siteId || event.siteId === siteId) && queryMatches &&
-        (from == null || occurred >= from) && (to == null || occurred <= to);
-    });
-  }, [events, filter, query, siteId, fromDate, toDate, kind]);
-  const openCount = events.filter((event) => event.eventType !== "RECOVERY" && !event.recoveredAt).length;
-  const selectableIds = filtered.filter(needsAcknowledgement).map((event) => event.id);
-  const unacknowledgedCount = events.filter(needsAcknowledgement).length;
+  const sites = availableSites.map(site => [site.siteid, site.name ?? site.siteid]);
+  const { session } = useAuth();
+  const [searchQuery, setSearchQuery] = useState(query);
+  useEffect(() => { const timer = setTimeout(() => setSearchQuery(query), 300); return () => clearTimeout(timer); }, [query]);
+  const params = new URLSearchParams({ page: String(page), size: "20", query: searchQuery, siteId, status: filter, kind });
+  if (fromDate) params.set("from", new Date(`${fromDate}T00:00:00`).toISOString());
+  if (toDate) params.set("to", new Date(`${toDate}T23:59:59.999`).toISOString());
+  const history = useQuery({ queryKey: ["alert-events", "search", session?.id, params.toString()], queryFn: () => apiFetch<{events: AlertEventSummary[]; total: number}>(`/alerts/events/search?${params}`), enabled: Boolean(session), refetchInterval: 60_000 });
+  const filtered = history.data?.events ?? [];
+  const total = history.data?.total ?? 0;
+  const failed = history.isError;
+  const selectableIds = filtered.filter(needsAcknowledgement).map(event => event.id);
   const selectedIds = selected.filter(id => selectableIds.includes(id));
-  const currentPage = Math.min(page, Math.max(1, Math.ceil(filtered.length / 20)));
+  const currentPage = page;
   const busy = bulkSaving || acknowledging !== null || retrying !== null;
 
   async function acknowledge(eventId: number) {
     if (!window.confirm("이 알림을 확인했나요? 확인하면 나에게 오는 반복 알림이 멈춥니다. 문제가 해결됐다는 뜻은 아닙니다.")) return;
     setAcknowledging(eventId); setError(null);
-    try { await onAcknowledge(eventId); }
+    try { await onAcknowledge(eventId); await history.refetch(); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 확인 처리하지 못했습니다."); }
     finally { setAcknowledging(null); }
   }
@@ -261,7 +251,7 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
     if (ids.length === 0) return;
     if (!window.confirm(`${ids.length}건을 확인했나요? 확인하면 나에게 오는 반복 알림이 멈춥니다. 문제가 해결됐다는 뜻은 아닙니다.`)) return;
     setBulkSaving(true); setError(null);
-    try { await onAcknowledgeMany(ids); setSelected((current) => current.filter((id) => !ids.includes(id))); }
+    try { await onAcknowledgeMany(ids); await history.refetch(); setSelected((current) => current.filter((id) => !ids.includes(id))); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 일괄 확인 처리하지 못했습니다."); }
     finally { setBulkSaving(false); }
   }
@@ -269,34 +259,35 @@ function AlertEventsPanel({ events, loading, failed, onAcknowledge, onAcknowledg
   async function retry(eventId: number) {
     if (!window.confirm("발송에 실패한 수신처에 다시 전송할까요? 확인완료한 담당자는 제외됩니다.")) return;
     setRetrying(eventId); setError(null);
-    try { await onRetryDelivery(eventId); }
+    try { await onRetryDelivery(eventId); await history.refetch(); }
     catch (retryError) { setError(retryError instanceof Error ? retryError.message : "알림을 재전송하지 못했습니다."); }
     finally { setRetrying(null); }
   }
 
-  if (loading) return <div className="text-text-secondary py-16 text-center text-sm">알림 이력을 불러오는 중…</div>;
+
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div><h2 className="text-2xl font-bold">확인할 알림</h2><p className="text-text-secondary mt-1 text-sm">병원과 문제 내용을 확인하세요. ‘확인했어요’를 누르면 나에게 오는 반복 알림이 멈춥니다.</p></div>
-        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["unacknowledged", "open", "all"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체 기록" : value === "open" ? `문제 지속 ${openCount}` : value === "unacknowledged" ? `확인할 알림 ${unacknowledgedCount}` : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "미발송"}</button>)}</div>
+        <div className="flex max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-white/5">{(["unacknowledged", "open", "all"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`shrink-0 rounded-lg px-3 py-2 text-sm font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체 기록" : value === "open" ? "문제 지속" : value === "unacknowledged" ? "확인할 알림" : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "미발송"}</button>)}</div>
       </div>
       <div className="mb-5 grid gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-2 dark:border-white/15 dark:bg-background-dark-card">
         <label className="text-base font-bold">병원 찾기<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="병원 이름이나 알림 내용을 입력하세요" className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-white/5" /></label>
         <label className="text-base font-bold">어떤 문제인가요?<select value={kind} onChange={event => setKind(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-white/5"><option value="all">모든 문제</option><option value="range">수치 이상</option><option value="site">병원 전체 수집 중단</option><option value="missing">측정항목 누락</option><option value="chiller">콜드칠러 정지 의심</option></select></label>
         <details className="sm:col-span-2"><summary className="min-h-12 cursor-pointer py-3 text-base font-semibold text-sky-800 dark:text-sky-300">기간 · 병원 · 발송 상태로 찾기</summary><div className="mt-2 grid gap-3 sm:grid-cols-2"><label className="text-base font-bold">병원<select value={siteId} onChange={event => setSiteId(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card"><option value="">모든 병원</option>{sites.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select></label><label className="text-base font-bold">발송 상태<select value={filter} onChange={event => setFilter(event.target.value as AlertEventFilter)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card"><option value="unacknowledged">확인할 알림</option><option value="open">문제 지속</option><option value="all">전체 기록</option><option value="failed">발송 확인 필요</option><option value="skipped">발송 안 됨</option></select></label><label className="text-base font-bold">시작일<input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card" /></label><label className="text-base font-bold">종료일<input type="date" value={toDate} onChange={event => setToDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card" /></label></div></details>
       </div>
-      <p className="text-text-secondary mb-3 text-sm">최근 500건까지 표시합니다. 확인한 알림은 ‘전체 기록’에서 다시 볼 수 있습니다.</p>
+      <p className="text-text-secondary mb-3 text-sm">전체 보관 이력을 조건별로 조회합니다. 확인한 알림은 ‘전체 기록’에서 다시 볼 수 있습니다.</p>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <label className="flex cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every((id) => selected.includes(id))} onChange={(event) => setSelected(event.target.checked ? Array.from(new Set([...selected, ...selectableIds])) : selected.filter((id) => !selectableIds.includes(id)))} className="h-4 w-4 accent-sky-700" />여러 알림 선택</label>
         <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="rounded-lg bg-sky-700 px-3 py-2 text-sm font-bold text-white disabled:opacity-40">선택 확인 ({selectedIds.length})</button>
-        <button type="button" disabled={busy || selectableIds.length === 0} onClick={() => acknowledgeSelected(selectableIds)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">검색 결과 모두 확인</button>
-        <span className="text-text-secondary ml-auto text-sm">검색 결과 {filtered.length}건</span>
+        <button type="button" disabled={busy || selectableIds.length === 0} onClick={() => acknowledgeSelected(selectableIds)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold hover:bg-slate-50 disabled:opacity-40 dark:border-white/10 dark:hover:bg-white/5">현재 페이지 모두 확인</button>
+        <span className="text-text-secondary ml-auto text-sm">검색 결과 {total}건</span>
       </div>
-      {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다.</p>}
+      {history.isFetching && <p role="status" className="mb-3 text-sm">알림 이력을 불러오는 중…</p>}
+      {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      {filtered.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-white/20 dark:bg-background-dark-card"><p className="text-xl font-bold">{failed ? "알림을 불러오지 못했습니다" : filter === "unacknowledged" && !query && kind === "all" ? "확인할 알림이 없습니다" : "조건에 맞는 알림이 없습니다"}</p><p className="mt-3 text-base text-text-secondary">{failed ? "잠시 후 다시 시도해주세요." : "병원별 알림 기준은 ‘알림 설정’에서 확인할 수 있습니다."}</p></div> : <div className="space-y-4">{filtered.slice((currentPage - 1) * 20, currentPage * 20).map((event) => <AlertEventRow key={event.id} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.includes(event.siteId)} />)}</div>}
-      {filtered.length > 20 && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.ceil(filtered.length / 20)}</span><button type="button" disabled={currentPage * 20 >= filtered.length} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
+      {!history.isPending && filtered.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-white/20 dark:bg-background-dark-card"><p className="text-xl font-bold">{failed ? "알림을 불러오지 못했습니다" : filter === "unacknowledged" && !query && kind === "all" ? "확인할 알림이 없습니다" : "조건에 맞는 알림이 없습니다"}</p><p className="mt-3 text-base text-text-secondary">{failed ? "잠시 후 다시 시도해주세요." : "병원별 알림 기준은 ‘알림 설정’에서 확인할 수 있습니다."}</p></div> : <div className="space-y-4">{filtered.map((event) => <AlertEventRow key={event.id} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}</div>}
+      {(total > 20 || currentPage > 1) && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.max(1, Math.ceil(total / 20))}</span><button type="button" disabled={history.isFetching || currentPage * 20 >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
     </section>
   );
 }

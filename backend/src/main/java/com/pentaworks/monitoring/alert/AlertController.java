@@ -98,6 +98,18 @@ public class AlertController {
             ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user), limit, user.id());
     }
 
+    @GetMapping("/events/search")
+    public AlertEventService.EventPage searchEvents(
+        @RequestParam(defaultValue="1") int page, @RequestParam(defaultValue="20") int size,
+        @RequestParam(defaultValue="") String query, @RequestParam(defaultValue="") String siteId,
+        @RequestParam(defaultValue="unacknowledged") String status, @RequestParam(defaultValue="all") String kind,
+        @RequestParam(required=false) java.time.Instant from, @RequestParam(required=false) java.time.Instant to,
+        Authentication authentication) {
+        var user = currentUsers.require(authentication);
+        return alertEvents.search(user.isAdmin() ? currentUsers.allowedSiteIds(user) : currentUsers.visibleSiteIds(user),
+            user.id(), page, size, query, siteId, status, kind, from, to);
+    }
+
     @PatchMapping("/events/{eventId}/acknowledge")
     public AlertEventSummary acknowledge(@PathVariable long eventId, Authentication authentication) {
         return alertEvents.acknowledge(currentUsers.require(authentication), eventId);

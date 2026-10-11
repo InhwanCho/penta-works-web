@@ -31,7 +31,9 @@ interface AuthContextType {
   isAdmin: boolean;
   role: Role | null;
   login: (email: string, password: string) => Promise<Session>;
-  logout: () => Promise<void>;
+  logout: (allDevices?: boolean) => Promise<void>;
+  connectionError: string | null;
+  retrySession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -39,6 +41,8 @@ const AuthContext = createContext<AuthContextType>({
   isLoading: true,
   isAdmin: false,
   role: null,
+  connectionError: null,
+  retrySession: () => {},
   login: async () => Promise.reject(new Error("AuthProvider is unavailable")),
   logout: async () => {},
 });
@@ -58,40 +62,76 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const retrySession = useCallback(
+    () => window.dispatchEvent(new Event("auth:retry")),
+    [],
+  );
 
   useEffect(() => {
-    try { window.localStorage.removeItem("pentaworks_dashboard_snapshot_v1"); } catch { /* Storage unavailable. */ }
-    const stored = readStoredSession();
-    if (stored && !accessTokenExpiresSoon(stored)) {
-      setSession({ id: stored.id, email: stored.email, name: stored.name, role: stored.role });
-      setIsLoading(false);
-      return;
+    try {
+      window.localStorage.removeItem("pentaworks_dashboard_snapshot_v1");
+    } catch {
+      /* Storage unavailable. */
     }
-
-    refreshAccessToken()
-      .then((refreshed) => {
-        setSession({
-          id: refreshed.id,
-          email: refreshed.email,
-          name: refreshed.name,
-          role: refreshed.role,
-        });
-      })
-      .catch((error) => {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+    let disposed = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const restore = async () => {
+      const stored = readStoredSession();
+      setConnectionError(null);
+      if (stored && !accessTokenExpiresSoon(stored)) {
+        setSession(sessionFromStorage());
+        setIsLoading(false);
+        return;
+      }
+      try {
+        await refreshAccessToken();
+        if (!disposed) {
+          setSession(sessionFromStorage());
+          setIsLoading(false);
+        }
+      } catch (error) {
+        if (disposed) return;
+        if (error instanceof ApiError && error.status === 401) {
           const current = readStoredSession();
           if (current && current.accessToken !== stored?.accessToken) {
-            setSession({ id: current.id, email: current.email, name: current.name, role: current.role });
+            setSession(sessionFromStorage());
           } else {
             clearStoredSession();
             clearPrivateQueries(queryClient);
             setSession(null);
           }
-        } else if (stored && !accessTokenExpiresSoon(stored, 0)) {
-          setSession({ id: stored.id, email: stored.email, name: stored.name, role: stored.role });
-        } else setSession(null);
-      })
-      .finally(() => setIsLoading(false));
+          setIsLoading(false);
+        } else {
+          // Offline phones and restarting servers cannot prove a session expired.
+          // Keep the account and retry; API authorization is still checked by the server.
+          if (stored) {
+            setSession(sessionFromStorage());
+            setIsLoading(false);
+          }
+          setConnectionError(
+            "서버에 연결하지 못했습니다. 로그인은 유지되며 자동으로 다시 연결합니다.",
+          );
+          setIsLoading(false);
+          retryTimer = setTimeout(() => {
+            void restore();
+          }, 10_000);
+        }
+      }
+    };
+    const retry = () => {
+      clearTimeout(retryTimer);
+      void restore();
+    };
+    void restore();
+    window.addEventListener("online", retry);
+    window.addEventListener("auth:retry", retry);
+    return () => {
+      disposed = true;
+      clearTimeout(retryTimer);
+      window.removeEventListener("online", retry);
+      window.removeEventListener("auth:retry", retry);
+    };
   }, [queryClient]);
 
   const login = useCallback(
@@ -104,30 +144,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         name: result.name,
         role: result.role,
       };
+      setConnectionError(null);
+      setIsLoading(false);
       setSession(next);
       return next;
     },
     [queryClient],
   );
 
-  const logout = useCallback(async () => {
-    await requestLogout();
-    queryClient.clear();
-    clearStoredSession();
-    setSession(null);
-  }, [queryClient]);
+  const logout = useCallback(
+    async (allDevices = false) => {
+      await requestLogout(allDevices);
+      queryClient.clear();
+      clearStoredSession();
+      setConnectionError(null);
+      setIsLoading(false);
+      setSession(null);
+    },
+    [queryClient],
+  );
 
   useEffect(() => {
-    const refreshed = () => setSession(sessionFromStorage());
+    const refreshed = () => {
+      setSession(sessionFromStorage());
+      setConnectionError(null);
+      setIsLoading(false);
+    };
     const expired = () => {
       clearPrivateQueries(queryClient);
       setSession(null);
+      setConnectionError(null);
+      setIsLoading(false);
+    };
+    const storage = (event: StorageEvent) => {
+      if (event.key === "pentaworks_session_v2" || event.key === null) {
+        clearPrivateQueries(queryClient);
+        refreshed();
+      }
     };
     window.addEventListener("auth:refreshed", refreshed);
     window.addEventListener("auth:expired", expired);
+    window.addEventListener("storage", storage);
     return () => {
       window.removeEventListener("auth:refreshed", refreshed);
       window.removeEventListener("auth:expired", expired);
+      window.removeEventListener("storage", storage);
     };
   }, [queryClient]);
 
@@ -135,13 +196,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       session,
       isLoading,
+      connectionError,
+      retrySession,
       isAdmin:
-        session?.role === "PLATFORM_ADMIN" || session?.role === "SUPER_ADMIN" || session?.role === "ADMIN",
+        session?.role === "PLATFORM_ADMIN" ||
+        session?.role === "SUPER_ADMIN" ||
+        session?.role === "ADMIN",
       role: session?.role ?? null,
       login,
       logout,
     }),
-    [session, isLoading, login, logout],
+    [session, isLoading, connectionError, retrySession, login, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

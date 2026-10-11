@@ -11,7 +11,10 @@
     "test:public-auth": "node --test tests/public-auth-query.test.mjs",
     "test:invitation-login": "node --test tests/invitation-login.test.mjs",
     "test:mutation-feedback": "node --test tests/mutation-feedback.test.mjs",
-    "test:alerts": "node --test tests/alert-event-state.test.mjs"
+    "test:alerts": "node --test tests/alert-event-state.test.mjs",
+    "test:session": "node --test tests/session-resilience.test.mjs",
+    "test:pwa": "node --test tests/pwa-update.test.mjs",
+    "test:preferences": "node --test tests/dashboard-preferences.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",

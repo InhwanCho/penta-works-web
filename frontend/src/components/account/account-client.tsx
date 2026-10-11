@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
+type DeviceSession = { id: string; deviceName: string | null; ipAddress: string | null; lastUsedAt: string; current: boolean };
 type Profile = { name: string; email: string; phone: string | null };
 const INPUT = "mt-1 w-full min-w-0 rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-base dark:border-white/10 dark:bg-white/5";
 
@@ -16,6 +17,7 @@ export default function AccountClient() {
   const router = useRouter();
   const client = useQueryClient();
   const profile = useQuery({queryKey:["my-profile", session?.id], queryFn:() => apiFetch<Profile>("/auth/profile"), enabled:Boolean(session)});
+  const devices = useQuery({queryKey:["my-sessions", session?.id], queryFn:() => apiFetch<DeviceSession[]>("/auth/sessions"), enabled:Boolean(session)});
   const [mode, setMode] = useState<"profile" | "password" | null>(null);
   const [draft, setDraft] = useState<Profile>({name:"",email:"",phone:null});
   const [currentPassword, setCurrentPassword] = useState("");
@@ -42,9 +44,9 @@ export default function AccountClient() {
     finally { setSaving(false); }
   }
 
-  async function signOut() {
+  async function signOut(allDevices = false) {
     setSaving(true); setMessage(null);
-    try { await logout(); router.replace("/login"); }
+    try { await logout(allDevices); router.replace("/login"); }
     catch (error) { setMessage(error instanceof Error ? error.message : "로그아웃하지 못했습니다."); }
     finally { setSaving(false); }
   }
@@ -76,8 +78,16 @@ export default function AccountClient() {
           </>}
           <div className="grid grid-cols-2 gap-2"><button type="button" disabled={saving} onClick={()=>{setMode(null);setMessage(null);}} className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10">취소</button><button disabled={saving} className="min-h-12 rounded-xl bg-button-primary font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "변경 저장"}</button></div>
         </form>}
+        <section className="mt-6 border-t pt-5"><h2 className="font-bold">로그인한 기기</h2>
+          {devices.isPending ? <p className="mt-3 text-sm">불러오는 중…</p> : devices.isError ? <button type="button" onClick={() => devices.refetch()} className="min-h-11 text-sm underline">기기 목록 다시 불러오기</button> : <ul className="divide-y">{devices.data?.map(device => <li key={device.id} className="py-3 text-sm"><p className="break-words font-bold">{device.current ? "현재 기기 · " : ""}{device.deviceName ?? "기기 정보 없음"}</p><p className="mt-1 text-xs text-text-secondary">{device.ipAddress} · 최근 접속 {new Date(device.lastUsedAt).toLocaleString("ko-KR")}</p>{!device.current && <button type="button" disabled={saving} onClick={async () => {
+            setSaving(true);setMessage(null);
+            try { await apiFetch(`/auth/sessions/${encodeURIComponent(device.id)}`, {method:"DELETE"}); await devices.refetch(); }
+            catch (error) { setMessage(error instanceof Error ? error.message : "기기를 종료하지 못했습니다."); }
+            finally { setSaving(false); }
+          }} className="min-h-11 text-rose-700 underline dark:text-rose-300">이 기기 로그인 종료</button>}</li>)}</ul>}
+        </section>
         {message && <p role="status" className="mt-4 text-sm">{message}</p>}
-        <div className="mt-6 border-t border-slate-100 pt-5 dark:border-white/10"><button type="button" disabled={saving} onClick={signOut} className="min-h-12 w-full rounded-xl bg-rose-50 font-bold text-rose-700 disabled:opacity-50 dark:bg-rose-950/30 dark:text-rose-300">로그아웃</button><p className="mt-2 text-center text-xs text-text-secondary">모든 기기에서 로그아웃됩니다.</p></div>
+        <div className="mt-6 border-t border-slate-100 pt-5 dark:border-white/10"><button type="button" disabled={saving} onClick={() => signOut()} className="min-h-12 w-full rounded-xl bg-rose-50 font-bold text-rose-700 disabled:opacity-50 dark:bg-rose-950/30 dark:text-rose-300">이 기기에서 로그아웃</button><button type="button" disabled={saving} onClick={() => signOut(true)} className="mt-2 min-h-12 w-full rounded-xl border font-bold">모든 기기에서 로그아웃</button><p className="mt-2 text-center text-xs text-text-secondary">다른 기기의 로그인은 직접 종료할 때까지 유지됩니다.</p></div>
       </div>
     </section>
   </main>;
