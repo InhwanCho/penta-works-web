@@ -12,7 +12,7 @@ import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { Controller, useForm, useWatch } from "react-hook-form";
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
 type UserRow = {
   id: number;
@@ -361,34 +361,42 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
   canInviteAdmins: boolean;
 }) {
   const queryClient = useQueryClient();
-  const form = useForm<{ email: string; name: string; phone: string; role: Role }>({
-    mode: "onChange", defaultValues: { email: "", name: "", phone: "", role: "USER" },
+  const form = useForm<{ email: string; name: string; phone: string; role: Role; siteIds: string[] }>({
+    mode: "onChange", defaultValues: { email: "", name: "", phone: "", role: "USER", siteIds: [] },
   });
   const role = useWatch({ control: form.control, name: "role" });
   const { register, formState: { errors } } = form;
   const [resendingId, setResendingId] = useState<string | null>(null);
-  const [siteIds, setSiteIds] = useState<string[]>([]);
+  const [formVersion, setFormVersion] = useState(0);
+  const submissionLock = useRef(false);
   const [link, setLink] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function submit({ email, name, phone, role }: { email: string; name: string; phone: string; role: Role }) {
+  async function submit({ email, name, phone, role, siteIds }: { email: string; name: string; phone: string; role: Role; siteIds: string[] }) {
+    if (submissionLock.current) return;
+    submissionLock.current = true;
     setSaving(true);
     setMessage(null);
+    setLink(null);
     try {
       const result = await apiFetch<InvitationCreated>("/admin/accounts/invitations", {
         method: "POST",
-        body: JSON.stringify({ email, name, role, siteIds, phone: phoneDigits(phone) || null }),
+        body: JSON.stringify({ email, name, role, siteIds: role === "USER" ? siteIds : [], phone: phoneDigits(phone) || null }),
       });
       setLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(result.token)}`);
       setMessage(result.deliveryStatus === "SENT" ? "초대 이메일을 발송했습니다." : result.deliveryStatus === "FAILED" ? "메일 발송에 실패해 수동 링크를 생성했습니다." : "메일이 비활성화되어 수동 링크를 생성했습니다.");
-      form.reset({ email: "", name: "", phone: "", role });
-      setSiteIds([]);
-      await queryClient.invalidateQueries({ queryKey: ["admin-invitations"] });
-      await queryClient.invalidateQueries({ queryKey: ["admin-audits"] });
+      form.reset({ email: "", name: "", phone: "", role: "USER", siteIds: [] });
+      setFormVersion(value => value + 1);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-invitations"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-sites"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-audits"] }),
+      ]);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "초대하지 못했습니다.");
     } finally {
+      submissionLock.current = false;
       setSaving(false);
     }
   }
@@ -414,7 +422,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,.95fr)]">
-      <form noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className={`${CARD} space-y-4 p-5 sm:p-6`}>
+      <form key={formVersion} noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className={`${CARD} space-y-4 p-5 sm:p-6`}>
         <div><h2 className="text-lg font-bold">새 사용자 초대</h2><p className="text-text-secondary mt-1 text-sm">초대받은 사용자가 직접 비밀번호를 설정합니다.</p></div>
         <fieldset disabled={saving} className="space-y-4">
         <div><label htmlFor="invite-email" className="text-sm font-bold">이메일</label><input id="invite-email" className={`${INPUT} mt-1.5`} type="email" aria-invalid={Boolean(errors.email)} aria-describedby="invite-email-error" placeholder="이메일" {...register("email", { required: "이메일을 입력해주세요.", maxLength: {value:254,message:"이메일은 254자 이하로 입력해주세요."}, pattern: { value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: "올바른 이메일을 입력해주세요." }, setValueAs: value => value.trim() })} />{errors.email && <p id="invite-email-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.email.message}</p>}</div>
@@ -430,7 +438,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
           {canInviteAdmins && <option value="SUPER_ADMIN">최고관리자</option>}
         </select></label>
         </fieldset>
-        {role === "USER" && <fieldset disabled={saving}><SiteChecks sites={sites} selected={siteIds} onChange={setSiteIds} /></fieldset>}
+        {role === "USER" && <fieldset disabled={saving}><Controller control={form.control} name="siteIds" render={({field}) => <SiteChecks sites={sites} selected={field.value} onChange={field.onChange} />} /></fieldset>}
         {message && <p className="text-sm text-red-600">{message}</p>}
         <button type="submit" disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50">
