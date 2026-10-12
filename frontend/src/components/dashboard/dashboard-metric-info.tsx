@@ -1,7 +1,7 @@
 "use client";
 
 import { averagePeriodMessage, averageUnavailableMessage } from "@/lib/alert-range";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 
@@ -13,6 +13,14 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"),
     staleTime: 60_000,
   });
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  useEffect(() => {
+    // Count from the click, even if the query is slow or offline. Query results
+    // and background refetches must not extend the deadline.
+    const timer = setTimeout(() => closeRef.current(), 5000);
+    return () => clearTimeout(timer);
+  }, [selection]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => { if (event.key === "Escape") onClose(); };
     window.addEventListener("keydown", close);
