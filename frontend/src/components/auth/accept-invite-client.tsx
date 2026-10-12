@@ -50,7 +50,7 @@ export default function AcceptInviteClient() {
           <p className="text-text-secondary mt-1 text-xs leading-5">회원가입하면 이 회사의 워크스페이스를 사용할 수 있습니다.</p>
         </header>
         <div className="space-y-5 p-6">
-          <div className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5"><p className="font-bold">{invitation.data.name}</p><p className="text-text-secondary mt-1 break-all text-sm">{invitation.data.email}</p></div>
+          <div className="rounded-xl bg-slate-50 px-4 py-3 dark:bg-white/5"><p className="font-bold">{invitation.data.name}</p><p className="mt-2 text-xs font-bold text-sky-700 dark:text-sky-300">로그인 ID (이메일)</p><p className="text-text-secondary mt-1 break-all text-sm">{invitation.data.email}</p><p className="text-text-secondary mt-2 text-xs leading-5">초대받은 이메일 주소가 로그인 ID입니다. 가입 후 이 이메일과 아래에서 설정한 비밀번호로 로그인해주세요.</p></div>
           <fieldset disabled={saving} className="space-y-4"><PasswordFields form={form} /></fieldset>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={saving} className="bg-button-primary flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold text-white disabled:opacity-50">

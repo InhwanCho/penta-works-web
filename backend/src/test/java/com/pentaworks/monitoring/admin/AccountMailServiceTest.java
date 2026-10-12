@@ -17,6 +17,20 @@ import static org.mockito.Mockito.when;
 
 class AccountMailServiceTest {
     @Test
+    void invitationExplainsThatTheInvitedEmailIsTheLoginId() throws Exception {
+        JavaMailSender sender = mock(JavaMailSender.class);
+        when(sender.createMimeMessage()).thenReturn(new MimeMessage(Session.getInstance(new Properties())));
+        var service = new AccountMailService(sender,
+            new MailProperties(true, "ihcho@pentaworks.net", "펜타웍스 알림", "https://app.example.com"));
+        assertEquals(AccountMailService.DeliveryStatus.SENT, service.sendInvitation("user@example.com", "User", "test-token"));
+        var sent = ArgumentCaptor.forClass(MimeMessage.class);
+        verify(sender).send(sent.capture());
+        String body = sent.getValue().getContent().toString();
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("로그인 ID: user@example.com"));
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("초대받은 이메일 주소가 로그인 ID입니다."));
+    }
+
+    @Test
     void doesNotContactSmtpWhenMailIsDisabled() {
         JavaMailSender sender = mock(JavaMailSender.class);
         AccountMailService service = new AccountMailService(sender,

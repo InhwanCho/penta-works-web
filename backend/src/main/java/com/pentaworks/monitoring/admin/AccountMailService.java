@@ -25,7 +25,7 @@ public class AccountMailService {
 
     public DeliveryStatus sendInvitation(String email, String name, String token) {
         return send(email, "[MREyes] 계정 초대",
-            name + "님, MREyes에 초대되었습니다.\n\n아래 링크에서 7일 이내에 비밀번호를 설정해주세요.\n" +
+            name + "님, MREyes에 초대되었습니다.\n\n로그인 ID: " + email + "\n초대받은 이메일 주소가 로그인 ID입니다.\n아래 링크에서 7일 이내에 비밀번호를 설정한 뒤, 이 이메일과 설정한 비밀번호로 로그인해주세요.\n" +
                 link("/accept-invite", token));
     }
 
