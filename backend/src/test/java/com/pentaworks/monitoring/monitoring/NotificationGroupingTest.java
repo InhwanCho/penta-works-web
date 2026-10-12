@@ -8,9 +8,9 @@ import org.junit.jupiter.api.Test;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
 
-class MissingNotificationGroupingTest {
+class NotificationGroupingTest {
     @Test
-    void sendsOneMissingMessagePerRecipientAndRecordsEveryIncidentWithSameReceipt() {
+    void sendsOneMixedMessagePerRecipientAndRecordsEveryIncidentWithSameReceipt() {
         var events=mock(AlertEventService.class);var recipients=mock(AlertRecipientService.class);
         var deliveries=mock(AlertDeliveryService.class);var kakao=mock(BaroKakaoService.class);
         var monitor=new MonitorService(mock(DashboardService.class),mock(AlertService.class),events,recipients,deliveries,kakao,mock(PersonalAlertService.class),mock(RollingAverageService.class));
@@ -26,16 +26,16 @@ class MissingNotificationGroupingTest {
         when(deliveries.begin(eq(2L),anyList(),eq(false))).thenReturn(b2);
         when(deliveries.begin(eq(3L),anyList(),eq(false))).thenReturn(b3);
         when(deliveries.claim(any(),anyString())).thenReturn(true);
-        when(kakao.sendMissing("01011111111",List.of(pressure,temperature))).thenReturn("bundle-receipt");
-        when(kakao.sendMissing("01022222222",List.of(pressure))).thenReturn("single-receipt");
-        when(kakao.send("01011111111",humidity)).thenReturn("range-receipt");
+        when(kakao.sendBundle("01011111111",List.of(pressure,temperature,humidity))).thenReturn("bundle-receipt");
+        when(kakao.send("01022222222",pressure)).thenReturn("single-receipt");
         monitor.sendNotifications(List.of(pressure,temperature,humidity),Map.of(),false,7);
-        verify(kakao).sendMissing("01011111111",List.of(pressure,temperature));
-        verify(kakao).sendMissing("01022222222",List.of(pressure));
-        verify(kakao).send("01011111111",humidity);verifyNoMoreInteractions(kakao);
+        verify(kakao).sendBundle("01011111111",List.of(pressure,temperature,humidity));
+        verify(kakao).send("01022222222",pressure);
+        verifyNoMoreInteractions(kakao);
         verify(deliveries).accepted(b1,"KAKAO_ALIMTALK:01011111111","bundle-receipt");
         verify(deliveries).accepted(b2,"KAKAO_ALIMTALK:01011111111","bundle-receipt");
         verify(deliveries).accepted(b1,"KAKAO_ALIMTALK:01022222222","single-receipt");
+        verify(deliveries).accepted(b3,"KAKAO_ALIMTALK:01011111111","bundle-receipt");
         verify(deliveries).finish(b1);verify(deliveries).finish(b2);verify(deliveries).finish(b3);
     }
 
@@ -50,10 +50,28 @@ class MissingNotificationGroupingTest {
         when(deliveries.begin(eq(1L),anyList(),eq(false))).thenReturn(b1);when(deliveries.begin(eq(2L),anyList(),eq(false))).thenReturn(b2);
         when(deliveries.claim(b1,"KAKAO_ALIMTALK:01011111111")).thenReturn(false);
         when(deliveries.claim(b2,"KAKAO_ALIMTALK:01011111111")).thenReturn(true);
-        when(kakao.sendMissing("01011111111",List.of(second))).thenThrow(new IllegalStateException("접수 거부"));
+        when(kakao.send("01011111111",second)).thenThrow(new IllegalStateException("접수 거부"));
         monitor.sendNotifications(List.of(first,second),Map.of(),false,7);
-        verify(kakao).sendMissing("01011111111",List.of(second));verifyNoMoreInteractions(kakao);
+        verify(kakao).send("01011111111",second);verifyNoMoreInteractions(kakao);
         verify(deliveries).complete(b2,"KAKAO_ALIMTALK:01011111111","FAILED","접수 거부");
         verify(deliveries,never()).complete(eq(b1),anyString(),anyString(),any());
     }
+    @Test
+    void ambiguousBundleResponseMarksEveryMemberUnknownWithoutRetryingSeparately() {
+        var recipients=mock(AlertRecipientService.class);var deliveries=mock(AlertDeliveryService.class);var kakao=mock(BaroKakaoService.class);
+        var monitor=new MonitorService(mock(DashboardService.class),mock(AlertService.class),mock(AlertEventService.class),recipients,deliveries,kakao,mock(PersonalAlertService.class),mock(RollingAverageService.class));
+        var first=new Transition(1,"001","병원","hepres","압력","psi","HIGH",3.0,null,2.0,"이탈");
+        var second=new Transition(2,"001","병원","actemp","온도","°C","LOW",10.0,20.0,null,"이탈");
+        when(recipients.personalPhones(eq("001"),eq(7L),any())).thenReturn(List.of("01011111111"));
+        var b1=new AlertDeliveryService.Batch(1,"b1");var b2=new AlertDeliveryService.Batch(2,"b2");
+        when(deliveries.begin(eq(1L),anyList(),eq(false))).thenReturn(b1);when(deliveries.begin(eq(2L),anyList(),eq(false))).thenReturn(b2);
+        when(deliveries.claim(any(),anyString())).thenReturn(true);
+        when(kakao.sendBundle("01011111111",List.of(first,second))).thenThrow(new RuntimeException("응답 유실"));
+        monitor.sendNotifications(List.of(first,second),Map.of(),false,7);
+        verify(kakao).sendBundle("01011111111",List.of(first,second));verifyNoMoreInteractions(kakao);
+        verify(deliveries).complete(eq(b1),eq("KAKAO_ALIMTALK:01011111111"),eq("UNKNOWN"),anyString());
+        verify(deliveries).complete(eq(b2),eq("KAKAO_ALIMTALK:01011111111"),eq("UNKNOWN"),anyString());
+        verify(deliveries).finish(b1);verify(deliveries).finish(b2);
+    }
+
 }

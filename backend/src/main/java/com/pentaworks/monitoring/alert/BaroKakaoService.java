@@ -64,9 +64,9 @@ public class BaroKakaoService {
         return sendRequest(request(phone, alert, ZonedDateTime.now(SEOUL)));
     }
 
-    public String sendMissing(String phone, List<Transition> alerts) {
+    public String sendBundle(String phone, List<Transition> alerts) {
         if (!ready()) throw new IllegalStateException("알림톡 및 문자 대체발송 설정이 완료되지 않았습니다.");
-        return sendRequest(missingRequest(phone, alerts, ZonedDateTime.now(SEOUL)));
+        return sendRequest(bundleRequest(phone, alerts, ZonedDateTime.now(SEOUL)));
     }
 
     private String sendRequest(String xml) {
@@ -100,16 +100,34 @@ public class BaroKakaoService {
         return request(phone, alert, now, value(alert.value(), alert.unit()));
     }
 
-    String missingRequest(String phone, List<Transition> alerts, ZonedDateTime now) {
-        if (alerts.isEmpty()) throw new IllegalArgumentException("묶을 항목 누락이 없습니다.");
+    String bundleRequest(String phone, List<Transition> alerts, ZonedDateTime now) {
+        if (alerts.isEmpty()) throw new IllegalArgumentException("묶을 알림이 없습니다.");
         Transition first = alerts.get(0);
-        if (alerts.stream().anyMatch(item -> !"METRIC_MISSING".equals(item.eventType()) || !first.siteId().equals(item.siteId())))
-            throw new IllegalArgumentException("같은 병원의 항목 누락만 묶을 수 있습니다.");
+        if (alerts.stream().anyMatch(item -> "RECOVERY".equals(item.eventType()) || !first.siteId().equals(item.siteId())))
+            throw new IllegalArgumentException("같은 병원의 이상 알림만 묶을 수 있습니다.");
         if (alerts.size() == 1) return request(phone, first, now);
-        String labels = alerts.stream().map(item -> safe(item.metricLabel()).replace(" 측정 누락", "")).collect(Collectors.joining(", "));
-        String counts = alerts.stream().map(item -> safe(item.metricLabel()).replace(" 측정 누락", "") + " " + value(item.value(), "회")).collect(Collectors.joining(", "));
-        Transition grouped = new Transition(first.eventId(),first.siteId(),first.siteName(),first.metricKey(),labels + " · 항목 누락",null,"METRIC_MISSING",null,null,null,first.message());
-        return request(phone, grouped, now, counts);
+        String labels = alerts.stream().map(BaroKakaoService::bundleLabel).distinct().collect(Collectors.joining(", "));
+        String values = alerts.stream().map(item -> bundleLabel(item) + " [" + alertType(item) + "] "
+            + value(item.value(), item.unit())).collect(Collectors.joining("\n"));
+        Transition grouped = new Transition(first.eventId(), first.siteId(), first.siteName(), first.metricKey(),
+            labels, "건", "BUNDLE", (double) alerts.size(), null, null, first.message());
+        return request(phone, grouped, now, values);
+    }
+
+    private static String bundleLabel(Transition alert) {
+        String label = safe(alert.metricLabel());
+        return "METRIC_MISSING".equals(alert.eventType()) ? label.replace(" 측정 누락", "") : label;
+    }
+
+    private static String alertType(Transition alert) {
+        if ("__cold_chiller__".equals(alert.metricKey())) return "정지 의심";
+        return switch (alert.eventType()) {
+            case "HIGH" -> "상한 초과";
+            case "LOW" -> "하한 미만";
+            case "METRIC_MISSING" -> "항목 누락";
+            case "NO_DATA" -> "수집 누락";
+            default -> "이상 감지";
+        };
     }
 
     private String request(String phone, Transition alert, ZonedDateTime now, String value) {

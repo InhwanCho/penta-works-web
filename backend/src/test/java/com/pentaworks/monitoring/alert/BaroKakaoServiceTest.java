@@ -11,16 +11,20 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaroKakaoServiceTest {
     @Test
-    void groupedMissingUsesApprovedTemplateAndNamesEachItemAndItsCount() {
+    void groupedAlertsUseApprovedTemplateAndNameEachItemValueAndType() {
         var service=new BaroKakaoService(true,"test-key","1234567890","sender","01012345678",false);
         var pressure=new Transition(1,"001","테스트 병원","hepres","헬륨 압력 측정 누락","회","METRIC_MISSING",5.0,null,5.0,"누락");
         var temperature=new Transition(2,"001","테스트 병원","actemp","항온항습기 온도 측정 누락","회","METRIC_MISSING",6.0,null,3.0,"누락");
-        String request=service.missingRequest("01099998888",java.util.List.of(pressure,temperature),ZonedDateTime.now());
-        assertTrue(request.contains("감지 항목: 헬륨 압력, 항온항습기 온도 · 항목 누락"));
-        assertTrue(request.contains("현재 값: 헬륨 압력 5회, 항온항습기 온도 6회"));
+        var humidity=new Transition(3,"001","테스트 병원","achumi","항온항습기 습도","%","HIGH",90.0,null,70.0,"이탈");
+        var noData=new Transition(4,"001","테스트 병원","__data__","데이터 수집 5회 연속 누락","분","NO_DATA",50.0,null,50.0,"누락");
+        String request=service.bundleRequest("01099998888",java.util.List.of(pressure,temperature,humidity,noData),ZonedDateTime.now());
+        assertTrue(request.contains("감지 항목: 헬륨 압력, 항온항습기 온도, 항온항습기 습도, 데이터 수집 5회 연속 누락"));
+        assertTrue(request.contains("현재 값: 헬륨 압력 [항목 누락] 5회\n항온항습기 온도 [항목 누락] 6회"));
+        assertTrue(request.contains("항온항습기 습도 [상한 초과] 90%"));
+        assertTrue(request.contains("데이터 수집 5회 연속 누락 [수집 누락] 50분"));
         assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림 - 간소화</TemplateName>"));
         var other=new Transition(3,"002","다른 병원","hepres","압력","회","METRIC_MISSING",5.0,null,5.0,"누락");
-        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->service.missingRequest("01099998888",java.util.List.of(pressure,other),ZonedDateTime.now()));
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->service.bundleRequest("01099998888",java.util.List.of(pressure,other),ZonedDateTime.now()));
     }
 
     @Test

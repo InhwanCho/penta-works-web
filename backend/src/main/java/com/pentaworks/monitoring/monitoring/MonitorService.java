@@ -149,25 +149,19 @@ public class MonitorService {
                     if (!eligible.getOrDefault(alert.eventId(), List.of()).contains(phone)) continue;
                     if (batch != null && deliveries.claim(batch, destination)) claimed.add(alert);
                 }
-                List<List<Transition>> messages = new ArrayList<>();
-                List<Transition> missing = claimed.stream().filter(alert -> "METRIC_MISSING".equals(alert.eventType())).toList();
-                if (!missing.isEmpty()) messages.add(missing);
-                claimed.stream().filter(alert -> !"METRIC_MISSING".equals(alert.eventType())).forEach(alert -> messages.add(List.of(alert)));
-                for (List<Transition> message : messages) {
-                    try {
-                        String receipt = "METRIC_MISSING".equals(message.get(0).eventType())
-                            ? kakao.sendMissing(phone, message) : kakao.send(phone, message.get(0));
-                        for (Transition alert : message) deliveries.accepted(batches.get(alert.eventId()), destination, receipt);
-                    } catch (IllegalStateException error) {
-                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED", error.getMessage());
-                    } catch (RestClientResponseException error) {
-                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED",
-                            "바로빌 접수 거부 (HTTP " + error.getStatusCode().value() + ")");
-                    } catch (RuntimeException error) {
-                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "UNKNOWN",
-                            "바로빌 응답을 확인할 수 없습니다. 중복 발송 방지를 위해 도착 여부를 확인해주세요.");
-                        log.warn("Kakao delivery response unavailable for site {}", entry.getKey());
-                    }
+                if (claimed.isEmpty()) continue;
+                try {
+                    String receipt = claimed.size() == 1 ? kakao.send(phone, claimed.get(0)) : kakao.sendBundle(phone, claimed);
+                    for (Transition alert : claimed) deliveries.accepted(batches.get(alert.eventId()), destination, receipt);
+                } catch (IllegalStateException error) {
+                    for (Transition alert : claimed) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED", error.getMessage());
+                } catch (RestClientResponseException error) {
+                    for (Transition alert : claimed) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED",
+                        "바로빌 접수 거부 (HTTP " + error.getStatusCode().value() + ")");
+                } catch (RuntimeException error) {
+                    for (Transition alert : claimed) deliveries.complete(batches.get(alert.eventId()), destination, "UNKNOWN",
+                        "바로빌 응답을 확인할 수 없습니다. 중복 발송 방지를 위해 도착 여부를 확인해주세요.");
+                    log.warn("Kakao delivery response unavailable for site {}", entry.getKey());
                 }
             }
             batches.values().forEach(deliveries::finish);
