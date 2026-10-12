@@ -18,7 +18,7 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
   useEffect(() => {
     // Count from the click, even if the query is slow or offline. Query results
     // and background refetches must not extend the deadline.
-    const timer = setTimeout(() => closeRef.current(), 5000);
+    const timer = setTimeout(() => closeRef.current(), 3000);
     return () => clearTimeout(timer);
   }, [selection]);
   useEffect(() => {

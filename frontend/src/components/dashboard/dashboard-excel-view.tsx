@@ -125,7 +125,7 @@ export default function DashboardExcelView({
       column,
       metric: Boolean(metric),
     });
-    selectionTimer.current = setTimeout(() => setSelectedCell(null), 5000);
+    selectionTimer.current = setTimeout(() => setSelectedCell(null), 3000);
   };
 
   useEffect(

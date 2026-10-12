@@ -11,6 +11,19 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaroKakaoServiceTest {
     @Test
+    void groupedMissingUsesApprovedTemplateAndNamesEachItemAndItsCount() {
+        var service=new BaroKakaoService(true,"test-key","1234567890","sender","01012345678",false);
+        var pressure=new Transition(1,"001","테스트 병원","hepres","헬륨 압력 측정 누락","회","METRIC_MISSING",5.0,null,5.0,"누락");
+        var temperature=new Transition(2,"001","테스트 병원","actemp","항온항습기 온도 측정 누락","회","METRIC_MISSING",6.0,null,3.0,"누락");
+        String request=service.missingRequest("01099998888",java.util.List.of(pressure,temperature),ZonedDateTime.now());
+        assertTrue(request.contains("감지 항목: 헬륨 압력, 항온항습기 온도 · 항목 누락"));
+        assertTrue(request.contains("현재 값: 헬륨 압력 5회, 항온항습기 온도 6회"));
+        assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림 - 간소화</TemplateName>"));
+        var other=new Transition(3,"002","다른 병원","hepres","압력","회","METRIC_MISSING",5.0,null,5.0,"누락");
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->service.missingRequest("01099998888",java.util.List.of(pressure,other),ZonedDateTime.now()));
+    }
+
+    @Test
     void fallbackContainsSiteMetricAndValueWithinNinetyBytes() {
         Transition alert = new Transition(1, "001", "아주 긴 사업장 이름 테스트 병원", "hepres",
             "헬륨 압력 측정값", "psi", "HIGH", 3.25, 0.5, 2.0, "이상");

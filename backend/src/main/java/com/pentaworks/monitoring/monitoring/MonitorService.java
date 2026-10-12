@@ -98,7 +98,7 @@ public class MonitorService {
         return Map.of("ok", true, "eventId", eventId);
     }
 
-    private void sendNotifications(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual, long userId) {
+    void sendNotifications(List<Transition> alerts, Map<String, SiteAlertSettings> settings, boolean manual, long userId) {
         if (alerts.isEmpty()) return;
         List<Transition> recoveries = alerts.stream().filter(alert -> "RECOVERY".equals(alert.eventType())).toList();
         if (!recoveries.isEmpty()) {
@@ -143,20 +143,28 @@ public class MonitorService {
             }
             for (String phone : phones) {
                 String destination = "KAKAO_ALIMTALK:" + phone;
+                List<Transition> claimed = new ArrayList<>();
                 for (Transition alert : siteAlerts) {
                     var batch = batches.get(alert.eventId());
                     if (!eligible.getOrDefault(alert.eventId(), List.of()).contains(phone)) continue;
-                    if (batch == null || !deliveries.claim(batch, destination)) continue;
+                    if (batch != null && deliveries.claim(batch, destination)) claimed.add(alert);
+                }
+                List<List<Transition>> messages = new ArrayList<>();
+                List<Transition> missing = claimed.stream().filter(alert -> "METRIC_MISSING".equals(alert.eventType())).toList();
+                if (!missing.isEmpty()) messages.add(missing);
+                claimed.stream().filter(alert -> !"METRIC_MISSING".equals(alert.eventType())).forEach(alert -> messages.add(List.of(alert)));
+                for (List<Transition> message : messages) {
                     try {
-                        String receipt = kakao.send(phone, alert);
-                        deliveries.accepted(batch, destination, receipt);
+                        String receipt = "METRIC_MISSING".equals(message.get(0).eventType())
+                            ? kakao.sendMissing(phone, message) : kakao.send(phone, message.get(0));
+                        for (Transition alert : message) deliveries.accepted(batches.get(alert.eventId()), destination, receipt);
                     } catch (IllegalStateException error) {
-                        deliveries.complete(batch, destination, "FAILED", error.getMessage());
+                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED", error.getMessage());
                     } catch (RestClientResponseException error) {
-                        deliveries.complete(batch, destination, "FAILED",
+                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED",
                             "바로빌 접수 거부 (HTTP " + error.getStatusCode().value() + ")");
                     } catch (RuntimeException error) {
-                        deliveries.complete(batch, destination, "UNKNOWN",
+                        for (Transition alert : message) deliveries.complete(batches.get(alert.eventId()), destination, "UNKNOWN",
                             "바로빌 응답을 확인할 수 없습니다. 중복 발송 방지를 위해 도착 여부를 확인해주세요.");
                         log.warn("Kakao delivery response unavailable for site {}", entry.getKey());
                     }

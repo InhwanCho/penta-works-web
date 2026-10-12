@@ -9,6 +9,8 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.List;
+import java.util.stream.Collectors;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -59,7 +61,15 @@ public class BaroKakaoService {
     /** A positive provider receipt means accepted, not handset delivery. Baro handles SMS fallback. */
     public String send(String phone, Transition alert) {
         if (!ready()) throw new IllegalStateException("알림톡 및 문자 대체발송 설정이 완료되지 않았습니다.");
-        String xml = request(phone, alert, ZonedDateTime.now(SEOUL));
+        return sendRequest(request(phone, alert, ZonedDateTime.now(SEOUL)));
+    }
+
+    public String sendMissing(String phone, List<Transition> alerts) {
+        if (!ready()) throw new IllegalStateException("알림톡 및 문자 대체발송 설정이 완료되지 않았습니다.");
+        return sendRequest(missingRequest(phone, alerts, ZonedDateTime.now(SEOUL)));
+    }
+
+    private String sendRequest(String xml) {
         String response = client.post().uri(ENDPOINT).contentType(MediaType.TEXT_XML)
             .header("SOAPAction", "http://ws.baroservice.com/SendATKakaotalkEx")
             .body(xml).retrieve().body(String.class);
@@ -87,7 +97,22 @@ public class BaroKakaoService {
 
     String request(String phone, Transition alert, ZonedDateTime now) {
         // Approved template BB0836851023705085; this API identifies it by TemplateName.
-        String value = value(alert.value(), alert.unit());
+        return request(phone, alert, now, value(alert.value(), alert.unit()));
+    }
+
+    String missingRequest(String phone, List<Transition> alerts, ZonedDateTime now) {
+        if (alerts.isEmpty()) throw new IllegalArgumentException("묶을 항목 누락이 없습니다.");
+        Transition first = alerts.get(0);
+        if (alerts.stream().anyMatch(item -> !"METRIC_MISSING".equals(item.eventType()) || !first.siteId().equals(item.siteId())))
+            throw new IllegalArgumentException("같은 병원의 항목 누락만 묶을 수 있습니다.");
+        if (alerts.size() == 1) return request(phone, first, now);
+        String labels = alerts.stream().map(item -> safe(item.metricLabel()).replace(" 측정 누락", "")).collect(Collectors.joining(", "));
+        String counts = alerts.stream().map(item -> safe(item.metricLabel()).replace(" 측정 누락", "") + " " + value(item.value(), "회")).collect(Collectors.joining(", "));
+        Transition grouped = new Transition(first.eventId(),first.siteId(),first.siteName(),first.metricKey(),labels + " · 항목 누락",null,"METRIC_MISSING",null,null,null,first.message());
+        return request(phone, grouped, now, counts);
+    }
+
+    private String request(String phone, Transition alert, ZonedDateTime now, String value) {
         String message = "[MrEyes MRI 모니터링 알림]\n담당자님, 설정 범위 이탈이 감지되었습니다.\n\n병원명: "
             + safe(alert.siteName()) + "\n감지 시각: " + now.format(ALERT_TIME)
             + "\n감지 항목: " + safe(alert.metricLabel()) + "\n현재 값: " + value;
