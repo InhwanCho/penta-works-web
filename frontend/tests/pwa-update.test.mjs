@@ -38,7 +38,7 @@ test('updates activate automatically after assets are ready and preserve previou
   h.listeners.get('message')({data:{type:'SKIP_WAITING'}});
   assert.equal(h.activations(),2);
   await h.lifecycle('activate');
-  assert.deepEqual(h.navigations,['https://example.test/','https://example.test/account']);
+  assert.deepEqual(h.navigations,[]);
   assert.equal(h.stores.has('unrelated'),true);
   assert.equal(h.stores.has('mreyes-shell-oldest'),false);
   assert.equal(h.stores.has('mreyes-shell-previous'),true);
@@ -59,4 +59,11 @@ test('first installation activates without refreshing open forms',async()=>{
  const h=await worker(true);
  await h.lifecycle('install');await h.lifecycle('activate');
  assert.equal(h.activations(),1);assert.deepEqual(h.navigations,[]);
+});
+
+test('dashboard navigation fetches the online document before using the offline shell',async()=>{
+ const h=await worker();await h.lifecycle('install');
+ let pending;
+ h.listeners.get('fetch')({request:{url:'https://example.test/',method:'GET',mode:'navigate'},waitUntil:()=>{},respondWith:promise=>pending=promise});
+ assert.equal(await (await pending).text(),'new chunk');
 });

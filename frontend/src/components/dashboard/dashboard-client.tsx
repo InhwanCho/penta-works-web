@@ -134,7 +134,8 @@ export default function DashboardClient() {
   const sortedRows = useMemo(
     () => filteredRows.slice().sort((a, b) => {
       const rank = { NO_DATA: 0, WARNING: 1, NORMAL: 2 } as const;
-      return rank[a.alertStatus] - rank[b.alertStatus] || b.unacknowledgedAlertCount - a.unacknowledgedAlertCount || compareSite(a, b);
+      const issue = (row: SiteRow) => row.alertStatus !== "NORMAL" || row.openAlertCount > 0 || row.unacknowledgedAlertCount > 0;
+      return Number(issue(b)) - Number(issue(a)) || rank[a.alertStatus] - rank[b.alertStatus] || b.unacknowledgedAlertCount - a.unacknowledgedAlertCount || compareSite(a, b);
     }),
     [filteredRows],
   );

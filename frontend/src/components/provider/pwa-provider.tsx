@@ -9,6 +9,17 @@ export default function PwaProvider() {
     if (pathname === "/accept-invite" || pathname === "/reset-password") return;
     if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator)) return;
     let disposed = false;
+    let previouslyControlled = Boolean(navigator.serviceWorker.controller);
+    let reloading = false;
+    const applyUpdate = () => {
+      if (disposed || reloading) return;
+      if (previouslyControlled) {
+        reloading = true;
+        window.location.reload();
+      }
+      previouslyControlled = true;
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", applyUpdate);
     let registration: ServiceWorkerRegistration | undefined;
     let installing: ServiceWorker | null = null;
     const changed = () => {
@@ -32,6 +43,7 @@ export default function PwaProvider() {
     };
     document.addEventListener("visibilitychange", check);
     window.addEventListener("online", check);
+    window.addEventListener("pageshow", check);
     const timer = window.setTimeout(() => { void register(); }, 2000);
     const interval = window.setInterval(check, 5 * 60 * 1000);
     return () => {
@@ -39,6 +51,8 @@ export default function PwaProvider() {
       window.clearTimeout(timer); window.clearInterval(interval);
       document.removeEventListener("visibilitychange", check);
       window.removeEventListener("online", check);
+      window.removeEventListener("pageshow", check);
+      navigator.serviceWorker.removeEventListener("controllerchange", applyUpdate);
       registration?.removeEventListener("updatefound", found);
       installing?.removeEventListener("statechange", changed);
     };
