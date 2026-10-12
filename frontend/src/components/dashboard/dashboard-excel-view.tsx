@@ -15,8 +15,8 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
  * 모바일에서는 큰글씨 모드에서도 여백이 함께 커지지 않도록 px 단위를 씁니다.
  */
 const COL_NAME =
-  "w-[120px] min-w-[120px] max-w-[120px] sm:w-[130px] lg:w-[190px] sm:min-w-[130px] lg:min-w-[190px] sm:max-w-[130px] lg:max-w-[190px]";
-const COL_NAME_INNER = "block w-[112px] line-clamp-2 break-words sm:w-[118px] lg:w-[166px]";
+  "w-[80px] min-w-[80px] max-w-[80px] sm:w-[130px] lg:w-[190px] sm:min-w-[130px] lg:min-w-[190px] sm:max-w-[130px] lg:max-w-[190px]";
+const COL_NAME_INNER = "block w-[74px] truncate sm:w-[118px] lg:w-[166px]";
 
 /**
  * z-index 레이어링
@@ -166,7 +166,7 @@ export default function DashboardExcelView({
           aria-label="병원별 전체표, 가로와 세로로 스크롤할 수 있습니다"
           className="min-h-0 overflow-auto overscroll-contain pb-16 sm:pb-0"
         >
-          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 120 + columns.length * 64 }}>
+          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 80 + columns.length * 64 }}>
             <caption className="sr-only">
               병원별 최신 수집값 전체 지표 표
             </caption>
@@ -194,7 +194,7 @@ export default function DashboardExcelView({
                       key={m.key}
                       scope="col"
                       className={[
-                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[120px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
+                        "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
                         CELL_BORDER,
                         HEAD_BG,
                         openMetric === m.key ? "z-50" : Z_HEAD,
@@ -205,7 +205,7 @@ export default function DashboardExcelView({
                           type="button"
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
-                          className="text-text-major dark:text-text-dark-primary min-h-11 cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
+                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
                           onClick={() => showMetricHelp(m.key, true)}
                           onMouseEnter={() => showMetricHelp(m.key)}
                           onMouseLeave={hideMetricHelp}
@@ -218,7 +218,7 @@ export default function DashboardExcelView({
                           <span
                             id={`metric-help-${m.key}`}
                             role="tooltip"
-                            className="dark:border-background-dark-secondary dark:bg-background-dark-card dark:text-text-dark-primary fixed top-[112px] right-[8px] left-[8px] z-50 rounded-lg border bg-white px-3 py-2 text-left text-sm leading-snug font-medium whitespace-normal text-slate-700 shadow-lg sm:absolute sm:top-full sm:right-auto sm:left-1/2 sm:mt-2 sm:w-[260px] sm:-translate-x-1/2"
+                            className="dark:border-background-dark-secondary dark:bg-background-dark-card dark:text-text-dark-primary fixed top-[74px] right-[8px] left-[8px] z-50 rounded-lg border bg-white px-3 py-2 text-left text-sm leading-snug font-medium whitespace-normal text-slate-700 shadow-lg sm:absolute sm:top-full sm:right-auto sm:left-1/2 sm:mt-2 sm:w-[260px] sm:-translate-x-1/2"
                           >
                             <strong className="text-text-major dark:text-text-dark-primary mr-1 font-extrabold">
                               {m.code}
@@ -229,7 +229,7 @@ export default function DashboardExcelView({
                       </span>
                       {sub ? (
                         <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-[10px] font-medium">
-                          {m.key === "cctemp" ? "cc-in" : m.key === "ccflow" ? "cc-out" : m.code}{m.unit ? ` (${m.unit})` : ""}
+                          <span className="hidden sm:inline">{m.key === "cctemp" ? "cc-in" : m.key === "ccflow" ? "cc-out" : m.code} </span>{m.unit ? `(${m.unit})` : ""}
                         </span>
                       ) : null}
                     </th>
@@ -266,17 +266,15 @@ export default function DashboardExcelView({
                       title={row.name ?? undefined}
                     >
                       <Link
-                        className="text-text-major dark:text-text-dark-primary block min-h-11 font-bold underline decoration-transparent underline-offset-4 hover:decoration-current"
+                        className="text-text-major dark:text-text-dark-primary block font-bold underline decoration-transparent underline-offset-4 hover:decoration-current"
                         href={`/sites/${row.siteSlug}`}
                       >
                         <span className={COL_NAME_INNER}>
                           {row.name ?? "-"}
                         </span>
                       </Link>
-                      <span className="block text-[10px] text-slate-500 dark:text-slate-300">#{row.siteSlug}</span>
-                      <span className="block text-[10px] text-slate-500 sm:hidden dark:text-slate-300">수집 {lastAtDate ? `${lastAtDate.getMonth() + 1}/${lastAtDate.getDate()} ${fmtHms(lastAtDate).slice(0,5)}` : "없음"}</span>
                       <CollectionStatus row={row} />
-                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[112px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
+                      {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[74px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}
                     </td>
 
                     {columns.map((column) => {
