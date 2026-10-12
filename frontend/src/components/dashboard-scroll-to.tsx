@@ -8,7 +8,7 @@ export default function DashboardScrollTo({
   onTargetRequested,
 }: {
   offset?: number;
-  onTargetRequested?: () => void;
+  onTargetRequested?: (siteId: string) => void;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -17,7 +17,7 @@ export default function DashboardScrollTo({
   useEffect(() => {
     const requestedSlug = sp.get("scrollTo")?.trim();
     if (!requestedSlug) return;
-    onTargetRequested?.();
+    onTargetRequested?.(requestedSlug);
     const slug = /^\d+$/.test(requestedSlug) ? String(Number(requestedSlug)) : requestedSlug;
 
     const isDesktop = window.matchMedia("(min-width: 768px)").matches;

@@ -7,6 +7,8 @@ import { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-setti
 import AlertSettingsTable, { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
+import { visibleDashboardSites } from "@/lib/dashboard-site-visibility";
+import DashboardSiteFilter from "./dashboard-site-filter";
 import DashboardMetricInfo, { type MetricSelection } from "./dashboard-metric-info";
 import DashboardLoading from "@/components/dashboard/dashboard-loading";
 import {
@@ -18,7 +20,7 @@ import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
 import type { MetricDef } from "@/lib/metrics";
 import type { ReactNode } from "react";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 
 type StatusFilter = "all" | "issues" | "warning" | "no-data" | "normal" | "configured";
@@ -75,6 +77,23 @@ export default function DashboardClient() {
   const userId = session?.id;
   const [preferences, setPreferences] = useState<DashboardPreferences>(defaultPreferences);
   const [showColumns, setShowColumns] = useState(false);
+  const queryClient = useQueryClient();
+  const hiddenSitesKey = ["dashboard-hidden-sites", userId];
+  const hiddenSites = useQuery({ queryKey: hiddenSitesKey, queryFn: () => apiFetch<string[]>("/dashboard/hidden-sites"), enabled: userId != null, staleTime: 0 });
+  const [linkedSite, setLinkedSite] = useState<string | null>(null);
+  const visibilityMutation = useMutation({
+    mutationFn: (change: { siteId: string; hidden: boolean } | null) => change
+      ? apiFetch<string[]>(`/dashboard/hidden-sites/${encodeURIComponent(change.siteId)}`, {method: "PUT", body: JSON.stringify({hidden: change.hidden})})
+      : apiFetch<string[]>("/dashboard/hidden-sites", {method: "DELETE"}),
+    onMutate: async () => {
+      await queryClient.cancelQueries({queryKey: hiddenSitesKey});
+      return { key: hiddenSitesKey, userId };
+    },
+    onSuccess: (result, _change, context) => {
+      if (context) queryClient.setQueryData(context.key, result);
+      if (context?.userId === userId) setLinkedSite(null);
+    },
+  });
   useEffect(() => { setPreferences(userId === undefined ? defaultPreferences : readDashboardPreferences(userId)); }, [userId]);
   const updatePreferences = (next: DashboardPreferences) => { setPreferences(next); if (session) writeDashboardPreferences(session.id, next); };
 
@@ -92,20 +111,24 @@ export default function DashboardClient() {
     setShowMobileFilters(false);
   }, []);
 
-  const resetStatusFilter = useCallback(() => changeStatusFilter("all"), [changeStatusFilter]);
+  const resetStatusFilter = useCallback((siteId: string) => {
+    changeStatusFilter("all");
+    setLinkedSite(siteId);
+  }, [changeStatusFilter]);
 
   const handleRefresh = useCallback(async () => {
     await refetch();
   }, [refetch]);
 
+  const displayedRows = useMemo(() => visibleDashboardSites(data?.rows ?? [], hiddenSites.data ?? [], linkedSite), [data?.rows, hiddenSites.data, linkedSite]);
   const filteredRows = useMemo(() => {
-    const currentRows = data?.rows ?? [];
+    const currentRows = displayedRows;
     return currentRows.filter((row) => statusFilter === "all" || statusFilter === "configured" ||
       (statusFilter === "issues" && row.alertStatus !== "NORMAL") ||
       (statusFilter === "warning" && row.alertStatus === "WARNING") ||
       (statusFilter === "no-data" && row.alertStatus === "NO_DATA") ||
       (statusFilter === "normal" && row.alertStatus === "NORMAL"));
-  }, [data?.rows, statusFilter]);
+  }, [displayedRows, statusFilter]);
 
   const sortedRows = useMemo(
     () => filteredRows.slice().sort((a, b) => {
@@ -115,7 +138,7 @@ export default function DashboardClient() {
     [filteredRows],
   );
 
-  if (isLoading) {
+  if (isLoading || (userId != null && hiddenSites.isPending)) {
     return <DashboardLoading />;
   }
 
@@ -136,7 +159,17 @@ export default function DashboardClient() {
   const dashboardMetrics = metrics;
   const allColumns = dashboardColumns(data.metricConfig);
   const visibleColumns = preferences.columns === null ? allColumns : allColumns.filter(column => preferences.columns!.includes(column.key));
+  const displayStats = {
+    total: displayedRows.length,
+    warning: displayedRows.filter(row => row.alertStatus === "WARNING").length,
+    noData: displayedRows.filter(row => row.alertStatus === "NO_DATA").length,
+    normal: displayedRows.filter(row => row.alertStatus === "NORMAL").length,
+  };
   const viewOptions = <div className="mt-3 space-y-2 text-sm">
+    <DashboardSiteFilter rows={data.rows} hiddenSites={hiddenSites.data ?? []} disabled={hiddenSites.isError || visibilityMutation.isPending} onChange={(siteId, hidden) => visibilityMutation.mutate({siteId, hidden})} onRestore={() => visibilityMutation.mutate(null)} />
+    {visibilityMutation.isPending && <p role="status" className="text-xs">병원 표시 설정 저장 중…</p>}
+    {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
+    {hiddenSites.isError && <button type="button" onClick={() => hiddenSites.refetch()} className="min-h-11 text-rose-600 underline">병원 표시 설정 불러오기 실패 · 다시 시도</button>}
 
     <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="min-h-11 rounded-lg border px-3">표시할 열 ({visibleColumns.length})</button>
     {showColumns && <fieldset className="rounded-xl border p-3"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
@@ -148,11 +181,11 @@ export default function DashboardClient() {
 
   const statusFilterButtons = (
     <>
-      <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={data.stats.totalSites} tone="slate" />
-      <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={data.stats.warningSites + data.stats.noDataSites} tone="rose" />
-      <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={data.stats.warningSites} tone="amber" />
-      <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={data.stats.noDataSites} tone="rose" />
-      <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={data.stats.normalSites} tone="emerald" />
+      <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={displayStats.total} tone="slate" />
+      <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={displayStats.warning + displayStats.noData} tone="rose" />
+      <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={displayStats.warning} tone="amber" />
+      <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={displayStats.noData} tone="rose" />
+      <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={displayStats.normal} tone="emerald" />
       <StatusFilterButton active={statusFilter === "configured"} onClick={() => changeStatusFilter("configured")} label="알림값" value="확인" tone="slate" />
     </>
   );
@@ -198,7 +231,7 @@ export default function DashboardClient() {
           </div>
           <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
         </header>
-        <details className="mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">표시할 열 설정</summary>{viewOptions}</details>
+        <details className="mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
         <div className="mb-1 flex shrink-0 items-center justify-between px-1 text-[11px] lg:hidden"><span>가로로 밀어 더 보기 · 수집 시각은 병원별 표시</span><button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 px-2 font-bold text-sky-700 dark:text-sky-300">{isFetching ? "갱신 중…" : "새로고침"}</button></div>
 
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
@@ -211,7 +244,7 @@ export default function DashboardClient() {
           <section className="space-y-3">
             <Link href="/baselines" className="hidden min-h-12 py-3 text-base font-bold text-sky-700 lg:inline-block dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
-              <AlertSettingsTable entries={alertSettings.data ?? []} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
+              <AlertSettingsTable entries={(alertSettings.data ?? []).filter(site => displayedRows.some(row => row.siteDb === site.siteid))} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
             )}
           </section>
         ) : (
@@ -222,8 +255,8 @@ export default function DashboardClient() {
             ctrl={ctrl}
             metrics={dashboardMetrics}
             columns={visibleColumns}
-            emptyMessage={data.rows.length === 0 ? "표시할 병원이 없습니다. 병원 표시 설정이나 연결 상태를 확인해주세요." : `${STATUS_FILTER_LABEL[statusFilter]} 조건에 맞는 병원이 없습니다.`}
-            onResetFilters={() => {setStatusFilter("all");}}
+            emptyMessage={displayedRows.length === 0 && data.rows.length > 0 ? "모든 병원을 숨겼습니다. 필터에서 표시할 병원을 선택해주세요." : data.rows.length === 0 ? "표시할 병원이 없습니다. 병원 표시 설정이나 연결 상태를 확인해주세요." : `${STATUS_FILTER_LABEL[statusFilter]} 조건에 맞는 병원이 없습니다.`}
+            onResetFilters={() => {setStatusFilter("all"); if (displayedRows.length === 0) visibilityMutation.mutate(null);}}
           />
         )}
         <p className="text-text-secondary mt-1 shrink-0 px-1 text-center text-[10px] leading-3 lg:hidden dark:text-text-dark-primary/70">

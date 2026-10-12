@@ -14,7 +14,8 @@
     "test:alerts": "node --test tests/alert-event-state.test.mjs",
     "test:session": "node --test tests/session-resilience.test.mjs",
     "test:pwa": "node --test tests/pwa-update.test.mjs",
-    "test:preferences": "node --test tests/dashboard-preferences.test.mjs"
+    "test:preferences": "node --test tests/dashboard-preferences.test.mjs",
+    "test:site-visibility": "node --test tests/dashboard-site-visibility.test.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",
