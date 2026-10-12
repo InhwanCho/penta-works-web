@@ -16,7 +16,8 @@ import {
 import Link from "next/link";
 import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
 import type { MetricDef } from "@/lib/metrics";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 
@@ -85,13 +86,6 @@ export default function DashboardClient() {
   const openAlertSettings = useCallback((siteId: string, metricKey?: string) => setSelectedAlert({siteId, metricKey}), []);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
-
-  useEffect(() => {
-    if (!showMobileFilters) return;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setShowMobileFilters(false); };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [showMobileFilters]);
 
   const changeStatusFilter = useCallback((next: StatusFilter) => {
     setStatusFilter(next);
@@ -165,13 +159,13 @@ export default function DashboardClient() {
 
   const mobileControls = (
     <div className="lg:hidden" data-ptr-ignore>
-      {showMobileFilters && <section id="dashboard-mobile-tools" aria-label="대시보드 필터" className="fixed right-3 bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] left-3 z-[55] mx-auto max-h-[70dvh] max-w-sm overflow-y-auto rounded-2xl border border-slate-200 bg-white p-4 shadow-xl dark:border-white/10 dark:bg-background-dark-card">
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" aria-label="필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
+      {showMobileFilters && <MobileFilterDialog onClose={() => setShowMobileFilters(false)}>
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
         <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
         <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
         {viewOptions}
-      </section>}
+      </MobileFilterDialog>}
       <button type="button" aria-label="대시보드 필터" aria-expanded={showMobileFilters} aria-controls="dashboard-mobile-tools" onClick={() => setShowMobileFilters(open => !open)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[55] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">필터 {showMobileFilters ? "›" : "‹"}{statusFilter !== "all" && <span className="ml-1 inline-block h-2 w-2 rounded-full bg-sky-500" aria-label={`${STATUS_FILTER_LABEL[statusFilter]} ${sortedRows.length}개`} />}</button>
     </div>
   );
@@ -179,6 +173,7 @@ export default function DashboardClient() {
   return (
     <PullToRefresh
       onRefresh={handleRefresh}
+      disabled={showMobileFilters}
       topOffset={56}
     >
       <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 ${statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
@@ -245,4 +240,36 @@ export default function DashboardClient() {
 function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
   const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
   return <button type="button" onClick={onClick} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-400 ring-2 ring-sky-100 dark:border-sky-500 dark:ring-sky-950" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-xl font-extrabold tabular-nums ${colors[tone]}`}>{value}</span></button>;
+}
+
+function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = () => { if (desktop.matches) onCloseRef.current(); };
+    desktop.addEventListener("change", closeOnDesktop);
+    closeOnDesktop();
+    return () => {
+      desktop.removeEventListener("change", closeOnDesktop);
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  return <dialog ref={dialogRef} id="dashboard-mobile-tools" aria-label="대시보드 필터" aria-modal="true" data-ptr-ignore
+    onCancel={event => { event.preventDefault(); onClose(); }}
+    onClick={event => {
+      if (event.target !== event.currentTarget) return;
+      const bounds = event.currentTarget.getBoundingClientRect();
+      if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
+    }}
+    className="fixed inset-x-3 top-auto bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] m-0 mx-auto max-h-[70dvh] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-text-major shadow-xl backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
+    {children}
+  </dialog>;
 }
