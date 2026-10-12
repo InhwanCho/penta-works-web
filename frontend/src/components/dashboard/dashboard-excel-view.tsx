@@ -76,14 +76,10 @@ export default function DashboardExcelView({
   columns,
   onOpenAlertSettings,
   onInspectMetric,
-  favorites,
-  onToggleFavorite,
   onResetFilters,
   emptyMessage,
 }: {
   emptyMessage: string;
-  favorites: string[];
-  onToggleFavorite: (siteId: string) => void;
   onResetFilters: () => void;
   rows: SiteRow[];
   ctrl: Record<string, CtrlRange>;
@@ -277,7 +273,7 @@ export default function DashboardExcelView({
                           {row.name ?? "-"}
                         </span>
                       </Link>
-                      <div className="flex items-center justify-between"><span className="text-[10px] text-slate-500 dark:text-slate-300">#{row.siteSlug}</span><button type="button" aria-label={`${row.name ?? row.siteSlug} 즐겨찾기 ${favorites.includes(row.siteDb) ? "해제" : "추가"}`} aria-pressed={favorites.includes(row.siteDb)} onClick={() => onToggleFavorite(row.siteDb)} className="min-h-11 min-w-11 text-lg text-amber-600">{favorites.includes(row.siteDb) ? "★" : "☆"}</button></div>
+                      <span className="block text-[10px] text-slate-500 dark:text-slate-300">#{row.siteSlug}</span>
                       <span className="block text-[10px] text-slate-500 sm:hidden dark:text-slate-300">수집 {lastAtDate ? `${lastAtDate.getMonth() + 1}/${lastAtDate.getDate()} ${fmtHms(lastAtDate).slice(0,5)}` : "없음"}</span>
                       <CollectionStatus row={row} />
                       {row.alertStatus !== "NORMAL" && <span className={`mt-1 inline-flex max-w-[112px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"} {row.openAlertCount}</span>}

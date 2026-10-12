@@ -28,7 +28,7 @@ function warmShell() {
   return warming;
 }
 self.addEventListener("install", event => {
-  event.waitUntil(warmShell());
+  event.waitUntil(warmShell().then(() => self.skipWaiting()));
 });
 self.addEventListener("message", event => { if (event.data?.type === "SKIP_WAITING") self.skipWaiting(); });
 self.addEventListener("activate", event => {
@@ -36,6 +36,16 @@ self.addEventListener("activate", event => {
     const names = await caches.keys();
     await Promise.all(names.filter(name => name.startsWith("mreyes-shell-") && name !== CACHE).slice(0, -1).map(name => caches.delete(name)));
     await self.clients.claim();
+    // Refresh existing app windows even when they still run the old manual-update UI.
+    // First installation does not reload; token forms keep their current document.
+    if (names.some(name => name.startsWith("mreyes-shell-") && name !== CACHE)) {
+      const windows = await self.clients.matchAll({ type: "window" });
+      await Promise.all(windows.map(async client => {
+        const url = new URL(client.url);
+        if (url.origin !== self.location.origin || ["/accept-invite", "/reset-password"].includes(url.pathname)) return;
+        try { await client.navigate(client.url); } catch { /* A closing tab needs no update. */ }
+      }));
+    }
   })());
 });
 self.addEventListener("fetch", event => {
