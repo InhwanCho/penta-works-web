@@ -20,7 +20,7 @@ import Link from "next/link";
 import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
 import type { MetricDef } from "@/lib/metrics";
 import type { ReactNode } from "react";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 
@@ -105,12 +105,19 @@ export default function DashboardClient() {
   const [selectedAlert, setSelectedAlert] = useState<{siteId: string; metricKey?: string; pane?: AlertSettingsPane; onlyMetric?: boolean} | null>(null);
   const openAlertSettings = useCallback((siteId: string, metricKey?: string) => setSelectedAlert({siteId, metricKey}), []);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const closeMobileFilters = useCallback(() => {
+    // Release the browser's modal/inert state before React removes the dialog.
+    const dialog = document.getElementById("dashboard-mobile-tools") as HTMLDialogElement | null;
+    if (dialog?.open) dialog.close();
+    setShowMobileFilters(false);
+  }, []);
   const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
 
   const changeStatusFilter = useCallback((next: StatusFilter) => {
+    closeMobileFilters();
     setStatusFilter(next);
-    setShowMobileFilters(false);
-  }, []);
+    window.scrollTo({top: 0, behavior: "instant"});
+  }, [closeMobileFilters]);
 
   const resetStatusFilter = useCallback((siteId: string) => {
     changeStatusFilter("all");
@@ -194,8 +201,8 @@ export default function DashboardClient() {
 
   const mobileControls = (
     <div className="dashboard-compact-controls lg:hidden" data-ptr-ignore>
-      {showMobileFilters && <MobileFilterDialog onClose={() => setShowMobileFilters(false)}>
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
+      {showMobileFilters && <MobileFilterDialog onClose={closeMobileFilters}>
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={closeMobileFilters} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
         <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
         <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
@@ -281,7 +288,7 @@ function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClos
   const dialogRef = useRef<HTMLDialogElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
-  useEffect(() => {
+  useLayoutEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return;
     const previousOverflow = document.body.style.overflow;
