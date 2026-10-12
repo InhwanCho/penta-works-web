@@ -522,7 +522,16 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
 }
 
 function MetricMissingEditor({threshold,disabled,onChange}:{threshold:AlertThreshold;disabled:boolean;onChange:(patch:Partial<AlertThreshold>)=>void}) {
-  return <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15"><h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락</h4><AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={threshold.missingActive ?? false} disabled={disabled} onChange={missingActive=>onChange({missingActive,missingThreshold:threshold.missingThreshold ?? 3})}/>{threshold.missingActive && <div className="mt-4"><NumberField label="몇 회 연속 빠지면 알릴까요?" value={threshold.missingThreshold ?? 3} min={3} max={288} disabled={disabled} onChange={missingThreshold=>onChange({missingThreshold})}/><p className="mt-2 text-base leading-7 text-text-secondary">{Number.isInteger(threshold.missingThreshold ?? 3) && (threshold.missingThreshold ?? 3) >= 3 && (threshold.missingThreshold ?? 3) <= 288 ? `1~2회는 알리지 않고, ${threshold.missingThreshold ?? 3}회 연속 누락되면 알립니다. 정상 값이 들어오면 다시 0회가 됩니다.` : "3회에서 288회 사이의 정수를 입력해주세요."}</p></div>}</section>;
+  const count = threshold.missingThreshold ?? (threshold.key === "hepres" ? 5 : 3);
+  const active = threshold.missingActive ?? threshold.key === "hepres";
+  return <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15">
+    <h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락</h4>
+    <p className="mb-4 text-sm leading-6 text-text-secondary">병원 데이터는 들어오는데 이 측정값만 빠진 경우를 확인합니다. 병원 전체 수집 누락 알림과 별개입니다.</p>
+    <AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={active} disabled={disabled} onChange={missingActive=>onChange({missingActive,missingThreshold:count})}/>
+    {active && <div className="mt-4"><NumberField label="몇 회 연속 빠지면 알릴까요?" value={count} min={3} max={288} disabled={disabled} onChange={missingThreshold=>onChange({missingThreshold})}/>
+      <p className="mt-2 text-base leading-7 text-text-secondary">{Number.isInteger(count) && count >= 3 && count <= 288 ? `1~${count - 1}회는 알리지 않고, ${count}회 이상 연속 누락되면 알립니다. 정상 값이 들어오면 다시 0회가 됩니다.` : "3회에서 288회 사이의 정수를 입력해주세요."}</p>
+    </div>}
+  </section>;
 }
 
 function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: { threshold: AlertThreshold; disabled: boolean; allowAverage?: boolean; onChange: (patch: Partial<AlertThreshold>) => void }) {

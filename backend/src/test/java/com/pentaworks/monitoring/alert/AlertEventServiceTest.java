@@ -9,6 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.ResultSetExtractor;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,12 +24,34 @@ import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
     @Test
+    @SuppressWarnings("unchecked")
+    void pressureMissingStartsAtFifthReceivedSampleAndStopsWhenPressureReturns() throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Long.class),eq(1L),eq("001"),eq("hepres"))).thenReturn(7L);
+        when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"),eq(Long.class))).thenReturn(9L);
+        var rs=mock(ResultSet.class); when(rs.next()).thenReturn(false,false,true);
+        when(rs.getLong("id")).thenReturn(9L);
+        when(jdbc.query(anyString(),any(ResultSetExtractor.class),eq(7L),eq("METRIC_MISSING")))
+            .thenAnswer(call->((ResultSetExtractor<?>)call.getArgument(1)).extractData(rs));
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var threshold=new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,false);
+        assertTrue(threshold.missingActive()); assertEquals(5,threshold.missingThreshold());
+        var site=new SiteAlertSettings("001","병원",true,List.of(threshold),20,true,true,0,30,null,null,false);
+        assertNull(service.evaluateMetricMissing(1,site,threshold,4));
+        assertEquals(5.0,service.evaluateMetricMissing(1,site,threshold,5).value());
+        assertNull(service.evaluateMetricMissing(1,site,threshold,0));
+        verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"),any(java.sql.Timestamp.class),eq(9L));
+        var other=new AlertThreshold("heleve","He Level","%",0.0,100.0,true);
+        assertFalse(other.missingActive()); assertEquals(3,other.missingThreshold());
+    }
+
+    @Test
     void existingSavedJsonKeepsMissingAlertsOffWithThreeCollectionDefault() throws Exception {
         var json=new com.fasterxml.jackson.databind.ObjectMapper().findAndRegisterModules();
         var old=json.valueToTree(new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,true));
         ((com.fasterxml.jackson.databind.node.ObjectNode)old).remove(List.of("missingActive","missingThreshold"));
         var restored=json.treeToValue(old,AlertThreshold.class);
-        org.junit.jupiter.api.Assertions.assertFalse(restored.missingActive());assertEquals(3,restored.missingThreshold());
+        org.junit.jupiter.api.Assertions.assertFalse(restored.missingActive());assertEquals(5,restored.missingThreshold());
     }
 
     @Test
