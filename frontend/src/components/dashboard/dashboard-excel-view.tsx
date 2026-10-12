@@ -280,7 +280,7 @@ export default function DashboardExcelView({
                     {columns.map((column) => {
                       const m = metrics.find(metric => metric.key === column.key);
                       if (!m) return <td key={column.key} onClick={() => selectCell(row, column.displayName)} className={`${CELL_BORDER} cursor-cell px-1 py-1.5 text-right whitespace-nowrap tabular-nums lg:px-3 lg:py-2`}>
-                        {column.key === "lastAt" ? <><span className="inline text-xs lg:block">{fmtYmd(lastAtDate)}</span>{" "}<span className="inline text-xs opacity-70 lg:block">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
+                        {column.key === "lastAt" ? <><span className="block text-xs">{fmtYmd(lastAtDate)}</span><span className="block text-xs opacity-70">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
                       </td>;
                       const value = row.metrics?.[m.key] ?? null;
                       const alert = isMetricOutOfRange(value, m.bound, range);

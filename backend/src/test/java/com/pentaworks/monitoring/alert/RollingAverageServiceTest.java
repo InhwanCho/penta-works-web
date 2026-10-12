@@ -40,10 +40,10 @@ class RollingAverageServiceTest {
             any(Timestamp.class));
         var state = new RollingAverageService(jdbc).states().get("001").get("hepres");
         assertTrue(state.useAverage());
-        assertEquals(40.0, state.tolerancePercent());
-        assertEquals(40.0, new AlertThreshold("hepres", "He Pressure", "psi", 0.0, 20.0, true).tolerancePercent());
-        assertEquals(6.0, RollingAverageService.effectiveRange(state, now).min());
-        assertEquals(14.0, RollingAverageService.effectiveRange(state, now).max());
+        assertEquals(50.0, state.tolerancePercent());
+        assertEquals(50.0, new AlertThreshold("hepres", "He Pressure", "psi", 0.0, 20.0, true).tolerancePercent());
+        assertEquals(5.0, RollingAverageService.effectiveRange(state, now).min());
+        assertEquals(15.0, RollingAverageService.effectiveRange(state, now).max());
         org.mockito.Mockito.verify(jdbc, org.mockito.Mockito.never()).query(
             contains("FROM mrtb"), any(RowCallbackHandler.class), any(Timestamp.class), any(Timestamp.class));
     }
