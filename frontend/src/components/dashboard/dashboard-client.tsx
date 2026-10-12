@@ -8,6 +8,7 @@ import AlertSettingsTable, { type AlertSettingsPane } from "@/components/baselin
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import { visibleDashboardSites } from "@/lib/dashboard-site-visibility";
+import DashboardHiddenSites from "./dashboard-hidden-sites";
 import DashboardSiteFilter from "./dashboard-site-filter";
 import DashboardMetricInfo, { type MetricSelection } from "./dashboard-metric-info";
 import DashboardLoading from "@/components/dashboard/dashboard-loading";
@@ -259,6 +260,7 @@ export default function DashboardClient() {
             onResetFilters={() => {setStatusFilter("all"); if (displayedRows.length === 0) visibilityMutation.mutate(null);}}
           />
         )}
+        <DashboardHiddenSites rows={data.rows.filter(row => (hiddenSites.data ?? []).includes(row.siteDb))} saving={visibilityMutation.isPending} error={visibilityMutation.isError} onShow={siteId => visibilityMutation.mutate({siteId, hidden: false})} />
         <p className="text-text-secondary mt-1 shrink-0 px-1 text-center text-[10px] leading-3 lg:hidden dark:text-text-dark-primary/70">
           화면 갱신 {fmtYmdHms(meta.nowMs)} · 5분마다 자동 갱신{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
