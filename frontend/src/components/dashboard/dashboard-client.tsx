@@ -233,7 +233,6 @@ export default function DashboardClient() {
           <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
         </header>
         <details className="mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
-        <div className="mb-1 flex shrink-0 items-center justify-between px-1 text-[11px] lg:hidden"><span>가로로 밀어 더 보기 · 수집 시각은 병원별 표시</span><button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 px-2 font-bold text-sky-700 dark:text-sky-300">{isFetching ? "갱신 중…" : "새로고침"}</button></div>
 
         {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
