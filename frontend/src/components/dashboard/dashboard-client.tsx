@@ -99,6 +99,7 @@ export default function DashboardClient() {
   const updatePreferences = (next: DashboardPreferences) => { setPreferences(next); if (session) writeDashboardPreferences(session.id, next); };
 
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  useEffect(() => { if (new URLSearchParams(window.location.search).get("view") === "alerts") setStatusFilter("configured"); }, []);
   const [metricSelection, setMetricSelection] = useState<MetricSelection | null>(null);
   const closeMetricInfo = useCallback(() => setMetricSelection(null), []);
   const inspectMetric = useCallback((row: SiteRow, metric: MetricDef) => setMetricSelection({siteId: row.siteDb, hospital: row.name ?? "병원명 없음", metricKey: metric.key, label: metric.label ?? metric.code}), []);
@@ -252,7 +253,7 @@ export default function DashboardClient() {
           <section className="space-y-3">
             <Link href="/baselines" className="hidden min-h-12 py-3 text-base font-bold text-sky-700 lg:inline-block dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
             {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
-              <AlertSettingsTable entries={(alertSettings.data ?? []).filter(site => displayedRows.some(row => row.siteDb === site.siteid))} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
+              <AlertSettingsTable entries={sortedRows.map(row => alertSettings.data?.find(site => site.siteid === row.siteDb)).filter((site): site is SiteAlertSettings => Boolean(site))} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
             )}
           </section>
         ) : (

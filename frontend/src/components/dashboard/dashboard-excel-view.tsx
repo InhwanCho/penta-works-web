@@ -2,6 +2,7 @@
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, type MetricDef } from "@/lib/metrics";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { CompanyMetric } from "@/lib/company-metrics";
 import CollectionStatus, { collectionMissing } from "./collection-status";
@@ -89,6 +90,7 @@ export default function DashboardExcelView({
   onOpenAlertSettings: (siteId: string, metricKey?: string) => void;
 }) {
   const [openMetric, setOpenMetric] = useState<string | null>(null);
+  const [tooltipTop, setTooltipTop] = useState(112);
   const [selectedCell, setSelectedCell] = useState<{
     key: string;
     hospital: string;
@@ -137,6 +139,8 @@ export default function DashboardExcelView({
   const showMetricHelp = (key: string, autoClose = false) => {
     clearCloseTimer();
     setOpenMetric(key);
+    const anchor = document.getElementById(`metric-heading-${key}`);
+    if (anchor) setTooltipTop(Math.max(64, Math.min(anchor.getBoundingClientRect().bottom + 12, window.innerHeight - 180)));
     if (autoClose) {
       closeTimer.current = setTimeout(() => setOpenMetric(null), 3000);
     }
@@ -228,6 +232,7 @@ export default function DashboardExcelView({
                       <span className="relative inline-block">
                         <button
                           type="button"
+                          id={`metric-heading-${m.key}`}
                           aria-expanded={openMetric === m.key}
                           aria-describedby={`metric-help-${m.key}`}
                           className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
@@ -239,18 +244,7 @@ export default function DashboardExcelView({
                         >
                           {column.displayName}
                         </button>
-                        {openMetric === m.key ? (
-                          <span
-                            id={`metric-help-${m.key}`}
-                            role="tooltip"
-                            className="dark:border-background-dark-secondary dark:bg-background-dark-card dark:text-text-dark-primary fixed top-[74px] right-[8px] left-[8px] z-50 rounded-lg border bg-white px-3 py-2 text-left text-sm leading-snug font-medium whitespace-normal text-slate-700 shadow-lg sm:absolute sm:top-full sm:right-auto sm:left-1/2 sm:mt-2 sm:w-[260px] sm:-translate-x-1/2"
-                          >
-                            <strong className="text-text-major dark:text-text-dark-primary mr-1 font-extrabold">
-                              {m.code}
-                            </strong>
-                            {m.description}
-                          </span>
-                        ) : null}
+
                       </span>
                       {sub ? (
                         <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-[10px] font-medium">
@@ -377,6 +371,12 @@ export default function DashboardExcelView({
         </p>
       </div>
 
+      {openMetric && typeof document !== "undefined" && createPortal(
+        <div role="tooltip" id={`metric-help-${openMetric}`} style={{top:tooltipTop}} className="fixed inset-x-3 z-[65] mx-auto max-w-lg rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-xl dark:border-white/15 dark:bg-background-dark-card dark:text-slate-200">
+          <button type="button" aria-label="측정항목 설명 닫기" onClick={hideMetricHelp} className="float-right ml-2 min-h-11 min-w-11 text-xl">×</button>
+          <strong className="mr-2">{metrics.find(metric=>metric.key===openMetric)?.code}</strong>
+          {metrics.find(metric=>metric.key===openMetric)?.description}
+        </div>, document.body)}
       {selectedCell && !selectedCell.metric ? (
         <div
           role="status"

@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 import dynamic from "next/dynamic";
+import { useRouter } from "next/navigation";
+import { alertSettingsPageUrl } from "@/lib/alert-settings-navigation";
 import type { AlertSettingsPane } from "./alert-settings-table";
 
 const SiteThresholdEditor = dynamic(() => import("./baselines-client").then(module => module.SiteThresholdEditor), {
-  loading: () => <div role="status" className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 text-white">설정 화면을 여는 중…</div>,
+  loading: () => <div role="status" className="p-6 text-center">설정 화면을 여는 중…</div>,
 });
 
 /** All entry points share the editor, authorization and query cache. */
@@ -20,13 +22,19 @@ export default function SiteAlertSettingsButton({ siteId }: { siteId: string }) 
   </>;
 }
 
-export function SiteAlertSettingsDialog({ siteId, initialMetricKey, initialPane, onlyMetricKey, onClose }: {
+export function SiteAlertSettingsDialog({ page = false, siteId, initialMetricKey, initialPane, onlyMetricKey, onClose }: {
+  page?: boolean;
   siteId: string;
   initialMetricKey?: string;
   initialPane?: AlertSettingsPane;
   onlyMetricKey?: string;
   onClose: () => void;
 }) {
+  const router = useRouter();
+  const mobilePage = !page && typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  useEffect(() => {
+    if (mobilePage) router.push(alertSettingsPageUrl(siteId, window.location.pathname, {metric:initialMetricKey, pane:initialPane, only:onlyMetricKey}));
+  }, [mobilePage, router, siteId, initialMetricKey, initialPane, onlyMetricKey]);
   const client = useQueryClient();
   const settings = useQuery({
     queryKey: ["alert-thresholds"],
@@ -72,8 +80,10 @@ export function SiteAlertSettingsDialog({ siteId, initialMetricKey, initialPane,
     ]);
     return saved;
   }
-  return createPortal(<>
-      {entry && !settings.isError && <SiteThresholdEditor entry={entry} canEdit={true} initialMetricKey={initialMetricKey} initialPane={initialPane} onlyMetricKey={onlyMetricKey} onClose={onClose} onSave={save} />}
-      {(!entry || settings.isError) && <div role="dialog" aria-modal="true" aria-label="알림값 설정 불러오기" className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"><div className="w-full max-w-sm rounded-xl bg-white p-5 dark:bg-background-dark-card"><p role="status">{settings.isPending ? "알림 설정을 불러오는 중…" : settings.isError ? "알림 설정을 불러오지 못했습니다." : "이 병원의 알림 설정에 접근할 수 없습니다."}</p><div className="mt-4 flex gap-3">{settings.isError && <button type="button" onClick={() => settings.refetch()} className="min-h-11 font-bold">다시 시도</button>}<button type="button" onClick={onClose} className="min-h-11 font-bold">닫기</button></div></div></div>}
-    </>, document.body);
+  if (mobilePage) return <p role="status" className="p-4">알림 설정 화면으로 이동 중…</p>;
+  const content = (<>
+      {entry && !settings.isError && <SiteThresholdEditor page={page} entry={entry} canEdit={true} initialMetricKey={initialMetricKey} initialPane={initialPane} onlyMetricKey={onlyMetricKey} onClose={onClose} onSave={save} />}
+      {(!entry || settings.isError) && <div role={page ? undefined : "dialog"} aria-modal={page ? undefined : true} aria-label="알림값 설정 불러오기" className={page ? "mx-auto max-w-lg p-4" : "fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"}><div className="w-full max-w-sm rounded-xl bg-white p-5 dark:bg-background-dark-card"><p role="status">{settings.isPending ? "알림 설정을 불러오는 중…" : settings.isError ? "알림 설정을 불러오지 못했습니다." : "이 병원의 알림 설정에 접근할 수 없습니다."}</p><div className="mt-4 flex gap-3">{settings.isError && <button type="button" onClick={() => settings.refetch()} className="min-h-11 font-bold">다시 시도</button>}<button type="button" onClick={onClose} className="min-h-11 font-bold">닫기</button></div></div></div>}
+    </>);
+  return page ? content : createPortal(content, document.body);
 }

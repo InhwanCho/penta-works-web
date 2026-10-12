@@ -13,7 +13,9 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import type { AlertEventSummary, AlertThreshold, SiteAlertSettings } from "@/lib/api";
 import { formatMetricMeasurement, METRICS } from "@/lib/metrics";
+import { alertSettingsPageUrl } from "@/lib/alert-settings-navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
@@ -355,7 +357,8 @@ function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHI
 function formatValue(value: number | null, unit?: string | null) { return value == null ? "-" : `${Number(value.toFixed(2))}${unit ? ` ${unit}` : ""}`; }
 function deliveryLabel(status: AlertEventSummary["deliveryStatus"]) { return ({ PENDING: "대기", SENDING: "전송 중", SENT: "접수 완료", PARTIAL: "일부 접수 실패", FAILED: "접수 실패", SKIPPED: "미발송", UNKNOWN: "결과 확인 필요" } as const)[status] ?? status; }
 
-export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialPane, onlyMetricKey, onClose, onSave }: {
+export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetricKey, initialPane, onlyMetricKey, onClose, onSave }: {
+  page?: boolean;
   entry: SiteAlertSettings;
   canEdit: boolean;
   initialMetricKey?: string;
@@ -364,6 +367,18 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
   onClose: () => void;
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
+  const router = useRouter();
+  const [smallScreen, setSmallScreen] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const update = () => setSmallScreen(media.matches);
+    update(); media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  useEffect(() => {
+    if (page || !smallScreen) return;
+    router.push(alertSettingsPageUrl(entry.siteid, window.location.pathname, {metric:initialMetricKey, pane:initialPane, only:onlyMetricKey}));
+  }, [page, smallScreen, router, entry.siteid, initialMetricKey, initialPane, onlyMetricKey]);
   const [thresholds, setThresholds] = useState(() => onlyMetricKey ? entry.thresholds.filter(item => item.key === onlyMetricKey) : entry.thresholds);
   const [metricFilter, setMetricFilter] = useState<"active" | "all">(initialMetricKey && !initialMetricKey.startsWith("__") ? "all" : entry.thresholds.some(item => item.active) ? "active" : "all");
   const [pane, setPane] = useState<EditorPane>(initialPane ?? (initialMetricKey === "__data__" ? "missing" : "metrics"));
@@ -391,6 +406,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
   const dialogState = useRef({ saving, onClose });
   dialogState.current = { saving, onClose };
   useEffect(() => {
+    if (page || window.matchMedia("(max-width: 1023px)").matches) return;
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -405,7 +421,7 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
     }
     document.addEventListener("keydown", handleKey);
     return () => { document.removeEventListener("keydown", handleKey); document.body.style.overflow = previousOverflow; previousFocus?.focus(); };
-  }, []);
+  }, [page]);
 
   // Refresh the stored hourly snapshot without overwriting unsaved preferences.
   useEffect(() => {
@@ -454,14 +470,14 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
     finally { setSaving(false); }
   }
 
-  return createPortal(
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
-      <form ref={dialogForm} role="dialog" aria-modal="true" aria-labelledby="threshold-editor-title" onSubmit={submit} className={`flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
+  const editor = (
+    <div className={page ? "mx-auto w-full max-w-4xl px-2 py-3 sm:px-4" : "fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4"} onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <form ref={dialogForm} role={page ? undefined : "dialog"} aria-modal={page ? undefined : true} aria-labelledby="threshold-editor-title" onSubmit={submit} className={page ? "w-full rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-background-dark-card" : `flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
           <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "확인할 내용과 알림 받을 시간을 나눠 설정하세요."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className={page ? "p-4 sm:p-6" : "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"}>
           {!onlyMetricKey && <>
             <div className="mb-5 flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 dark:bg-white/5"><div className="min-w-0"><p className="text-lg font-bold">이 병원의 내 알림</p><p className="mt-1 text-sm text-text-secondary">{entry.dashboardVisible ? "끄면 내 알림이 모두 멈춥니다." : "숨긴 병원은 알림을 켤 수 없습니다."}</p></div><AlertSwitch label="이 병원의 내 알림" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={setAlertsEnabled} /></div>
             <ManagementTabs large label="병원 알림 설정" value={pane} onChange={setPane} items={[{value:"metrics",label:"수치 이상"},{value:"missing",label:"데이터 누락"},{value:"schedule",label:"시간·휴일"}]} />
@@ -517,8 +533,10 @@ export function SiteThresholdEditor({ entry, canEdit, initialMetricKey, initialP
           {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover min-h-12 rounded-xl px-6 py-3 text-base font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? "저장 중…" : onlyMetricKey ? "이 알림 저장" : "설정 저장"}</button>}
         </footer>
       </form>
-    </div>, document.body
+    </div>
   );
+  if (!page && smallScreen) return <p role="status" className="p-4">알림 설정 화면으로 이동 중…</p>;
+  return page ? editor : createPortal(editor, document.body);
 }
 
 function MetricMissingEditor({threshold,disabled,onChange}:{threshold:AlertThreshold;disabled:boolean;onChange:(patch:Partial<AlertThreshold>)=>void}) {
