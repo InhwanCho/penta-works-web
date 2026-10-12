@@ -192,7 +192,7 @@ export default function DashboardClient() {
   );
 
   const mobileControls = (
-    <div className="lg:hidden" data-ptr-ignore>
+    <div className="dashboard-compact-controls lg:hidden" data-ptr-ignore>
       {showMobileFilters && <MobileFilterDialog onClose={() => setShowMobileFilters(false)}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={() => setShowMobileFilters(false)} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
         <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
@@ -210,10 +210,10 @@ export default function DashboardClient() {
       disabled={showMobileFilters}
       topOffset={56}
     >
-      <main className={`mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 ${statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
+      <main className={`dashboard-layout mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 ${statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
-        <header className="mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
+        <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -232,11 +232,11 @@ export default function DashboardClient() {
           </div>
           <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
         </header>
-        <details className="mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
+        <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
 
-        {isError && <p role="status" className="mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
+        {isError && <p role="status" className="dashboard-compact-feedback mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
-        <section className="mb-5 hidden shrink-0 grid-cols-6 gap-2 lg:grid" aria-label="상태별 병원 필터">
+        <section className="dashboard-expanded-status mb-5 hidden shrink-0 grid-cols-6 gap-2 lg:grid" aria-label="상태별 병원 필터">
           {statusFilterButtons}
         </section>
 
@@ -260,7 +260,7 @@ export default function DashboardClient() {
           />
         )}
         <DashboardHiddenSites rows={data.rows.filter(row => (hiddenSites.data ?? []).includes(row.siteDb))} saving={visibilityMutation.isPending} error={visibilityMutation.isError} onShow={siteId => visibilityMutation.mutate({siteId, hidden: false})} />
-        <p className="text-text-secondary mt-1 shrink-0 px-1 text-center text-[10px] leading-3 lg:hidden dark:text-text-dark-primary/70">
+        <p className="dashboard-compact-feedback text-text-secondary mt-1 shrink-0 px-1 text-center text-[10px] leading-3 lg:hidden dark:text-text-dark-primary/70">
           화면 갱신 {fmtYmdHms(meta.nowMs)} · 5분마다 자동 갱신{data.stats.openAlerts > 0 ? ` · 진행 중 알림 ${data.stats.openAlerts}건` : ""}
         </p>
         {metricSelection && <DashboardMetricInfo selection={metricSelection} onClose={closeMetricInfo} onEdit={() => { setSelectedAlert({siteId: metricSelection.siteId, metricKey: metricSelection.metricKey, onlyMetric: true}); closeMetricInfo(); }} />}
@@ -286,7 +286,7 @@ function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClos
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialog.showModal();
-    const desktop = window.matchMedia("(min-width: 1024px)");
+    const desktop = window.matchMedia("(min-width: 1024px) and (min-height: 761px)");
     const closeOnDesktop = () => { if (desktop.matches) onCloseRef.current(); };
     desktop.addEventListener("change", closeOnDesktop);
     closeOnDesktop();

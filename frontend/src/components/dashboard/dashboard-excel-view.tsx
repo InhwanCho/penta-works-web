@@ -138,7 +138,7 @@ export default function DashboardExcelView({
 
   return (
     <section className="relative flex min-h-0 flex-[0_1_auto] flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
-      <div className="hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
+      <div className="dashboard-table-heading hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
           전체 지표{" "}
@@ -326,7 +326,7 @@ export default function DashboardExcelView({
         </div>
       )}
 
-      <div className="text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 lg:py-2.5">
+      <div className="dashboard-table-legend text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 lg:py-2.5">
         <p>
           <span className="font-semibold text-red-600 dark:text-red-400">
             빨간 값

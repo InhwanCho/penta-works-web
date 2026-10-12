@@ -23,7 +23,7 @@ interface ThemeContextType {
 
 // Context 생성
 const ThemeContext = createContext<ThemeContextType>({
-  theme: "system",
+  theme: "light",
   isDark: false,
   isLargeText: false,
   setTheme: () => {},
@@ -33,7 +33,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 // ThemeProvider 컴포넌트
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>("system");
+  const [theme, setThemeState] = useState<Theme>("light");
   const [isDark, setIsDarkState] = useState<boolean>(false);
   const [isLargeText, setIsLargeText] = useState(false);
 
@@ -57,16 +57,21 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setThemeState(saved);
       setIsDarkState(saved === "dark");
       applyTheme(saved);
-    } else {
+    } else if (saved === "system") {
+      setThemeState("system");
       const systemDark = detectSystemDark();
       setIsDarkState(systemDark);
       applyTheme(systemDark ? "dark" : "light");
+    } else {
+      setThemeState("light");
+      setIsDarkState(false);
+      applyTheme("light");
     }
 
     const media = window.matchMedia("(prefers-color-scheme: dark)");
     const listener = (e: MediaQueryListEvent) => {
       // theme이 system일 때만 반영
-      if (!localStorage.getItem("theme")) {
+      if (localStorage.getItem("theme") === "system") {
         setIsDarkState(e.matches);
         applyTheme(e.matches ? "dark" : "light");
       }
@@ -79,7 +84,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (t: Theme) => {
     setThemeState(t);
     if (t === "system") {
-      localStorage.removeItem("theme");
+      localStorage.setItem("theme", "system");
       const systemDark = detectSystemDark();
       setIsDarkState(systemDark);
       applyTheme(systemDark ? "dark" : "light");

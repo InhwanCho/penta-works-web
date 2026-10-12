@@ -215,3 +215,22 @@ html.dark select:not([multiple]):not([size]),
 html.dark .select-inset-arrow {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='m6 8 4 4 4-4' stroke='%23b9ccdb' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
+
+/* Short laptop viewports reserve their height for hospital rows. */
+@media (min-width: 1024px) and (max-height: 760px) {
+  .dashboard-layout {
+    padding: 8px 6px 2px;
+    min-height: 0;
+  }
+  .dashboard-expanded-header,
+  .dashboard-expanded-filters,
+  .dashboard-expanded-status,
+  .dashboard-table-heading,
+  .dashboard-table-legend {
+    display: none;
+  }
+  .dashboard-compact-controls,
+  .dashboard-compact-feedback {
+    display: block;
+  }
+}
