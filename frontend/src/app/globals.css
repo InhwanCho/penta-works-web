@@ -234,3 +234,8 @@ html.dark .select-inset-arrow {
     display: block;
   }
 }
+
+.dashboard-sticky-columns { top: 3.5rem; }
+@media (max-width: 639px) {
+  .dashboard-sticky-columns { top: calc(3.5rem + env(safe-area-inset-top, 0px)); }
+}

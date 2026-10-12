@@ -5,7 +5,7 @@ import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, t
 import Link from "next/link";
 import type { CompanyMetric } from "@/lib/company-metrics";
 import CollectionStatus, { collectionMissing } from "./collection-status";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * 고정(freeze) 열: 병원명.
@@ -95,6 +95,37 @@ export default function DashboardExcelView({
     column: string;
     metric: boolean;
   } | null>(null);
+  const headerScrollRef = useRef<HTMLDivElement>(null);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const [columnWidths, setColumnWidths] = useState<number[]>([]);
+  useLayoutEffect(() => {
+    const header = headerScrollRef.current;
+    const body = bodyScrollRef.current;
+    if (!header || !body) return;
+    const measure = () => {
+      const heads = header.querySelectorAll("th");
+      const cells = body.querySelector("tbody tr")?.children;
+      if (!cells || heads.length !== cells.length) return;
+      const widths = Array.from(heads, (head, index) => Math.ceil(Math.max(head.getBoundingClientRect().width, cells[index].getBoundingClientRect().width)));
+      setColumnWidths(previous => previous.length === widths.length && previous.every((width, index) => width === widths[index]) ? previous : widths);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    observer.observe(body);
+    measure();
+    const resize = () => setColumnWidths([]);
+    window.addEventListener("resize", resize);
+    return () => { observer.disconnect(); window.removeEventListener("resize", resize); };
+  }, [columns, rows, columnWidths.length]);
+  const syncScroll = (source: HTMLDivElement, target: HTMLDivElement | null) => {
+    if (target && target.scrollLeft !== source.scrollLeft) target.scrollLeft = source.scrollLeft;
+  };
+  const tableStyle = columnWidths.length === columns.length + 1
+    ? { width: columnWidths.reduce((sum, width) => sum + width, 0), minWidth: "100%", tableLayout: "fixed" as const }
+    : { minWidth: 80 + columns.length * 64 };
+  const columnGroup = columnWidths.length === columns.length + 1
+    ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{width}} />)}</colgroup> : null;
+
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -137,7 +168,7 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="relative flex min-h-0 flex-[0_1_auto] flex-col overflow-hidden border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
+    <section className="relative flex min-h-0 flex-[0_1_auto] flex-col border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
       <div className="dashboard-table-heading hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">
@@ -159,17 +190,11 @@ export default function DashboardExcelView({
           <button type="button" onClick={onResetFilters} className="mx-auto mt-3 block min-h-11 px-4 text-sky-700 underline">전체 병원 보기</button>
         </div>
       ) : (
-        // Horizontal overflow stays in the table; vertical scrolling belongs to the page.
-        <div
-          data-dashboard-scroll
-          tabIndex={0}
-          aria-label="병원별 전체표, 가로로 스크롤할 수 있습니다"
-          className="overflow-x-auto pb-2"
-        >
-          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 80 + columns.length * 64 }}>
-            <caption className="sr-only">
-              병원별 최신 수집값 전체 지표 표
-            </caption>
+        <>
+        <div className="dashboard-sticky-columns sticky z-30 bg-white dark:bg-background-dark-card">
+          <div ref={headerScrollRef} onScroll={event => syncScroll(event.currentTarget, bodyScrollRef.current)} tabIndex={0} aria-label="표 컬럼명, 가로로 스크롤할 수 있습니다" className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <table aria-label="병원별 전체표 컬럼명" className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={tableStyle}>
+              {columnGroup}
             <thead>
               <tr>
                 {/* 코너셀: 세로 + 가로 양방향 고정 */}
@@ -238,6 +263,22 @@ export default function DashboardExcelView({
 
               </tr>
             </thead>
+            </table>
+          </div>
+        </div>
+        <div
+          ref={bodyScrollRef}
+          onScroll={event => syncScroll(event.currentTarget, headerScrollRef.current)}
+          data-dashboard-scroll
+          tabIndex={0}
+          aria-label="병원별 전체표, 가로로 스크롤할 수 있습니다"
+          className="overflow-x-auto pb-2"
+        >
+          <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={tableStyle}>
+            {columnGroup}
+            <caption className="sr-only">병원별 최신 수집값 전체 지표 표</caption>
+            <thead className="sr-only"><tr><th scope="col">병원명</th>{columns.map(column => <th key={column.key} scope="col">{column.displayName}</th>)}</tr></thead>
+
 
             <tbody>
               {rows.map((row) => {
@@ -324,6 +365,7 @@ export default function DashboardExcelView({
             </tbody>
           </table>
         </div>
+        </>
       )}
 
       <div className="dashboard-table-legend text-text-secondary dark:border-background-dark-secondary dark:text-text-dark-primary/70 hidden shrink-0 border-t px-[8px] py-[7px] text-sm font-medium sm:block sm:px-4 lg:py-2.5">
