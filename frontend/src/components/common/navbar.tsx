@@ -34,11 +34,30 @@ export default function Navbar() {
     function escape(event: KeyboardEvent) {
       if (event.key === "Escape") setMenuOpen(false);
     }
-    document.addEventListener("mousedown", close);
+    document.addEventListener("click", close);
     document.addEventListener("keydown", escape);
     return () => {
-      document.removeEventListener("mousedown", close);
+      document.removeEventListener("click", close);
       document.removeEventListener("keydown", escape);
+    };
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const smallScreen = window.matchMedia("(max-width: 1023px)");
+    const content = document.getElementById("app-content");
+    const previousOverflow = document.body.style.overflow;
+    const previousInert = content?.inert ?? false;
+    const sync = () => {
+      if (content) content.inert = smallScreen.matches || previousInert;
+      document.body.style.overflow = smallScreen.matches ? "hidden" : previousOverflow;
+    };
+    sync();
+    smallScreen.addEventListener("change", sync);
+    return () => {
+      smallScreen.removeEventListener("change", sync);
+      if (content) content.inert = previousInert;
+      document.body.style.overflow = previousOverflow;
     };
   }, [menuOpen]);
 
@@ -46,6 +65,7 @@ export default function Navbar() {
 
   return (
     <>
+      {menuOpen && <div aria-hidden="true" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[45] bg-slate-900/25 backdrop-blur-sm lg:hidden" />}
       <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
         <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between px-3 sm:px-4 lg:px-6">
           <Link href="/" className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
@@ -56,7 +76,7 @@ export default function Navbar() {
 
           <nav className="flex items-center gap-1.5">
             {session && (
-              <button type="button" className={ICON_BUTTON} onClick={openSearchModal} aria-label="병원 검색">
+              <button type="button" className={ICON_BUTTON} onClick={() => { setMenuOpen(false); openSearchModal(); }} aria-label="병원 검색">
                 <SearchIcon className="h-5 w-5" />
               </button>
             )}

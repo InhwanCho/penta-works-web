@@ -159,12 +159,12 @@ export default function DashboardExcelView({
           <button type="button" onClick={onResetFilters} className="mx-auto mt-3 block min-h-11 px-4 text-sky-700 underline">전체 병원 보기</button>
         </div>
       ) : (
-        // sticky 는 이 스크롤 컨테이너를 기준으로 동작합니다.
+        // Horizontal overflow stays in the table; vertical scrolling belongs to the page.
         <div
           data-dashboard-scroll
           tabIndex={0}
-          aria-label="병원별 전체표, 가로와 세로로 스크롤할 수 있습니다"
-          className="min-h-0 overflow-auto overscroll-contain pb-16 sm:pb-0"
+          aria-label="병원별 전체표, 가로로 스크롤할 수 있습니다"
+          className="overflow-x-auto pb-2"
         >
           <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={{ minWidth: 80 + columns.length * 64 }}>
             <caption className="sr-only">

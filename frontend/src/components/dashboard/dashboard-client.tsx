@@ -210,7 +210,7 @@ export default function DashboardClient() {
       disabled={showMobileFilters}
       topOffset={56}
     >
-      <main className={`dashboard-layout mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 ${statusFilter !== "configured" ? "flex h-[calc(100dvh-3.5rem-env(safe-area-inset-top,0px)-env(safe-area-inset-bottom,0px))] min-h-[32rem] flex-col" : ""}`}>
+      <main className={`dashboard-layout mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 flex min-h-0 flex-col`}>
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
         <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">

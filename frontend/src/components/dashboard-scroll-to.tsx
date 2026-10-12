@@ -40,15 +40,10 @@ export default function DashboardScrollTo({
         const scroller = gridRow.closest<HTMLElement>("[data-dashboard-scroll]");
         if (scroller) {
           window.scrollTo({
-            top: Math.max(0, scroller.getBoundingClientRect().top + window.scrollY - offset),
+            top: Math.max(0, gridRow.getBoundingClientRect().top + window.scrollY - offset),
             behavior: "smooth",
           });
-          const headHeight = scroller.querySelector("thead")?.getBoundingClientRect().height ?? 60;
-          scroller.scrollTo({
-            top: scroller.scrollTop + gridRow.getBoundingClientRect().top - scroller.getBoundingClientRect().top - headHeight,
-            left: 0,
-            behavior: "smooth",
-          });
+          scroller.scrollTo({ left: 0, behavior: "smooth" });
         }
       } else {
         const y = el.getBoundingClientRect().top + window.scrollY - offset;

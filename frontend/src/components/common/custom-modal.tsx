@@ -49,11 +49,24 @@ export default function CustomModal({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleClose, closeOnEsc, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const content = document.getElementById("app-content");
+    const previousInert = content?.inert ?? false;
+    const previousOverflow = document.body.style.overflow;
+    if (content) content.inert = true;
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (content) content.inert = previousInert;
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 flex items-end justify-center p-0 sm:items-start sm:p-6 sm:pt-[10vh]"
+      className="fixed inset-0 bg-slate-900/25 backdrop-blur-sm flex items-end justify-center p-0 sm:items-start sm:p-6 sm:pt-[10vh]"
       style={{ zIndex }}
       onClick={closeOnOverlay ? handleClose : undefined}
       role="presentation"

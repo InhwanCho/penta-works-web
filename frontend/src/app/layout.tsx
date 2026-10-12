@@ -101,7 +101,7 @@ export default function RootLayout({
               <ModalProvider>
                 <Navbar />
                 <ToastViewport />
-                <AuthGate>{children}</AuthGate>
+                <div id="app-content"><AuthGate>{children}</AuthGate></div>
               </ModalProvider>
             </AuthProvider>
           </ThemeProvider>
