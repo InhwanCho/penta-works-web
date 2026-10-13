@@ -105,7 +105,15 @@ export default function DashboardExcelView({
       const heads = header.querySelectorAll("th");
       const cells = body.querySelector("tbody tr")?.children;
       if (!cells || heads.length !== cells.length) return;
-      const widths = Array.from(heads, (head, index) => Math.ceil(Math.max(head.getBoundingClientRect().width, cells[index].getBoundingClientRect().width)));
+      const widths = Array.from(heads, (head, index) => {
+        if (index > 0 && columns[index - 1]?.key === "lastAt" && window.innerWidth < 1024) {
+          const cell = cells[index];
+          const style = getComputedStyle(cell);
+          const textWidth = Array.from(cell.children).reduce((sum, child) => sum + child.getBoundingClientRect().width, 0);
+          return Math.ceil(Math.max(72, textWidth + parseFloat(style.paddingLeft) + parseFloat(style.paddingRight) + 4));
+        }
+        return Math.ceil(Math.max(head.getBoundingClientRect().width, cells[index].getBoundingClientRect().width));
+      });
       setColumnWidths(previous => previous.length === widths.length && previous.every((width, index) => width === widths[index]) ? previous : widths);
     };
     const observer = new ResizeObserver(measure);
@@ -277,7 +285,7 @@ export default function DashboardExcelView({
                     {columns.map((column) => {
                       const m = metrics.find(metric => metric.key === column.key);
                       if (!m) return <td key={column.key} onClick={() => selectCell(row, column.displayName)} className={`${CELL_BORDER} cursor-cell px-1 py-1.5 text-right whitespace-nowrap tabular-nums lg:px-3 lg:py-2`}>
-                        {column.key === "lastAt" ? <><span className="text-xs lg:block">{fmtYmd(lastAtDate)}</span><span className="lg:hidden"> </span><span className="text-xs opacity-70 lg:block">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
+                        {column.key === "lastAt" ? <><span className="text-[10px] tracking-tight lg:block lg:text-xs">{fmtYmd(lastAtDate)}</span><span className="lg:hidden"> </span><span className="text-[10px] tracking-tight opacity-70 lg:block lg:text-xs">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
                       </td>;
                       const value = row.metrics?.[m.key] ?? null;
                       const alert = isMetricOutOfRange(value, m.bound, range);

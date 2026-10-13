@@ -1,5 +1,7 @@
 "use client";
 
+import { useUnreadAlerts } from "@/hooks/use-unread-alerts";
+import UnreadAlertDot from "./unread-alert-dot";
 import dynamic from "next/dynamic";
 import SearchIcon from "@/components/icons/search-icon";
 import { useModal } from "@/components/provider/modal-provider";
@@ -61,6 +63,9 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  const unread = useUnreadAlerts();
+  const goToAll = () => { setMenuOpen(false); window.dispatchEvent(new Event("dashboard-show-all")); };
+
   const initial = session?.name?.trim().charAt(0) || session?.email?.charAt(0).toUpperCase() || "나";
 
   return (
@@ -68,7 +73,7 @@ export default function Navbar() {
       {menuOpen && <div aria-hidden="true" onClick={() => setMenuOpen(false)} className="fixed inset-0 z-[45] bg-slate-900/25 backdrop-blur-sm lg:hidden" />}
       <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
         <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between px-3 sm:px-4 lg:px-6">
-          <Link href="/" className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
+          <Link href="/" onClick={goToAll} className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
             <Image src="/favicon/android-chrome-192x192.png" alt="MrEyes" width={32} height={32} priority
               className="h-8 w-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:-rotate-3 group-hover:scale-105" />
             <span className="text-[15px] font-bold tracking-[-0.02em]">MrEyes</span>
@@ -84,7 +89,8 @@ export default function Navbar() {
             {session ? (
               <div className="relative" ref={menuRef}>
                 <button type="button" aria-label="계정 및 메뉴" aria-haspopup="menu" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}
-                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-3">
+                  className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-3">
+                  {unread && <span className="absolute -right-0.5 -top-0.5"><UnreadAlertDot /></span>}
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
                     {initial}
                   </span>
@@ -103,8 +109,8 @@ export default function Navbar() {
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="py-1.5">
-                      <MenuLink onSelect={() => setMenuOpen(false)} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
-                      <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 관리</MenuLink>
+                      <MenuLink onSelect={goToAll} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
+                      <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 확인·관리 {unread && <UnreadAlertDot />}</MenuLink>
                       {session.role === "PLATFORM_ADMIN" && <MenuLink onSelect={() => setMenuOpen(false)} href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
                       {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>관리 설정</MenuLink>}
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/account" icon={<PersonIcon />}>내 계정</MenuLink>

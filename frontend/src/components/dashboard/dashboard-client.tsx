@@ -1,5 +1,6 @@
 "use client";
 
+import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import { useAuth } from "@/components/provider/auth-provider";
 import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import PullToRefresh from "@/components/common/pull-to-refresh";
@@ -108,6 +109,12 @@ export default function DashboardClient() {
     window.scrollTo({top: 0, behavior: "instant"});
   }, [closeMobileFilters]);
 
+  useEffect(() => {
+    const showAll = () => { changeStatusFilter("all"); setLinkedSite(null); setSelectedAlert(null); };
+    window.addEventListener("dashboard-show-all", showAll);
+    return () => window.removeEventListener("dashboard-show-all", showAll);
+  }, [changeStatusFilter]);
+
   const resetStatusFilter = useCallback((siteId: string) => {
     changeStatusFilter("all");
     setLinkedSite(siteId);
@@ -182,7 +189,7 @@ export default function DashboardClient() {
       <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={displayStats.warning} tone="amber" />
       <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={displayStats.noData} tone="rose" />
       <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={displayStats.normal} tone="emerald" />
-      <StatusFilterButton active={statusFilter === "configured"} onClick={() => changeStatusFilter("configured")} label="알림값" value="확인" tone="slate" />
+      <StatusFilterButton active={statusFilter === "configured"} onClick={() => changeStatusFilter("configured")} label={<>알림값 <DeferredUnreadAlertDot /></>} value="확인" tone="slate" />
     </>
   );
 
@@ -268,7 +275,7 @@ export default function DashboardClient() {
   );
 }
 
-function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: string; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
+function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: ReactNode; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
   const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
   return <button type="button" onClick={onClick} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-400 ring-2 ring-sky-100 dark:border-sky-500 dark:ring-sky-950" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-[11px] font-bold">{label}</span><span className={`mt-0.5 block text-xl font-extrabold tabular-nums ${colors[tone]}`}>{value}</span></button>;
 }
