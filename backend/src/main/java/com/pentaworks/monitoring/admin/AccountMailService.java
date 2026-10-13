@@ -25,14 +25,27 @@ public class AccountMailService {
 
     public DeliveryStatus sendInvitation(String email, String name, String token) {
         return send(email, "[MREyes] 계정 초대",
-            name + "님, MREyes에 초대되었습니다.\n\n로그인 ID: " + email + "\n초대받은 이메일 주소가 로그인 ID입니다.\n아래 링크에서 7일 이내에 비밀번호를 설정한 뒤, 이 이메일과 설정한 비밀번호로 로그인해주세요.\n" +
-                link("/accept-invite", token));
+            name + "님, 안녕하세요.\n\n펜타웍스 MREyes 관리자가 병원 모니터링 서비스에 초대했습니다.\n\n" +
+            "로그인 ID: " + email + "\n초대받은 이메일 주소가 로그인 ID입니다.\n" +
+            "초대 링크는 7일 동안 유효합니다. 아래 주소에서 비밀번호를 설정한 뒤 로그인해주세요.\n\n" +
+            link("/accept-invite", token) + "\n\n" +
+            "초대를 예상하지 못했다면 링크를 열지 말고 사내 관리자에게 확인해주세요.\n" + footer());
     }
 
     public DeliveryStatus sendPasswordReset(String email, String name, String token) {
         return send(email, "[MREyes] 비밀번호 재설정",
-            name + "님, 비밀번호 재설정 요청이 생성되었습니다.\n\n아래 링크는 1시간 동안 유효합니다.\n" +
-                link("/reset-password", token));
+            name + "님, 안녕하세요.\n\n펜타웍스 MREyes 계정의 비밀번호 재설정 요청을 받았습니다.\n\n" +
+            "로그인 ID: " + email + "\n" +
+            "아래 주소에서 새 비밀번호를 설정해주세요. 링크는 1시간 동안 유효합니다.\n\n" +
+            link("/reset-password", token) + "\n\n" +
+            "본인이 요청하지 않았다면 이 메일을 무시해주세요. 링크에서 변경을 완료하기 전까지 기존 비밀번호는 유지됩니다.\n" + footer());
+    }
+
+    private String footer() {
+        return "\n이 메일은 MREyes의 계정 서비스에서 자동 발송되었습니다.\n" +
+            "비밀번호나 인증정보를 이메일 답장으로 요청하지 않습니다.\n" +
+            "서비스 주소: " + (properties.publicBaseUrl() == null ? "" : properties.publicBaseUrl().trim()).replaceAll("/+$", "") + "\n" +
+            "문의가 필요하면 사내 MREyes 관리자에게 연락해주세요. 이 발신 주소는 회신을 확인하지 않습니다.\n";
     }
 
     private DeliveryStatus send(String email, String subject, String text) {

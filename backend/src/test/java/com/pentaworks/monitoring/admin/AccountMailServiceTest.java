@@ -55,5 +55,10 @@ class AccountMailServiceTest {
         InternetAddress from = (InternetAddress) sent.getValue().getFrom()[0];
         assertEquals("ihcho@pentaworks.net", from.getAddress());
         assertEquals("펜타웍스 알림 (회신불가)", from.getPersonal());
+        String body = sent.getValue().getContent().toString();
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("본인이 요청하지 않았다면"));
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("1시간 동안 유효"));
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("https://app.example.com/reset-password?token=a%2Bb"));
+        org.junit.jupiter.api.Assertions.assertTrue(body.contains("서비스 주소: https://app.example.com\n"));
     }
 }
