@@ -122,9 +122,7 @@ public class MonitorService {
             List<String> destinations = new ArrayList<>();
             phones.forEach(phone -> destinations.add("KAKAO_ALIMTALK:" + phone));
             if (destinations.isEmpty()) {
-                String reason = recipients.hasConfiguredPhones(entry.getKey())
-                    ? "사용 가능한 수신 채널이 없습니다. 수신처 번호를 확인해주세요."
-                    : "등록된 수신 채널이 없습니다.";
+                String reason = "내 계정의 휴대폰 번호와 병원 표시 설정을 확인해주세요. 숨긴 병원은 알림이 중지됩니다.";
                 if (manual) throw new BadRequestException(reason);
                 alertEvents.markDelivery(eventIds, "SKIPPED", reason, 0);
                 continue;

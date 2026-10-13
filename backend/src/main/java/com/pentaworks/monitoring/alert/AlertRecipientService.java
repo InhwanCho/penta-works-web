@@ -157,14 +157,18 @@ public class AlertRecipientService {
 
     public List<String> personalPhones(String siteId,long userId,Long eventId) {
         return jdbcTemplate.query("""
-            SELECT DISTINCT r.destination FROM site_alert_recipient r
-            JOIN app_user u ON u.id=r.user_id AND u.status='ACTIVE'
+            SELECT DISTINCT u.phone FROM app_user u
             JOIN company c ON c.id=u.company_id AND c.status='ACTIVE'
-            JOIN company_site cs ON cs.site_id=r.site_id AND cs.company_id=u.company_id AND cs.is_dashboard_visible=TRUE
-            WHERE r.site_id=? AND r.user_id=? AND r.channel='KAKAO_ALIMTALK' AND r.is_enabled=TRUE
-              AND (u.role IN ('PLATFORM_ADMIN','SUPER_ADMIN','ADMIN') OR EXISTS(SELECT 1 FROM user_site us WHERE us.user_id=u.id AND us.site_id=r.site_id))
+            JOIN company_site cs ON cs.company_id=u.company_id AND cs.is_dashboard_visible=TRUE
+            WHERE cs.site_id=? AND u.id=? AND u.status='ACTIVE'
+              AND (u.role IN ('PLATFORM_ADMIN','SUPER_ADMIN','ADMIN') OR EXISTS(SELECT 1 FROM user_site us WHERE us.user_id=u.id AND us.site_id=cs.site_id))
+              AND NOT EXISTS(SELECT 1 FROM user_dashboard_hidden_site h WHERE h.user_id=u.id AND h.site_id=cs.site_id)
               AND NOT EXISTS(SELECT 1 FROM alert_event_acknowledgement a WHERE a.user_id=u.id AND a.event_id=?)
-            """,(rs,n)->rs.getString(1),siteId,userId,eventId==null?-1:eventId);
+            """,(rs,n)->rs.getString(1),siteId,userId,eventId==null?-1:eventId).stream()
+            .filter(java.util.Objects::nonNull)
+            .map(phone -> phone.replaceAll("[-\\s]", ""))
+            .filter(phone -> phone.matches("01[016789][0-9]{7,8}"))
+            .distinct().toList();
     }
 
     public boolean hasConfiguredPhones(String siteId) {

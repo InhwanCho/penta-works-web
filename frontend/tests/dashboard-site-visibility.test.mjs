@@ -13,10 +13,9 @@ test('personal hiding supports restoring and hiding all without modifying assign
  assert.deepEqual(ids(exports.visibleDashboardSites(rows,['001','002'])),[]);
  assert.equal(rows.length,2);
 });
-test('notification links temporarily reveal a hidden assigned hospital without changing preferences',()=>{
+test('notification links cannot implicitly reveal or resume a hidden hospital',()=>{
  const hidden=['001','002'];
- assert.deepEqual(ids(exports.visibleDashboardSites(rows,hidden,'001')),['001']);
- assert.deepEqual(ids(exports.visibleDashboardSites(rows,hidden,'1')),['001']);
+ assert.deepEqual(ids(exports.visibleDashboardSites(rows,hidden,'001')),[]);
+ assert.deepEqual(ids(exports.visibleDashboardSites(rows,hidden,'1')),[]);
  assert.deepEqual(hidden,['001','002']);
- assert.deepEqual(ids(exports.visibleDashboardSites(rows,hidden,'999')),[]);
 });

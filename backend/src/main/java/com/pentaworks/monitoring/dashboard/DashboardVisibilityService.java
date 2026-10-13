@@ -7,7 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Personal display preferences never change assignments or monitoring policy. */
+/** Personal visibility controls delivery eligibility without changing assignments or saved thresholds. */
 @Service
 public class DashboardVisibilityService {
     private final JdbcTemplate jdbc;

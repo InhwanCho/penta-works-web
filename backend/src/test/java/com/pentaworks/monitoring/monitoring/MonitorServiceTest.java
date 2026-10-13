@@ -135,7 +135,7 @@ class MonitorServiceTest {
         assertEquals("actemp", rows.get(0).metricKey());
         assertEquals("HIGH", rows.get(0).eventType());
         verify(alertEvents).markDelivery(List.of(10L), "SKIPPED",
-            "사용 가능한 수신 채널이 없습니다. 수신처 번호를 확인해주세요.", 0);
+            "내 계정의 휴대폰 번호와 병원 표시 설정을 확인해주세요. 숨긴 병원은 알림이 중지됩니다.", 0);
     }
 
     @Test

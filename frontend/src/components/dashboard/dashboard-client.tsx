@@ -63,6 +63,7 @@ export default function DashboardClient() {
 
   const { session } = useAuth();
   const userId = session?.id;
+  const profile = useQuery({queryKey: ["my-profile", userId], queryFn: () => apiFetch<{phone: string | null}>("/auth/profile"), enabled: userId != null});
   const [preferences, setPreferences] = useState<DashboardPreferences>(defaultPreferences);
   const [showColumns, setShowColumns] = useState(false);
   const queryClient = useQueryClient();
@@ -117,9 +118,9 @@ export default function DashboardClient() {
   }, [refetch]);
 
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
-  const displayedRows = useMemo(() => visibleDashboardSites(data?.rows ?? [], hiddenSites.data ?? [], linkedSite)
+  const displayedRows = useMemo(() => visibleDashboardSites(data?.rows ?? [], hiddenSites.data ?? [])
     .map(row => ({...row, alertStatus: dashboardRowStatus(row, data?.ctrl ?? {}, metrics)})),
-    [data?.rows, data?.ctrl, metrics, hiddenSites.data, linkedSite]);
+    [data?.rows, data?.ctrl, metrics, hiddenSites.data]);
   const filteredRows = useMemo(() => {
     const currentRows = displayedRows;
     return currentRows.filter((row) => statusFilter === "all" || statusFilter === "configured" ||
@@ -205,6 +206,8 @@ export default function DashboardClient() {
       topOffset={56}
     >
       <main className={`dashboard-layout mobile-safe-inline mx-auto w-full max-w-7xl px-[4px] pt-[8px] pb-[2px] lg:px-6 lg:py-5 flex min-h-0 flex-col`}>
+        {profile.isSuccess && !/^01[016789][0-9]{7,8}$/.test((profile.data.phone ?? "").replace(/[-\s]/g, "")) && <Link href="/account" className="mb-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">휴대폰 번호를 등록해야 카카오톡·문자 알림을 받을 수 있습니다. 내 계정에서 등록하기 →</Link>}
+        {linkedSite && data.rows.some(row => (row.siteDb === linkedSite || row.siteSlug === String(Number(linkedSite))) && (hiddenSites.data ?? []).includes(row.siteDb)) && <p role="status" className="mb-2 p-2 text-sm text-amber-700">이 링크의 병원은 숨김·알림 중지 상태입니다. 아래 ‘숨긴 병원’에서 다시 표시할 수 있습니다.</p>}
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
         <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">

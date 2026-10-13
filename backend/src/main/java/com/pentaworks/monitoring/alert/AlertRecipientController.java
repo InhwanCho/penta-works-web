@@ -41,21 +41,21 @@ public class AlertRecipientController {
     @PostMapping
     public RecipientSummary create(@Valid @RequestBody CreateRecipientRequest request,
                                    Authentication authentication) {
-        return recipients.create(requireAdmin(authentication), new CreateRecipient(
-            request.siteId(), request.channel(), request.destination(), request.quietStart(), request.quietEnd(), request.enabled(), request.userId()));
+        requireAdmin(authentication);
+        throw new com.pentaworks.monitoring.common.BadRequestException("수신처는 대시보드 표시 병원과 계정 휴대폰번호로 자동 연결됩니다.");
     }
 
     @PatchMapping("/{id}")
     public RecipientSummary update(@PathVariable long id, @Valid @RequestBody UpdateRecipientRequest request,
                                    Authentication authentication) {
-        return recipients.update(requireAdmin(authentication), id,
-            new UpdateRecipient(request.quietStart(), request.quietEnd(), request.enabled(), request.destination(), request.userId()));
+        requireAdmin(authentication);
+        throw new com.pentaworks.monitoring.common.BadRequestException("내 계정의 휴대폰번호 또는 대시보드 병원 표시 설정을 변경해주세요.");
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable long id, Authentication authentication) {
-        recipients.delete(requireAdmin(authentication), id);
-        return ResponseEntity.noContent().build();
+        requireAdmin(authentication);
+        throw new com.pentaworks.monitoring.common.BadRequestException("대시보드에서 병원을 숨기면 해당 병원의 알림이 중지됩니다.");
     }
 
     private CurrentUser requireAdmin(Authentication authentication) {

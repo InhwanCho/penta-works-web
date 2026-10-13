@@ -13,7 +13,7 @@ export default function DashboardSiteFilter({ rows, hiddenSites, disabled, onCha
   const matches = rows.filter(row => `${row.name ?? ""} ${row.siteDb}`.toLowerCase().includes(search.trim().toLowerCase()));
   return <details className="rounded-xl border p-3">
     <summary className="cursor-pointer font-bold">표시할 병원 ({rows.length - hiddenCount}/{rows.length})</summary>
-    <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">내 대시보드에서만 숨깁니다. 숨긴 병원의 알림은 기존 설정대로 발송됩니다.</p>
+    <p className="mt-2 text-xs text-slate-500 dark:text-slate-300">숨기면 이 병원의 알림도 중지됩니다. 다시 표시하면 기존 알림 설정으로 수신을 재개합니다. 검색·상태 필터는 알림에 영향을 주지 않습니다.</p>
     <input type="search" aria-label="표시할 병원 검색" placeholder="병원 검색" value={search} onChange={event => setSearch(event.target.value)} className="mt-2 min-h-11 w-full rounded-lg border bg-transparent px-3" />
     <fieldset disabled={disabled} className="mt-2 max-h-52 overflow-y-auto overscroll-contain disabled:opacity-60">
       <legend className="sr-only">내 대시보드에 표시할 병원</legend>

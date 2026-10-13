@@ -67,7 +67,7 @@ export default function AccountClient() {
           <h2 className="font-bold">{mode === "profile" ? "내 정보 변경" : "비밀번호 변경"}</h2>
           {mode === "profile" ? <>
             <label className="block text-sm font-bold">휴대폰번호<PhoneInput className={INPUT} value={draft.phone} onValueChange={phone=>setDraft({...draft,phone:phone || null})} placeholder="010-3333-3333" /></label>
-            <p className="text-xs text-text-secondary">알림 수신번호는 관리자가 관리 설정의 수신처에서 별도로 등록합니다.</p>
+            <p className="text-xs text-text-secondary">대시보드에 표시하는 병원의 알림을 이 번호로 받습니다. 번호 변경은 모든 병원에 적용되며, 번호를 삭제하면 카카오톡·문자 알림을 받을 수 없습니다.</p>
           </> : <>
             <p className="text-xs text-text-secondary">8자 이상으로 설정해 주세요. 문자 조합 제한은 없습니다. 변경 후 모든 기기에서 로그아웃됩니다.</p>
             <label className="block text-sm font-bold">현재 비밀번호<input type="password" required autoComplete="current-password" className={INPUT} value={currentPassword} onChange={e=>setCurrentPassword(e.target.value)} /></label>

@@ -35,12 +35,15 @@ class PersonalAlertDatabaseTest {
         jdbc=new JdbcTemplate(ds);
         transaction=new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds));
         jdbc.execute("SET FOREIGN_KEY_CHECKS=0");
-        for(String table:List.of("mrtb","alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
+        for(String table:List.of("user_dashboard_hidden_site","mrtb","alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
         jdbc.execute("SET FOREIGN_KEY_CHECKS=1");
         try(var connection=ds.getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("personal-alert-test-schema.sql"));
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/migration/V30__personal_alert_patterns.sql"));
         }
+        jdbc.execute("ALTER TABLE app_user ADD COLUMN phone VARCHAR(30)");
+        jdbc.execute("CREATE TABLE user_dashboard_hidden_site(user_id BIGINT UNSIGNED,site_id VARCHAR(32),PRIMARY KEY(user_id,site_id))");
+        jdbc.update("UPDATE app_user SET phone=CASE id WHEN 1 THEN '01011112222' WHEN 2 THEN '01033334444' ELSE '01055556666' END");
         var users=new CurrentUserService(jdbc);
         var audit=mock(AuditService.class);
         var defaults=mock(AlertService.class);
@@ -51,6 +54,38 @@ class PersonalAlertDatabaseTest {
         events=new AlertEventService(jdbc,users,audit);
         recipients=new AlertRecipientService(jdbc,users,audit);
     }
+    @Test void dashboardRecipientsFollowAccountPhoneVisibilityAndAccessWithoutManualRegistration() {
+        jdbc.update("DELETE FROM site_alert_recipient");
+        assertEquals(List.of("01011112222"),recipients.personalPhones("001",1,null));
+        assertEquals(List.of("01055556666"),recipients.personalPhones("001",3,null)); // admin, no user_site row
+        assertTrue(recipients.personalPhones("001",4,null).isEmpty()); // other company
+        assertTrue(recipients.personalPhones("001",5,null).isEmpty()); // no assignment
+        jdbc.update("UPDATE app_user SET phone='010-9999-8888' WHERE id=1");
+        assertEquals(List.of("01099998888"),recipients.personalPhones("001",1,null));
+        jdbc.update("INSERT INTO user_dashboard_hidden_site VALUES(1,'001')");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        assertEquals(List.of("01033334444"),recipients.personalPhones("001",2,null));
+        jdbc.update("DELETE FROM user_dashboard_hidden_site WHERE user_id=1");
+        assertEquals(List.of("01099998888"),recipients.personalPhones("001",1,null));
+        jdbc.update("DELETE FROM user_site WHERE user_id=1");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        jdbc.update("INSERT INTO user_site VALUES(1,'001')");
+        for(String phone:List.of("", "invalid")) {
+            jdbc.update("UPDATE app_user SET phone=? WHERE id=1",phone);
+            assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        }
+        jdbc.update("UPDATE app_user SET phone=NULL WHERE id=1");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        jdbc.update("UPDATE app_user SET phone='01011112222',status='DISABLED' WHERE id=1");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        jdbc.update("UPDATE app_user SET status='ACTIVE' WHERE id=1");
+        jdbc.update("UPDATE company_site SET is_dashboard_visible=FALSE WHERE company_id=1");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+        jdbc.update("UPDATE company_site SET is_dashboard_visible=TRUE WHERE company_id=1");
+        jdbc.update("UPDATE company SET status='DISABLED' WHERE id=1");
+        assertTrue(recipients.personalPhones("001",1,null).isEmpty());
+    }
+
     private SiteAlertSettings save(CurrentUser actor,double max,LocalTime start,LocalTime end) {
         return personal.save(actor,"001",new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest("hepres",0.5,max,true,false,40.0)),20,false,true,0,30,start,end,true,List.of(LocalDate.of(2026,12,25)),false,10,2));
     }
@@ -68,7 +103,8 @@ class PersonalAlertDatabaseTest {
             var request=new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest("hepres",0.5,2.0,false,false,40.0,true,3)),20,false,true,0,0,null,null,false,List.of(),false,10,2);
             var first=personal.save(a,"001",request);
             assertTrue(first.thresholds().get(0).missingActive());assertEquals(3,first.thresholds().get(0).missingThreshold());
-            assertFalse(personal.settings(b,"001").thresholds().get(0).missingActive());
+            assertTrue(personal.settings(b,"001").thresholds().get(0).missingActive());
+            assertEquals(5,personal.settings(b,"001").thresholds().get(0).missingThreshold());
             assertNull(events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),2));
             var event=events.evaluateMetricMissing(a.id(),first,first.thresholds().get(0),3);
             assertNotNull(event);assertEquals("METRIC_MISSING",events.events(Set.of("001"),500,a.id()).get(0).eventType());

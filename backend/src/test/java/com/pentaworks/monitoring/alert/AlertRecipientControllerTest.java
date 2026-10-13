@@ -26,7 +26,7 @@ class AlertRecipientControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings={"ADMIN","SUPER_ADMIN","PLATFORM_ADMIN"})
-    void administratorCanManageRecipients(String role) {
+    void administratorCannotMutateObsoleteManualRecipients(String role) {
         var users = mock(CurrentUserService.class);
         var service = mock(AlertRecipientService.class);
         var authentication = mock(Authentication.class);
@@ -34,12 +34,10 @@ class AlertRecipientControllerTest {
         when(users.require(authentication)).thenReturn(actor);
         var controller = new AlertRecipientController(service,users);
         controller.recipients(authentication);
-        controller.create(new AlertRecipientController.CreateRecipientRequest("001","KAKAO_ALIMTALK","01012345678",null,null,true,1L),authentication);
-        controller.update(1,new AlertRecipientController.UpdateRecipientRequest(null,null,true,"01012345678",1L),authentication);
-        controller.delete(1,authentication);
+        assertThrows(com.pentaworks.monitoring.common.BadRequestException.class, () -> controller.create(new AlertRecipientController.CreateRecipientRequest("001","KAKAO_ALIMTALK","01012345678",null,null,true,1L),authentication));
+        assertThrows(com.pentaworks.monitoring.common.BadRequestException.class, () -> controller.update(1,new AlertRecipientController.UpdateRecipientRequest(null,null,true,"01012345678",1L),authentication));
+        assertThrows(com.pentaworks.monitoring.common.BadRequestException.class, () -> controller.delete(1,authentication));
         verify(service).recipients(actor);
-        verify(service).create(eq(actor),any(AlertRecipientService.CreateRecipient.class));
-        verify(service).update(eq(actor),eq(1L),any(AlertRecipientService.UpdateRecipient.class));
-        verify(service).delete(actor,1L);
+        verifyNoMoreInteractions(service);
     }
 }

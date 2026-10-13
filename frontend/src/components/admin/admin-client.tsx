@@ -131,7 +131,7 @@ export default function AdminClient() {
 
       <ManagementTabs label="관리 설정" value={tab} onChange={setTab} items={[
         {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"병원"},
-        {value:"metrics",label:"측정항목"}, {value:"recipients",label:"수신처"}, {value:"audit",label:"활동 기록"},
+        {value:"metrics",label:"측정항목"}, {value:"recipients",label:"알림 수신 안내"}, {value:"audit",label:"활동 기록"},
       ]} />
 
       {tab === "users" && (
@@ -190,7 +190,7 @@ function UserSection({ users, sites, loading, canManageAdmins, currentUserId }: 
         <select className={INPUT} value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "ALL" | Role)}><option value="ALL">모든 권한</option><option value="PLATFORM_ADMIN">플랫폼 관리자</option><option value="SUPER_ADMIN">최고관리자</option><option value="ADMIN">관리자</option><option value="USER">일반 사용자</option></select>
         <select className={INPUT} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "SUSPENDED")}><option value="ALL">모든 상태</option><option value="ACTIVE">활성</option><option value="SUSPENDED">정지</option></select>
       </div>
-      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">휴대폰번호는 사용자 연락처입니다. 실제 알림톡 수신번호는 관리 설정의 수신처에서 별도로 등록합니다.</p>
+      <p className="text-text-secondary mb-2 px-1 text-xs dark:text-text-dark-primary/70">각 사용자는 대시보드에 표시하는 병원의 알림을 본인 휴대폰번호로 받습니다. 숨긴 병원의 알림은 중지됩니다.</p>
       <div className={`${CARD} overflow-x-auto`}>
         <table className="w-full min-w-[900px] text-left text-sm whitespace-nowrap">
           <thead className="border-b border-slate-200 bg-slate-50 text-xs text-text-secondary dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary/70">
@@ -430,7 +430,7 @@ function InvitationSection({ invitations, sites, canInviteAdmins }: {
         <div><label htmlFor="invite-phone" className="text-sm font-bold">휴대폰번호 (카카오 알림용)</label>
           <Controller control={form.control} name="phone" rules={{ validate: value => !value || /^01[016789][0-9]{7,8}$/.test(value) || "휴대폰번호를 확인해주세요. 예: 010-1234-5678" }} render={({ field }) => <PhoneInput id="invite-phone" name={field.name} onBlur={field.onBlur} value={field.value} onValueChange={field.onChange} className={`${INPUT} mt-1.5`} aria-invalid={Boolean(errors.phone)} aria-describedby="invite-phone-help invite-phone-error" placeholder="010-1234-5678" />} />
           {errors.phone && <p id="invite-phone-error" role="alert" className="mt-1 text-xs text-rose-600">{errors.phone.message}</p>}
-          <p id="invite-phone-help" className="text-text-secondary mt-1.5 text-xs leading-5">가입 완료 시 연락처에 저장됩니다. 알림관리에서 담당자를 선택하면 이 번호가 입력됩니다. 초대 링크는 이메일로 발송합니다.</p>
+          <p id="invite-phone-help" className="text-text-secondary mt-1.5 text-xs leading-5">가입 완료 후 대시보드에 표시되는 병원의 알림을 이 번호로 받습니다. 관리자는 전체 병원이 대상입니다. 초대 링크는 이메일로 발송합니다.</p>
         </div>
         <label className="block text-sm font-bold">권한<select className={`${INPUT} select-inset-arrow mt-1.5`} {...register("role")}>
           <option value="USER">일반 사용자</option>
