@@ -98,6 +98,14 @@ class AlertEventServiceTest {
         assertNull(service.evaluateNoData(site, 0L));
         verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(9L));
     }
+    @Test void coldChillerToleranceIncludesDecimalBoundaryInEitherDirection() {
+        org.junit.jupiter.api.Assertions.assertTrue(AlertEventService.coldChillerStopped(20.0,20.1));
+        org.junit.jupiter.api.Assertions.assertTrue(AlertEventService.coldChillerStopped(20.1,20.0));
+        org.junit.jupiter.api.Assertions.assertTrue(AlertEventService.coldChillerStopped(20.123,20.124));
+        org.junit.jupiter.api.Assertions.assertFalse(AlertEventService.coldChillerStopped(20.0,20.10001));
+        org.junit.jupiter.api.Assertions.assertFalse(AlertEventService.coldChillerStopped(20.0,20.2));
+    }
+
     @Test
     void coldChillerIgnoresUnmeasuredAndDisabledValues() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
@@ -115,7 +123,7 @@ class AlertEventServiceTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    void coldChillerCreatesNewIncidentWhenEqual() throws Exception {
+    void coldChillerCreatesNewIncidentAtToleranceBoundary() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
         when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class))).thenReturn(9L);
@@ -124,13 +132,13 @@ class AlertEventServiceTest {
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
             null, null, false, List.of(), true, true);
-        assertEquals(9L, service.evaluateColdChiller(site, 20.123, 20.123).eventId());
+        assertEquals(9L, service.evaluateColdChiller(site, 20.0, 20.1).eventId());
         verify(jdbc).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    void coldChillerExactEqualityRepeatsSameIncidentAndDifferentValuesCloseIt() throws Exception {
+    void coldChillerWithinToleranceRepeatsSameIncidentAndLargerDifferenceClosesIt() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.queryForObject(anyString(), eq(Long.class), eq(0L), eq("001"), eq("__cold_chiller__"))).thenReturn(7L);
         ResultSet rs = mock(ResultSet.class);
@@ -143,13 +151,28 @@ class AlertEventServiceTest {
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30,
             null, null, false, List.of(), true, true);
-        var transition = service.evaluateColdChiller(site, 20.123, 20.123);
+        var transition = service.evaluateColdChiller(site, 20.123, 20.223);
         assertEquals(5L, transition.eventId());
         assertEquals(20.123, transition.value());
         assertEquals("__cold_chiller__", transition.metricKey());
-        assertNull(service.evaluateColdChiller(site, 20.123, 20.124));
+        assertNull(service.evaluateColdChiller(site, 20.123, 20.224));
         verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(5L));
     }
+    @Test
+    @SuppressWarnings("unchecked")
+    void quietHourSkipDoesNotResendAnAlreadyDeliveredOneShot() throws Exception {
+        JdbcTemplate jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Long.class),eq(0L),eq("001"),eq("actemp"))).thenReturn(7L);
+        ResultSet rs=mock(ResultSet.class);when(rs.next()).thenReturn(true);when(rs.getLong("id")).thenReturn(5L);
+        when(rs.getString("event_type")).thenReturn("HIGH");when(rs.getString("delivery_status")).thenReturn("SKIPPED");
+        when(rs.getTimestamp("last_notified_at")).thenReturn(java.sql.Timestamp.from(java.time.Instant.now().minusSeconds(3600)));
+        when(jdbc.query(anyString(),any(ResultSetExtractor.class),eq(7L),eq("LOW"),eq("HIGH")))
+            .thenAnswer(invocation->((ResultSetExtractor<?>)invocation.getArgument(1)).extractData(rs));
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var site=new SiteAlertSettings("001","병원",true,List.of(),30,false,true,0,0,null,null,false);
+        assertNull(service.evaluate(site,new AlertThreshold("actemp","온도","°C",15.0,25.0,true),31.0));
+    }
+
     @Test
     @SuppressWarnings("unchecked")
     void skippedOneShotAlertCanBeDeliveredAfterQuietHoursEnd() throws Exception {

@@ -161,8 +161,14 @@ public class AlertEventService {
             !Double.isFinite(inlet) || !Double.isFinite(outlet) ||
             DashboardService.isUnmeasured(inlet) || DashboardService.isUnmeasured(outlet)) return null;
         return evaluateCondition(userId, site,
-            new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (IN=OUT)", "°C", null, null, true),
-            inlet, true, Double.compare(inlet, outlet) == 0 ? "HIGH" : null);
+            new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (온도 차이 ≤ 0.1°C)", "°C", null, null, true),
+            inlet, true, coldChillerStopped(inlet, outlet) ? "HIGH" : null);
+    }
+
+    static boolean coldChillerStopped(double inlet,double outlet) {
+        // Decimal comparison includes the 0.1 boundary without binary floating-point error.
+        return java.math.BigDecimal.valueOf(inlet).subtract(java.math.BigDecimal.valueOf(outlet)).abs()
+            .compareTo(java.math.BigDecimal.valueOf(0.1)) <= 0;
     }
 
     private Transition evaluateCondition(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value,
@@ -195,7 +201,7 @@ public class AlertEventService {
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
                 ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
-            if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도가 " + value + "°C로 동일합니다. 정지 상태를 확인해주세요.";
+            if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도 차이가 0.1°C 이하입니다. IN 온도는 " + value + "°C입니다. 정지 상태를 확인해주세요.";
             jdbcTemplate.update("UPDATE alert_event SET event_type=?,measured_value=?,threshold_min=?,threshold_max=?,message=? WHERE id=?",
                 eventType, value, min, max, message, open.id());
             return new Transition(open.id(), site.siteid(), site.name(), threshold.key(), threshold.label(),
@@ -206,7 +212,7 @@ public class AlertEventService {
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
             ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
-        if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도가 " + value + "°C로 동일합니다. 정지 상태를 확인해주세요.";
+        if (coldChiller) message = site.name() + " · 콜드칠러 IN/OUT 온도 차이가 0.1°C 이하입니다. IN 온도는 " + value + "°C입니다. 정지 상태를 확인해주세요.";
         long eventId = insertEvent(ruleId, site.siteid(), eventType, value, message, now, null);
         return new Transition(eventId, site.siteid(), site.name(), threshold.key(), threshold.label(),
             threshold.unit(), eventType, value, min, max, message);
@@ -353,7 +359,7 @@ public class AlertEventService {
         if (!"__data__".equals(event.metricKey()) && DashboardService.isUnmeasured(event.value()))
             throw new BadRequestException("미측정 값으로 발생한 알림은 재전송할 수 없습니다.");
         return new Transition(event.id(), event.siteId(), event.siteName(), event.metricKey(),
-            "METRIC_MISSING".equals(event.eventType()) ? event.metricKey()+" 측정 누락" : "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (IN=OUT)" : event.metricKey(),
+            "METRIC_MISSING".equals(event.eventType()) ? event.metricKey()+" 측정 누락" : "__cold_chiller__".equals(event.metricKey()) ? "콜드칠러 정지 의심 (온도 차이 ≤ 0.1°C)" : event.metricKey(),
             "METRIC_MISSING".equals(event.eventType()) ? "회" : "__cold_chiller__".equals(event.metricKey()) ? "°C" : null,
             event.eventType(), event.value(), event.min(), event.max(), event.message());
     }
@@ -436,7 +442,7 @@ public class AlertEventService {
     private boolean repeatDue(OpenEvent open, int repeatMinutes) {
         if ("UNKNOWN".equals(open.deliveryStatus()) || "SENDING".equals(open.deliveryStatus())) return false;
         // A quiet-hours/no-recipient skip is not a notification, including one-shot rules.
-        if ("SKIPPED".equals(open.deliveryStatus())) return true;
+        if ("SKIPPED".equals(open.deliveryStatus()) && open.lastNotifiedAt() == null) return true;
         if (repeatMinutes <= 0) return false;
         if (open.lastNotifiedAt() == null) return true;
         return Duration.between(open.lastNotifiedAt(), Instant.now()).toMinutes() >= repeatMinutes;

@@ -3,6 +3,7 @@
 import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
 import AlertPatternInbox, { SharePatternButton } from "./alert-pattern-sharing";
+import { NotificationPreferencesSummary } from "./notification-preferences";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
 import ManagementTabs from "@/components/common/management-tabs";
@@ -129,6 +130,7 @@ export default function BaselinesClient({
         </p>
       </header>
 
+      {view !== "thresholds" && <NotificationPreferencesSummary/>}
       <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
         {value:"events",label:"알림 확인",},
         {value:"thresholds",label:"알림 설정"}, {value:"patterns",label:"설정 공유"},
@@ -201,8 +203,6 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
     {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "회사 기준 저장"}</button></div>}</>}
   </section>;
 }
-
-function TimeField({ label, value, onChange, optional = false, disabled = false }: { label: string; value: string; onChange: (value: string) => void; optional?: boolean; disabled?: boolean }) { return <label className="text-text-secondary block min-w-28 flex-1 text-sm font-bold">{label}<input type="time" disabled={disabled} required={!optional} value={value} onChange={(event) => onChange(event.target.value)} className="text-text-major mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary" /></label>; }
 
 function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, onOpenSettings, availableSites }: {
   onOpenSettings: (event: AlertEventSummary) => void;
@@ -322,7 +322,7 @@ function AlertEventRow({ event, selected, onSelect, acknowledging, retrying, onA
   const isColdChiller = event.metricKey === "__cold_chiller__";
   return <article className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_12px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
     <div className="grid grid-cols-1 gap-3">
-      <div className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={!!event.acknowledgedAt || acknowledging} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-sky-700 disabled:opacity-30" /><div><EventBadge type={isColdChiller ? "COLD_CHILLER" : event.eventType} /></div><div className="col-span-2 min-w-0"><h3 className="break-words text-xl font-bold leading-8">{event.siteName ?? event.siteId} · {isNoData ? "병원 전체 수집 중단" : isColdChiller ? "콜드칠러 정지 의심" : metricName(event.metricKey, metric?.label)}</h3><p className="text-text-secondary mt-1 text-base leading-7">{recovered ? "현재 이 알림은 종료됐습니다. 당시 발생한 문제를 확인해주세요." : isNoData ? "이 병원에서 새 데이터가 들어오지 않습니다. 전원과 인터넷 연결을 확인하세요." : isColdChiller ? "IN·OUT 온도가 같습니다. 냉각장치 상태를 확인하세요." : isMetricMissing ? "데이터는 들어오지만 이 측정항목의 값이 연속으로 빠졌습니다." : event.eventType === "LOW" ? "측정값이 정상 범위보다 낮습니다." : "측정값이 정상 범위보다 높습니다."}</p><p className="mt-3 text-lg font-bold leading-8 tabular-nums">{isNoData ? event.measuredValue == null ? "아직 수집된 데이터가 없습니다." : `수집 중단 ${formatValue(event.measuredValue, "분")} · ${formatValue(event.max, "분")}부터 알림` : isColdChiller ? `IN = OUT: ${formatValue(event.measuredValue, "°C")}` : isMetricMissing ? `연속 ${formatValue(event.measuredValue, "회")} 누락 · ${formatValue(event.max, "회")}부터 알림` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
+      <div className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2"><input type="checkbox" aria-label="알림 선택" checked={selected} disabled={!!event.acknowledgedAt || acknowledging} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-sky-700 disabled:opacity-30" /><div><EventBadge type={isColdChiller ? "COLD_CHILLER" : event.eventType} /></div><div className="col-span-2 min-w-0"><h3 className="break-words text-xl font-bold leading-8">{event.siteName ?? event.siteId} · {isNoData ? "병원 전체 수집 중단" : isColdChiller ? "콜드칠러 정지 의심" : metricName(event.metricKey, metric?.label)}</h3><p className="text-text-secondary mt-1 text-base leading-7">{recovered ? "현재 이 알림은 종료됐습니다. 당시 발생한 문제를 확인해주세요." : isNoData ? "이 병원에서 새 데이터가 들어오지 않습니다. 전원과 인터넷 연결을 확인하세요." : isColdChiller ? "IN·OUT 온도 차이가 0.1°C 이하입니다. 냉각장치 상태를 확인하세요." : isMetricMissing ? "데이터는 들어오지만 이 측정항목의 값이 연속으로 빠졌습니다." : event.eventType === "LOW" ? "측정값이 정상 범위보다 낮습니다." : "측정값이 정상 범위보다 높습니다."}</p><p className="mt-3 text-lg font-bold leading-8 tabular-nums">{isNoData ? event.measuredValue == null ? "아직 수집된 데이터가 없습니다." : `수집 중단 ${formatValue(event.measuredValue, "분")} · ${formatValue(event.max, "분")}부터 알림` : isColdChiller ? `IN 온도: ${formatValue(event.measuredValue, "°C")} · IN/OUT 차이 0.1°C 이하` : isMetricMissing ? `연속 ${formatValue(event.measuredValue, "회")} 누락 · ${formatValue(event.max, "회")}부터 알림` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
       <div className="text-left"><p className="text-text-secondary text-base tabular-nums">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-sm">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
     </div>
     <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/7">
@@ -389,20 +389,10 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
   const [coldChillerActive, setColdChillerActive] = useState(entry.coldChillerActive);
   const [alertsEnabled, setAlertsEnabled] = useState(entry.alertsEnabled);
   const [triggerAfterMinutes, setTriggerAfterMinutes] = useState(entry.triggerAfterMinutes);
-  const [repeatMinutes, setRepeatMinutes] = useState(entry.repeatMinutes);
-  const [quietEnabled, setQuietEnabled] = useState(Boolean(entry.quietStart && entry.quietEnd));
-  const [quietStart, setQuietStart] = useState(entry.quietStart?.slice(0, 5) ?? "22:00");
-  const [quietEnd, setQuietEnd] = useState(entry.quietEnd?.slice(0, 5) ?? "08:00");
-  const [suppressWeekends, setSuppressWeekends] = useState(entry.suppressWeekends);
-  const [holidayDates, setHolidayDates] = useState(entry.holidayDates);
-  const [holidayDate, setHolidayDate] = useState("");
-  const holidayInput = useRef<HTMLInputElement>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const dialogForm = useRef<HTMLFormElement>(null);
-  const repeatDetails = useRef<HTMLDetailsElement>(null);
-  useEffect(() => { if (initialMetricKey === "__repeat__") repeatDetails.current?.scrollIntoView({block:"nearest"}); }, [initialMetricKey]);
   const dialogState = useRef({ saving, onClose });
   dialogState.current = { saving, onClose };
   useEffect(() => {
@@ -454,18 +444,14 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
     if (!Number.isInteger(triggerAfterMinutes) || triggerAfterMinutes < 0 || triggerAfterMinutes > 1440) {
       setError("이상 지속 기준은 0분에서 1440분 사이의 정수여야 합니다."); return;
     }
-    if (!Number.isInteger(repeatMinutes) || repeatMinutes < 0 || repeatMinutes > 10080 || (repeatMinutes > 0 && repeatMinutes < 5)) {
-      setError("반복 알림은 0(사용 안 함) 또는 5분에서 10080분 사이여야 합니다."); return;
-    }
     }
     for (const threshold of thresholds) {
       if (!Number.isFinite(threshold.tolerancePercent) || threshold.tolerancePercent < 0.1 || threshold.tolerancePercent > 100) {
         setError(`${threshold.label}: 자동 평균 허용편차는 0.1%에서 100% 사이여야 합니다.`); return;
       }
     }
-    if (!onlyMetricKey && quietEnabled && (!quietStart || !quietEnd || quietStart === quietEnd)) { setError("발송 제외 시작과 종료를 서로 다르게 입력해주세요."); return; }
     setSaving(true); setError(null);
-    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, coldChillerActive, collectionIntervalMinutes, missingCollectionThreshold, alertsEnabled, triggerAfterMinutes, repeatMinutes, quietStart: quietEnabled ? quietStart : null, quietEnd: quietEnabled ? quietEnd : null, suppressWeekends, holidayDates }); onClose(); }
+    try { await onSave({ ...entry, thresholds, noDataMinutes, noDataActive, coldChillerActive, collectionIntervalMinutes, missingCollectionThreshold, alertsEnabled, triggerAfterMinutes }); onClose(); }
     catch (saveError) { setError(saveError instanceof Error ? saveError.message : "기준값을 저장하지 못했습니다."); }
     finally { setSaving(false); }
   }
@@ -474,13 +460,13 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
     <div className={page ? "mx-auto w-full max-w-4xl px-2 py-3 sm:px-4" : "fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4"} onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form ref={dialogForm} role={page ? undefined : "dialog"} aria-modal={page ? undefined : true} aria-labelledby="threshold-editor-title" onSubmit={submit} className={page ? "w-full rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-background-dark-card" : `flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "확인할 내용과 알림 받을 시간을 나눠 설정하세요."}</p></div>
+          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "이 병원의 수치·누락 기준과 이상 지속 시간을 설정하세요."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className={page ? "p-4 sm:p-6" : "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"}>
           {!onlyMetricKey && <>
             <div className="mb-5 flex items-center justify-between gap-3 rounded-xl bg-slate-50 p-4 dark:bg-white/5"><div className="min-w-0"><p className="text-lg font-bold">이 병원의 내 알림</p><p className="mt-1 text-sm text-text-secondary">{entry.dashboardVisible ? "끄면 내 알림이 모두 멈춥니다." : "숨긴 병원은 알림을 켤 수 없습니다."}</p></div><AlertSwitch label="이 병원의 내 알림" checked={alertsEnabled} disabled={!canEdit || saving || !entry.dashboardVisible} onChange={setAlertsEnabled} /></div>
-            <ManagementTabs large label="병원 알림 설정" value={pane} onChange={setPane} items={[{value:"metrics",label:"수치 이상"},{value:"missing",label:"데이터 누락"},{value:"schedule",label:"시간·휴일"}]} />
+            <ManagementTabs large label="병원 알림 설정" value={pane} onChange={setPane} items={[{value:"metrics",label:"수치 이상"},{value:"missing",label:"데이터 누락"},{value:"schedule",label:"이상 지속 시간"}]} />
           </>}
           {(onlyMetricKey || pane === "metrics") && <>
           <p className="mb-4 text-base leading-7 text-text-secondary">측정값이 정상 범위를 벗어나면 알려드립니다. 항목을 눌러 기준을 변경하세요.</p>
@@ -494,26 +480,10 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
 
               </div>)}
           </div>
-          {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도가 같으면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive} disabled={!canEdit || saving} onChange={setColdChillerActive} /></AlertSection></div>}
+          {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도 차이가 0.1°C 이하면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive} disabled={!canEdit || saving} onChange={setColdChillerActive} /></AlertSection></div>}
           </>}
           {onlyMetricKey && <div className="mt-5 space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>}
-          {!onlyMetricKey && pane === "schedule" && <div className="space-y-5">
-            <AlertSection title="알림 받지 않는 시간·휴일" description="이 병원에서 내가 받을 알림만 쉬게 합니다. 다른 담당자의 설정에는 영향을 주지 않습니다.">
-              <div className="space-y-4">
-                <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary">
-                  <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-lg font-bold">매일 같은 시간에 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">예: 퇴근 후 저녁 6시부터 다음 날 오전 9시까지</p></div><AlertSwitch label="매일 알림 받지 않는 시간" checked={quietEnabled} disabled={!canEdit || saving} onChange={setQuietEnabled} /></div>
-                  {quietEnabled && <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"><TimeField label="알림 쉬기 시작" value={quietStart} onChange={setQuietStart} disabled={!canEdit || saving} /><TimeField label="다시 받기 시작" value={quietEnd} onChange={setQuietEnd} disabled={!canEdit || saving} /></div>}
-                </section>
-                <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><div><h4 className="text-lg font-bold">주말에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">매주 토요일·일요일에는 알림을 받지 않습니다.</p></div><AlertSwitch label="토요일·일요일 알림 받지 않기" checked={suppressWeekends} disabled={!canEdit || saving} onChange={setSuppressWeekends} /></section>
-                <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><h4 className="text-lg font-bold">특정 날짜에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">공휴일이나 휴가 등 알림을 받지 않을 날짜를 직접 추가하세요.</p>
-                  <div className="mt-4 flex flex-wrap items-end gap-3"><label className="min-w-0 flex-1 text-base font-bold">쉬는 날짜<input ref={holidayInput} aria-label="알림 받지 않을 날짜" type="date" value={holidayDate} disabled={!canEdit || saving} onChange={event => setHolidayDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-background-dark-primary" /></label><button type="button" disabled={!canEdit || saving} onClick={() => { const date = holidayInput.current?.value ?? holidayDate; if (!date || !holidayInput.current?.validity.valid) { setError("알림 받지 않을 날짜를 선택해주세요."); return; } setHolidayDates(current => current.includes(date) ? current : [...current, date].sort()); setHolidayDate(""); setError(null); }} className="min-h-12 rounded-xl border border-sky-300 px-4 text-base font-bold text-sky-800 disabled:opacity-40 dark:border-sky-800 dark:text-sky-200">날짜 추가</button></div>
-                  {holidayDates.length > 0 ? <ul className="mt-4 space-y-2">{holidayDates.map(date => <li key={date} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 dark:bg-white/5"><span className="text-base font-bold">{date} · 하루 종일 쉬기</span><button type="button" aria-label={`${date} 제외 날짜 삭제`} disabled={!canEdit || saving} onClick={() => setHolidayDates(current => current.filter(item => item !== date))} className="min-h-12 shrink-0 px-3 text-base font-bold text-rose-700 dark:text-rose-300">삭제</button></li>)}</ul> : <p className="mt-4 text-base text-text-secondary">등록된 날짜가 없습니다.</p>}
-                </section>
-              </div>
-              <p className="mt-5 rounded-xl bg-sky-50 p-4 text-base leading-7 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">쉬는 시간·날짜에는 수치 이상, 항목 누락, 수집 중단, 콜드칠러 알림을 모두 보내지 않습니다. 날짜는 한국 시간을 기준으로 적용합니다.</p>
-            </AlertSection>
-            <details ref={repeatDetails} open={initialMetricKey === "__repeat__" || undefined} className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><summary className="min-h-12 cursor-pointer py-3 text-base font-bold">반복 알림·이상 지속 시간 설정</summary><div className="mt-3 grid gap-4 sm:grid-cols-2"><div><NumberField label="수치·장치 이상이 몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 즉시 알립니다. 데이터 누락은 별도의 연속 누락 기준을 사용합니다.</p></div><div><NumberField label="몇 분마다 다시 알릴까요?" value={repeatMinutes} min={0} max={10080} disabled={!canEdit || saving} onChange={setRepeatMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 처음 한 번만 알립니다. 5분 이상이면 내가 확인할 때까지 반복합니다.</p></div></div></details>
-          </div>}
+          {!onlyMetricKey && pane === "schedule" && <AlertSection title="이상 지속 시간" description="이 병원의 수치·콜드칠러 이상이 얼마나 지속되면 알릴지 정합니다."><NumberField label="몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes}/><p className="mt-3 text-base leading-7 text-text-secondary">0분이면 다음 검사에서 알림 대상으로 판단합니다. 데이터 누락은 별도의 연속 누락 기준을 사용합니다.</p><Link href="/notification-settings" className="mt-4 inline-flex min-h-11 items-center font-bold text-sky-800 dark:text-sky-200">내 알림 수신 시간·반복 설정 →</Link></AlertSection>}
           {!onlyMetricKey && pane === "missing" && <div className="space-y-5">
             <AlertSection title="병원 전체 수집 중단" description="이 병원에서 새 데이터가 통째로 오지 않을 때 알려드립니다. 정전이나 공유기 종료 등이 원인일 수 있으니 전원과 인터넷 연결을 확인하세요.">
               <AlertSwitch label="병원 전체 수집 중단" checked={noDataActive} disabled={!canEdit || saving} onChange={setNoDataActive} />
@@ -523,7 +493,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
               <p className="mb-4 text-base leading-7 text-text-secondary">1~2회 누락은 알리지 않습니다. 감시할 항목을 켜고, 몇 회 연속 빠지면 알릴지 정하세요. 병원 전체 수집이 중단된 동안에는 항목별 누락 알림을 보내지 않습니다.</p>
               <div className="space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>
             </AlertSection>
-            <div className="rounded-xl bg-sky-50 p-5 text-base leading-7 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><p className="font-bold">퇴근 후 공유기를 끄는 병원인가요?</p><p className="mt-2">‘시간·휴일’에서 퇴근부터 출근까지 알림을 받지 않도록 설정할 수 있습니다. 이 시간에는 수치 이상을 포함한 모든 알림 발송이 쉬어갑니다.</p></div>
+            <div className="rounded-xl bg-sky-50 p-5 text-base leading-7 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200"><p className="font-bold">퇴근 후 공유기를 끄는 병원인가요?</p><p className="mt-2">‘내 알림 수신 설정’에서 퇴근부터 출근까지 알림을 받지 않도록 설정할 수 있습니다. 이 시간에는 수치 이상을 포함한 모든 알림 발송이 쉬어갑니다.</p></div>
           </div>}
 
         </div>

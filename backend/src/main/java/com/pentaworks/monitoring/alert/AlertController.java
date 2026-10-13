@@ -50,6 +50,17 @@ public class AlertController {
         return personal.settings(user);
     }
 
+    @GetMapping("/notification-preferences")
+    public PersonalAlertService.PreferenceView notificationPreferences(Authentication authentication) {
+        return personal.notificationPreferences(currentUsers.require(authentication));
+    }
+
+    @PatchMapping("/notification-preferences")
+    public PersonalAlertService.PreferenceView updateNotificationPreferences(
+            @RequestBody NotificationPreferences preferences, Authentication authentication) {
+        return personal.saveNotificationPreferences(currentUsers.require(authentication),preferences);
+    }
+
     @GetMapping("/company-thresholds")
     public List<AlertThreshold> companyThresholds(Authentication authentication) {
         return alertService.companyThresholds(currentUsers.require(authentication));

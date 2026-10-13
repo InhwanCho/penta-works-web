@@ -70,7 +70,48 @@ public class PersonalAlertService {
             if(config==null)throw new IllegalStateException("개인 알림 패턴을 초기화하지 못했습니다.");
             result.add(enrich(config,site,states.getOrDefault(site.siteid(),Map.of())));
         }
-        return result;
+        NotificationPreferences preferences=commonPreferences(actor.id(),result);
+        return preferences==null?result:result.stream().map(preferences::apply).toList();
+    }
+
+    public record PreferenceChoice(String siteId, String name, NotificationPreferences preferences) {}
+    public record PreferenceView(NotificationPreferences preferences, boolean needsSelection, List<PreferenceChoice> previousSettings) {}
+
+    private NotificationPreferences storedPreferences(long userId) {
+        var values=jdbc.query("SELECT settings_json FROM user_notification_preferences WHERE user_id=?",
+            (rs,n)->decodePreferences(rs.getString(1)),userId);
+        return values.isEmpty()?null:values.get(0);
+    }
+    private NotificationPreferences decodePreferences(String value) {
+        try { return json.readValue(value,NotificationPreferences.class); }
+        catch(JsonProcessingException e) { throw new IllegalStateException("내 알림 수신 설정 읽기 실패",e); }
+    }
+    private NotificationPreferences commonPreferences(long userId,List<SiteAlertSettings> sites) {
+        var existing=storedPreferences(userId);
+        if(existing!=null)return existing;
+        var distinct=sites.stream().map(NotificationPreferences::from).distinct().toList();
+        // Different legacy schedules stay effective until the member explicitly chooses one.
+        if(distinct.size()!=1)return null;
+        try {
+            jdbc.update("INSERT IGNORE INTO user_notification_preferences(user_id,settings_json) VALUES(?,?)",userId,json.writeValueAsString(distinct.get(0)));
+        } catch(JsonProcessingException e) { throw new IllegalStateException("내 알림 수신 설정 이전 실패",e); }
+        return storedPreferences(userId);
+    }
+    public PreferenceView notificationPreferences(CurrentUser actor) {
+        var current=storedPreferences(actor.id());
+        if(current!=null)return new PreferenceView(current,false,List.of());
+        var sites=settings(actor);
+        current=storedPreferences(actor.id());
+        return new PreferenceView(current,current==null&&!sites.isEmpty(),current==null?sites.stream()
+            .map(s->new PreferenceChoice(s.siteid(),s.name(),NotificationPreferences.from(s))).toList():List.of());
+    }
+    @Transactional
+    public PreferenceView saveNotificationPreferences(CurrentUser actor,NotificationPreferences preferences) {
+        try {
+            jdbc.update("INSERT INTO user_notification_preferences(user_id,settings_json) VALUES(?,?) ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json)",actor.id(),json.writeValueAsString(preferences));
+        } catch(JsonProcessingException e) { throw new IllegalStateException("내 알림 수신 설정 저장 실패",e); }
+        audit.record(actor,"NOTIFICATION_PREFERENCES_UPDATED","USER",Long.toString(actor.id()),Map.of("ownerId",actor.id()));
+        return new PreferenceView(preferences,false,List.of());
     }
     private Map<String,SiteAlertSettings> stored(long userId) {
         Map<String,SiteAlertSettings> result=new HashMap<>();
@@ -111,7 +152,9 @@ public class PersonalAlertService {
     SiteAlertSettings currentForUpdate(CurrentUser actor,String siteId) {
         SiteAlertSettings meta=settings(actor,siteId);
         SiteAlertSettings locked=jdbc.queryForObject("SELECT settings_json FROM user_site_alert_settings WHERE user_id=? AND site_id=? FOR UPDATE",(rs,n)->decode(rs.getString(1)),actor.id(),siteId);
-        return enrich(locked,meta,averages.states().getOrDefault(siteId,Map.of()));
+        var result=enrich(locked,meta,averages.states().getOrDefault(siteId,Map.of()));
+        var preferences=storedPreferences(actor.id());
+        return preferences==null?result:preferences.apply(result);
     }
 
     @Transactional
@@ -132,7 +175,7 @@ public class PersonalAlertService {
         int missing=request.missingCollectionThreshold()==null?current.missingCollectionThreshold():request.missingCollectionThreshold();
         validatePolicy(request,interval,missing);
         if(request.alertsEnabled()&&!current.dashboardVisible())throw new BadRequestException("대시보드에서 숨긴 병원은 알림을 켤 수 없습니다.");
-        SiteAlertSettings value=new SiteAlertSettings(siteId,current.name(),true,thresholds,interval*missing,request.noDataActive(),request.alertsEnabled(),request.triggerAfterMinutes(),request.repeatMinutes(),request.quietStart(),request.quietEnd(),request.suppressWeekends(),request.holidayDates().stream().distinct().sorted().toList(),current.dashboardVisible(),request.coldChillerActive()==null?current.coldChillerActive():request.coldChillerActive(),interval,missing);
+        SiteAlertSettings value=new SiteAlertSettings(siteId,current.name(),true,thresholds,interval*missing,request.noDataActive(),request.alertsEnabled(),request.triggerAfterMinutes(),current.repeatMinutes(),current.quietStart(),current.quietEnd(),current.suppressWeekends(),current.holidayDates(),current.dashboardVisible(),request.coldChillerActive()==null?current.coldChillerActive():request.coldChillerActive(),interval,missing);
         persist(actor,value);
         return settings(actor,siteId);
     }
@@ -152,7 +195,7 @@ public class PersonalAlertService {
     public SiteAlertSettings reset(CurrentUser actor,String siteId) {
         users.requireSiteAccess(actor,siteId);
         SiteAlertSettings base=defaults.alertSettings().stream().filter(s->s.siteid().equals(siteId)).findFirst().orElseThrow(()->new NotFoundException("병원을 찾을 수 없습니다."));
-        persist(actor,base);
+        persist(actor,NotificationPreferences.from(settings(actor,siteId)).apply(base));
         return settings(actor,siteId);
     }
     private void persist(CurrentUser actor,SiteAlertSettings value) {
@@ -260,7 +303,7 @@ public class PersonalAlertService {
         SiteAlertSettings snapshot=decode(raw);
         users.requireSiteAccess(actor,snapshot.siteid());
         SiteAlertSettings current=currentForUpdate(actor,snapshot.siteid());
-        persist(actor,copy(snapshot,snapshot.thresholds(),snapshot.alertsEnabled()&&current.dashboardVisible(),snapshot.quietStart(),snapshot.quietEnd()));
+        persist(actor,NotificationPreferences.from(current).apply(copy(snapshot,snapshot.thresholds(),snapshot.alertsEnabled()&&current.dashboardVisible(),current.quietStart(),current.quietEnd())));
         jdbc.update("UPDATE alert_pattern_share SET applied_at=CURRENT_TIMESTAMP(6) WHERE id=?",id);
         return settings(actor,snapshot.siteid());
     }

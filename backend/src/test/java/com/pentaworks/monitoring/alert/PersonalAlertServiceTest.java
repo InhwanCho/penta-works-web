@@ -48,7 +48,7 @@ class PersonalAlertServiceTest {
         var captor=org.mockito.ArgumentCaptor.forClass(String.class);
         verify(jdbc).update(contains("INSERT INTO user_site_alert_settings"),eq(7L),eq("001"),captor.capture());
         var stored=json.readValue(captor.getValue(),SiteAlertSettings.class);
-        assertEquals(LocalTime.of(22,0),stored.quietStart());assertTrue(stored.suppressWeekends());assertEquals(request.holidayDates(),stored.holidayDates());
+        assertNull(stored.quietStart());assertFalse(stored.suppressWeekends());assertTrue(stored.holidayDates().isEmpty()); // a hospital save cannot overwrite delivery preferences
         assertEquals(15,stored.thresholds().get(0).tolerancePercent());
         verify(jdbc).update(contains("DELETE p FROM alert_pending_state"),eq(7L),eq("001"));
         verify(users).requireSiteAccess(engineer,"001");
@@ -96,6 +96,16 @@ class PersonalAlertServiceTest {
     @Test void migrationKeepsBothExistingQuietWindowsAndDoesNotEnableAllDaySuppressedUsers() {
         assertArrayEquals(new LocalTime[]{LocalTime.of(21,0),LocalTime.of(9,0)},PersonalAlertService.mergeQuietWindows(LocalTime.of(22,0),LocalTime.of(8,0),new LocalTime[]{LocalTime.of(21,0),LocalTime.of(9,0)}));
         assertArrayEquals(new LocalTime[]{LocalTime.MIDNIGHT,LocalTime.MIDNIGHT},PersonalAlertService.mergeQuietWindows(LocalTime.of(22,0),LocalTime.of(8,0),new LocalTime[]{LocalTime.of(8,0),LocalTime.of(22,0)}));
+    }
+    @Test void commonPreferenceValidationRejectsAmbiguousTimesAndInvalidRepeatAndCanonicalizesDates() throws Exception {
+        assertThrows(BadRequestException.class,()->new NotificationPreferences(1,null,null,false,List.of()));
+        assertThrows(BadRequestException.class,()->new NotificationPreferences(30,LocalTime.of(22,0),null,false,List.of()));
+        assertThrows(BadRequestException.class,()->new NotificationPreferences(30,LocalTime.NOON,LocalTime.NOON,false,List.of()));
+        var date=LocalDate.of(2026,12,25);
+        var p=new NotificationPreferences(30,LocalTime.of(22,0),LocalTime.of(8,0),true,List.of(date,date));
+        assertEquals(List.of(date),p.holidayDates());
+        assertEquals(p,json.readValue(json.writeValueAsString(p),NotificationPreferences.class));
+        var applied=p.apply(config(40));assertEquals(config(40).thresholds(),applied.thresholds());assertEquals(config(40).triggerAfterMinutes(),applied.triggerAfterMinutes());
     }
     @Test void personalSnapshotSupportsJacksonRoundTripWithDatesAndTimes() throws Exception {
         var original=PersonalAlertService.copy(config(40),config(40).thresholds(),true,LocalTime.of(22,0),LocalTime.of(8,0));

@@ -35,11 +35,12 @@ class PersonalAlertDatabaseTest {
         jdbc=new JdbcTemplate(ds);
         transaction=new org.springframework.transaction.support.TransactionTemplate(new org.springframework.jdbc.datasource.DataSourceTransactionManager(ds));
         jdbc.execute("SET FOREIGN_KEY_CHECKS=0");
-        for(String table:List.of("user_dashboard_hidden_site","mrtb","alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
+        for(String table:List.of("user_notification_preferences","user_dashboard_hidden_site","mrtb","alert_pattern_share","user_site_alert_settings","alert_event_acknowledgement","alert_pending_state","alert_event","alert_rule","site_alert_recipient","user_site","company_site","site","app_user","company"))jdbc.execute("DROP TABLE IF EXISTS "+table);
         jdbc.execute("SET FOREIGN_KEY_CHECKS=1");
         try(var connection=ds.getConnection()) {
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("personal-alert-test-schema.sql"));
             ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/migration/V30__personal_alert_patterns.sql"));
+            ScriptUtils.executeSqlScript(connection,new ClassPathResource("db/migration/V35__user_notification_preferences.sql"));
         }
         jdbc.execute("ALTER TABLE app_user ADD COLUMN phone VARCHAR(30)");
         jdbc.execute("CREATE TABLE user_dashboard_hidden_site(user_id BIGINT UNSIGNED,site_id VARCHAR(32),PRIMARY KEY(user_id,site_id))");
@@ -54,6 +55,36 @@ class PersonalAlertDatabaseTest {
         events=new AlertEventService(jdbc,users,audit);
         recipients=new AlertRecipientService(jdbc,users,audit);
     }
+    @Test void commonPreferencesApplyToAllAssignedAndFutureHospitalsAndOnlyTheirOwner() {
+        transaction.executeWithoutResult(status->{
+            var quiet=new NotificationPreferences(60,LocalTime.of(18,0),LocalTime.of(9,0),true,List.of(LocalDate.of(2026,12,25)));
+            personal.saveNotificationPreferences(a,quiet);
+            var first=personal.settings(a,"001");
+            assertEquals(60,first.repeatMinutes());assertEquals(LocalTime.of(18,0),first.quietStart());
+            assertEquals(30,personal.settings(b,"001").repeatMinutes());
+            var second=new SiteAlertSettings("002","새 병원",true,base.thresholds(),20,false,true,10,5,null,null,false,List.of(),true,true,10,2);
+            jdbc.update("INSERT INTO company_site VALUES(1,'002',TRUE)");
+            jdbc.update("INSERT INTO user_site VALUES(1,'002')");
+            var both=personal.settings(a,List.of(base,second),Map.of());
+            assertEquals(2,both.size());
+            assertTrue(both.stream().allMatch(v->v.repeatMinutes()==60&&v.quietStart().equals(LocalTime.of(18,0))&&v.suppressWeekends()));
+            assertEquals(10,both.get(1).triggerAfterMinutes());
+            personal.reset(a,"001");assertEquals(quiet,personal.notificationPreferences(a).preferences());
+        });
+    }
+    @Test void conflictingLegacyPreferencesRequireAnExplicitChoiceWithoutChangingEither() throws Exception {
+        var mapper=new ObjectMapper().findAndRegisterModules();
+        jdbc.update("INSERT INTO company_site VALUES(1,'002',TRUE)");jdbc.update("INSERT INTO user_site VALUES(1,'002')");
+        var second=new SiteAlertSettings("002","다른 병원",true,base.thresholds(),20,false,true,10,60,LocalTime.of(22,0),LocalTime.of(8,0),true,List.of(),true,true,10,2);
+        jdbc.update("INSERT INTO user_site_alert_settings(user_id,site_id,settings_json) VALUES(1,'001',?),(1,'002',?)",mapper.writeValueAsString(base),mapper.writeValueAsString(second));
+        var defaults=mock(AlertService.class);when(defaults.alertSettings()).thenReturn(List.of(base,second));
+        var service=new PersonalAlertService(jdbc,new CurrentUserService(jdbc),defaults,mock(RollingAverageService.class),mapper,mock(AuditService.class));
+        var view=service.notificationPreferences(a);assertTrue(view.needsSelection());assertNull(view.preferences());assertEquals(2,view.previousSettings().size());
+        assertEquals(30,service.settings(a,"001").repeatMinutes());assertEquals(60,service.settings(a,"002").repeatMinutes());
+        service.saveNotificationPreferences(a,NotificationPreferences.from(second));
+        assertFalse(service.notificationPreferences(a).needsSelection());assertEquals(60,service.settings(a,"001").repeatMinutes());
+    }
+
     @Test void dashboardRecipientsFollowAccountPhoneVisibilityAndAccessWithoutManualRegistration() {
         jdbc.update("DELETE FROM site_alert_recipient");
         assertEquals(List.of("01011112222"),recipients.personalPhones("001",1,null));
@@ -140,6 +171,7 @@ class PersonalAlertDatabaseTest {
     @Test void sharingSnapshotsNeedsRecipientApplyAndCannotCrossCompanyOrSiteAccess() {
         transaction.executeWithoutResult(status->{
         save(b,2.5,LocalTime.of(22,0),LocalTime.of(8,0));
+        personal.saveNotificationPreferences(b,new NotificationPreferences(60,LocalTime.of(22,0),LocalTime.of(8,0),true,List.of(LocalDate.of(2026,12,25))));
         var shared=personal.share(b,"001",a.id());
         assertNull(shared.appliedAt());
         assertEquals(2.0,personal.settings(a,"001").thresholds().get(0).max());
@@ -148,9 +180,10 @@ class PersonalAlertDatabaseTest {
         assertThrows(NotFoundException.class,()->personal.apply(b,shared.id()));
         var applied=personal.apply(a,shared.id());
         assertEquals(2.5,applied.thresholds().get(0).max());
-        assertEquals(LocalTime.of(22,0),applied.quietStart());
-        assertTrue(applied.suppressWeekends());
-        assertEquals(List.of(LocalDate.of(2026,12,25)),applied.holidayDates());
+        assertNull(applied.quietStart());
+        assertFalse(applied.suppressWeekends());
+        assertTrue(applied.holidayDates().isEmpty());
+        assertEquals(30,applied.repeatMinutes()); // receiving a pattern preserves my common delivery settings
         assertNotNull(personal.shares(a,true).get(0).appliedAt());
         assertEquals(5.0,personal.settings(b,"001").thresholds().get(0).max());
         assertEquals(List.of("01011112222"),recipients.personalPhones("001",a.id(),null));
