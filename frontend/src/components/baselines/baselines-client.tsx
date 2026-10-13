@@ -2,6 +2,8 @@
 
 import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
+import HelpButton from "@/components/common/context-help";
+import { ALERT_HELP } from "@/lib/alert-help";
 import { NotificationPreferencesSummary } from "./notification-preferences";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
@@ -511,7 +513,7 @@ function MetricMissingEditor({threshold,disabled,onChange}:{threshold:AlertThres
   const count = threshold.missingThreshold ?? (threshold.key === "hepres" ? 5 : 3);
   const active = threshold.missingActive ?? threshold.key === "hepres";
   return <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary">
-    <h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락</h4>
+    <h4 className="mb-3 flex flex-wrap items-center text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락<HelpButton title="항목 누락" message={ALERT_HELP["항목 누락"]}/></h4>
     <p className="mb-4 text-sm leading-6 text-text-secondary">병원 데이터는 들어오는데 이 측정값만 빠진 경우를 확인합니다. 병원 전체 수집 누락 알림과 별개입니다.</p>
     <AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={active} disabled={disabled} onChange={missingActive=>onChange({missingActive,missingThreshold:count})}/>
     {active && <div className="mt-4"><NumberField label="몇 회 연속 빠지면 알릴까요?" value={count} min={3} max={288} disabled={disabled} onChange={missingThreshold=>onChange({missingThreshold})}/>
@@ -535,7 +537,7 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
       {allowAverage && <fieldset className="mt-4">
-        <legend className="text-sm font-bold">정상 범위를 정하는 방법</legend>
+        <legend className="text-sm font-bold">정상 범위를 정하는 방법<HelpButton title="정상 범위를 정하는 방법" message={ALERT_HELP["정상 범위를 정하는 방법"]}/></legend>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           {[{value:true,label:"평균에 맞춰 자동 조정",description:"평균이 갱신되면 범위도 자동 변경"}, {value:false,label:"직접 범위 입력",description:"입력한 범위를 계속 사용"}].map(mode =>
             <label key={String(mode.value)} className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-3 ${threshold.useAverage === mode.value ? "border-sky-500 bg-sky-50 dark:bg-sky-950/30" : "border-slate-200 dark:border-white/10"}`}>
@@ -550,7 +552,7 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
         {averagePeriodMessage(threshold) && <p className="mt-1 text-sm text-text-secondary">{averagePeriodMessage(threshold)}</p>}
         <p className="mt-1 text-lg font-extrabold">{threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)}${unit}`}</p>
         <p className="mt-1 text-sm text-text-secondary">유효 {threshold.averageSampleCount}건 · 미측정 제외 {threshold.excludedZeroCount}건 · 매시간 자동 갱신</p>
-        <div className="mt-3"><NumberField label="평균에서 얼마나 벗어나면 알릴까요? (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
+        <div className="mt-3"><p className="font-bold text-sm">허용편차<HelpButton title="허용편차" message={ALERT_HELP["허용편차"]}/></p><NumberField label="평균에서 얼마나 벗어나면 알릴까요? (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
         <div role="status" aria-live="polite" className={`mt-3 rounded-lg p-3 ${preview.averageApplied ? "bg-emerald-100/70 dark:bg-emerald-950/50" : "bg-amber-100/70 dark:bg-amber-950/40"}`}>
           <p className="text-sm font-bold">저장 후 적용될 범위 · {preview.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균" : "24시간 평균" : "대체 범위"}</p>
           <p className="mt-1 text-base font-extrabold">{formatRange(preview.min,preview.max)}</p>

@@ -1,5 +1,7 @@
 "use client";
 
+import HelpButton from "@/components/common/context-help";
+import { ALERT_HELP } from "@/lib/alert-help";
 import { NotificationPreferencesSummary } from "./notification-preferences";
 import type { MetricKey } from "@/lib/metrics";
 import type { SiteAlertSettings } from "@/lib/api";
@@ -41,7 +43,7 @@ export default function AlertSettingsTable({ entries, metrics, onOpen, onToggle,
       <label className="text-xs lg:text-base font-bold">측정항목<select value={metricKey} onChange={e=>setMetricKey(e.target.value)} className="ml-2 min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-background-dark-primary"><option value="all">전체 항목</option>{available.map(m=><option key={m.key} value={m.key}>{label(m.key,m.label)}</option>)}</select></label>
     </div>
     <PageScrollTable name="병원별 내 알림값 표" labels={["병원명", ...shown.map(m=>label(m.key,m.label)), "병원 전체 수집 중단", "콜드칠러 정지", "병원 설정"]} heading={(
-        <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th scope="col" className="sticky left-0 z-30 min-w-[100px] lg:min-w-40 bg-slate-100 p-2 lg:p-3 text-left dark:bg-slate-800">병원명</th>{shown.map(m=><th scope="col" key={m.key} className="min-w-[112px] lg:min-w-44 p-2 lg:p-3">{label(m.key,m.label)}</th>)}{["병원 전체 수집 중단","콜드칠러 정지","병원 설정"].map(label=><th scope="col" key={label} className="min-w-[100px] lg:min-w-40 p-2 lg:p-3">{label}</th>)}</tr></thead>)} body={(
+        <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th scope="col" className="sticky left-0 z-30 min-w-[100px] lg:min-w-40 bg-slate-100 p-2 lg:p-3 text-left dark:bg-slate-800">병원명</th>{shown.map(m=><th scope="col" key={m.key} className="min-w-[112px] lg:min-w-44 p-2 lg:p-3">{label(m.key,m.label)}</th>)}{["병원 전체 수집 중단","콜드칠러 정지","병원 설정"].map(label=><th scope="col" key={label} className="min-w-[100px] lg:min-w-40 p-2 lg:p-3"><span className="inline-flex items-center justify-center gap-1"><span>{label}</span>{ALERT_HELP[label]&&<HelpButton title={label} message={ALERT_HELP[label]}/>}</span></th>)}</tr></thead>)} body={(
         <tbody>{entries.map(site=> {
           const hospital=site.name ?? site.siteid;
           return <tr key={site.siteid} className="border-t border-slate-200 align-top dark:border-white/10">
