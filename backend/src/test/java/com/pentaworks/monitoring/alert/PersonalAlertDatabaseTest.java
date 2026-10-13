@@ -168,29 +168,6 @@ class PersonalAlertDatabaseTest {
         assertEquals(4.0,personal.settings(a,"001").thresholds().get(0).max());
         });
     }
-    @Test void sharingSnapshotsNeedsRecipientApplyAndCannotCrossCompanyOrSiteAccess() {
-        transaction.executeWithoutResult(status->{
-        save(b,2.5,LocalTime.of(22,0),LocalTime.of(8,0));
-        personal.saveNotificationPreferences(b,new NotificationPreferences(60,LocalTime.of(22,0),LocalTime.of(8,0),true,List.of(LocalDate.of(2026,12,25))));
-        var shared=personal.share(b,"001",a.id());
-        assertNull(shared.appliedAt());
-        assertEquals(2.0,personal.settings(a,"001").thresholds().get(0).max());
-        save(b,5.0,null,null);
-        assertEquals(2.5,personal.shares(a,true).get(0).settings().thresholds().get(0).max());
-        assertThrows(NotFoundException.class,()->personal.apply(b,shared.id()));
-        var applied=personal.apply(a,shared.id());
-        assertEquals(2.5,applied.thresholds().get(0).max());
-        assertNull(applied.quietStart());
-        assertFalse(applied.suppressWeekends());
-        assertTrue(applied.holidayDates().isEmpty());
-        assertEquals(30,applied.repeatMinutes()); // receiving a pattern preserves my common delivery settings
-        assertNotNull(personal.shares(a,true).get(0).appliedAt());
-        assertEquals(5.0,personal.settings(b,"001").thresholds().get(0).max());
-        assertEquals(List.of("01011112222"),recipients.personalPhones("001",a.id(),null));
-        assertThrows(BadRequestException.class,()->personal.share(b,"001",4));
-        assertThrows(BadRequestException.class,()->personal.share(b,"001",5));
-        });
-    }
     @Test void historyKeepsOwnEventsWithoutRecipientsAndExcludesOtherOwners() {
         transaction.executeWithoutResult(status->{
             var first=personal.settings(a,"001");

@@ -271,42 +271,4 @@ public class PersonalAlertService {
     private static Double min(Map<String,AlertThreshold> t,String key) {return t.containsKey(key)&&t.get(key).active()?t.get(key).effectiveMin():null;}
     private static Double max(Map<String,AlertThreshold> t,String key) {return t.containsKey(key)&&t.get(key).active()?t.get(key).effectiveMax():null;}
 
-    public List<ShareTarget> targets(CurrentUser actor,String siteId) {
-        users.requireSiteAccess(actor,siteId);
-        return activeUsers().stream().filter(u->u.companyId()==actor.companyId()&&u.id()!=actor.id()&&users.allowedSiteIds(u).contains(siteId)).map(u->new ShareTarget(u.id(),u.name())).toList();
-    }
-    @Transactional
-    public Share share(CurrentUser actor,String siteId,long recipientId) {
-        if(targets(actor,siteId).stream().noneMatch(u->u.id()==recipientId))throw new BadRequestException("같은 회사에서 해당 병원에 접근 가능한 담당자를 선택해주세요.");
-        Integer pending=jdbc.queryForObject("SELECT COUNT(*) FROM alert_pattern_share WHERE sender_id=? AND recipient_id=? AND site_id=? AND applied_at IS NULL",Integer.class,actor.id(),recipientId,siteId);
-        if(pending!=null&&pending>=10)throw new BadRequestException("미적용 공유 패턴이 많습니다. 상대방이 먼저 확인해주세요.");
-        jdbc.update("INSERT INTO alert_pattern_share(sender_id,recipient_id,site_id,settings_json) VALUES(?,?,?,?)",actor.id(),recipientId,siteId,encode(settings(actor,siteId)));
-        long id=jdbc.queryForObject("SELECT LAST_INSERT_ID()",Long.class);
-        audit.record(actor,"ALERT_PATTERN_SHARED","ALERT_PATTERN",Long.toString(id),Map.of("recipientId",recipientId,"siteId",siteId));
-        return shares(actor,false).stream().filter(s->s.id()==id).findFirst().orElseThrow();
-    }
-    public List<Share> shares(CurrentUser actor,boolean inbox) {
-        Set<String> allowed=users.allowedSiteIds(actor);
-        return jdbc.query("""
-            SELECT p.id,p.site_id,s.name AS site_name,u.name AS sender_name,v.name AS recipient_name,p.settings_json,p.created_at,p.applied_at
-            FROM alert_pattern_share p JOIN app_user u ON u.id=p.sender_id JOIN app_user v ON v.id=p.recipient_id
-            LEFT JOIN site s ON s.site=p.site_id WHERE %s=? AND u.company_id=? AND v.company_id=? ORDER BY p.id DESC LIMIT 200
-            """.formatted(inbox?"p.recipient_id":"p.sender_id"),(rs,n)->new Share(rs.getLong(1),rs.getString(2),rs.getString(3),rs.getString(4),rs.getString(5),decode(rs.getString(6)),rs.getTimestamp(7).toInstant(),rs.getTimestamp(8)==null?null:rs.getTimestamp(8).toInstant()),actor.id(),actor.companyId(),actor.companyId()).stream().filter(s->allowed.contains(s.siteId())).toList();
-    }
-    @Transactional
-    public SiteAlertSettings apply(CurrentUser actor,long id) {
-        String raw=jdbc.query("""
-            SELECT p.settings_json FROM alert_pattern_share p JOIN app_user u ON u.id=p.sender_id
-            WHERE p.id=? AND p.recipient_id=? AND u.company_id=? FOR UPDATE
-            """,rs->rs.next()?rs.getString(1):null,id,actor.id(),actor.companyId());
-        if(raw==null)throw new NotFoundException("공유 패턴을 찾을 수 없습니다.");
-        SiteAlertSettings snapshot=decode(raw);
-        users.requireSiteAccess(actor,snapshot.siteid());
-        SiteAlertSettings current=currentForUpdate(actor,snapshot.siteid());
-        persist(actor,NotificationPreferences.from(current).apply(copy(snapshot,snapshot.thresholds(),snapshot.alertsEnabled()&&current.dashboardVisible(),current.quietStart(),current.quietEnd())));
-        jdbc.update("UPDATE alert_pattern_share SET applied_at=CURRENT_TIMESTAMP(6) WHERE id=?",id);
-        return settings(actor,snapshot.siteid());
-    }
-    public record ShareTarget(long id,String name){}
-    public record Share(long id,String siteId,String siteName,String senderName,String recipientName,SiteAlertSettings settings,java.time.Instant createdAt,java.time.Instant appliedAt){}
 }

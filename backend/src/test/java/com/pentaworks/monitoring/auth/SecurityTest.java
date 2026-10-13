@@ -53,8 +53,8 @@ class SecurityTest {
         String updateCompanyThreshold() { return "ok"; }
         @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/thresholds/001/metrics/hepres")
         String updatePersonalMetric() { return "ok"; }
-        @org.springframework.web.bind.annotation.PostMapping("/api/v1/alerts/patterns/001/share")
-        String sharePattern() { return "ok"; }
+        @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/notification-preferences")
+        String notificationPreferences() { return "ok"; }
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/change-password")
         String changePassword() { return "ok"; }
     }
@@ -118,12 +118,12 @@ class SecurityTest {
             .andExpect(status().isOk());
     }
 
-    @Test void personalMetricAndPeerSharingAreAvailableToEngineersWhileCompanyDefaultsStayProtected() throws Exception {
+    @Test void personalMetricAndNotificationPreferencesAreAvailableToEngineersWhileCompanyDefaultsStayProtected() throws Exception {
         mvc.perform(patch("/api/v1/alerts/thresholds/001/metrics/hepres").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isOk());
-        mvc.perform(post("/api/v1/alerts/patterns/001/share").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isOk());
+        mvc.perform(patch("/api/v1/alerts/notification-preferences").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isOk());
         mvc.perform(patch("/api/v1/alerts/company-thresholds").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isForbidden());
         mvc.perform(patch("/api/v1/alerts/thresholds/001/metrics/hepres")).andExpect(status().isUnauthorized());
-        mvc.perform(post("/api/v1/alerts/patterns/001/share")).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/v1/alerts/notification-preferences")).andExpect(status().isUnauthorized());
     }
 
     @Test void expiredTokenIsRejected() throws Exception {

@@ -167,24 +167,6 @@ public class AlertController {
         return new PsiThreshold(s.siteid(),s.name(),t.effectiveMin(),t.effectiveMax(),t.active());
     }
 
-    @GetMapping("/patterns/targets")
-    public List<PersonalAlertService.ShareTarget> targets(@RequestParam String siteId,Authentication authentication) {
-        return personal.targets(currentUsers.require(authentication),siteId);
-    }
-    @GetMapping("/patterns/shared")
-    public List<PersonalAlertService.Share> shared(@RequestParam(defaultValue="true") boolean inbox,Authentication authentication) {
-        return personal.shares(currentUsers.require(authentication),inbox);
-    }
-    @PostMapping("/patterns/{siteId}/share")
-    public PersonalAlertService.Share share(@PathVariable String siteId,@Valid @RequestBody ShareRequest request,Authentication authentication) {
-        return personal.share(currentUsers.require(authentication),siteId,request.recipientId());
-    }
-    @PostMapping("/patterns/shared/{id}/apply")
-    public SiteAlertSettings apply(@PathVariable long id,Authentication authentication) {
-        return personal.apply(currentUsers.require(authentication),id);
-    }
-    public record ShareRequest(@NotNull Long recipientId) {}
-
     public record UpdatePsiThresholdRequest(@NotNull Double min, @NotNull Double max,
                                             @NotNull Boolean active) {}
     public record UpdateAlertThresholdsRequest(@NotEmpty List<@Valid ThresholdUpdateRequest> thresholds,

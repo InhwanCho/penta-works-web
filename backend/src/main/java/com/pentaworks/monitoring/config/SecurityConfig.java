@@ -54,7 +54,8 @@ public class SecurityConfig {
                     .authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH,
                     "/api/v1/alerts/thresholds/*", "/api/v1/alerts/thresholds/*/metrics/*",
-                    "/api/v1/alerts/policy/*", "/api/v1/alerts/psi-thresholds/*").authenticated()
+                    "/api/v1/alerts/policy/*", "/api/v1/alerts/psi-thresholds/*",
+                    "/api/v1/alerts/notification-preferences").authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/**")
                     .hasAnyRole("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN")
                 .requestMatchers("/api/v1/admin/**").hasAnyRole("PLATFORM_ADMIN", "SUPER_ADMIN", "ADMIN")

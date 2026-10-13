@@ -5,13 +5,11 @@ import com.pentaworks.monitoring.admin.AuditService;
 import com.pentaworks.monitoring.auth.CurrentUserService;
 import com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser;
 import com.pentaworks.monitoring.common.BadRequestException;
-import com.pentaworks.monitoring.common.NotFoundException;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.ResultSetExtractor;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -61,32 +59,6 @@ class PersonalAlertServiceTest {
     }
     private AlertController.UpdateAlertThresholdsRequest request(LocalTime start,LocalTime end) {
         return new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest("hepres",0.5,3.0,true,true,15.0)),20,true,true,0,30,start,end,true,List.of(LocalDate.of(2026,12,25)),true,10,2);
-    }
-    @Test void sharingTargetsIncludeOtherEngineersButExcludeOtherCompaniesAndInaccessibleSites() {
-        var peer=new CurrentUser(8,1,"peer@example.com","동료","USER","ACTIVE");
-        var outsider=new CurrentUser(9,2,"outside@example.com","외부","USER","ACTIVE");
-        var restricted=new CurrentUser(10,1,"restricted@example.com","권한 없음","USER","ACTIVE");
-        doReturn(List.of(engineer,peer,outsider,restricted)).when(service).activeUsers();
-        when(users.allowedSiteIds(peer)).thenReturn(Set.of("001"));when(users.allowedSiteIds(restricted)).thenReturn(Set.of("002"));
-        assertEquals(List.of(new PersonalAlertService.ShareTarget(8,"동료")),service.targets(engineer,"001"));
-    }
-    @Test void cannotSendASnapshotToAnUnauthorizedUser() {
-        doReturn(List.of()).when(service).targets(engineer,"001");
-        assertThrows(BadRequestException.class,()->service.share(engineer,"001",9));verifyNoInteractions(jdbc);
-    }
-    @Test void cannotApplyAShareAddressedToSomeoneElse() {
-        assertThrows(NotFoundException.class,()->service.apply(engineer,99));
-        verify(jdbc,never()).update(anyString(),any(Object[].class));
-    }
-    @Test @SuppressWarnings("unchecked") void applyingShareCopiesPreferencesToRecipientAndDoesNotCopyPhones() throws Exception {
-        String snapshot=json.writeValueAsString(config(15));
-        when(jdbc.query(anyString(),any(ResultSetExtractor.class),eq(99L),eq(7L),eq(1L))).thenReturn(snapshot);
-        doReturn(config(15)).when(service).settings(engineer,"001");
-        doReturn(config(15)).when(service).currentForUpdate(engineer,"001");
-        service.apply(engineer,99);
-        verify(jdbc).update(contains("INSERT INTO user_site_alert_settings"),eq(7L),eq("001"),eq(snapshot));
-        verify(jdbc).update(eq("UPDATE alert_pattern_share SET applied_at=CURRENT_TIMESTAMP(6) WHERE id=?"),eq(99L));
-        verify(jdbc,never()).update(contains("site_alert_recipient"),any(Object[].class));
     }
     @Test void manualThresholdValidationMatchesExistingUiRules() {
         assertDoesNotThrow(()->PersonalAlertService.validateMetric(1.0,1.0,true,40.0));

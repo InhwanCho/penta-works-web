@@ -2,7 +2,6 @@
 
 import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
-import AlertPatternInbox, { SharePatternButton } from "./alert-pattern-sharing";
 import { NotificationPreferencesSummary } from "./notification-preferences";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
@@ -60,10 +59,10 @@ export default function BaselinesClient({
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
 
 }) {
-  const [view, setView] = useState<"sites" | "thresholds" | "events" | "patterns">("events");
+  const [view, setView] = useState<"sites" | "thresholds" | "events">("events");
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
-    if (requested === "thresholds" || requested === "events" || requested === "patterns") setView(requested);
+    if (requested === "thresholds" || requested === "events") setView(requested);
   }, []);
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -108,7 +107,7 @@ export default function BaselinesClient({
   }
 
   async function restoreCompany(entry: SiteAlertSettings) {
-    if (!window.confirm(`${entry.name ?? entry.siteid}의 내 알림 설정을 초기 기준으로 되돌릴까요? 내 기준값·반복 주기·발송 제외 설정이 바뀝니다.`)) return;
+    if (!window.confirm(`${entry.name ?? entry.siteid}의 내 알림 설정을 초기 기준으로 되돌릴까요? 이 병원의 내 기준값이 바뀝니다. 회원 공통 수신 시간·반복 설정은 유지됩니다.`)) return;
     setRestoringSite(entry.siteid); setActionError(null);
     try { await onRestoreCompany(entry.siteid); }
     catch (error) { setActionError(error instanceof Error ? error.message : "회사 기준으로 복원하지 못했습니다."); }
@@ -133,7 +132,7 @@ export default function BaselinesClient({
       {view !== "thresholds" && <NotificationPreferencesSummary/>}
       <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
         {value:"events",label:"알림 확인",},
-        {value:"thresholds",label:"알림 설정"}, {value:"patterns",label:"설정 공유"},
+        {value:"thresholds",label:"알림 설정"},
         ...(canEditCompany ? [{value:"sites" as const,label:"병원 표시"}] : []),
       ]} />
 
@@ -164,12 +163,11 @@ export default function BaselinesClient({
         <p className="pb-3 text-base text-text-secondary">{entries.length}개 병원 · {activeCount}개 알림 사용</p>
       </div>
       <p className="mb-5 text-base leading-7 text-text-secondary">설정은 내 계정에만 적용됩니다.</p>
-      {filtered.length === 0 ? <EmptyState /> : <AlertSettingsTable entries={filtered} canEdit={canEdit} busySite={busySite} onToggle={toggleAlerts} onOpen={openSettings} actions={entry=><details className="mt-2"><summary className="min-h-12 cursor-pointer py-3 text-base font-bold text-sky-800 dark:text-sky-200">공유 · 초기 설정</summary><SharePatternButton entry={entry}/>{canEdit && entry.configured && <button type="button" disabled={restoringSite===entry.siteid} onClick={()=>restoreCompany(entry)} className="mt-2 min-h-12 rounded-lg border px-3 text-base dark:border-white/15">처음 설정으로</button>}</details>} />}
+      {filtered.length === 0 ? <EmptyState /> : <AlertSettingsTable entries={filtered} canEdit={canEdit} busySite={busySite} onToggle={toggleAlerts} onOpen={openSettings} actions={entry=>canEdit && entry.configured ? <button type="button" disabled={restoringSite===entry.siteid} onClick={()=>restoreCompany(entry)} className="mt-2 min-h-12 rounded-lg border px-3 text-base dark:border-white/15">처음 설정으로</button> : null} />}
 
       {canEditCompany && <div className="mt-8"><CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} /></div>}
 
-      </> : view === "events" ? <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />
-        : <AlertPatternInbox/>}
+      </> : <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />}
 
       {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} initialMetricKey={editorMetric} initialPane={editorPane} onlyMetricKey={selected.thresholds.some(item => item.key === editorMetric) ? editorMetric : undefined} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
