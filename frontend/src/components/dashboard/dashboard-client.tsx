@@ -174,8 +174,8 @@ export default function DashboardClient() {
     {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
     {hiddenSites.isError && <button type="button" onClick={() => hiddenSites.refetch()} className="min-h-11 text-rose-600 underline">병원 표시 설정 불러오기 실패 · 다시 시도</button>}
 
-    <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="min-h-11 rounded-lg border px-3">표시할 열 ({visibleColumns.length})</button>
-    {showColumns && <fieldset className="rounded-xl border p-3"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
+    <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 dark:border-slate-600 dark:bg-background-dark-primary dark:text-text-dark-primary">표시할 열 ({visibleColumns.length})</button>
+    {showColumns && <fieldset className="rounded-xl border border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-background-dark-secondary"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
       const keys = visibleColumns.map(item => item.key);
       updatePreferences({ ...preferences, columns: event.target.checked ? [...keys, column.key] : keys.filter(key => key !== column.key) });
     }} />{column.displayName}</label>)}</div><button type="button" onClick={() => updatePreferences({ ...preferences, columns: null })} className="min-h-11 text-sky-700 underline">전체 열 복원</button></fieldset>}
@@ -217,7 +217,7 @@ export default function DashboardClient() {
         {linkedSite && data.rows.some(row => (row.siteDb === linkedSite || row.siteSlug === String(Number(linkedSite))) && (hiddenSites.data ?? []).includes(row.siteDb)) && <p role="status" className="mb-2 p-2 text-sm text-amber-700">이 링크의 병원은 숨김·알림 중지 상태입니다. 아래 ‘숨긴 병원’에서 다시 표시할 수 있습니다.</p>}
         <Suspense fallback={null}><DashboardScrollTo offset={80} onTargetRequested={resetStatusFilter} /></Suspense>
 
-        <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card/90">
+        <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -236,7 +236,7 @@ export default function DashboardClient() {
           </div>
           <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
         </header>
-        <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border p-3 lg:block"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
+        <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border border-slate-300 bg-white p-3 text-slate-800 shadow-sm lg:block dark:border-slate-600 dark:bg-background-dark-card dark:text-text-dark-primary"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
 
         {isError && <p role="status" className="dashboard-compact-feedback mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 

@@ -7,7 +7,7 @@ export default function DashboardHiddenSites({ rows, saving, error, onShow }: {
 }) {
   if (rows.length === 0) return null;
   const openAlerts = rows.reduce((total, row) => total + row.openAlertCount, 0);
-  return <details className="mt-1 shrink-0 rounded-lg border border-amber-200/70 bg-amber-50/60 text-xs dark:border-amber-700/40 dark:bg-amber-950/20">
+  return <details className="mt-1 shrink-0 rounded-lg border border-amber-200/70 bg-amber-50 text-xs dark:border-amber-700/40 dark:bg-background-dark-card">
     <summary className="flex min-h-9 cursor-pointer flex-wrap items-center gap-x-2 gap-y-1 px-3 py-2 text-amber-800 dark:text-amber-200">
       <span className="font-bold">숨긴 병원 {rows.length}개 · 알림 중지 중</span>
       {openAlerts > 0 && <span className="font-bold text-rose-600 dark:text-rose-300">진행 중 알림 {openAlerts}건</span>}

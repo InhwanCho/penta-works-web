@@ -136,7 +136,7 @@ export default function BaselinesClient({
       ]} />
 
       {view === "sites" ? <section className="space-y-3">
-        <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-sky-950/20 dark:text-sky-100">
+        <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-background-dark-secondary dark:text-sky-100">
           <p className="font-bold">병원 표시 → 알림 사용 → 상세 기준값</p>
           <p className="mt-1 text-sm opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 다시 표시하면 각 담당자의 개인 설정을 따릅니다.</p>
         </div>
@@ -500,19 +500,19 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
           {!onlyMetricKey && pane === "schedule" && <div className="space-y-5">
             <AlertSection title="알림 받지 않는 시간·휴일" description="이 병원에서 내가 받을 알림만 쉬게 합니다. 다른 담당자의 설정에는 영향을 주지 않습니다.">
               <div className="space-y-4">
-                <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15">
+                <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary">
                   <div className="flex flex-wrap items-center justify-between gap-3"><div><h4 className="text-lg font-bold">매일 같은 시간에 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">예: 퇴근 후 저녁 6시부터 다음 날 오전 9시까지</p></div><AlertSwitch label="매일 알림 받지 않는 시간" checked={quietEnabled} disabled={!canEdit || saving} onChange={setQuietEnabled} /></div>
                   {quietEnabled && <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2"><TimeField label="알림 쉬기 시작" value={quietStart} onChange={setQuietStart} disabled={!canEdit || saving} /><TimeField label="다시 받기 시작" value={quietEnd} onChange={setQuietEnd} disabled={!canEdit || saving} /></div>}
                 </section>
-                <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 p-4 dark:border-white/15"><div><h4 className="text-lg font-bold">주말에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">매주 토요일·일요일에는 알림을 받지 않습니다.</p></div><AlertSwitch label="토요일·일요일 알림 받지 않기" checked={suppressWeekends} disabled={!canEdit || saving} onChange={setSuppressWeekends} /></section>
-                <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15"><h4 className="text-lg font-bold">특정 날짜에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">공휴일이나 휴가 등 알림을 받지 않을 날짜를 직접 추가하세요.</p>
+                <section className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><div><h4 className="text-lg font-bold">주말에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">매주 토요일·일요일에는 알림을 받지 않습니다.</p></div><AlertSwitch label="토요일·일요일 알림 받지 않기" checked={suppressWeekends} disabled={!canEdit || saving} onChange={setSuppressWeekends} /></section>
+                <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><h4 className="text-lg font-bold">특정 날짜에는 쉬기</h4><p className="mt-1 text-base leading-7 text-text-secondary">공휴일이나 휴가 등 알림을 받지 않을 날짜를 직접 추가하세요.</p>
                   <div className="mt-4 flex flex-wrap items-end gap-3"><label className="min-w-0 flex-1 text-base font-bold">쉬는 날짜<input ref={holidayInput} aria-label="알림 받지 않을 날짜" type="date" value={holidayDate} disabled={!canEdit || saving} onChange={event => setHolidayDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-background-dark-primary" /></label><button type="button" disabled={!canEdit || saving} onClick={() => { const date = holidayInput.current?.value ?? holidayDate; if (!date || !holidayInput.current?.validity.valid) { setError("알림 받지 않을 날짜를 선택해주세요."); return; } setHolidayDates(current => current.includes(date) ? current : [...current, date].sort()); setHolidayDate(""); setError(null); }} className="min-h-12 rounded-xl border border-sky-300 px-4 text-base font-bold text-sky-800 disabled:opacity-40 dark:border-sky-800 dark:text-sky-200">날짜 추가</button></div>
                   {holidayDates.length > 0 ? <ul className="mt-4 space-y-2">{holidayDates.map(date => <li key={date} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 dark:bg-white/5"><span className="text-base font-bold">{date} · 하루 종일 쉬기</span><button type="button" aria-label={`${date} 제외 날짜 삭제`} disabled={!canEdit || saving} onClick={() => setHolidayDates(current => current.filter(item => item !== date))} className="min-h-12 shrink-0 px-3 text-base font-bold text-rose-700 dark:text-rose-300">삭제</button></li>)}</ul> : <p className="mt-4 text-base text-text-secondary">등록된 날짜가 없습니다.</p>}
                 </section>
               </div>
               <p className="mt-5 rounded-xl bg-sky-50 p-4 text-base leading-7 text-sky-900 dark:bg-sky-950/30 dark:text-sky-200">쉬는 시간·날짜에는 수치 이상, 항목 누락, 수집 중단, 콜드칠러 알림을 모두 보내지 않습니다. 날짜는 한국 시간을 기준으로 적용합니다.</p>
             </AlertSection>
-            <details ref={repeatDetails} open={initialMetricKey === "__repeat__" || undefined} className="rounded-xl border border-slate-200 p-4 dark:border-white/15"><summary className="min-h-12 cursor-pointer py-3 text-base font-bold">반복 알림·이상 지속 시간 설정</summary><div className="mt-3 grid gap-4 sm:grid-cols-2"><div><NumberField label="수치·장치 이상이 몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 즉시 알립니다. 데이터 누락은 별도의 연속 누락 기준을 사용합니다.</p></div><div><NumberField label="몇 분마다 다시 알릴까요?" value={repeatMinutes} min={0} max={10080} disabled={!canEdit || saving} onChange={setRepeatMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 처음 한 번만 알립니다. 5분 이상이면 내가 확인할 때까지 반복합니다.</p></div></div></details>
+            <details ref={repeatDetails} open={initialMetricKey === "__repeat__" || undefined} className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary"><summary className="min-h-12 cursor-pointer py-3 text-base font-bold">반복 알림·이상 지속 시간 설정</summary><div className="mt-3 grid gap-4 sm:grid-cols-2"><div><NumberField label="수치·장치 이상이 몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 즉시 알립니다. 데이터 누락은 별도의 연속 누락 기준을 사용합니다.</p></div><div><NumberField label="몇 분마다 다시 알릴까요?" value={repeatMinutes} min={0} max={10080} disabled={!canEdit || saving} onChange={setRepeatMinutes} /><p className="mt-2 text-base leading-7 text-text-secondary">0분이면 처음 한 번만 알립니다. 5분 이상이면 내가 확인할 때까지 반복합니다.</p></div></div></details>
           </div>}
           {!onlyMetricKey && pane === "missing" && <div className="space-y-5">
             <AlertSection title="병원 전체 수집 중단" description="이 병원에서 새 데이터가 통째로 오지 않을 때 알려드립니다. 정전이나 공유기 종료 등이 원인일 수 있으니 전원과 인터넷 연결을 확인하세요.">
@@ -542,7 +542,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
 function MetricMissingEditor({threshold,disabled,onChange}:{threshold:AlertThreshold;disabled:boolean;onChange:(patch:Partial<AlertThreshold>)=>void}) {
   const count = threshold.missingThreshold ?? (threshold.key === "hepres" ? 5 : 3);
   const active = threshold.missingActive ?? threshold.key === "hepres";
-  return <section className="rounded-xl border border-slate-200 p-4 dark:border-white/15">
+  return <section className="rounded-xl border border-slate-300 bg-slate-50 p-4 dark:border-slate-600 dark:bg-background-dark-secondary">
     <h4 className="mb-3 text-lg font-bold">{metricName(threshold.key,threshold.label)} · 항목 누락</h4>
     <p className="mb-4 text-sm leading-6 text-text-secondary">병원 데이터는 들어오는데 이 측정값만 빠진 경우를 확인합니다. 병원 전체 수집 누락 알림과 별개입니다.</p>
     <AlertSwitch label={`${metricName(threshold.key,threshold.label)} 누락 알림`} checked={active} disabled={disabled} onChange={missingActive=>onChange({missingActive,missingThreshold:count})}/>
@@ -561,7 +561,7 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
     <NumberField label="최대값" value={threshold.max} disabled={disabled} onChange={max => onChange({max})} />
   </div>;
   return (
-    <section className={`rounded-xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50/45 dark:border-sky-900/70 dark:bg-sky-950/20" : "border-slate-200/80 bg-slate-50/45 dark:border-white/8 dark:bg-white/3"}`}>
+    <section className={`rounded-xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50 dark:border-sky-900/70 dark:bg-background-dark-secondary" : "border-slate-200/80 bg-slate-50 dark:border-white/8 dark:bg-background-dark-secondary"}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="font-extrabold">{metricName(threshold.key, threshold.label)}{threshold.unit && <span className="text-text-secondary ml-1 text-sm font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-sm">{METRIC_DESCRIPTION.get(threshold.key)}</p></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
@@ -576,7 +576,7 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
             </label>)}
         </div>
       </fieldset>}
-      {allowAverage && threshold.useAverage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+      {allowAverage && threshold.useAverage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/50 dark:bg-background-dark-secondary">
         <p className="text-sm font-bold">{threshold.historicalAverage ? "과거 24시간 평균 사용" : "최근 24시간 평균"}</p>
         {threshold.historicalAverage && <p className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-300">최근 평균을 사용할 수 없어 마지막 정상 평균을 사용합니다. 최근 표본이 충분해지면 자동 복귀합니다.</p>}
         {averagePeriodMessage(threshold) && <p className="mt-1 text-sm text-text-secondary">{averagePeriodMessage(threshold)}</p>}
@@ -589,8 +589,8 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
           {!preview.averageApplied && <p className="mt-2 text-sm leading-5">{preview.reason ?? "허용편차를 확인해주세요."} 현재는 아래 대체 범위로 판단합니다. 표본과 최신성 조건이 충족되면 평균 기준으로 자동 전환됩니다.</p>}
         </div>
         {threshold.averageValue != null && !preview.averageApplied && <p className="mt-2 text-sm text-text-secondary">평균 적용 조건 충족 시 계산 범위: {formatRange(threshold.averageValue - Math.abs(threshold.averageValue)*threshold.tolerancePercent/100, threshold.averageValue + Math.abs(threshold.averageValue)*threshold.tolerancePercent/100)} · 현재 미적용</p>}
-        <details className="mt-3 rounded-lg border border-emerald-200 bg-white/70 p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-sm font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-sm text-text-secondary">최근 평균이 부족하거나 오래되면 이전의 정상 24시간 평균을 찾아 사용합니다. 과거에도 유효 표본 12건 이상인 정상 평균이 없으면 이 대체 범위를 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
-      </div> : <div className="mt-3 rounded-xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/5">
+        <details className="mt-3 rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-sm font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-sm text-text-secondary">최근 평균이 부족하거나 오래되면 이전의 정상 24시간 평균을 찾아 사용합니다. 과거에도 유효 표본 12건 이상인 정상 평균이 없으면 이 대체 범위를 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
+      </div> : <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
         <p className="mb-3 text-sm font-bold">수동 범위 설정</p>{manualFields}
         <p role="status" aria-live="polite" className="mt-3 text-sm font-bold">저장 후 적용될 범위: {formatRange(threshold.min,threshold.max)}</p>
         {allowAverage && <p className="mt-2 text-sm text-text-secondary">24시간 평균과 허용편차는 알림 판단에 사용하지 않습니다.</p>}

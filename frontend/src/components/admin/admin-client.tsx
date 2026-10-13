@@ -3,7 +3,6 @@
 import ManagementTabs from "@/components/common/management-tabs";
 import CircleLoader from "@/components/icons/circle-loader";
 import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
-import RecipientManagement from "@/components/admin/recipient-management";
 import DeleteAccountDialog from "@/components/admin/delete-account-dialog";
 import PhoneInput from "@/components/forms/phone-input";
 import { formatPhone, phoneDigits } from "@/lib/phone";
@@ -70,11 +69,11 @@ type PasswordResetCreated = { token: string; email: string; expiresAt: string; d
 const CARD =
   "rounded-xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card";
 const INPUT =
-  "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5 dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
+  "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
 
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
-  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "metrics" | "recipients" | "audit">("users");
+  const [tab, setTab] = useState<"users" | "invitations" | "sites" | "metrics" | "audit">("users");
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => apiFetch<UserRow[]>("/admin/accounts/users"),
@@ -131,7 +130,7 @@ export default function AdminClient() {
 
       <ManagementTabs label="관리 설정" value={tab} onChange={setTab} items={[
         {value:"users",label:"사용자"}, {value:"invitations",label:"초대"}, {value:"sites",label:"병원"},
-        {value:"metrics",label:"측정항목"}, {value:"recipients",label:"알림 수신 안내"}, {value:"audit",label:"활동 기록"},
+        {value:"metrics",label:"측정항목"}, {value:"audit",label:"활동 기록"},
       ]} />
 
       {tab === "users" && (
@@ -153,7 +152,6 @@ export default function AdminClient() {
       {tab === "sites" && <SiteSection sites={sites.data ?? []} company={company.data ?? null} loading={sites.isLoading || company.isLoading} />}
       {tab === "audit" && <AuditSection rows={audits.data ?? []} loading={audits.isLoading} />}
       {tab === "metrics" && <CompanyMetricsEditor />}
-      {tab === "recipients" && <RecipientManagement sites={(sites.data ?? []).map(site => ({siteid: site.id, name: site.name}))} />}
     </main>
   );
 }
