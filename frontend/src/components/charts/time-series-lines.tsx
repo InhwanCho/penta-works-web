@@ -110,12 +110,14 @@ export function TimeSeriesLines({
   series,
   height = 280,
   interactive = true,
+  periodLabel,
 }: {
   title: string;
   points: TimeSeriesPoint[];
   series: Series[];
   height?: number;
   interactive?: boolean;
+  periodLabel?: string;
 }) {
   const labels = points.map((p) => p.t);
 
@@ -255,14 +257,18 @@ export function TimeSeriesLines({
   return (
     <section className="dark:bg-background-dark-card dark:border-background-dark-secondary w-full min-w-0 max-w-full overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
       <div className="dark:border-background-dark-secondary/60 border-b border-border/60 px-4 py-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
-            {title}
-          </strong>
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
+              {title}
+            </strong>
+            {periodLabel && <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-bold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">기간 조회</span>}
+          </div>
           {interactive && <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
             휠/핀치 확대 · Shift + 드래그 이동
           </span>}
         </div>
+        {periodLabel && <p className="text-text-secondary dark:text-text-dark-primary/70 mt-2 text-xs leading-5">{periodLabel}</p>}
       </div>
 
       <div
@@ -273,7 +279,7 @@ export function TimeSeriesLines({
           data={data}
           options={options}
           role="img"
-          aria-label={`${title} 측정 그래프. 마우스를 올리거나 터치하면 시각과 측정값을 확인할 수 있습니다.`}
+          aria-label={`${title} 측정 그래프.${periodLabel ? ` 기간 조회: ${periodLabel}.` : ""} 마우스를 올리거나 터치하면 시각과 측정값을 확인할 수 있습니다.`}
         />
       </div>
     </section>

@@ -176,6 +176,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
   const rowsDesc = data.rows; // desc
   const totalCount = data.totalCount ?? data.rows.length;
+  const chartPeriodLabel = periodActive ? `${fmtDate(from).slice(0,16)} ~ ${fmtDate(to).slice(0,16)} · ${rowsDesc.length}건` : undefined;
   const points: TimeSeriesPoint[] = rowsDesc
     .slice()
     .reverse()
@@ -451,7 +452,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             >
               <div className="text-text-secondary dark:text-text-dark-primary/70 mb-1 flex flex-wrap items-baseline justify-between gap-1 px-1 text-xs">
                 <span>
-                  최신 값{" "}
+                  {periodActive ? "조회 기간 마지막 값" : "최신 값"}{" "}
                   <strong className="text-sm tabular-nums">
                     {formatMetricMeasurement(rowsDesc[0]?.[metric.key], metric.unit)}
                   </strong>
@@ -473,6 +474,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               {points.some((point) => point[metric.key] != null) ? (
                 <TimeSeriesLines
                   title={metricTitle(metric)}
+                  periodLabel={chartPeriodLabel}
                   points={points}
                   series={[{ key: metric.key, name: metricTitle(metric) }]}
                   height={mode === "grid" ? 190 : 280}
@@ -480,7 +482,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                 />
               ) : (
                 <div className="dark:bg-background-dark-card rounded-lg border bg-white p-4 text-sm">
-                  <h2 className="font-bold">{metricTitle(metric)}</h2>
+                  <div className="flex flex-wrap items-center gap-2"><h2 className="font-bold">{metricTitle(metric)}</h2>{chartPeriodLabel && <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-bold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">기간 조회</span>}</div>
+                  {chartPeriodLabel && <p className="text-text-secondary mt-2 text-xs leading-5">{chartPeriodLabel}</p>}
                   <p className="mt-2">선택한 기간에 측정된 값이 없습니다.</p>
                 </div>
               )}
