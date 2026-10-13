@@ -54,8 +54,6 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const from = sp.get("from");
   const to = sp.get("to");
   const periodActive = !!(from && to);
-  const pageRaw = Number(sp.get("page") ?? 1);
-  const page = Number.isFinite(pageRaw) ? Math.max(1, Math.floor(pageRaw)) : 1;
   const [periodStart, setPeriodStart] = useState(() => localDateTime(from, new Date(Date.now() - 86400000)));
   const [periodEnd, setPeriodEnd] = useState(() => localDateTime(to, new Date()));
   const [periodError, setPeriodError] = useState("");
@@ -73,7 +71,6 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     take,
     from,
     to,
-    page,
   );
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
@@ -179,9 +176,6 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
   const rowsDesc = data.rows; // desc
   const totalCount = data.totalCount ?? data.rows.length;
-  const currentPage = data.page ?? page;
-  const totalPages = Math.max(1, Math.ceil(totalCount / 5000));
-  const pageHref = (nextPage: number) => `/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from: from!, to: to!, page: String(nextPage)})}`;
   const points: TimeSeriesPoint[] = rowsDesc
     .slice()
     .reverse()
@@ -236,28 +230,36 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           표시 건수 · 기간 조회
         </legend>
         <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-xs">
-          최신 데이터를 몇 건까지 볼지 선택하세요.
+          표시할 측정값의 건수를 선택하세요.
         </p>
         <div className="bg-background-tertiary dark:bg-background-dark-secondary/60 grid min-h-11 w-full grid-cols-4 rounded-lg p-1">
           <TakeLink
             slug={slug}
+            from={from}
+            to={to}
             take={10}
-            active={!periodActive && take === 10}
+            active={take === 10}
           />
           <TakeLink
             slug={slug}
+            from={from}
+            to={to}
             take={20}
-            active={!periodActive && take === 20}
+            active={take === 20}
           />
           <TakeLink
             slug={slug}
+            from={from}
+            to={to}
             take={50}
-            active={!periodActive && take === 50}
+            active={take === 50}
           />
           <TakeLink
             slug={slug}
+            from={from}
+            to={to}
             take={100}
-            active={!periodActive && take === 100}
+            active={take === 100}
           />
         </div>
         <form className="mt-3 grid gap-2 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={event => {
@@ -273,8 +275,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           end.setTime(end.getTime() + 59_999);
           setPeriodError("");
           const nextFrom = start.toISOString(), nextTo = end.toISOString();
-          if (from === nextFrom && to === nextTo && page === 1) void refetch();
-          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo})}`);
+          if (from === nextFrom && to === nextTo) void refetch();
+          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo, take:String(take)})}`);
         }}>
           <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
           <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
@@ -284,13 +286,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         {periodActive && <div className="mt-3 space-y-2 text-xs">
           <p>조회 기간: {fmtDate(from)} ~ {fmtDate(to)} · 전체 {totalCount.toLocaleString()}건</p>
           <p>{data.rows.length ? `현재 차트: ${fmtDate(data.rows[data.rows.length-1].date)} ~ ${fmtDate(data.rows[0].date)} · ${data.rows.length.toLocaleString()}건` : "해당 기간에 수집된 기록이 없습니다."}</p>
-          {totalPages > 1 && <nav aria-label="기간 조회 페이지" className="flex flex-wrap items-center gap-2">
-            {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">이전 기록</Link>}
-            <span>{currentPage}/{totalPages} 페이지 · 최신 기록부터 표시</span>
-            {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">다음 기록</Link>}
-          </nav>}
+          <Link href={`/sites/${encodeURIComponent(slug)}?take=${take}`} scroll={false} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">기간 해제 · 최신 {take}건</Link>
         </div>}
-        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준 · 기간 제한 없이 조회합니다. 5,000건이 넘으면 이전·다음 기록으로 나눠 볼 수 있습니다. 건수 버튼을 누르면 최신 건수 조회로 돌아갑니다.</p>
+        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준 · 기간과 표시 건수를 함께 적용합니다. 기간 전체의 처음과 마지막을 포함해 고르게 추린 실제 측정값을 보여줍니다.</p>
       </fieldset>
 
       <section
@@ -494,17 +492,20 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 }
 
 function TakeLink({
+  from, to,
   slug,
   take,
   active,
 }: {
   slug: string;
+  from?: string | null;
+  to?: string | null;
   take: number;
   active: boolean;
 }) {
   return (
     <Link
-      href={`/sites/${encodeURIComponent(slug)}?take=${take}`}
+      href={`/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from,to,take:String(take)} : {take:String(take)})}`}
       scroll={false}
       aria-current={active ? "true" : undefined}
       className={[

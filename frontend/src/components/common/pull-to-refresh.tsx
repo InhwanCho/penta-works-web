@@ -14,7 +14,7 @@ type Props = {
 const THRESHOLD = 80;
 const MAX_PULL = 120;
 // 당김 저항 (1.0 = 손가락 이동 그대로, 작을수록 둔해짐)
-const RESISTANCE = 0.4;
+const RESISTANCE = 0.25;
 // 화면 맨 최상단 판정 허용 오차(px). iOS 바운스 등 미세한 양수값 흡수
 const TOP_TOLERANCE = 0;
 

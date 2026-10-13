@@ -22,10 +22,10 @@ class SitePeriodTest {
                 ? new SiteResponse.SiteSummary("016", "대구동물") : "2026-10-02T02:36:56Z");
         Instant start = Instant.parse("2026-10-01T00:00:00Z"), end = start.plus(Duration.ofDays(1));
         SiteResponse response = new SiteService(jdbc).detail("16", 50, start, end);
-        assertEquals(5000, response.take());
+        assertEquals(50, response.take());
         assertEquals("2026-10-02T02:36:56Z", response.lastAt());
         verify(jdbc).query(contains("AND date >= ? AND date <= ?"), any(RowMapper.class),
-            eq("016"), eq(Timestamp.from(start)), eq(Timestamp.from(end)), eq(5000), eq(0L));
+            eq("016"), eq(Timestamp.from(start)), eq(Timestamp.from(end)), eq(50), eq(50), eq(50), eq(50));
     }
     @Test
     void allowsLatestModeAndPeriodsLongerThanAMonth() {
@@ -44,7 +44,7 @@ class SitePeriodTest {
     }
     @Test
     @SuppressWarnings("unchecked")
-    void paginatesLongPeriodsWithoutDroppingEarlierRecordsAndBoundsThePage() {
+    void samplesTheWholeLongPeriodUsingTheRequestedCountAndIgnoresLegacyPages() {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
         when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq("008")))
             .thenAnswer(invocation -> invocation.getArgument(0, String.class).startsWith("SELECT site,")
@@ -54,15 +54,14 @@ class SitePeriodTest {
             eq(Timestamp.from(start)), eq(Timestamp.from(end)))).thenReturn(10023L);
         SiteService service = new SiteService(jdbc);
         SiteResponse second = service.detail("8",50,start,end,2);
-        assertEquals(2,second.page());
+        assertEquals(1,second.page());
+        assertEquals(50,second.take());
         assertEquals(10023L,second.totalCount());
-        verify(jdbc).query(contains("LIMIT ? OFFSET ?"),any(RowMapper.class),eq("008"),
-            eq(Timestamp.from(start)),eq(Timestamp.from(end)),eq(5000),eq(5000L));
         SiteResponse last = service.detail("8",50,start,end,Integer.MAX_VALUE);
-        assertEquals(3,last.page());
-        verify(jdbc).query(contains("LIMIT ? OFFSET ?"),any(RowMapper.class),eq("008"),
-            eq(Timestamp.from(start)),eq(Timestamp.from(end)),eq(5000),eq(10000L));
+        assertEquals(1,last.page());
         assertEquals(1,service.detail("8",50,start,end,-1).page());
+        verify(jdbc,times(3)).query(contains("ROW_NUMBER() OVER (ORDER BY date, `index`)"),any(RowMapper.class),eq("008"),
+            eq(Timestamp.from(start)),eq(Timestamp.from(end)),eq(50),eq(50),eq(50),eq(50));
     }
 
     @Test

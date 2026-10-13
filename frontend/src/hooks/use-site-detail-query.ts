@@ -31,10 +31,9 @@ async function fetchSiteDetail(
   take: number,
   from: string | null,
   to: string | null,
-  page: number,
 ): Promise<SiteDetailResponse> {
   return apiFetch<SiteDetailResponse>(
-    `/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from, to, page: String(page)} : {take: String(take)})}`,
+    `/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from, to, take: String(take)} : {take: String(take)})}`,
     { cache: "no-store" },
   );
 }
@@ -43,10 +42,10 @@ async function fetchSiteDetail(
  * 사이트 상세 시계열 조회 훅.
  * - staleTime 10초 — 짧은 시간 내 재방문 시 캐시 히트
  */
-export function useSiteDetailQuery(slug: string, take: number, from: string | null = null, to: string | null = null, page = 1) {
+export function useSiteDetailQuery(slug: string, take: number, from: string | null = null, to: string | null = null) {
   return useQuery({
-    queryKey: ["siteDetail", slug, take, from, to, page] as const,
-    queryFn: () => fetchSiteDetail(slug, take, from, to, page),
+    queryKey: ["siteDetail", slug, take, from, to] as const,
+    queryFn: () => fetchSiteDetail(slug, take, from, to),
     staleTime: 10_000,
   });
 }

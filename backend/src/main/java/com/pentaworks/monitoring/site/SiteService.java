@@ -32,7 +32,7 @@ public class SiteService {
 
     public SiteResponse detail(String slug, int rawTake, Instant from, Instant to, int rawPage) {
         validatePeriod(from, to);
-        int take = from == null ? Math.min(Math.max(rawTake, 10), 1000) : 5000;
+        int take = Math.min(Math.max(rawTake, 10), 1000);
         String siteId = normalizeSiteId(slug);
         SiteResponse.SiteSummary site = jdbcTemplate.query("SELECT site, name FROM site WHERE site = ?", rs ->
             rs.next() ? new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name")) : null, siteId);
@@ -43,22 +43,37 @@ public class SiteService {
             Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mrtb WHERE siteid=? AND date>=? AND date<=?",
                 Long.class, site.siteDb(), Timestamp.from(from), Timestamp.from(to));
             totalCount = count == null ? 0 : count;
-            long pages = Math.max(1, (totalCount + take - 1) / take);
-            page = (int) Math.min(Math.max(1, rawPage), pages);
         }
         List<Object> arguments = new ArrayList<>();
         arguments.add(site.siteDb());
         if (from != null) {arguments.add(Timestamp.from(from)); arguments.add(Timestamp.from(to));}
         arguments.add(take);
-        if (from != null) arguments.add((long) (page - 1) * take);
-        List<SiteResponse.Measurement> rows = jdbcTemplate.query("""
+        if (from != null) { arguments.add(take); arguments.add(take); arguments.add(take); }
+        // Rank only IDs within the complete period, then read measurements at evenly spaced
+        // record positions. This retains the first/last actual records without fetching all values.
+        List<SiteResponse.Measurement> rows = jdbcTemplate.query(from == null ? """
             SELECT `index`, date, hepres_value AS hepres, heleve_value AS heleve,
                 actemp_value AS actemp, achumi_value AS achumi,
                 recosi_value AS recosi, coldtp_value AS coldtp, recoru_value AS recoru,
                 gctemp_value AS gctemp, gcflow_value AS gcflow,
                 cctemp_value AS cctemp, ccflow_value AS ccflow FROM mrtb
-            WHERE siteid = ? AND date IS NOT NULL %s ORDER BY date DESC, `index` DESC LIMIT ? %s
-            """.formatted(from == null ? "" : "AND date >= ? AND date <= ?", from == null ? "" : "OFFSET ?"), (rs, row) -> new SiteResponse.Measurement(rs.getInt("index"),
+            WHERE siteid = ? AND date IS NOT NULL ORDER BY date DESC, `index` DESC LIMIT ?
+            """ : """
+            SELECT m.`index`, m.date, m.hepres_value AS hepres, m.heleve_value AS heleve,
+                m.actemp_value AS actemp, m.achumi_value AS achumi,
+                m.recosi_value AS recosi, m.coldtp_value AS coldtp, m.recoru_value AS recoru,
+                m.gctemp_value AS gctemp, m.gcflow_value AS gcflow,
+                m.cctemp_value AS cctemp, m.ccflow_value AS ccflow
+            FROM mrtb m JOIN (
+                SELECT `index`, ROW_NUMBER() OVER (ORDER BY date, `index`) AS sample_row,
+                    COUNT(*) OVER () AS sample_count
+                FROM mrtb WHERE siteid = ? AND date >= ? AND date <= ?
+            ) samples ON samples.`index` = m.`index`
+            WHERE sample_count <= ? OR sample_row = 1
+                OR FLOOR((sample_row - 1) * (? - 1) / NULLIF(sample_count - 1, 0))
+                    > FLOOR((sample_row - 2) * (? - 1) / NULLIF(sample_count - 1, 0))
+            ORDER BY m.date DESC, m.`index` DESC LIMIT ?
+            """, (rs, row) -> new SiteResponse.Measurement(rs.getInt("index"),
                 rs.getTimestamp("date").toInstant().toString(), DashboardService.parseMeasurement(rs.getString("hepres")),
                 DashboardService.parseMeasurement(rs.getString("heleve")), DashboardService.parseMeasurement(rs.getString("actemp")),
                 DashboardService.parseMeasurement(rs.getString("achumi")),

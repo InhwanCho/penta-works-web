@@ -239,3 +239,9 @@ html.dark .select-inset-arrow {
 @media (max-width: 639px) {
   .dashboard-sticky-columns { top: calc(3.5rem + env(safe-area-inset-top, 0px)); }
 }
+
+.dashboard-touch-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  touch-action: pan-x pan-y pinch-zoom;
+}

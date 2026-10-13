@@ -2,7 +2,6 @@
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, type MetricDef } from "@/lib/metrics";
-import { createPortal } from "react-dom";
 import Link from "next/link";
 import type { CompanyMetric } from "@/lib/company-metrics";
 import CollectionStatus, { collectionMissing } from "./collection-status";
@@ -89,8 +88,6 @@ export default function DashboardExcelView({
   onInspectMetric: (row: SiteRow, metric: MetricDef) => void;
   onOpenAlertSettings: (siteId: string, metricKey?: string) => void;
 }) {
-  const [openMetric, setOpenMetric] = useState<string | null>(null);
-  const [tooltipTop, setTooltipTop] = useState(112);
   const [selectedCell, setSelectedCell] = useState<{
     key: string;
     hospital: string;
@@ -128,28 +125,7 @@ export default function DashboardExcelView({
   const columnGroup = columnWidths.length === columns.length + 1
     ? <colgroup>{columnWidths.map((width, index) => <col key={index} style={{width}} />)}</colgroup> : null;
 
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearCloseTimer = () => {
-    if (closeTimer.current) clearTimeout(closeTimer.current);
-    closeTimer.current = null;
-  };
-
-  const showMetricHelp = (key: string, autoClose = false) => {
-    clearCloseTimer();
-    setOpenMetric(key);
-    const anchor = document.getElementById(`metric-heading-${key}`);
-    if (anchor) setTooltipTop(Math.max(64, Math.min(anchor.getBoundingClientRect().bottom + 12, window.innerHeight - 180)));
-    if (autoClose) {
-      closeTimer.current = setTimeout(() => setOpenMetric(null), 3000);
-    }
-  };
-
-  const hideMetricHelp = () => {
-    clearCloseTimer();
-    setOpenMetric(null);
-  };
 
   const selectCell = (row: SiteRow, column: string, metric?: MetricDef) => {
     if (metric) onInspectMetric(row, metric);
@@ -165,7 +141,6 @@ export default function DashboardExcelView({
 
   useEffect(
     () => () => {
-      clearCloseTimer();
       if (selectionTimer.current) clearTimeout(selectionTimer.current);
     },
     [],
@@ -196,7 +171,7 @@ export default function DashboardExcelView({
       ) : (
         <>
         <div className="dashboard-sticky-columns sticky z-30 bg-white dark:bg-background-dark-card">
-          <div ref={headerScrollRef} onScroll={event => syncScroll(event.currentTarget, bodyScrollRef.current)} tabIndex={0} aria-label="표 컬럼명, 가로로 스크롤할 수 있습니다" className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div data-ptr-ignore ref={headerScrollRef} onScroll={event => syncScroll(event.currentTarget, bodyScrollRef.current)} tabIndex={0} aria-label="표 컬럼명, 가로로 스크롤할 수 있습니다" className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <table aria-label="병원별 전체표 컬럼명" className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={tableStyle}>
               {columnGroup}
             <thead>
@@ -226,25 +201,11 @@ export default function DashboardExcelView({
                         "sticky top-0 min-w-[64px] px-[3px] py-[5px] text-center align-middle whitespace-nowrap md:min-w-[80px] lg:min-w-[104px] lg:px-3 lg:py-2.5",
                         CELL_BORDER,
                         HEAD_BG,
-                        openMetric === m.key ? "z-50" : Z_HEAD,
+                        Z_HEAD,
                       ].join(" ")}
                     >
                       <span className="relative inline-block">
-                        <button
-                          type="button"
-                          id={`metric-heading-${m.key}`}
-                          aria-expanded={openMetric === m.key}
-                          aria-describedby={`metric-help-${m.key}`}
-                          className="text-text-major dark:text-text-dark-primary cursor-help text-xs font-bold underline decoration-dotted underline-offset-4 lg:text-sm"
-                          onClick={() => showMetricHelp(m.key, true)}
-                          onMouseEnter={() => showMetricHelp(m.key)}
-                          onMouseLeave={hideMetricHelp}
-                          onFocus={() => showMetricHelp(m.key)}
-                          onBlur={hideMetricHelp}
-                        >
-                          {column.displayName}
-                        </button>
-
+                        <span className="text-text-major dark:text-text-dark-primary text-xs font-bold lg:text-sm">{column.displayName}</span>
                       </span>
                       {sub ? (
                         <span className="text-text-secondary dark:text-text-dark-primary/70 mt-0.5 block text-[10px] font-medium">
@@ -263,10 +224,11 @@ export default function DashboardExcelView({
         <div
           ref={bodyScrollRef}
           onScroll={event => syncScroll(event.currentTarget, headerScrollRef.current)}
+          data-ptr-ignore
           data-dashboard-scroll
           tabIndex={0}
           aria-label="병원별 전체표, 가로로 스크롤할 수 있습니다"
-          className="overflow-x-auto pb-2"
+          className="dashboard-touch-scroll overflow-x-auto pb-2"
         >
           <table className="w-full border-separate border-spacing-0 text-xs lg:text-sm" style={tableStyle}>
             {columnGroup}
@@ -371,12 +333,6 @@ export default function DashboardExcelView({
         </p>
       </div>
 
-      {openMetric && typeof document !== "undefined" && createPortal(
-        <div role="tooltip" id={`metric-help-${openMetric}`} style={{top:tooltipTop}} className="fixed inset-x-3 z-[65] mx-auto max-w-lg rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-relaxed text-slate-700 shadow-xl dark:border-white/15 dark:bg-background-dark-card dark:text-slate-200">
-          <button type="button" aria-label="측정항목 설명 닫기" onClick={hideMetricHelp} className="float-right ml-2 min-h-11 min-w-11 text-xl">×</button>
-          <strong className="mr-2">{metrics.find(metric=>metric.key===openMetric)?.code}</strong>
-          {metrics.find(metric=>metric.key===openMetric)?.description}
-        </div>, document.body)}
       {selectedCell && !selectedCell.metric ? (
         <div
           role="status"
