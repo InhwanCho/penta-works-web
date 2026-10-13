@@ -7,13 +7,14 @@ const source = ts.transpileModule(fs.readFileSync(new URL('../src/lib/alert-even
 const state = {};
 vm.runInNewContext(source,{exports:state});
 const ended = {eventType:'HIGH',acknowledgedAt:null,recoveredAt:'2026-10-06T06:00:00Z',deliveryStatus:'SKIPPED'};
-test('auto recovery leaves the incident visible and selectable in the default unacknowledged list',()=>{
+test('auto recovery removes the incident from the default list while preserving all history',()=>{
  assert.equal(state.DEFAULT_ALERT_EVENT_FILTER,'unacknowledged');
- assert.equal(state.matchesAlertEventFilter(ended,state.DEFAULT_ALERT_EVENT_FILTER),true);
+ assert.equal(state.matchesAlertEventFilter(ended,state.DEFAULT_ALERT_EVENT_FILTER),false);
+ assert.equal(state.matchesAlertEventFilter(ended,'all'),true);
  assert.equal(state.needsAcknowledgement(ended),true);
  assert.equal(state.matchesAlertEventFilter(ended,'open'),false);
 });
-test('only explicit acknowledgement removes an ended incident from the pending list; all history preserves it',()=>{
+test('acknowledged and ended incidents remain available in all history',()=>{
  const acknowledged={...ended,acknowledgedAt:'2026-10-06T07:00:00Z'};
  assert.equal(state.matchesAlertEventFilter(acknowledged,'unacknowledged'),false);
  assert.equal(state.needsAcknowledgement(acknowledged),false);

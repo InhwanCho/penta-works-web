@@ -13,7 +13,7 @@ export function matchesAlertEventFilter(event: EventState, filter: AlertEventFil
   switch (filter) {
     case "all": return true;
     case "open": return !event.recoveredAt;
-    case "unacknowledged": return needsAcknowledgement(event);
+    case "unacknowledged": return !event.recoveredAt && needsAcknowledgement(event);
     case "failed": return ["FAILED", "PARTIAL", "UNKNOWN"].includes(event.deliveryStatus);
     case "skipped": return event.deliveryStatus === "SKIPPED";
   }

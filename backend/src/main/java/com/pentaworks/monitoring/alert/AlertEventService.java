@@ -85,7 +85,7 @@ public class AlertEventService {
         List<Object> filters = new ArrayList<>();
         switch (status) {
             case "all" -> {}
-            case "unacknowledged" -> where.append(" AND ack.acknowledged_at IS NULL");
+            case "unacknowledged" -> where.append(" AND ack.acknowledged_at IS NULL AND e.recovered_at IS NULL");
             case "open" -> where.append(" AND e.recovered_at IS NULL");
             case "failed" -> where.append(" AND e.delivery_status IN ('FAILED','PARTIAL','UNKNOWN')");
             case "skipped" -> where.append(" AND e.delivery_status='SKIPPED'");

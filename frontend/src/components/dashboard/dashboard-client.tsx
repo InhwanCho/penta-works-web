@@ -7,6 +7,7 @@ import { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-setti
 import AlertSettingsTable, { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
+import { dashboardRowStatus, sortDashboardRows } from "@/lib/dashboard-row-order";
 import { visibleDashboardSites } from "@/lib/dashboard-site-visibility";
 import DashboardHiddenSites from "./dashboard-hidden-sites";
 import DashboardSiteFilter from "./dashboard-site-filter";
@@ -33,20 +34,6 @@ const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
   normal: "정상",
   configured: "알림값 확인",
 };
-
-function compareSite(a: SiteRow, b: SiteRow) {
-  const aSlug = a.siteSlug ?? "";
-  const bSlug = b.siteSlug ?? "";
-
-  const aIsNum = /^\d+$/.test(aSlug);
-  const bIsNum = /^\d+$/.test(bSlug);
-
-  if (aIsNum && bIsNum) return Number(aSlug) - Number(bSlug);
-  if (aIsNum) return -1;
-  if (bIsNum) return 1;
-
-  return aSlug.localeCompare(bSlug);
-}
 
 function fmtYmd(d: Date | null) {
   if (!d) return "-";
@@ -129,7 +116,10 @@ export default function DashboardClient() {
     await refetch();
   }, [refetch]);
 
-  const displayedRows = useMemo(() => visibleDashboardSites(data?.rows ?? [], hiddenSites.data ?? [], linkedSite), [data?.rows, hiddenSites.data, linkedSite]);
+  const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
+  const displayedRows = useMemo(() => visibleDashboardSites(data?.rows ?? [], hiddenSites.data ?? [], linkedSite)
+    .map(row => ({...row, alertStatus: dashboardRowStatus(row, data?.ctrl ?? {}, metrics)})),
+    [data?.rows, data?.ctrl, metrics, hiddenSites.data, linkedSite]);
   const filteredRows = useMemo(() => {
     const currentRows = displayedRows;
     return currentRows.filter((row) => statusFilter === "all" || statusFilter === "configured" ||
@@ -140,12 +130,8 @@ export default function DashboardClient() {
   }, [displayedRows, statusFilter]);
 
   const sortedRows = useMemo(
-    () => filteredRows.slice().sort((a, b) => {
-      const rank = { NO_DATA: 0, WARNING: 1, NORMAL: 2 } as const;
-      const issue = (row: SiteRow) => row.alertStatus !== "NORMAL" || row.openAlertCount > 0 || row.unacknowledgedAlertCount > 0;
-      return Number(issue(b)) - Number(issue(a)) || rank[a.alertStatus] - rank[b.alertStatus] || b.unacknowledgedAlertCount - a.unacknowledgedAlertCount || compareSite(a, b);
-    }),
-    [filteredRows],
+    () => sortDashboardRows(filteredRows, data?.ctrl ?? {}, metrics),
+    [filteredRows, data?.ctrl, metrics],
   );
 
   if (isLoading || (userId != null && hiddenSites.isPending)) {
@@ -165,7 +151,6 @@ export default function DashboardClient() {
   }
 
   const { meta, ctrl } = data;
-  const metrics = companyMetrics(data.metricConfig);
   const dashboardMetrics = metrics;
   const allColumns = dashboardColumns(data.metricConfig);
   const visibleColumns = preferences.columns === null ? allColumns : allColumns.filter(column => preferences.columns!.includes(column.key));
