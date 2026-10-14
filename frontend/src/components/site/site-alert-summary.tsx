@@ -13,7 +13,7 @@ export default function SiteAlertSummary({siteId, names}: {siteId:string; names:
       <dl className="mt-2 space-y-2">{site.thresholds.filter(item=>item.active || item.missingActive).map(item=><div key={item.key} className="flex flex-wrap items-baseline gap-x-2 gap-y-1"><dt className="font-semibold">{names[item.key] ?? item.label}</dt><dd className="text-text-secondary">{item.active && <span>{number(item.effectiveMin)}–{number(item.effectiveMax)}{item.unit ? ` ${item.unit}` : ""}{item.useAverage ? item.averageApplied ? " · 평균 기준" : " · 대체 범위" : ""}</span>}{item.active && item.missingActive && " · "}{item.missingActive && `항목 누락 ${item.missingThreshold ?? 3}회`}</dd></div>)}</dl>
       <p className="mt-2 text-text-secondary">{[site.noDataActive ? `수집 중단 ${site.noDataMinutes}분` : null, site.coldChillerActive ? "콜드칠러 온도 차이 ≤ 0.1°C" : null].filter(Boolean).join(" · ")}</p>
       {!site.thresholds.some(item=>item.active || item.missingActive) && !site.noDataActive && !site.coldChillerActive && <p className="mt-2 text-text-secondary">켜진 알림 항목이 없습니다.</p>}
-      <p className="mt-2 text-xs text-text-secondary">수치 이탈 {site.triggerAfterMinutes ? `${site.triggerAfterMinutes}분 지속 후` : "감지 시"} 알림 · 내 계정 기준</p>
+      <p className="mt-2 text-xs text-text-secondary">수치 2회 연속 이탈{site.triggerAfterMinutes ? ` · ${site.triggerAfterMinutes}분 지속 후` : " 시"} 알림 · 내 계정 기준</p>
     </>}
   </section>;
 }

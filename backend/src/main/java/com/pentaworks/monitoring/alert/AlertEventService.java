@@ -194,7 +194,14 @@ public class AlertEventService {
 
     @Transactional
     public Transition evaluate(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value) {
-        return evaluateCondition(userId, site, threshold, value, false, null);
+        int count=site.dashboardVisible() && site.alertsEnabled() && threshold.active() && RangeExcursions.outside(value,threshold)
+            ? RangeExcursions.count(DashboardService.readRecentSamples(jdbcTemplate,site.siteid(),576),threshold,site.collectionIntervalMinutes(),null) : 0;
+        return evaluate(userId,site,threshold,value,count);
+    }
+
+    @Transactional
+    public Transition evaluate(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value, int consecutiveCount) {
+        return evaluateCondition(userId, site, threshold, value, false, null, consecutiveCount);
     }
 
     @Transactional
@@ -210,7 +217,7 @@ public class AlertEventService {
         if (airCooled(site.siteid())) return null;
         return evaluateCondition(userId, site,
             new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (온도 차이 ≤ 0.1°C)", "°C", null, null, true),
-            inlet, true, coldChillerStopped(inlet, outlet) ? "HIGH" : null);
+            inlet, true, coldChillerStopped(inlet, outlet) ? "HIGH" : null, 2);
     }
 
     static boolean coldChillerStopped(double inlet,double outlet) {
@@ -220,7 +227,7 @@ public class AlertEventService {
     }
 
     private Transition evaluateCondition(long userId, SiteAlertSettings site, AlertThreshold threshold, Double value,
-                                         boolean coldChiller, String conditionDirection) {
+                                         boolean coldChiller, String conditionDirection, int consecutiveCount) {
         if (!site.dashboardVisible() || !site.alertsEnabled() || !threshold.active() ||
             value == null || DashboardService.isUnmeasured(value)) return null;
         Double min = threshold.effectiveMin();
@@ -246,6 +253,7 @@ public class AlertEventService {
         }
         String eventType = direction.toUpperCase();
         if (open != null) {
+            if (!coldChiller && consecutiveCount < 2) return null;
             if (!repeatDue(open, site.repeatMinutes())) return null;
             String message = site.name() + " · " + threshold.label() + " 값이 계속 " +
                 ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");
@@ -256,7 +264,8 @@ public class AlertEventService {
                 threshold.unit(), eventType, value, min, max, message);
         }
         Instant now = Instant.now();
-        if (!sustained(ruleId, eventType, site.triggerAfterMinutes(), now)) return null;
+        boolean durationReady=sustained(ruleId, eventType, site.triggerAfterMinutes(), now);
+        if (!durationReady || !coldChiller && consecutiveCount < 2) return null;
         clearPending(ruleId);
         String message = site.name() + " · " + threshold.label() + " 값이 " +
             ("LOW".equals(eventType) ? "최소값보다 낮습니다." : "최대값보다 높습니다.");

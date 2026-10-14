@@ -319,6 +319,7 @@ export default function DashboardExcelView({
                           ].join(" ")}
                         >
                           {formatMetricMeasurement(value, null, row.lastAt != null, "-")}
+                          {alert && (row.rangeExcursionCounts?.[m.key] ?? 0) > 0 && <span className="block text-[9px] font-medium leading-tight lg:text-[10px]" title="실제 수집 데이터 기준입니다. 정상·항목 누락·수집 공백이면 초기화됩니다. 2회 연속 이탈 시 알림이 발생하며, 최근 576건까지 확인합니다.">연속 {row.rangeExcursionCounts?.[m.key]}{(row.rangeExcursionCounts?.[m.key] ?? 0) >= 576 ? "+" : ""}회</span>}
                         </td>
                       );
                     })}

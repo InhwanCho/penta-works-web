@@ -49,13 +49,16 @@ class MonitorServiceTest {
         when(dashboard.getDashboard()).thenReturn(new DashboardResponse(
             new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1, 1, 0, 0, 0),
             List.of(row), Map.of(), null));
+        when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(
+            new DashboardService.MetricSample(java.time.Instant.parse("2026-09-30T00:00:00Z"),Map.of("hepres",3.25)),
+            new DashboardService.MetricSample(java.time.Instant.parse("2026-09-29T23:50:00Z"),Map.of("hepres",3.5))));
         var threshold = new AlertThreshold("hepres", "He Pressure", "psi", 0.5, 2.0, true);
         when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true,
             List.of(threshold), 30, false, true, 0, 0, null, null, false)));
         var transition = new AlertEventService.Transition(10, "001", "병원", "hepres", "He Pressure",
             "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
         when(alertEvents.evaluate(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(3.25))).thenReturn(transition);
+            org.mockito.ArgumentMatchers.eq(3.25), org.mockito.ArgumentMatchers.eq(2))).thenReturn(transition);
         when(recipients.personalPhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.isNull()))
             .thenReturn(List.of("01012345678"));
         when(recipients.personalPhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(10L)))
@@ -124,7 +127,7 @@ class MonitorServiceTest {
             "병원 · AC Temp 값이 최대값보다 높습니다.");
         when(alertEvents.evaluate(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.argThat(threshold -> "actemp".equals(threshold.key())),
-            org.mockito.ArgumentMatchers.eq(31.0))).thenReturn(transition);
+            org.mockito.ArgumentMatchers.eq(31.0), org.mockito.ArgumentMatchers.anyInt())).thenReturn(transition);
 
         Map<String, Object> result = monitor(dashboard, alerts, alertEvents, recipients,
             mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),
@@ -182,7 +185,7 @@ class MonitorServiceTest {
         when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,1,0,1,1,0,0,0),List.of(row),Map.of(),null));
         var firstEvent=new AlertEventService.Transition(10,"001","병원","hepres","He Pressure","psi","HIGH",3.0,0.5,2.0,"이상");
         var secondEvent=new AlertEventService.Transition(11,"001","병원","hepres","He Pressure","psi","HIGH",3.0,0.5,2.0,"이상");
-        when(events.evaluate(1,a,threshold,3.0)).thenReturn(firstEvent);when(events.evaluate(2,b,threshold,3.0)).thenReturn(secondEvent);
+        when(events.evaluate(1,a,threshold,3.0, 0)).thenReturn(firstEvent);when(events.evaluate(2,b,threshold,3.0, 0)).thenReturn(secondEvent);
         when(recipients.personalPhones("001",1,null)).thenReturn(List.of("01011112222"));
         when(recipients.personalPhones("001",1,10L)).thenReturn(List.of("01011112222"));
         var batch=new com.pentaworks.monitoring.alert.AlertDeliveryService.Batch(10,"batch");

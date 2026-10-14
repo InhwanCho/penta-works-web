@@ -27,6 +27,7 @@ export type SiteRow = {
   /** 관리자 뷰용 전체 지표 (최신 1건) */
   metrics: MetricValues;
   alertStatus: "NORMAL" | "WARNING" | "NO_DATA";
+  rangeExcursionCounts?: Partial<Record<MetricKey, number>>;
   openAlertCount: number;
   unacknowledgedAlertCount: number;
   alertIssues: {

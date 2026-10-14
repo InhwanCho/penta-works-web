@@ -217,13 +217,16 @@ public class DashboardService {
 
     /** Read actual collection records, never scheduler ticks. Index matches the dashboard latest record. */
     public List<MetricSample> recentMetricSamples(String siteId, int limit) {
+        return readRecentSamples(jdbcTemplate,siteId,limit);
+    }
+    public static List<MetricSample> readRecentSamples(org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,String siteId,int limit) {
         return jdbcTemplate.query("SELECT `index`,date," + METRICS.stream().map(k->k+"_value AS "+k).collect(Collectors.joining(",")) +
             " FROM mrtb WHERE siteid=? AND date IS NOT NULL ORDER BY `index` DESC LIMIT ?",
             (rs,n)->new MetricSample(rs.getTimestamp("date").toInstant(),metricMap(rs)),siteId,Math.min(576,Math.max(1,limit)));
     }
     public record MetricSample(Instant at, Map<String,Double> metrics) {}
 
-    private Map<String, Double> metricMap(ResultSet rs) throws SQLException {
+    private static Map<String, Double> metricMap(ResultSet rs) throws SQLException {
         Map<String, Double> result = new LinkedHashMap<>();
         for (String metric : METRICS) result.put(metric, parseMeasurement(rs.getString(metric)));
         return result;

@@ -20,7 +20,14 @@ public record DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows,
                                Map<String, Double> metrics, String alertStatus, int openAlertCount,
                                int unacknowledgedAlertCount, List<AlertIssue> alertIssues,
                                int collectionIntervalMinutes, int missingCollectionThreshold,
-                               Long missedCollectionCount) {
+                               Long missedCollectionCount, Map<String,Integer> rangeExcursionCounts) {
+        public DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
+                            int count1h, int count24h, Double hePsi, Double hePct, Map<String,Double> metrics,
+                            String alertStatus, int openAlertCount, int unacknowledgedAlertCount, List<AlertIssue> alertIssues,
+                            int collectionIntervalMinutes, int missingCollectionThreshold, Long missedCollectionCount) {
+            this(siteDb,siteSlug,name,lastAt,lagMin,count1h,count24h,hePsi,hePct,metrics,alertStatus,openAlertCount,
+                unacknowledgedAlertCount,alertIssues,collectionIntervalMinutes,missingCollectionThreshold,missedCollectionCount,Map.of());
+        }
         public DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
                             int count1h, int count24h, Double hePsi, Double hePct, Map<String, Double> metrics,
                             String alertStatus, int openAlertCount, int unacknowledgedAlertCount, List<AlertIssue> alertIssues) {

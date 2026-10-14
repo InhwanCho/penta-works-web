@@ -24,6 +24,21 @@ import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
     @Test
+    @SuppressWarnings("unchecked")
+    void numericIncidentNeedsTwoConsecutiveMeasurements() {
+        var jdbc=mock(JdbcTemplate.class);
+        when(jdbc.queryForObject(anyString(),eq(Long.class),eq(0L),eq("001"),eq("actemp"))).thenReturn(7L);
+        when(jdbc.queryForObject(eq("SELECT LAST_INSERT_ID()"),eq(Long.class))).thenReturn(9L);
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var threshold=new AlertThreshold("actemp","온도","°C",15.0,25.0,true);
+        var site=new SiteAlertSettings("001","병원",true,List.of(threshold),20,true,true,0,0,null,null,false);
+        assertNull(service.evaluate(0,site,threshold,30.0,1));
+        assertNull(service.evaluate(0,site,threshold,30.0,1));
+        verify(jdbc,never()).queryForObject(eq("SELECT LAST_INSERT_ID()"),eq(Long.class));
+        assertEquals(9L,service.evaluate(0,site,threshold,30.0,2).eventId());
+    }
+
+    @Test
     void onlyPlatformAdminMayChangeHospitalCoolingType() {
         var jdbc=mock(JdbcTemplate.class);
         var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
@@ -190,7 +205,7 @@ class AlertEventServiceTest {
             .thenAnswer(invocation->((ResultSetExtractor<?>)invocation.getArgument(1)).extractData(rs));
         var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
         var site=new SiteAlertSettings("001","병원",true,List.of(),30,false,true,0,0,null,null,false);
-        assertNull(service.evaluate(site,new AlertThreshold("actemp","온도","°C",15.0,25.0,true),31.0));
+        assertNull(service.evaluate(0, site,new AlertThreshold("actemp","온도","°C",15.0,25.0,true),31.0, 2));
     }
 
     @Test
@@ -208,10 +223,10 @@ class AlertEventServiceTest {
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 0, null, null, false);
         var threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
-        assertEquals(5L, service.evaluate(site, threshold, 31.0).eventId());
-        assertNull(service.evaluate(site, threshold, 31.0));
-        assertNull(service.evaluate(site, threshold, 31.0));
-        assertNull(service.evaluate(site, threshold, 31.0));
+        assertEquals(5L, service.evaluate(0, site, threshold, 31.0, 2).eventId());
+        assertNull(service.evaluate(0, site, threshold, 31.0, 2));
+        assertNull(service.evaluate(0, site, threshold, 31.0, 2));
+        assertNull(service.evaluate(0, site, threshold, 31.0, 2));
     }
 
     @Test
@@ -230,7 +245,7 @@ class AlertEventServiceTest {
             });
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30, null, null, false);
-        var transition = service.evaluate(site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0);
+        var transition = service.evaluate(0, site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0, 2);
         assertEquals(5L, transition.eventId());
         assertEquals("HIGH", transition.eventType());
         verify(jdbc, never()).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
@@ -250,7 +265,7 @@ class AlertEventServiceTest {
             });
         var service = new AlertEventService(jdbc, mock(CurrentUserService.class), mock(AuditService.class));
         var site = new SiteAlertSettings("001", "병원", true, List.of(), 30, false, true, 0, 30, null, null, false);
-        assertNull(service.evaluate(site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 20.0));
+        assertNull(service.evaluate(0, site, new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 20.0, 2));
         verify(jdbc).update(eq("UPDATE alert_event SET recovered_at=? WHERE id=?"), any(java.sql.Timestamp.class), eq(5L));
         verify(jdbc, never()).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
     }
@@ -279,8 +294,8 @@ class AlertEventServiceTest {
         SiteAlertSettings site = new SiteAlertSettings("001", "병원", true, List.of(), 30, true,
             false, 0, 0, null, null, false);
 
-        assertNull(service.evaluate(site,
-            new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0));
+        assertNull(service.evaluate(0, site,
+            new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true), 31.0, 2));
         assertNull(service.evaluateNoData(site, 31L));
 
         verifyNoInteractions(jdbcTemplate);
@@ -307,7 +322,7 @@ class AlertEventServiceTest {
         AlertThreshold threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
 
         for (double value : new double[]{0.001, 0.1, -0.1, -3258.2})
-            assertNull(service.evaluate(site, threshold, value));
+            assertNull(service.evaluate(0, site, threshold, value, 2));
 
         verifyNoInteractions(jdbcTemplate);
     }
@@ -331,7 +346,7 @@ class AlertEventServiceTest {
             true, 0, 0, null, null, false);
         AlertThreshold threshold = new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true);
 
-        assertNull(service.evaluate(site, threshold, 31.0));
+        assertNull(service.evaluate(0, site, threshold, 31.0, 2));
 
         verify(jdbcTemplate, never()).queryForObject(eq("SELECT LAST_INSERT_ID()"), eq(Long.class));
     }

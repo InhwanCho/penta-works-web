@@ -255,9 +255,17 @@ public class PersonalAlertService {
         var rows=data.rows().stream().map(row->{
             var config=configs.get(row.siteDb());
             var issues=bySite.getOrDefault(row.siteDb(),List.of());
+            Map<String,Integer> counts=new LinkedHashMap<>();
+            if(config!=null) {
+                var out=config.thresholds().stream().filter(t->t.active() && RangeExcursions.outside(row.metrics().get(t.key()),t)).toList();
+                if(!out.isEmpty()) {
+                    var history=com.pentaworks.monitoring.dashboard.DashboardService.readRecentSamples(jdbc,row.siteDb(),576);
+                    for(var threshold:out) counts.put(threshold.key(),RangeExcursions.count(history,threshold,config.collectionIntervalMinutes(),row.lastAt()));
+                }
+            }
             String status=issues.stream().anyMatch(i->i.eventType().equals("NO_DATA"))?"NO_DATA":issues.isEmpty()?"NORMAL":"WARNING";
             int interval=config==null?10:config.collectionIntervalMinutes(), missing=config==null?2:config.missingCollectionThreshold();
-            return new com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow(row.siteDb(),row.siteSlug(),row.name(),row.lastAt(),row.lagMin(),row.count1h(),row.count24h(),row.hePsi(),row.hePct(),row.metrics(),status,issues.size(),(int)issues.stream().filter(i->!i.acknowledged()).count(),issues,interval,missing,CollectionHealth.missedCount(row.lagMin(),interval));
+            return new com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow(row.siteDb(),row.siteSlug(),row.name(),row.lastAt(),row.lagMin(),row.count1h(),row.count24h(),row.hePsi(),row.hePct(),row.metrics(),status,issues.size(),(int)issues.stream().filter(i->!i.acknowledged()).count(),issues,interval,missing,CollectionHealth.missedCount(row.lagMin(),interval),counts);
         }).toList();
         Map<String,com.pentaworks.monitoring.dashboard.DashboardResponse.CtrlRange> ranges=new LinkedHashMap<>();
         for(var row:rows) {var config=configs.get(row.siteDb());if(config!=null)ranges.put(row.siteDb(),ctrl(config));}

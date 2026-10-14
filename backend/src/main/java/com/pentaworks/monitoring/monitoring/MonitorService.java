@@ -76,7 +76,9 @@ public class MonitorService {
                         if(missing!=null)transitions.add(missing);
                     }
                     if(!threshold.active())continue;
-                    Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()));
+                    var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576));
+                    int consecutive=com.pentaworks.monitoring.alert.RangeExcursions.count(history,threshold,site.collectionIntervalMinutes(),row.lastAt());
+                    Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()),consecutive);
                     if(event!=null)transitions.add(event);
                 }
             }
