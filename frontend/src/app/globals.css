@@ -245,3 +245,15 @@ html.dark .select-inset-arrow {
   overscroll-behavior-x: contain;
   touch-action: pan-x pan-y pinch-zoom;
 }
+
+/* Korean control names wrap at word boundaries instead of splitting syllables. */
+button, summary, label, h1, h2, h3, h4, [role="tab"], [role="switch"] {
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 1023px) {
+  button[aria-pressed], [role="tab"], [role="switch"] {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}

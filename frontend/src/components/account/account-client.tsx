@@ -59,7 +59,7 @@ export default function AccountClient() {
           <div><dt className="text-xs text-text-secondary">휴대폰번호</dt><dd className="mt-1 font-bold">{formatPhone(profile.data?.phone) || "미등록"}</dd></div>
         </dl>
         {profile.isError && <p role="alert" className="mt-3 text-sm text-rose-600">내 정보를 불러오지 못했습니다. <button type="button" onClick={() => profile.refetch()} className="underline">다시 시도</button></p>}
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">
           <button type="button" disabled={saving || !profile.data} onClick={() => {setDraft(profile.data!);setMode("profile");setMessage(null);}} className="min-h-12 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">내 정보 변경</button>
           <button type="button" disabled={saving} onClick={() => {setMode("password");setMessage(null);setCurrentPassword("");setNewPassword("");setConfirm("");}} className="min-h-12 rounded-xl border border-slate-200 px-3 text-sm font-bold dark:border-white/10">비밀번호 변경</button>
         </div>
