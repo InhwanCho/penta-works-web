@@ -4,6 +4,7 @@ import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
 import OfficeAssetsPanel from "@/components/site/office-assets-panel";
+import SiteAlertSummary from "@/components/site/site-alert-summary";
 import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
@@ -221,6 +222,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
+      <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
+
       <OfficeAssetsPanel
         siteId={data.site.siteDb}
         returnPath={`/sites/${encodeURIComponent(slug)}`}
@@ -262,6 +265,22 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             take={100}
             active={take === 100}
           />
+        </div>
+        <div role="group" aria-label="빠른 기간 조회" className="mt-3 grid grid-cols-4 gap-2">
+          {[{label:"1주",months:0},{label:"3달",months:3},{label:"6달",months:6},{label:"1년",months:12}].map(period=><button key={period.label} type="button" disabled={isFetching} onClick={()=>{
+            const end = new Date();
+            const start = new Date(end.getTime() + 9*60*60*1000);
+            if (period.months) {
+              const day = start.getUTCDate();
+              start.setUTCDate(1);
+              start.setUTCMonth(start.getUTCMonth()-period.months);
+              const lastDay = new Date(Date.UTC(start.getUTCFullYear(),start.getUTCMonth()+1,0)).getUTCDate();
+              start.setUTCDate(Math.min(day,lastDay));
+            } else start.setUTCDate(start.getUTCDate()-7);
+            start.setTime(start.getTime()-9*60*60*1000);
+            setPeriodError("");
+            router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:start.toISOString(),to:end.toISOString(),take:String(take)})}`,{scroll:false});
+          }} className="min-h-11 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2 text-sm font-bold text-sky-800 disabled:opacity-50 dark:border-slate-600 dark:bg-background-dark-secondary dark:text-sky-200">{period.label}</button>)}
         </div>
         <form className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
           event.preventDefault();
