@@ -50,6 +50,18 @@ public class AlertController {
         return personal.settings(user);
     }
 
+    @GetMapping("/cooling-types")
+    public Map<String,Boolean> coolingTypes(Authentication authentication) {
+        return alertEvents.coolingTypes(currentUsers.require(authentication));
+    }
+
+    @PatchMapping("/cooling-types/{siteId}")
+    public Map<String,Boolean> coolingType(@PathVariable String siteId, @RequestBody CoolingType request, Authentication authentication) {
+        alertEvents.saveCoolingType(currentUsers.require(authentication),siteId,request.airCooled());
+        return Map.of("airCooled",request.airCooled());
+    }
+    public record CoolingType(boolean airCooled) {}
+
     @GetMapping("/notification-preferences")
     public PersonalAlertService.PreferenceView notificationPreferences(Authentication authentication) {
         return personal.notificationPreferences(currentUsers.require(authentication));

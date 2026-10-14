@@ -7,6 +7,7 @@ import { ALERT_HELP } from "@/lib/alert-help";
 import { NotificationPreferencesSummary } from "./notification-preferences";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
+import SiteCoolingControl, {useCoolingTypes} from "./site-cooling-control";
 import ManagementTabs from "@/components/common/management-tabs";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -133,7 +134,7 @@ export default function BaselinesClient({
       <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
         {value:"events",label:"알림 확인",},
         {value:"thresholds",label:"알림 설정"},
-        ...(canEditCompany ? [{value:"sites" as const,label:"병원 표시"}] : []),
+        ...(canEditCompany ? [{value:"sites" as const,label:"병원 설정"}] : []),
       ]} />
 
       {view === "sites" ? <section className="space-y-3">
@@ -147,6 +148,7 @@ export default function BaselinesClient({
         <div className="space-y-2">{filtered.map((entry) => <article key={entry.siteid} className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(22,58,82,0.035)] sm:flex-row sm:items-center dark:border-white/8 dark:bg-background-dark-card">
           <div className="min-w-0 flex-1"><h2 className="truncate font-bold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-0.5 text-sm">{entry.siteid} · {entry.dashboardVisible ? (entry.alertsEnabled ? "대시보드 표시 · 알림 켜짐" : "대시보드 표시 · 알림 꺼짐") : "대시보드 숨김 · 알림 불가"}</p></div>
           <div className="flex flex-wrap items-center gap-2">
+            <SiteCoolingControl siteId={entry.siteid} name={entry.name ?? entry.siteid}/>
             {canEditCompany && <button type="button" disabled={busySite === entry.siteid} onClick={() => toggleVisibility(entry)} className={`min-h-10 cursor-pointer rounded-lg px-3 text-sm font-bold transition disabled:opacity-50 ${entry.dashboardVisible ? "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-sky-950/50 dark:text-sky-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`} aria-label={`${entry.name ?? entry.siteid} 대시보드 ${entry.dashboardVisible ? "숨기기" : "표시하기"}`}>{entry.dashboardVisible ? "대시보드 표시 중" : "대시보드 숨김"}</button>}
             {canEdit && <button type="button" disabled={busySite === entry.siteid || !entry.dashboardVisible} onClick={() => toggleAlerts(entry)} className={`min-h-10 cursor-pointer rounded-lg px-3 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${entry.alertsEnabled && entry.dashboardVisible ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`}>{entry.alertsEnabled && entry.dashboardVisible ? "알림 켜짐" : "알림 꺼짐"}</button>}
             <button type="button" onClick={() => openSettings(entry)} className="min-h-10 cursor-pointer rounded-lg border border-slate-200 px-3 text-sm font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">상세 설정</button>
@@ -372,6 +374,8 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
   onSave: (entry: SiteAlertSettings) => Promise<SiteAlertSettings>;
 }) {
   const router = useRouter();
+  const cooling = useCoolingTypes();
+  const airCooled = cooling.data?.[entry.siteid] === true;
   const [smallScreen, setSmallScreen] = useState(false);
   useEffect(() => {
     const media = window.matchMedia("(max-width: 1023px)");
@@ -483,7 +487,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
 
               </div>)}
           </div>
-          {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도 차이가 0.1°C 이하면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive} disabled={!canEdit || saving} onChange={setColdChillerActive} /></AlertSection></div>}
+          {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도 차이가 0.1°C 이하면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive && !airCooled} disabled={!canEdit || saving || airCooled || cooling.isPending || cooling.isError} onChange={setColdChillerActive} />{airCooled && <p className="mt-2 text-sm font-semibold text-text-secondary">공냉식 병원이라 사용하지 않음 · 전체 담당자 적용</p>}</AlertSection></div>}
           </>}
           {onlyMetricKey && <div className="mt-5 space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>}
           {!onlyMetricKey && pane === "schedule" && <AlertSection title="이상 지속 시간" description="이 병원의 수치·콜드칠러 이상이 얼마나 지속되면 알릴지 정합니다."><NumberField label="몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes}/><p className="mt-3 text-base leading-7 text-text-secondary">0분이면 다음 검사에서 알림 대상으로 판단합니다. 데이터 누락은 별도의 연속 누락 기준을 사용합니다.</p><Link href="/notification-settings" className="mt-4 inline-flex min-h-11 items-center font-bold text-sky-800 dark:text-sky-200">내 알림 수신 시간·반복 설정 →</Link></AlertSection>}

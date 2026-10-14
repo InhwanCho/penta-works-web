@@ -70,6 +70,8 @@ public class PersonalAlertService {
             if(config==null)throw new IllegalStateException("개인 알림 패턴을 초기화하지 못했습니다.");
             result.add(enrich(config,site,states.getOrDefault(site.siteid(),Map.of())));
         }
+        Set<String> airCooled = new HashSet<>(jdbc.query("SELECT site_id FROM site_cooling_config WHERE air_cooled=TRUE",(rs,n)->rs.getString(1)));
+        result.replaceAll(value -> !airCooled.contains(value.siteid()) ? value : new SiteAlertSettings(value.siteid(),value.name(),value.configured(),value.thresholds(),value.noDataMinutes(),value.noDataActive(),value.alertsEnabled(),value.triggerAfterMinutes(),value.repeatMinutes(),value.quietStart(),value.quietEnd(),value.suppressWeekends(),value.holidayDates(),value.dashboardVisible(),false,value.collectionIntervalMinutes(),value.missingCollectionThreshold()));
         NotificationPreferences preferences=commonPreferences(actor.id(),result);
         return preferences==null?result:result.stream().map(preferences::apply).toList();
     }

@@ -110,7 +110,8 @@ public class MonitorService {
             .collect(Collectors.groupingBy(Transition::siteId, LinkedHashMap::new, Collectors.toList()));
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         for (Map.Entry<String, List<Transition>> entry : bySite.entrySet()) {
-            List<Transition> siteAlerts = entry.getValue();
+            List<Transition> siteAlerts = entry.getValue().stream().filter(alert -> !"__cold_chiller__".equals(alert.metricKey()) || !alertEvents.airCooled(alert.siteId())).toList();
+            if(siteAlerts.isEmpty()) continue;
             List<Long> eventIds = siteAlerts.stream().map(Transition::eventId).toList();
             SiteAlertSettings policy = settings.get(entry.getKey());
             if (policy != null && !deliveryAllowed(policy, now)) {
@@ -150,7 +151,7 @@ public class MonitorService {
                 if (claimed.isEmpty()) continue;
                 try {
                     var displayed = alertEvents.notificationTransitions(userId, claimed);
-                    if (displayed == null) displayed = claimed;
+                    if (displayed == null || displayed.isEmpty()) displayed = claimed;
                     String receipt = displayed.size() == 1 ? kakao.send(phone, displayed.get(0)) : kakao.sendBundle(phone, displayed);
                     for (Transition alert : claimed) deliveries.accepted(batches.get(alert.eventId()), destination, receipt);
                 } catch (IllegalStateException error) {

@@ -46,6 +46,7 @@ public class SecurityConfig {
                     "/api/v1/auth/invitations/*", "/api/v1/auth/password-resets/*").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/actuator/health", "/api/v1/monitor").permitAll()
                 .requestMatchers("/api/v1/platform/**").hasRole("PLATFORM_ADMIN")
+                .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/cooling-types/*").hasRole("PLATFORM_ADMIN")
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/events/*/acknowledge")
                     .authenticated()
                 .requestMatchers(org.springframework.http.HttpMethod.PATCH, "/api/v1/alerts/events/acknowledge")

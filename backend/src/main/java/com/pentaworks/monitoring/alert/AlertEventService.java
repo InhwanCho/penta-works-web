@@ -13,6 +13,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,30 @@ public class AlertEventService {
         this.jdbcTemplate = jdbcTemplate;
         this.currentUsers = currentUsers;
         this.audit = audit;
+    }
+
+    public boolean airCooled(String siteId) {
+        return Boolean.TRUE.equals(jdbcTemplate.query("SELECT air_cooled FROM site_cooling_config WHERE site_id=?", rs->rs.next()?rs.getBoolean(1):false, siteId));
+    }
+
+    public Map<String, Boolean> coolingTypes(CurrentUser actor) {
+        var allowed = currentUsers.allowedSiteIds(actor);
+        Map<String, Boolean> values = new java.util.HashMap<>();
+        jdbcTemplate.query("SELECT site_id,air_cooled FROM site_cooling_config", (org.springframework.jdbc.core.RowCallbackHandler) rs->{if(allowed.contains(rs.getString(1))) values.put(rs.getString(1),rs.getBoolean(2));});
+        return values;
+    }
+
+    @Transactional
+    public void saveCoolingType(CurrentUser actor, String siteId, boolean airCooled) {
+        if (!"PLATFORM_ADMIN".equals(actor.role())) throw new ForbiddenException("플랫폼 관리자만 병원 냉각 방식을 변경할 수 있습니다.");
+        currentUsers.requireSiteAccess(actor,siteId);
+        jdbcTemplate.update("INSERT INTO site_cooling_config(site_id,air_cooled,updated_by) VALUES(?,?,?) ON DUPLICATE KEY UPDATE air_cooled=VALUES(air_cooled),updated_by=VALUES(updated_by),updated_at=CURRENT_TIMESTAMP(6)",siteId,airCooled,actor.id());
+        if(airCooled) {
+            jdbcTemplate.update("UPDATE alert_event e JOIN alert_rule r ON r.id=e.rule_id SET e.recovered_at=CURRENT_TIMESTAMP(6) WHERE r.site_id=? AND r.metric_key='__cold_chiller__' AND e.recovered_at IS NULL",siteId);
+            jdbcTemplate.update("DELETE p FROM alert_pending_state p JOIN alert_rule r ON r.id=p.rule_id WHERE r.site_id=? AND r.metric_key='__cold_chiller__'",siteId);
+            jdbcTemplate.update("UPDATE alert_rule SET is_enabled=FALSE WHERE site_id=? AND metric_key='__cold_chiller__'",siteId);
+        }
+        audit.record(actor,"SITE_COOLING_TYPE_UPDATED","SITE",siteId,java.util.Map.of("airCooled",airCooled));
     }
 
     public List<Transition> notificationTransitions(long userId, List<Transition> transitions) {
@@ -182,6 +207,7 @@ public class AlertEventService {
         if (!site.coldChillerActive() || inlet == null || outlet == null ||
             !Double.isFinite(inlet) || !Double.isFinite(outlet) ||
             DashboardService.isUnmeasured(inlet) || DashboardService.isUnmeasured(outlet)) return null;
+        if (airCooled(site.siteid())) return null;
         return evaluateCondition(userId, site,
             new AlertThreshold("__cold_chiller__", "콜드칠러 정지 의심 (온도 차이 ≤ 0.1°C)", "°C", null, null, true),
             inlet, true, coldChillerStopped(inlet, outlet) ? "HIGH" : null);
@@ -376,6 +402,7 @@ public class AlertEventService {
         if (event == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
         currentUsers.requireSiteAccess(actor, event.siteId());
         currentUsers.requireVisibleSiteAccess(actor, event.siteId());
+        if ("__cold_chiller__".equals(event.metricKey()) && airCooled(event.siteId())) throw new BadRequestException("공냉식 병원은 콜드칠러 정지 알림을 발송하지 않습니다.");
         if (!List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.deliveryStatus()))
             throw new BadRequestException("미발송 또는 전송에 실패한 알림만 재전송할 수 있습니다.");
         if (!"__data__".equals(event.metricKey()) && DashboardService.isUnmeasured(event.value()))

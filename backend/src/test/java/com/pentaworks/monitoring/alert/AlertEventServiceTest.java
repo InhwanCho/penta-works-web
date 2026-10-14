@@ -24,6 +24,26 @@ import static org.mockito.Mockito.when;
 
 class AlertEventServiceTest {
     @Test
+    void onlyPlatformAdminMayChangeHospitalCoolingType() {
+        var jdbc=mock(JdbcTemplate.class);
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var actor=new CurrentUserService.CurrentUser(7,1,"test@example.com","담당자","SUPER_ADMIN","ACTIVE");
+        assertThrows(com.pentaworks.monitoring.common.ForbiddenException.class,()->service.saveCoolingType(actor,"022",true));
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void airCooledHospitalCannotCreateChillerIncidentEvenWhenPersonalSettingIsEnabled() {
+        var jdbc=mock(JdbcTemplate.class);
+        when(jdbc.query(eq("SELECT air_cooled FROM site_cooling_config WHERE site_id=?"),any(ResultSetExtractor.class),eq("022"))).thenReturn(true);
+        var service=new AlertEventService(jdbc,mock(CurrentUserService.class),mock(AuditService.class));
+        var site=new SiteAlertSettings("022","서울정병원",true,List.of(),20,true,true,0,30,null,null,false,List.of(),true,true,10,2);
+        assertNull(service.evaluateColdChiller(7,site,20.0,20.0));
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
+
+    @Test
     @SuppressWarnings("unchecked")
     void pressureMissingStartsAtFifthReceivedSampleAndStopsWhenPressureReturns() throws Exception {
         JdbcTemplate jdbc = mock(JdbcTemplate.class);
