@@ -478,8 +478,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
           <div className="grid gap-3">
             {thresholds.filter(threshold => metricFilter === "all" || threshold.active)
               .sort((a, b) => Number(b.key === initialMetricKey) - Number(a.key === initialMetricKey))
-              .map(threshold => <div key={threshold.key} className={threshold.key === initialMetricKey ? "rounded-xl ring-2 ring-sky-500" : undefined}>
-                {threshold.key === initialMetricKey && <p className="px-3 py-2 text-sm font-bold text-sky-700 dark:text-sky-300">선택한 항목</p>}
+              .map(threshold => <div key={threshold.key}>
                 {onlyMetricKey ? <MetricEditor threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} /> : <details open={threshold.key === initialMetricKey} className="rounded-xl border border-slate-200 bg-white dark:border-white/15 dark:bg-white/5"><summary className="flex min-h-16 cursor-pointer flex-wrap items-center justify-between gap-3 p-4"><span className="text-lg font-bold">{metricName(threshold.key, threshold.label)}</span><span className="text-base text-text-secondary">{threshold.active ? `${roundThreshold(threshold.effectiveMin)} ~ ${roundThreshold(threshold.effectiveMax)}${threshold.unit ? ` ${threshold.unit}` : ""}` : "알림 꺼짐"}</span></summary><div className="border-t border-slate-100 p-3 dark:border-white/10"><MetricEditor threshold={threshold} disabled={!canEdit || saving} allowAverage onChange={patch => update(threshold.key, patch)} /></div></details>}
 
               </div>)}
@@ -535,36 +534,36 @@ function MetricEditor({ threshold, disabled, allowAverage = false, onChange }: {
     <NumberField label="최대값" value={threshold.max} disabled={disabled} onChange={max => onChange({max})} />
   </div>;
   return (
-    <section className={`rounded-xl border p-3.5 transition ${threshold.active ? "border-sky-200 bg-sky-50 dark:border-sky-900/70 dark:bg-background-dark-secondary" : "border-slate-200/80 bg-slate-50 dark:border-white/8 dark:bg-background-dark-secondary"}`}>
+    <section className={allowAverage ? "py-2" : "rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-background-dark-secondary"}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0"><h3 className="font-extrabold">{metricName(threshold.key, threshold.label)}{threshold.unit && <span className="text-text-secondary ml-1 text-sm font-medium">({threshold.unit})</span>}</h3><p className="text-text-secondary mt-0.5 line-clamp-2 text-sm">{METRIC_DESCRIPTION.get(threshold.key)}</p></div>
         <label className="flex shrink-0 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={threshold.active} disabled={disabled} onChange={(event) => onChange({ active: event.target.checked })} className="h-5 w-5 accent-sky-700" />사용</label>
       </div>
       {allowAverage && <fieldset className="mt-4">
         <legend className="text-sm font-bold">정상 범위를 정하는 방법<HelpButton title="정상 범위를 정하는 방법" message={ALERT_HELP["정상 범위를 정하는 방법"]}/></legend>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div className="mt-2 grid gap-1 lg:grid-cols-2">
           {[{value:true,label:"평균에 맞춰 자동 조정",description:"평균이 갱신되면 범위도 자동 변경"}, {value:false,label:"직접 범위 입력",description:"입력한 범위를 계속 사용"}].map(mode =>
-            <label key={String(mode.value)} className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-3 ${threshold.useAverage === mode.value ? "border-sky-500 bg-sky-50 dark:bg-sky-950/30" : "border-slate-200 dark:border-white/10"}`}>
+            <label key={String(mode.value)} className="flex min-h-11 cursor-pointer items-center gap-3 py-2">
               <input type="radio" name={`alert-basis-${threshold.key}`} checked={threshold.useAverage === mode.value} disabled={disabled} onChange={()=>onChange({useAverage:mode.value})} className="mt-0.5 h-5 w-5 shrink-0 accent-sky-700" />
-              <span><span className="block text-sm font-bold">{mode.label}</span><span className="mt-1 block text-sm text-text-secondary">{mode.description}</span></span>
+              <span className="text-sm font-semibold">{mode.label}</span>
             </label>)}
         </div>
       </fieldset>}
-      {allowAverage && threshold.useAverage ? <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-900/50 dark:bg-background-dark-secondary">
-        <p className="text-sm font-bold">{threshold.historicalAverage ? "과거 24시간 평균 사용" : "최근 24시간 평균"}</p>
+      {allowAverage && threshold.useAverage ? <div className="mt-4 space-y-4 border-t border-slate-200 pt-4 dark:border-slate-700">
+        <div><p className="text-sm font-semibold text-text-secondary">{threshold.historicalAverage ? "과거 24시간 평균 사용" : "최근 24시간 평균"}</p>
         {threshold.historicalAverage && <p className="mt-1 text-sm leading-5 text-amber-700 dark:text-amber-300">최근 평균을 사용할 수 없어 마지막 정상 평균을 사용합니다. 최근 표본이 충분해지면 자동 복귀합니다.</p>}
         {averagePeriodMessage(threshold) && <p className="mt-1 text-sm text-text-secondary">{averagePeriodMessage(threshold)}</p>}
         <p className="mt-1 text-lg font-extrabold">{threshold.averageValue == null ? "데이터 없음" : `${roundThreshold(threshold.averageValue)}${unit}`}</p>
-        <p className="mt-1 text-sm text-text-secondary">유효 {threshold.averageSampleCount}건 · 미측정 제외 {threshold.excludedZeroCount}건 · 매시간 자동 갱신</p>
-        <div className="mt-3"><p className="font-bold text-sm">허용편차<HelpButton title="허용편차" message={ALERT_HELP["허용편차"]}/></p><NumberField label="평균에서 얼마나 벗어나면 알릴까요? (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
-        <div role="status" aria-live="polite" className={`mt-3 rounded-lg p-3 ${preview.averageApplied ? "bg-emerald-100/70 dark:bg-emerald-950/50" : "bg-amber-100/70 dark:bg-amber-950/40"}`}>
+        <p className="mt-1 text-sm text-text-secondary">유효 {threshold.averageSampleCount}건 · 미측정 제외 {threshold.excludedZeroCount}건 · 매시간 자동 갱신</p></div>
+        <div className="max-w-sm"><div className="flex items-center text-sm font-semibold">평균에서 벗어나는 비율<HelpButton title="허용편차" message={ALERT_HELP["허용편차"]}/></div><NumberField label="허용편차 (±%)" value={threshold.tolerancePercent} min={0.1} max={100} disabled={disabled} onChange={tolerancePercent=>onChange({tolerancePercent})} /></div>
+        <div role="status" aria-live="polite" className="border-l-2 border-sky-600 py-1 pl-3 dark:border-sky-400">
           <p className="text-sm font-bold">저장 후 적용될 범위 · {preview.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균" : "24시간 평균" : "대체 범위"}</p>
-          <p className="mt-1 text-base font-extrabold">{formatRange(preview.min,preview.max)}</p>
+          <p className="mt-1 text-xl font-bold tabular-nums">{formatRange(preview.min,preview.max)}</p>
           {!preview.averageApplied && <p className="mt-2 text-sm leading-5">{preview.reason ?? "허용편차를 확인해주세요."} 현재는 아래 대체 범위로 판단합니다. 표본과 최신성 조건이 충족되면 평균 기준으로 자동 전환됩니다.</p>}
         </div>
         {threshold.averageValue != null && !preview.averageApplied && <p className="mt-2 text-sm text-text-secondary">평균 적용 조건 충족 시 계산 범위: {formatRange(threshold.averageValue - Math.abs(threshold.averageValue)*threshold.tolerancePercent/100, threshold.averageValue + Math.abs(threshold.averageValue)*threshold.tolerancePercent/100)} · 현재 미적용</p>}
-        <details className="mt-3 rounded-lg border border-emerald-200 bg-white p-3 dark:border-emerald-900 dark:bg-white/5"><summary className="min-h-10 cursor-pointer text-sm font-bold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-sm text-text-secondary">최근 평균이 부족하거나 오래되면 이전의 정상 24시간 평균을 찾아 사용합니다. 과거에도 유효 표본 12건 이상인 정상 평균이 없으면 이 대체 범위를 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
-      </div> : <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-white/5">
+        <details className="border-t border-slate-200 pt-2 dark:border-slate-700"><summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">평균 사용 불가 시 대체 범위 수정</summary>{manualFields}<p className="mt-2 text-sm text-text-secondary">최근 평균이 부족하거나 오래되면 이전의 정상 24시간 평균을 찾아 사용합니다. 과거에도 유효 표본 12건 이상인 정상 평균이 없으면 이 대체 범위를 사용합니다. 미측정 값은 평균에서 제외합니다.</p></details>
+      </div> : <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-700">
         <p className="mb-3 text-sm font-bold">수동 범위 설정</p>{manualFields}
         <p role="status" aria-live="polite" className="mt-3 text-sm font-bold">저장 후 적용될 범위: {formatRange(threshold.min,threshold.max)}</p>
         {allowAverage && <p className="mt-2 text-sm text-text-secondary">24시간 평균과 허용편차는 알림 판단에 사용하지 않습니다.</p>}
