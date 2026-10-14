@@ -23,11 +23,33 @@ public class AlertEventService {
     private final JdbcTemplate jdbcTemplate;
     private final CurrentUserService currentUsers;
     private final AuditService audit;
+    private final com.pentaworks.monitoring.company.CompanyMetricService companyMetrics;
 
     public AlertEventService(JdbcTemplate jdbcTemplate, CurrentUserService currentUsers, AuditService audit) {
+        this(jdbcTemplate, currentUsers, audit, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public AlertEventService(JdbcTemplate jdbcTemplate, CurrentUserService currentUsers, AuditService audit,
+                             com.pentaworks.monitoring.company.CompanyMetricService companyMetrics) {
+        this.companyMetrics = companyMetrics;
         this.jdbcTemplate = jdbcTemplate;
         this.currentUsers = currentUsers;
         this.audit = audit;
+    }
+
+    public List<Transition> notificationTransitions(long userId, List<Transition> transitions) {
+        if (companyMetrics == null || transitions.isEmpty()) return transitions;
+        Long companyId = jdbcTemplate.queryForObject("SELECT company_id FROM app_user WHERE id=?", Long.class, userId);
+        var metrics = companyMetrics.metrics(companyId);
+        return transitions.stream().map(event -> {
+            var metric = metrics.stream().filter(item -> item.key().equals(event.metricKey())).findFirst().orElse(null);
+            if (metric == null) return event;
+            boolean missing = "METRIC_MISSING".equals(event.eventType());
+            return new Transition(event.eventId(), event.siteId(), event.siteName(), event.metricKey(),
+                metric.displayName() + (missing ? " 측정 누락" : ""),
+                missing ? "회" : metric.unit(), event.eventType(), event.value(), event.min(), event.max(), event.message());
+        }).toList();
     }
 
     public List<AlertEventSummary> events(Set<String> allowedSiteIds, int requestedLimit, long actorId) {

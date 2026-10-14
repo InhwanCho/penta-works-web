@@ -149,7 +149,9 @@ public class MonitorService {
                 }
                 if (claimed.isEmpty()) continue;
                 try {
-                    String receipt = claimed.size() == 1 ? kakao.send(phone, claimed.get(0)) : kakao.sendBundle(phone, claimed);
+                    var displayed = alertEvents.notificationTransitions(userId, claimed);
+                    if (displayed == null) displayed = claimed;
+                    String receipt = displayed.size() == 1 ? kakao.send(phone, displayed.get(0)) : kakao.sendBundle(phone, displayed);
                     for (Transition alert : claimed) deliveries.accepted(batches.get(alert.eventId()), destination, receipt);
                 } catch (IllegalStateException error) {
                     for (Transition alert : claimed) deliveries.complete(batches.get(alert.eventId()), destination, "FAILED", error.getMessage());
