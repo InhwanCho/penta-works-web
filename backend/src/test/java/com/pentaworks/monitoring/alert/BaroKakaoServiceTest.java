@@ -11,6 +11,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BaroKakaoServiceTest {
     @Test
+    void soapTransportPreservesKoreanTemplateNameAndMessage() {
+        var builder = org.springframework.web.client.RestClient.builder();
+        var server = org.springframework.test.web.client.MockRestServiceServer.bindTo(builder).build();
+        var service = new BaroKakaoService(true, "key", "1234567890", "sender", "01012345678", false);
+        var alert = new Transition(1, "001", "순천향병", "achumi", "항온항습기 습도", "%", "LOW", 24.8, 25.22, 75.67, "이탈");
+        String xml = service.request("01099998888", alert, ZonedDateTime.now());
+        server.expect(org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo("https://ws.baroservice.com/KAKAOTALK.asmx"))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.header("Content-Type", "text/xml;charset=UTF-8"))
+            .andExpect(org.springframework.test.web.client.match.MockRestRequestMatchers.content().bytes(xml.getBytes(StandardCharsets.UTF_8)))
+            .andRespond(org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess("accepted", org.springframework.http.MediaType.TEXT_XML));
+        assertEquals("accepted", BaroKakaoService.postSoap(builder.build(), "SendATKakaotalkEx", xml));
+        server.verify();
+    }
+
+    @Test
     void groupedAlertsUseApprovedTemplateAndNameEachItemValueAndType() {
         var service=new BaroKakaoService(true,"test-key","1234567890","sender","01012345678",false);
         var pressure=new Transition(1,"001","테스트 병원","hepres","헬륨 압력 측정 누락","회","METRIC_MISSING",5.0,null,5.0,"누락");

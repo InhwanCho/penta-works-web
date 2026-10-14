@@ -70,9 +70,7 @@ public class BaroKakaoService {
     }
 
     private String sendRequest(String xml) {
-        String response = client.post().uri(ENDPOINT).contentType(MediaType.TEXT_XML)
-            .header("SOAPAction", "http://ws.baroservice.com/SendATKakaotalkEx")
-            .body(xml).retrieve().body(String.class);
+        String response = postSoap(client, "SendATKakaotalkEx", xml);
         String receipt = result(response);
         if (receipt == null || receipt.isBlank()) throw new IllegalArgumentException("바로빌 접수번호가 없습니다.");
         if (receipt.startsWith("-")) throw new IllegalStateException("바로빌 접수 거부 (" + receipt + ")");
@@ -89,10 +87,15 @@ public class BaroKakaoService {
             + "<soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\"><soap:Body>"
             + "<GetSendKakaotalkEx xmlns=\"http://ws.baroservice.com/\">" + body
             + "</GetSendKakaotalkEx></soap:Body></soap:Envelope>";
-        String response = client.post().uri(ENDPOINT).contentType(MediaType.TEXT_XML)
-            .header("SOAPAction", "http://ws.baroservice.com/GetSendKakaotalkEx")
-            .body(xml).retrieve().body(String.class);
+        String response = postSoap(client, "GetSendKakaotalkEx", xml);
         return parseStatus(response);
+    }
+
+    static String postSoap(RestClient client, String action, String xml) {
+        return client.post().uri(ENDPOINT)
+            .contentType(new MediaType("text", "xml", StandardCharsets.UTF_8))
+            .header("SOAPAction", "http://ws.baroservice.com/" + action)
+            .body(xml.getBytes(StandardCharsets.UTF_8)).retrieve().body(String.class);
     }
 
     String request(String phone, Transition alert, ZonedDateTime now) {
