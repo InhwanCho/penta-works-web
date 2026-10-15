@@ -1,38 +1,26 @@
 "use client";
-import { useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 
-/** Separate sticky headings from horizontal overflow; page owns vertical scrolling. */
-export default function PageScrollTable({ heading, body, labels, name }: {heading: ReactNode; body: ReactNode; labels: string[]; name: string}) {
+/** Shared column widths keep the independently scrolling header and body aligned. */
+export default function PageScrollTable({ heading, body, labels, name, columnWidths }: {heading: ReactNode; body: ReactNode; labels: string[]; name: string; columnWidths: string[]}) {
   const head = useRef<HTMLDivElement>(null), rows = useRef<HTMLDivElement>(null);
-  const [widths, setWidths] = useState<number[]>([]);
+  const columnsKey=labels.join("|");
   useLayoutEffect(() => {
-    if (!head.current || !rows.current) return;
-    const measure = () => {
-      const headings = head.current?.querySelectorAll('th');
-      const cells = rows.current?.querySelector('tbody tr')?.children;
-      if (!headings || !cells || cells.length !== headings.length) return;
-      const next = Array.from(headings, (cell, index) => Math.ceil(Math.max(cell.getBoundingClientRect().width, cells[index].getBoundingClientRect().width)));
-      setWidths(old => old.length === next.length && old.every((width, index) => width === next[index]) ? old : next);
-    };
-    const observer = new ResizeObserver(measure);
-    observer.observe(head.current); observer.observe(rows.current); measure();
-    const resize = () => setWidths([]);
-    window.addEventListener('resize', resize);
-    return () => {observer.disconnect(); window.removeEventListener('resize', resize);};
-  }, [heading, body, widths.length]);
+    if(head.current && rows.current) head.current.scrollLeft=rows.current.scrollLeft;
+  },[columnsKey]);
   const sync = (source: HTMLDivElement, target: HTMLDivElement | null) => {if (target && target.scrollLeft !== source.scrollLeft) target.scrollLeft = source.scrollLeft;};
-  const style = widths.length === labels.length ? {width:widths.reduce((a,b)=>a+b,0),minWidth:'100%',tableLayout:'fixed' as const} : undefined;
-  const cols = widths.length === labels.length ? <colgroup>{widths.map((width,index)=><col key={index} style={{width}} />)}</colgroup> : null;
-  return <>
+  const style = {width:`calc(${columnWidths.join(" + ")})`,minWidth:'100%',tableLayout:'fixed' as const};
+  const cols = <colgroup>{columnWidths.map((width,index)=><col key={index} style={{width}} />)}</colgroup>;
+  return <div className="[--hospital-column:7rem] [--metric-column:9rem] [--policy-column:13rem] [--action-column:7rem] lg:[--hospital-column:11rem] lg:[--metric-column:13rem] lg:[--policy-column:15rem] lg:[--action-column:9rem]">
     <div className="dashboard-sticky-columns sticky z-30 bg-slate-100 dark:bg-slate-800">
       <div data-ptr-ignore ref={head} onScroll={event=>sync(event.currentTarget,rows.current)} aria-label={`${name} 컬럼명`} tabIndex={0} className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <table className="w-full border-separate border-spacing-0 text-sm lg:text-base" style={style}>{cols}{heading}</table>
+        <table className="border-separate border-spacing-0 text-sm lg:text-base" style={style}>{cols}{heading}</table>
       </div>
     </div>
     <div data-ptr-ignore ref={rows} onScroll={event=>sync(event.currentTarget,head.current)} tabIndex={0} role="region" aria-label={`${name} · 좌우로 스크롤`} className="dashboard-touch-scroll overflow-x-auto">
-      <table className="w-full border-separate border-spacing-0 text-sm lg:text-base" style={style}>
+      <table className="border-separate border-spacing-0 text-sm lg:text-base" style={style}>
         {cols}<caption className="sr-only">{name}</caption><thead className="sr-only"><tr>{labels.map((label,index)=><th key={index} scope="col">{label}</th>)}</tr></thead>{body}
       </table>
     </div>
-  </>;
+  </div>;
 }
