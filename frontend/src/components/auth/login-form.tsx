@@ -105,7 +105,7 @@ export default function LoginForm() {
               className="h-14 w-14 rounded-xl shadow-[0_5px_14px_rgba(22,58,82,0.12)]"
             />
             <h1 className="text-text-major dark:text-text-dark-primary mt-4 text-2xl font-extrabold tracking-tight">
-              MrEyes
+              MReyes
             </h1>
             <p className="text-text-secondary dark:text-text-dark-primary/60 mt-1 text-sm">
               {reauthenticate ? "가입한 계정으로 로그인하세요." : "계속하려면 로그인하세요."}

@@ -45,7 +45,7 @@ export default function AcceptInviteClient() {
       <form noValidate onSubmit={form.handleSubmit(submit)} aria-busy={saving} className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-background-dark-card">
         <header className="bg-sky-50 px-6 py-5 dark:bg-sky-950/30">
           <p className="text-xs font-bold text-sky-700 dark:text-sky-300">회사 초대</p>
-          <h1 className="mt-1 text-xl font-extrabold">MrEyes 가입 신청</h1>
+          <h1 className="mt-1 text-xl font-extrabold">MReyes 가입 신청</h1>
           <p className="mt-3 break-words text-sm"><strong>{invitation.data.companyName}</strong>에서 초대했습니다.</p>
           <p className="text-text-secondary mt-1 text-xs leading-5">회원가입하면 이 회사의 워크스페이스를 사용할 수 있습니다.</p>
         </header>

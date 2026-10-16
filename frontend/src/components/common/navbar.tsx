@@ -74,9 +74,9 @@ export default function Navbar() {
       <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
         <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between px-3 sm:px-4 lg:px-6">
           <Link href="/" onClick={goToAll} className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
-            <Image src="/favicon/android-chrome-192x192.png" alt="MrEyes" width={32} height={32} priority
+            <Image src="/favicon/android-chrome-192x192.png" alt="MReyes" width={32} height={32} priority
               className="h-8 w-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:-rotate-3 group-hover:scale-105" />
-            <span className="text-[15px] font-bold tracking-[-0.02em]">MrEyes</span>
+            <span className="text-[15px] font-bold tracking-[-0.02em]">MReyes</span>
           </Link>
 
           <nav className="flex items-center gap-1.5">

@@ -32,13 +32,14 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "MrEyes",
-    template: "%s | MrEyes",
+    default: "MReyes",
+    template: "%s | MReyes",
   },
-  description: "MrEyes 서비스",
-  applicationName: "MrEyes",
+  description: "MReyes 서비스",
+  applicationName: "MReyes",
+  appleWebApp: { capable: true, title: "MReyes", statusBarStyle: "default" },
   robots: { index: false, follow: false },
-  keywords: ["MrEyes", "Dashboard", "Monitoring"],
+  keywords: ["MReyes", "Dashboard", "Monitoring"],
   metadataBase: new URL("https://app.pentaworks.net"),
   alternates: { canonical: "/" },
   manifest: "/manifest.webmanifest",
@@ -53,24 +54,24 @@ export const metadata: Metadata = {
 
   openGraph: {
     type: "website",
-    siteName: "MrEyes",
-    title: "MrEyes",
-    description: "MrEyes 서비스",
+    siteName: "MReyes",
+    title: "MReyes",
+    description: "MReyes 서비스",
     url: "/",
     images: [
       {
         url: "/favicon/android-chrome-512x512.png",
         width: 512,
         height: 512,
-        alt: "MrEyes",
+        alt: "MReyes",
       },
     ],
   },
 
   twitter: {
     card: "summary",
-    title: "MrEyes",
-    description: "MrEyes 서비스",
+    title: "MReyes",
+    description: "MReyes 서비스",
     images: ["/favicon/android-chrome-512x512.png"],
   },
 };
