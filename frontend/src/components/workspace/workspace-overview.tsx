@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import type { OfficeAssetsResponse } from "@/hooks/use-office-assets-query";
 import {
   useWorkspace,
@@ -99,13 +99,32 @@ export default function OverviewPage() {
     const history = summaries.filter(
       (r) => r.siteId === site.siteDb && r.status === "COMPLETED",
     );
-    const pm = history.find((r) => r.type === "PM" || r.countsAsPm)?.date;
-    const full = history.find(
-      (r) => r.type === "ACR" && r.acrKind === "full",
-    )?.date;
-    const doc = history.find(
-      (r) => r.type === "ACR" && ["full", "doc"].includes(r.acrKind || ""),
-    )?.date;
+    const pm =
+      [
+        history.find((r) => r.type === "PM" || r.countsAsPm)?.date,
+        plan?.lastPmDate,
+      ]
+        .filter(Boolean)
+        .sort()
+        .at(-1) || undefined;
+    const full =
+      [
+        history.find((r) => r.type === "ACR" && r.acrKind === "full")?.date,
+        plan?.lastAcrFullDate,
+      ]
+        .filter(Boolean)
+        .sort()
+        .at(-1) || undefined;
+    const doc =
+      [
+        history.find(
+          (r) => r.type === "ACR" && ["doc", "full"].includes(r.acrKind || ""),
+        )?.date,
+        plan?.lastAcrDocDate,
+      ]
+        .filter(Boolean)
+        .sort()
+        .at(-1) || undefined;
     for (const [type, date] of [
       ["PM", nextDue(pm, plan?.pmOverride, plan?.pmIntervalMonths || 2)],
       ["ACR 정밀", nextDue(full, plan?.acrFullOverride, 36)],
@@ -133,7 +152,10 @@ export default function OverviewPage() {
   const dayDue = due.filter((d) => d.date === selected);
   const loading =
     sites.isPending || records.isPending || old.some((q) => q.isPending);
-  const partial = old.some((q) => q.isError);
+  const partial = old.some(
+    (q) =>
+      q.isError && !(q.error instanceof ApiError && q.error.status === 404),
+  );
   async function check(id: number, done: boolean) {
     setError("");
     try {

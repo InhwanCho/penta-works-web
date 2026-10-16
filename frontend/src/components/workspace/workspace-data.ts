@@ -84,6 +84,9 @@ export function errorText(error: unknown) {
 export type HospitalPlan = {
   siteId: string;
   pmIntervalMonths: number;
+  lastPmDate?: string | null;
+  lastAcrFullDate?: string | null;
+  lastAcrDocDate?: string | null;
   pmOverride: string | null;
   acrFullOverride: string | null;
   acrDocOverride: string | null;
