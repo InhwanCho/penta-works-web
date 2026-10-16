@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -340,20 +341,24 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   );
 }
 export function SchedulePage() {
+  const search = useSearchParams();
+  const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(search.get("date") || "")
+    ? search.get("date")!
+    : dayString();
   const { session, isAdmin } = useAuth();
   const { sites, schedules } = useWorkspace();
   const qc = useQueryClient();
-  const [selected, setSelected] = useState(dayString()),
+  const [selected, setSelected] = useState(initialDate),
     [scope, setScope] = useState("TEAM"),
-    [open, setOpen] = useState(false),
+    [open, setOpen] = useState(search.get("new") === "1"),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
   const [form, setForm] = useState({
     title: "",
     siteId: "",
     body: "",
-    startAt: dayString() + "T09:00",
-    endAt: dayString() + "T10:00",
+    startAt: initialDate + "T09:00",
+    endAt: initialDate + "T10:00",
   });
   const rows = (schedules.data || []).filter(
     (s) =>

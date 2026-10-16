@@ -7,8 +7,7 @@ const items = [
   { href: "/", label: "모니터링", icon: "monitor" },
   { href: "/overview", label: "업무 현황", icon: "home" },
   { href: "/hospitals", label: "병원", icon: "hospital" },
-  { href: "/work", label: "업무", icon: "work" },
-  { href: "/schedule", label: "일정", icon: "calendar" },
+  { href: "/baselines", label: "알림", icon: "bell" },
 ];
 export function WorkIcon({ name }: { name: string }) {
   return (
@@ -21,7 +20,11 @@ export function WorkIcon({ name }: { name: string }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {name === "home" ? (
+      {name === "bell" ? (
+        <>
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+        </>
+      ) : name === "home" ? (
         <>
           <path d="m3 10 9-7 9 7" />
           <path d="M5 9v12h14V9M9 21v-7h6v7" />
@@ -78,6 +81,15 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { session } = useAuth();
   if (!session) return children;
+  const active = (href: string) =>
+    path === href ||
+    (href === "/overview" &&
+      (path.startsWith("/work") || path.startsWith("/schedule"))) ||
+    (href === "/hospitals" && path.startsWith("/sites/")) ||
+    (href === "/baselines" &&
+      (path.startsWith("/alert-settings") ||
+        path.startsWith("/notification-settings"))) ||
+    (href !== "/" && path.startsWith(href));
   return (
     <div className="workspace-frame">
       <aside className="workspace-sidebar">
@@ -86,19 +98,15 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
-            className={
-              path === i.href || (i.href !== "/" && path.startsWith(i.href))
-                ? "selected"
-                : ""
-            }
-            aria-current={path === i.href ? "page" : undefined}
+            className={active(i.href) ? "selected" : ""}
+            aria-current={active(i.href) ? "page" : undefined}
           >
             <WorkIcon name={i.icon} />
             {i.label}
             {i.href === "/hospitals"
               ? " · 장비"
-              : i.href === "/work"
-                ? " 기록"
+              : i.href === "/baselines"
+                ? " 관리"
                 : ""}
           </Link>
         ))}
@@ -112,12 +120,8 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
-            className={
-              path === i.href || (i.href !== "/" && path.startsWith(i.href))
-                ? "selected"
-                : ""
-            }
-            aria-current={path === i.href ? "page" : undefined}
+            className={active(i.href) ? "selected" : ""}
+            aria-current={active(i.href) ? "page" : undefined}
           >
             <WorkIcon name={i.icon} />
             <span>{i.label}</span>

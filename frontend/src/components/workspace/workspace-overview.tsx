@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
 import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { OfficeAssetsResponse } from "@/hooks/use-office-assets-query";
@@ -46,6 +46,7 @@ export default function OverviewPage() {
   const today = dayString();
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
+    [dayOpen, setDayOpen] = useState(false),
     [error, setError] = useState("");
   const old = useQueries({
     queries: (sites.data || []).map((site) => ({
@@ -169,7 +170,7 @@ export default function OverviewPage() {
     }
   }
   return (
-    <main className="work-page">
+    <main className="work-page work-overview">
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 준비물을 한눈에 확인하세요."
@@ -199,7 +200,10 @@ export default function OverviewPage() {
       )}
       <div className="work-section">
         <h2>일정 달력</h2>
-        <Link href="/schedule">일정 관리 →</Link>
+        <div className="overview-shortcuts">
+          <Link href="/work">작업일지 목록</Link>
+          <Link href="/schedule">＋ 일정 작성·관리</Link>
+        </div>
       </div>
       <section className="work-panel work-calendar">
         <div className="work-calendar-toolbar">
@@ -274,9 +278,13 @@ export default function OverviewPage() {
                 key={day}
                 type="button"
                 aria-label={`${dateLabel(day)}, 기록 ${logs.length}건, 일정 ${events.length}건, 점검 예정 ${dueItems.length}건`}
+                aria-haspopup="dialog"
                 aria-pressed={selected === day}
                 className={`work-calendar-day ${day.slice(0, 7) !== month ? "outside" : ""} ${selected === day ? "selected" : ""} ${today === day ? "today" : ""}`}
-                onClick={() => setSelected(day)}
+                onClick={() => {
+                  setSelected(day);
+                  setDayOpen(true);
+                }}
               >
                 <span>{Number(day.slice(8))}</span>
                 <div className="work-calendar-tags">
@@ -313,12 +321,14 @@ export default function OverviewPage() {
           <span className="due">● 점검 예정</span>
           <span className="schedule">● 일정</span>
         </div>
-        <div
-          className="work-calendar-agenda"
-          aria-live="polite"
+      </section>
+      {dayOpen && (
+        <DayDialog
+          onClose={() => setDayOpen(false)}
+          title={dateLabel(selected)}
         >
           <div className="work-section">
-            <h3>{dateLabel(selected)}</h3>
+            <Link href={`/schedule?date=${selected}&new=1`}>＋ 일정 작성</Link>
             <Link href={`/work/new?date=${selected}`}>＋ 일지 작성</Link>
           </div>
           {dayRecords.map((r) => (
@@ -341,7 +351,7 @@ export default function OverviewPage() {
           ))}
           {daySchedules.map((s) => (
             <Link
-              href="/schedule"
+              href={`/schedule?date=${selected}`}
               className="work-agenda-row schedule"
               key={"s" + s.id}
             >
@@ -370,120 +380,202 @@ export default function OverviewPage() {
           {!dayRecords.length && !daySchedules.length && !dayDue.length && (
             <Empty>이 날짜에 등록된 일정과 작업일지가 없습니다.</Empty>
           )}
-        </div>
-      </section>
-      <div className="work-two-columns">
-        <section id="work-due">
-          <div className="work-section">
-            <h2>다가오는 점검 · 45일 이내</h2>
-          </div>
-          <p className="work-hint">
-            PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료
-            기록과 병원별 지정일로 계산합니다.
-          </p>
-          <div className="work-panel">
-            {upcomingDue.slice(0, 30).map((d) => (
-              <Link
-                className="work-due-row"
-                href={`/sites/${Number(d.siteId) || d.siteId}`}
-                key={d.siteId + d.type}
-              >
-                <div>
-                  <strong>{d.siteName}</strong>
-                  <p>
-                    {d.type} · {d.date}
-                  </p>
-                </div>
-                <span className={`work-badge ${d.days < 0 ? "overdue" : ""}`}>
-                  {d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}
-                </span>
-              </Link>
-            ))}
-            {!upcomingDue.length && (
-              <Empty>
-                {loading
-                  ? "예정일을 계산하는 중…"
-                  : "45일 이내 예정된 점검이 없습니다."}
-              </Empty>
-            )}
-          </div>
-        </section>
-        <section id="work-preparation">
-          <div className="work-section">
-            <h2>챙길 것 · 다음 방문 준비물</h2>
-          </div>
-          {error && (
-            <p
-              className="work-error"
-              role="alert"
-            >
-              {error}
+        </DayDialog>
+      )}
+      <div className="overview-folds">
+        <details
+          id="work-due"
+          className="overview-fold"
+        >
+          <summary>
+            <span>다가오는 점검</span>
+            <small>45일 이내 · {upcomingDue.length}건</small>
+          </summary>
+          <div className="overview-fold-body">
+            <p className="work-hint">
+              PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료
+              기록과 병원별 지정일로 계산합니다.
             </p>
-          )}
-          {planning.error ? (
-            <ErrorState
-              error={planning.error}
-              retry={() => void planning.refetch()}
-            />
-          ) : (
             <div className="work-panel">
-              {preparations.map((p) => (
-                <label
-                  className={`work-preparation ${p.done ? "done" : ""}`}
-                  key={p.id}
+              {upcomingDue.map((d) => (
+                <Link
+                  className="work-due-row"
+                  href={`/sites/${Number(d.siteId) || d.siteId}`}
+                  key={d.siteId + d.type}
                 >
-                  <input
-                    type="checkbox"
-                    checked={p.done}
-                    onChange={(e) => void check(p.id, e.target.checked)}
-                  />
                   <div>
-                    <span>{p.siteName || "일반 업무"}</span>
-                    <strong>{p.content}</strong>
+                    <strong>{d.siteName}</strong>
+                    <p>
+                      {d.type} · {d.date}
+                    </p>
                   </div>
-                </label>
+                  <span className={`work-badge ${d.days < 0 ? "overdue" : ""}`}>
+                    {d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}
+                  </span>
+                </Link>
               ))}
-              {!preparations.length && (
+              {!upcomingDue.length && (
                 <Empty>
-                  작업일지에 다음 방문 준비물을 적으면 여기에 표시됩니다.
+                  {loading
+                    ? "예정일을 계산하는 중…"
+                    : "45일 이내 예정된 점검이 없습니다."}
                 </Empty>
               )}
             </div>
-          )}
-        </section>
-      </div>
-      <div className="work-section">
-        <h2>최근 작업일지</h2>
-        <Link href="/work">새 작업일지 전체 보기 →</Link>
-      </div>
-      <div className="work-panel">
-        {summaries.slice(0, 8).map((r) => (
-          <Link
-            href={r.href}
-            className="work-overview-record"
-            key={r.key}
-          >
-            <div>
-              <strong>{r.siteName}</strong>
-              <p>
-                {r.title}
-                {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
+          </div>
+        </details>
+        <details
+          id="work-preparation"
+          className="overview-fold"
+        >
+          <summary>
+            <span>다음 방문 준비물</span>
+            <small>{preparations.filter((p) => !p.done).length}건 남음</small>
+          </summary>
+          <div className="overview-fold-body">
+            {error && (
+              <p
+                className="work-error"
+                role="alert"
+              >
+                {error}
               </p>
-              <small>{r.date}</small>
+            )}
+            {planning.error ? (
+              <ErrorState
+                error={planning.error}
+                retry={() => void planning.refetch()}
+              />
+            ) : (
+              <div className="work-panel">
+                {preparations.map((p) => (
+                  <label
+                    className={`work-preparation ${p.done ? "done" : ""}`}
+                    key={p.id}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={p.done}
+                      onChange={(e) => void check(p.id, e.target.checked)}
+                    />
+                    <div>
+                      <span>{p.siteName || "일반 업무"}</span>
+                      <strong>{p.content}</strong>
+                    </div>
+                  </label>
+                ))}
+                {!preparations.length && (
+                  <Empty>
+                    작업일지에 다음 방문 준비물을 적으면 여기에 표시됩니다.
+                  </Empty>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+        <details className="overview-fold">
+          <summary>
+            <span>최근 작업일지</span>
+            <small>최근 8건</small>
+          </summary>
+          <div className="overview-fold-body">
+            <Link
+              className="work-back"
+              href="/work"
+            >
+              MR.EYES에서 작성한 작업일지 →
+            </Link>
+            <div className="work-panel">
+              {summaries.slice(0, 8).map((r) => (
+                <Link
+                  href={r.href}
+                  className="work-overview-record"
+                  key={r.key}
+                >
+                  <div>
+                    <strong>{r.siteName}</strong>
+                    <p>
+                      {r.title}
+                      {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
+                    </p>
+                    <small>{r.date}</small>
+                  </div>
+                  <span className="work-badge">
+                    {serviceLabels[r.type] || "일반 업무"}
+                  </span>
+                </Link>
+              ))}
+              {!summaries.length && (
+                <Empty>
+                  {loading
+                    ? "작업일지를 불러오는 중…"
+                    : "아직 작성된 작업일지가 없습니다."}
+                </Empty>
+              )}
             </div>
-            <span className="work-badge">
-              {serviceLabels[r.type] || "일반 업무"}
-            </span>
-          </Link>
-        ))}
-        {!summaries.length && (
-          <Empty>
-            {loading
-              ? "작업일지를 불러오는 중…"
-              : "아직 작성된 작업일지가 없습니다."}
-          </Empty>
-        )}
+          </div>
+        </details>
       </div>
     </main>
+  );
+}
+
+function DayDialog({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const dialog = ref.current;
+    if (!dialog) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previous;
+    };
+  }, []);
+  return (
+    <dialog
+      ref={ref}
+      className="work-day-dialog"
+      aria-labelledby="work-day-title"
+      data-ptr-ignore
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        const b = e.currentTarget.getBoundingClientRect();
+        if (
+          e.clientX < b.left ||
+          e.clientX > b.right ||
+          e.clientY < b.top ||
+          e.clientY > b.bottom
+        )
+          onClose();
+      }}
+    >
+      <header>
+        <h2 id="work-day-title">{title}</h2>
+        <button
+          type="button"
+          className="work-secondary"
+          onClick={onClose}
+          autoFocus
+          aria-label="날짜 상세 닫기"
+        >
+          닫기 ✕
+        </button>
+      </header>
+      <div className="work-day-body">{children}</div>
+    </dialog>
   );
 }
