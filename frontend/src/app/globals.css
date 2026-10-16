@@ -1783,3 +1783,21 @@ h4,
   .work-day-body { padding: 0 16px 20px; }
 }
 .workspace-bottom > a { flex: 1 1 0; width: auto; min-width: 0; }
+.admin-user-filters .work-radio-group legend { font-size: 12px; margin-bottom: 6px; }
+.admin-user-filters .work-radio-group label { min-height: 40px; padding: 8px 10px; }
+.admin-card-table .admin-editor-row > td { padding: 12px; }
+@media (max-width: 639px) {
+  .admin-card-table, .admin-card-table tbody { display: block; width: 100%; min-width: 0; white-space: normal; }
+  .admin-card-table thead { display: none; }
+  .admin-card-table tbody { padding: 10px; }
+  .admin-card-table tr { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 16px; margin-bottom: 12px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); }
+  .admin-card-table td { display: block; min-width: 0; width: auto; padding: 0; text-align: left; white-space: normal; overflow-wrap: anywhere; }
+  .admin-card-table td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--work-muted); font-size: 11px; font-weight: 500; }
+  .admin-card-table td[data-label="이메일"], .admin-card-table td[data-label="대상"] { grid-column: 1 / -1; }
+  .admin-card-table td[data-label="관리"], .admin-card-table td[data-label="상세"] { grid-column: 1 / -1; }
+  .admin-card-table td[data-label="관리"] button, .admin-card-table td[data-label="상세"] button { width: 100%; min-height: 44px; background: var(--work-soft); color: var(--work-focus); font-size: 14px; }
+  .admin-card-table .admin-editor-row { display: block; padding: 0; border: 0; margin-top: -4px; }
+  .admin-card-table .admin-editor-row > td { padding: 0; }
+  .admin-card-table .admin-editor-row > td::before { display: none; }
+  .admin-card-table .admin-editor-row form { padding: 16px; border: 2px solid var(--work-focus); }
+}
