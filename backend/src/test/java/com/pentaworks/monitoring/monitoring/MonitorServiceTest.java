@@ -37,6 +37,39 @@ class MonitorServiceTest {
     }
 
     @Test
+    void morningCollectionLossCountsOnlyAfterGraceNotTheEntireNight() {
+        var now=java.time.Instant.parse("2026-10-16T00:15:00Z");
+        var status=new com.pentaworks.monitoring.alert.SiteOperatingHours.Status(true,true,"운영시간 내",now.minusSeconds(900),now.minusSeconds(300),null);
+        assertEquals(5L,MonitorService.monitoringLag(600L,status,now));
+        assertEquals(5L,MonitorService.monitoringLag(null,status,now));
+        assertEquals(1L,MonitorService.monitoringLag(1L,status,now));
+    }
+    @Test
+    void closedHospitalRejectsManualResendBeforeContactingProvider() {
+        var events=mock(AlertEventService.class);var recipients=mock(AlertRecipientService.class);var deliveries=mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class);var kakao=mock(com.pentaworks.monitoring.alert.BaroKakaoService.class);
+        var monitor=monitor(mock(DashboardService.class),mock(AlertService.class),events,recipients,deliveries,kakao);
+        var hours=mock(com.pentaworks.monitoring.alert.SiteOperatingHoursService.class);
+        when(hours.status(org.mockito.ArgumentMatchers.eq("001"),org.mockito.ArgumentMatchers.any())).thenReturn(new com.pentaworks.monitoring.alert.SiteOperatingHours.Status(true,false,"운영시간 외",null,null,null));monitor.setOperatingHours(hours);
+        var alert=new AlertEventService.Transition(1,"001","병원","hepres","압력","psi","HIGH",3.0,0.5,2.0,"이탈");
+        assertThrows(com.pentaworks.monitoring.common.BadRequestException.class,()->monitor.sendNotifications(List.of(alert),Map.of(),true,1));verifyNoInteractions(recipients,deliveries,kakao);
+    }
+
+    @Test
+    void closedHospitalDoesNotCreateOrSendAlerts() {
+        var dashboard=mock(DashboardService.class);var defaults=mock(AlertService.class);var events=mock(AlertEventService.class);
+        var recipients=mock(AlertRecipientService.class);var deliveries=mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class);var kakao=mock(com.pentaworks.monitoring.alert.BaroKakaoService.class);
+        var row=new DashboardResponse.DashboardRow("001","1","병원","2026-10-16T00:00:00Z",999L,0,1,3.0,70.0,Map.of("hepres",3.0),"NORMAL",0,0,List.of());
+        when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,0,0,1,1,0,0,0),List.of(row),Map.of(),null));
+        var threshold=new AlertThreshold("hepres","압력","psi",0.5,2.0,true);
+        when(defaults.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001","병원",true,List.of(threshold),20,true,true,0,30,null,null,false)));
+        var hours=mock(com.pentaworks.monitoring.alert.SiteOperatingHoursService.class);
+        when(hours.status(org.mockito.ArgumentMatchers.eq("001"),org.mockito.ArgumentMatchers.any())).thenReturn(new com.pentaworks.monitoring.alert.SiteOperatingHours.Status(true,false,"운영시간 외",null,null,null));
+        var monitor=monitor(dashboard,defaults,events,recipients,deliveries,kakao);monitor.setOperatingHours(hours);assertEquals(0,monitor.run().get("count"));
+        org.mockito.Mockito.verify(events,org.mockito.Mockito.never()).evaluateNoData(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
+        verifyNoInteractions(recipients,deliveries,kakao);
+    }
+
+    @Test
     void deliversThresholdAlertToRegisteredKakaoPhone() {
         DashboardService dashboard = mock(DashboardService.class);
         AlertService alerts = mock(AlertService.class);

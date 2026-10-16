@@ -50,10 +50,20 @@ public class MonitorService {
         this.kakao = kakao;
     }
 
+    private com.pentaworks.monitoring.alert.SiteOperatingHoursService operatingHours;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setOperatingHours(com.pentaworks.monitoring.alert.SiteOperatingHoursService value){this.operatingHours=value;}
+
     public Map<String, Object> run() {
         var base=alertService.alertSettings();
         var states=averages.states();
         var rows=dashboardService.getDashboard().rows();
+        var clock=ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
+        Map<String,com.pentaworks.monitoring.alert.SiteOperatingHours.Status> hours=new LinkedHashMap<>();
+        if(operatingHours!=null)for(var row:rows) {
+            var state=operatingHours.status(row.siteDb(),clock);hours.put(row.siteDb(),state);
+            operatingHours.resetSession(row.siteDb(),state);
+        }
         List<Transition> all=new ArrayList<>();
         Map<String,List<DashboardService.MetricSample>> samples=new LinkedHashMap<>();
         for(CurrentUser user:personal.activeUsers()) {
@@ -63,20 +73,24 @@ public class MonitorService {
             for(var row:rows) {
                 SiteAlertSettings site=settings.get(row.siteDb());
                 if(row.name()==null||site==null||!site.dashboardVisible()||!site.alertsEnabled())continue;
-                Transition noData=alertEvents.evaluateNoData(user.id(),site,row.lagMin());
+                var operating=hours.get(row.siteDb());
+                if(operating!=null && !operating.monitoring())continue;
+                Long effectiveLag=monitoringLag(row.lagMin(),operating,clock.toInstant());
+                Transition noData=alertEvents.evaluateNoData(user.id(),site,effectiveLag);
                 if(noData!=null)transitions.add(noData);
                 if(com.pentaworks.monitoring.alert.CollectionHealth.isMissing(row.lagMin(),site.collectionIntervalMinutes(),site.missingCollectionThreshold()))continue;
+                if(operating!=null && operating.sessionStart()!=null && (row.lastAt()==null || java.time.Instant.parse(row.lastAt()).isBefore(operating.sessionStart())))continue;
                 Transition chiller=alertEvents.evaluateColdChiller(user.id(),site,row.metrics().get("cctemp"),row.metrics().get("ccflow"));
                 if(chiller!=null)transitions.add(chiller);
                 for(AlertThreshold threshold:site.thresholds()) {
                     if(threshold.missingActive()) {
-                        var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576));
+                        var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576).stream().filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList());
                         Transition missing=alertEvents.evaluateMetricMissing(user.id(),site,threshold,
                             consecutiveMissing(history,threshold.key(),site.collectionIntervalMinutes(),row.lastAt()));
                         if(missing!=null)transitions.add(missing);
                     }
                     if(!threshold.active())continue;
-                    var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576));
+                    var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576).stream().filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList());
                     int consecutive=com.pentaworks.monitoring.alert.RangeExcursions.count(history,threshold,site.collectionIntervalMinutes(),row.lastAt());
                     Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()),consecutive);
                     if(event!=null)transitions.add(event);
@@ -87,6 +101,12 @@ public class MonitorService {
         }
         if(!all.isEmpty())dashboardService.invalidateCache();
         return Map.of("ok",true,"count",all.size(),"alerts",all);
+    }
+
+    static Long monitoringLag(Long measuredLag,com.pentaworks.monitoring.alert.SiteOperatingHours.Status status,java.time.Instant now) {
+        if(status==null || status.monitoringStart()==null)return measuredLag;
+        long sinceOpening=Math.max(0,java.time.Duration.between(status.monitoringStart(),now).toMinutes());
+        return measuredLag==null?sinceOpening:Math.min(measuredLag,sinceOpening);
     }
 
     public Map<String, Object> retry(CurrentUser actor, long eventId) {
@@ -114,6 +134,11 @@ public class MonitorService {
         for (Map.Entry<String, List<Transition>> entry : bySite.entrySet()) {
             List<Transition> siteAlerts = entry.getValue().stream().filter(alert -> !"__cold_chiller__".equals(alert.metricKey()) || !alertEvents.airCooled(alert.siteId())).toList();
             if(siteAlerts.isEmpty()) continue;
+            if(operatingHours!=null && !operatingHours.status(entry.getKey(),now).monitoring()) {
+                if(manual)throw new BadRequestException("병원 운영시간 외이거나 감시 유예 시간입니다.");
+                alertEvents.markDelivery(siteAlerts.stream().map(Transition::eventId).toList(),"SKIPPED","병원 운영시간 외",0);
+                continue;
+            }
             List<Long> eventIds = siteAlerts.stream().map(Transition::eventId).toList();
             SiteAlertSettings policy = settings.get(entry.getKey());
             if (policy != null && !deliveryAllowed(policy, now)) {

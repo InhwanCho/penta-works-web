@@ -7,6 +7,7 @@ import { ALERT_HELP } from "@/lib/alert-help";
 import { NotificationPreferencesSummary } from "./notification-preferences";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
+import {useOperatingHours,nextMonitoringLabel} from "@/lib/site-operating-hours";
 import SiteCoolingControl, {useCoolingTypes} from "./site-cooling-control";
 import ManagementTabs from "@/components/common/management-tabs";
 
@@ -65,8 +66,12 @@ export default function BaselinesClient({
   const [view, setView] = useState<"sites" | "thresholds" | "events">("events");
   useEffect(() => {
     const requested = new URLSearchParams(window.location.search).get("view");
-    if (requested === "thresholds" || requested === "events") setView(requested);
+    if (requested === "thresholds" || requested === "events" || requested === "sites") setView(requested);
   }, []);
+  const hours=useOperatingHours();
+  const router=useRouter();
+  const {session:actor}=useAuth();
+  const canManageHospital=["PLATFORM_ADMIN","SUPER_ADMIN","ADMIN"].includes(actor?.role??"");
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [restoringSite, setRestoringSite] = useState<string | null>(null);
@@ -134,24 +139,24 @@ export default function BaselinesClient({
       <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
         {value:"events",label:"알림 확인",},
         {value:"thresholds",label:"알림 설정"},
-        ...(canEditCompany ? [{value:"sites" as const,label:"병원 설정"}] : []),
+        ...(canManageHospital ? [{value:"sites" as const,label:"병원 설정"}] : []),
       ]} />
 
       {view === "sites" ? <section className="space-y-3">
         <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-background-dark-secondary dark:text-sky-100">
-          <p className="font-bold">병원 표시 → 알림 사용 → 상세 기준값</p>
-          <p className="mt-1 text-sm opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 다시 표시하면 각 담당자의 개인 설정을 따릅니다.</p>
+          <p className="font-bold">병원 표시 · 알림 사용 · 공통 운영 시간</p>
+          <p className="mt-1 text-sm opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 상세 설정에서 정한 운영 시간은 모든 담당자에게 공통 적용됩니다.</p>
         </div>
         {actionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
         {loadFailed && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">병원 설정을 불러오지 못했습니다.</p>}
         <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="병원 이름 또는 코드 검색" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-sky-400 dark:border-white/10 dark:bg-background-dark-card" />
         <div className="space-y-2">{filtered.map((entry) => <article key={entry.siteid} className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(22,58,82,0.035)] lg:flex-row lg:items-center dark:border-white/8 dark:bg-background-dark-card">
-          <div className="min-w-0 flex-1"><h2 className="truncate font-bold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-0.5 text-sm">{entry.siteid} · {entry.dashboardVisible ? (entry.alertsEnabled ? "대시보드 표시 · 알림 켜짐" : "대시보드 표시 · 알림 꺼짐") : "대시보드 숨김 · 알림 불가"}</p></div>
+          <div className="min-w-0 flex-1"><h2 className="truncate font-bold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-0.5 text-sm">{entry.siteid} · {entry.dashboardVisible ? (entry.alertsEnabled ? "대시보드 표시 · 알림 켜짐" : "대시보드 표시 · 알림 꺼짐") : "대시보드 숨김 · 알림 불가"}</p>{hours.data?.[entry.siteid]?.status.enabled && <p className="mt-1 text-xs text-sky-800 dark:text-sky-200">공통 운영 시간 · {hours.data[entry.siteid].status.label}{hours.data[entry.siteid].status.nextMonitoringAt?` · 다음 감시 ${nextMonitoringLabel(hours.data[entry.siteid].status.nextMonitoringAt)}`:""}</p>}</div>
           <SiteCoolingControl siteId={entry.siteid} name={entry.name ?? entry.siteid}/>
           <div className="grid w-full shrink-0 grid-cols-[1.4fr_1fr_1fr] gap-2 lg:w-96">
             {canEditCompany && <button type="button" disabled={busySite === entry.siteid} onClick={() => toggleVisibility(entry)} className={`min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-sm font-bold transition disabled:opacity-50 ${entry.dashboardVisible ? "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-sky-950/50 dark:text-sky-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`} aria-label={`${entry.name ?? entry.siteid} 대시보드 ${entry.dashboardVisible ? "숨기기" : "표시하기"}`}><span className="hidden lg:inline">대시보드 </span>{entry.dashboardVisible ? "표시 중" : "숨김"}</button>}
             {canEdit && <button type="button" disabled={busySite === entry.siteid || !entry.dashboardVisible} onClick={() => toggleAlerts(entry)} className={`min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${entry.alertsEnabled && entry.dashboardVisible ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`}>{entry.alertsEnabled && entry.dashboardVisible ? "알림 켜짐" : "알림 꺼짐"}</button>}
-            <button type="button" onClick={() => openSettings(entry)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-slate-200 px-2 text-sm font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">상세 설정</button>
+            <button type="button" onClick={() => router.push(`/hospital-settings/${encodeURIComponent(entry.siteid)}`)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-slate-200 px-2 text-sm font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">상세 설정</button>
           </div>
         </article>)}</div>
         {filtered.length === 0 && <EmptyState />}

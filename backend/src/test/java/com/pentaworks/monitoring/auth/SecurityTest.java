@@ -55,8 +55,17 @@ class SecurityTest {
         String updatePersonalMetric() { return "ok"; }
         @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/notification-preferences")
         String notificationPreferences() { return "ok"; }
+        @org.springframework.web.bind.annotation.PatchMapping("/api/v1/alerts/operating-hours/001")
+        String operatingHours() { return "ok"; }
         @org.springframework.web.bind.annotation.PostMapping("/api/v1/auth/change-password")
         String changePassword() { return "ok"; }
+    }
+
+    @Test void onlyAdministratorsCanChangeCommonOperatingHours() throws Exception {
+        mvc.perform(patch("/api/v1/alerts/operating-hours/001")).andExpect(status().isUnauthorized());
+        mvc.perform(patch("/api/v1/alerts/operating-hours/001").header("Authorization","Bearer "+issue("USER"))).andExpect(status().isForbidden());
+        for(String role:java.util.List.of("ADMIN","SUPER_ADMIN","PLATFORM_ADMIN"))
+            mvc.perform(patch("/api/v1/alerts/operating-hours/001").header("Authorization","Bearer "+issue(role))).andExpect(status().isOk());
     }
 
     @Test void dashboardRequiresAuthentication() throws Exception {
