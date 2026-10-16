@@ -14,6 +14,22 @@ import {
   type WorkRecord,
 } from "./workspace-data";
 import { Empty, ErrorState, PageHeading } from "./workspace-pages";
+import HospitalPicker from "./hospital-picker";
+import { ChoiceGroup } from "./choice-group";
+import ServiceFields from "./service-fields";
+import {
+  initialDetails,
+  parseDetails,
+  computedDetails,
+  type WorkDetails,
+} from "./service-form-model";
+import { PhotoAttachments, PhotoGallery } from "./work-photos";
+const generalTypes: [string, string][] = [
+  ["office", "사무실 업무"],
+  ["education", "교육 · 세미나"],
+  ["leave", "휴가 · 연차"],
+  ["etc", "기타 일정"],
+];
 export default function WorkEditor({ id }: { id?: string }) {
   const router = useRouter(),
     search = useSearchParams(),
@@ -23,41 +39,78 @@ export default function WorkEditor({ id }: { id?: string }) {
   const [form, setForm] = useState({
     kind: "FIELD",
     siteId: search.get("site") || "",
-    serviceType: "REPAIR",
+    serviceType: "PM",
     title: "",
     body: "",
-    workDate: dayString(),
+    workDate: search.get("date") || dayString(),
     status: "COMPLETED",
   });
-  const [loaded, setLoaded] = useState(false),
+  const [details, setDetails] = useState<WorkDetails>(() => initialDetails()),
+    [photoIds, setPhotoIds] = useState<number[] | null>(null),
+    [photoBusy, setPhotoBusy] = useState(false);
+  const [loadedId, setLoadedId] = useState<string | undefined>(),
     [editing, setEditing] = useState(!id),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
   const record = records.data?.find((r) => String(r.id) === id);
   useEffect(() => {
-    if (record && !loaded) {
+    if (record && loadedId !== id) {
       setForm({
         kind: record.kind,
         siteId: record.siteId || "",
-        serviceType: record.serviceType || "REPAIR",
+        serviceType: record.serviceType || "PM",
         title: record.title,
         body: record.body,
         workDate: record.workDate,
         status: record.status,
       });
-      setLoaded(true);
+      setDetails(parseDetails(record.detailsJson));
+      setPhotoIds(null);
+      setLoadedId(id);
     }
-  }, [record, loaded]);
+  }, [record, loadedId, id]);
   async function save(e: FormEvent) {
     e.preventDefault();
+    if (photoBusy) return;
     setSaving(true);
     setError("");
     try {
+      if (form.kind === "FIELD" && !form.siteId)
+        throw Error("병원을 선택해주세요.");
+      const computed = computedDetails({
+        ...details,
+        engineer: details.engineer || session?.name || "",
+      });
+      const title =
+        form.title.trim() ||
+        (form.kind === "FIELD"
+          ? form.serviceType === "COLDHEAD"
+            ? `Cold Head ${details.coldheadPosition}`
+            : serviceLabels[form.serviceType]
+          : "일반 업무");
+      const body =
+        form.body.trim() ||
+        (["PM", "ACR"].includes(form.serviceType) && form.kind === "FIELD"
+          ? `${title} 점검표`
+          : form.body);
       const result = await apiFetch<{ id?: number }>(
         id ? `/workspace/records/${id}` : "/workspace/records",
-        { method: id ? "PUT" : "POST", body: JSON.stringify(form) },
+        {
+          method: id ? "PUT" : "POST",
+          body: JSON.stringify({
+            ...form,
+            title,
+            body,
+            details: computed,
+            photoIds,
+          }),
+        },
       );
-      await qc.invalidateQueries({ queryKey: ["workspace-records"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["workspace-records"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-planning"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-photos"] }),
+      ]);
       if (id) setEditing(false);
       else router.replace(`/work/${result.id}`);
     } catch (e) {
@@ -67,7 +120,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     }
   }
   async function remove() {
-    if (!window.confirm("이 업무 기록을 삭제할까요?")) return;
+    if (!window.confirm("이 작업일지를 삭제할까요?")) return;
     setSaving(true);
     try {
       await apiFetch(`/workspace/records/${id}`, { method: "DELETE" });
@@ -89,28 +142,30 @@ export default function WorkEditor({ id }: { id?: string }) {
       </main>
     );
   if (id && records.isPending)
-    return <main className="work-page">업무를 불러오는 중…</main>;
+    return <main className="work-page">작업일지를 불러오는 중…</main>;
   if (id && !record)
     return (
       <main className="work-page">
         <Empty>기록을 찾을 수 없거나 접근 권한이 없습니다.</Empty>
-        <Link href="/work">업무 목록으로</Link>
+        <Link href="/work">목록으로</Link>
       </main>
     );
   const canEdit = !record || record.authorId === session?.id || isAdmin;
+  const field = form.kind === "FIELD",
+    type = form.serviceType;
   return (
     <main className="work-page work-editor">
       <Link
         href="/work"
         className="work-back"
       >
-        ← 업무 기록
+        ← 작업일지
       </Link>
       <PageHeading
-        title={id ? (editing ? "업무 수정" : "업무 기록") : "업무 기록 작성"}
+        title={id ? (editing ? "작업일지 수정" : "작업일지") : "새 작업일지"}
         description={
           editing
-            ? "업무 구분과 내용을 한 페이지에서 작성하세요."
+            ? "작업 구분에 맞는 점검·서비스 기록을 작성하세요."
             : `${record?.workDate} · ${record?.authorName}`
         }
         action={
@@ -137,145 +192,208 @@ export default function WorkEditor({ id }: { id?: string }) {
           onSubmit={save}
           className="work-panel work-form"
         >
-          <fieldset>
-            <legend>업무 구분</legend>
-            <div className="work-kind-choice">
-              {[
-                ["FIELD", "현장 서비스", "병원 방문 · 정비 · PM · ACR · 콜"],
-                ["GENERAL", "일반 업무", "출장 준비 · 사내 작업 · 업무 공유"],
-              ].map(([value, title, desc]) => (
-                <label
-                  key={value}
-                  className={form.kind === value ? "selected" : ""}
-                >
-                  <input
-                    type="radio"
-                    name="kind"
-                    value={value}
-                    checked={form.kind === value}
-                    onChange={() => setForm({ ...form, kind: value })}
-                  />
-                  <span>
-                    <strong>{title}</strong>
-                    <small>{desc}</small>
-                  </span>
-                </label>
-              ))}
-            </div>
-          </fieldset>
-          {form.kind === "FIELD" && (
-            <div className="work-form-row">
+          <ChoiceGroup
+            legend="대상"
+            value={form.kind}
+            onChange={(kind) => setForm({ ...form, kind })}
+            options={[
+              ["FIELD", "병원 · 현장 서비스"],
+              ["GENERAL", "병원 외 · 일반 업무"],
+            ]}
+          />
+          {field ? (
+            <>
+              <ChoiceGroup
+                legend="작업 구분"
+                value={type}
+                onChange={(serviceType) =>
+                  setForm({
+                    ...form,
+                    serviceType,
+                    status: serviceType === "CALL" ? "COMPLETED" : form.status,
+                  })
+                }
+                options={Object.entries(serviceLabels)}
+              />
               <label>
-                병원
-                <select
-                  className="work-input"
-                  required
+                병원 <span aria-hidden="true">*</span>
+                <HospitalPicker
+                  sites={sites.data || []}
                   value={form.siteId}
-                  onChange={(e) => setForm({ ...form, siteId: e.target.value })}
-                >
-                  <option value="">병원을 선택해주세요</option>
-                  {sites.data?.map((s) => (
-                    <option
-                      key={s.siteDb}
-                      value={s.siteDb}
-                    >
-                      {s.name || s.siteDb}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(siteId) => setForm({ ...form, siteId })}
+                />
                 {sites.error && (
                   <span role="alert">병원 목록을 불러오지 못했습니다.</span>
                 )}
               </label>
-              <label>
-                서비스 유형
-                <select
-                  className="work-input"
-                  value={form.serviceType}
-                  onChange={(e) =>
-                    setForm({ ...form, serviceType: e.target.value })
-                  }
-                >
-                  {Object.entries(serviceLabels).map(([v, t]) => (
-                    <option
-                      key={v}
-                      value={v}
-                    >
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
-          <label>
-            제목
-            <input
-              required
-              maxLength={200}
-              className="work-input"
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-              placeholder="어떤 업무를 진행했나요?"
+            </>
+          ) : (
+            <ChoiceGroup
+              legend="업무 분류"
+              value={details.personalKind}
+              onChange={(personalKind) =>
+                setDetails({ ...details, personalKind })
+              }
+              options={generalTypes}
             />
-          </label>
+          )}
           <div className="work-form-row">
             <label>
-              작업일
+              작업일 *
               <input
-                type="date"
                 className="work-input"
+                type="date"
                 required
                 value={form.workDate}
                 onChange={(e) => setForm({ ...form, workDate: e.target.value })}
               />
             </label>
-            <label>
-              진행 상태
-              <select
-                className="work-input"
-                value={form.status}
-                onChange={(e) => setForm({ ...form, status: e.target.value })}
-              >
-                {Object.entries(statusLabels).map(([v, t]) => (
-                  <option
-                    key={v}
-                    value={v}
-                  >
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {(!field || type !== "CALL") && (
+              <label>
+                담당 엔지니어
+                <input
+                  className="work-input"
+                  maxLength={100}
+                  value={details.engineer || session?.name || ""}
+                  onChange={(e) =>
+                    setDetails({ ...details, engineer: e.target.value })
+                  }
+                />
+              </label>
+            )}
           </div>
+          {field && type !== "CALL" && (
+            <label>
+              장비 (모델)
+              <input
+                className="work-input"
+                maxLength={200}
+                value={details.model}
+                onChange={(e) =>
+                  setDetails({ ...details, model: e.target.value })
+                }
+                placeholder="예: Signa HDxt 1.5T"
+              />
+            </label>
+          )}
           <label>
-            업무 내용
-            <textarea
-              required
+            제목
+            <input
               className="work-input"
-              rows={10}
+              maxLength={200}
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+              placeholder={
+                field
+                  ? type === "COLDHEAD"
+                    ? `Cold Head ${details.coldheadPosition}`
+                    : serviceLabels[type]
+                  : "어떤 업무를 진행했나요?"
+              }
+            />
+          </label>
+          {field &&
+            ["REPAIR", "COLDHEAD", "ACR", "ETC", "INSTALL"].includes(type) && (
+              <label className="work-check">
+                <input
+                  type="checkbox"
+                  checked={details.countsAsPm}
+                  onChange={(e) =>
+                    setDetails({ ...details, countsAsPm: e.target.checked })
+                  }
+                />
+                이 방문을 PM 정기점검 주기에도 포함
+              </label>
+            )}
+          {field && (
+            <ServiceFields
+              type={type}
+              details={details}
+              onChange={setDetails}
+            />
+          )}
+          <label>
+            {field
+              ? type === "CALL"
+                ? "콜 내용"
+                : type === "PM"
+                  ? "점검 내용 / 특이사항"
+                  : "조치 내용 / 특이사항"
+              : "업무 내용"}
+            <textarea
+              className="work-input"
+              rows={6}
+              required={!field || !["PM", "ACR"].includes(type)}
               maxLength={100000}
               value={form.body}
               onChange={(e) => setForm({ ...form, body: e.target.value })}
               placeholder={
-                form.kind === "FIELD"
-                  ? "증상, 작업 내용, 결과와 후속 조치를 기록하세요."
-                  : "진행한 업무와 결과를 기록하세요."
+                type === "CALL" && field
+                  ? "문의 내용과 안내 사항을 기록하세요."
+                  : "작업 내용, 결과와 특이사항을 기록하세요."
               }
             />
           </label>
+          {(!field || type !== "CALL") && (
+            <ChoiceGroup
+              legend="진행 상태"
+              value={form.status}
+              onChange={(status) => setForm({ ...form, status })}
+              options={Object.entries(statusLabels)}
+            />
+          )}
+          {form.status !== "COMPLETED" && (
+            <label>
+              후속 조치 / 재방문 계획
+              <textarea
+                className="work-input"
+                value={details.followUp}
+                onChange={(e) =>
+                  setDetails({ ...details, followUp: e.target.value })
+                }
+              />
+            </label>
+          )}
+          <PhotoAttachments
+            key={id || "new"}
+            recordId={id ? Number(id) : undefined}
+            onChange={setPhotoIds}
+            onBusy={setPhotoBusy}
+          />
+          <label>
+            다음 방문 준비물
+            <textarea
+              className="work-input"
+              maxLength={10000}
+              rows={3}
+              value={details.prepItems}
+              onChange={(e) =>
+                setDetails({ ...details, prepItems: e.target.value })
+              }
+              placeholder="다음에 가져갈 부품·물품을 한 줄에 하나씩 입력하세요."
+            />
+            <small className="work-hint">
+              업무 현황의 ‘챙길 것’에 표시됩니다.
+            </small>
+          </label>
           <div className="work-form-actions">
             <Link
-              href="/work"
               className="work-secondary"
+              href="/work"
             >
               취소
             </Link>
             <button
               className="work-primary"
-              disabled={saving}
+              disabled={saving || photoBusy}
             >
-              {saving ? "저장 중…" : "기록 저장"}
+              {saving
+                ? "저장 중…"
+                : photoBusy
+                  ? "사진 처리 중…"
+                  : id
+                    ? "변경 저장"
+                    : "작업일지 저장"}
             </button>
           </div>
         </form>
@@ -295,6 +413,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   );
 }
 function ReadRecord({ record: r }: { record: WorkRecord }) {
+  const d = parseDetails(r.detailsJson);
   return (
     <article className="work-panel work-form">
       <div>
@@ -314,7 +433,89 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
           {r.siteName} →
         </Link>
       )}
+      <dl className="work-details">
+        {[
+          ["장비", d.model],
+          ["엔지니어", d.engineer],
+          ["증상 / 요청", d.symptom],
+          ["교체 부품", d.parts],
+          [
+            "작업 시간",
+            d.startTime || d.endTime ? `${d.startTime} ~ ${d.endTime}` : "",
+          ],
+          ["헬륨 레벨", d.heLevel ? d.heLevel + "%" : ""],
+          [
+            "Cold Head",
+            r.serviceType === "COLDHEAD"
+              ? `${d.coldheadPosition} · ${d.coldheadSerial} · 입고 ${d.coldheadInDate}`
+              : "",
+          ],
+          ["후속 조치", d.followUp],
+          ["다음 준비물", d.prepItems],
+        ]
+          .filter(([, v]) => v)
+          .map(([k, v]) => (
+            <div key={k}>
+              <dt>{k}</dt>
+              <dd className="work-prewrap">{v}</dd>
+            </div>
+          ))}
+      </dl>
       <p className="work-prewrap">{r.body}</p>
+      {r.serviceType === "PM" && (
+        <section>
+          <h2>PM 점검표</h2>
+          {d.pm.map((item) => (
+            <div
+              className="work-pm-read"
+              key={item.name}
+            >
+              <strong>{item.name}</strong>
+              <span>
+                {item.options.find((o) => o.v === item.result)?.l || "미입력"}
+              </span>
+              {item.fields.map((f) => (
+                <p key={f.label}>
+                  {f.label}:{" "}
+                  {f.type === "check"
+                    ? f.value === "Y"
+                      ? "확인"
+                      : "미확인"
+                    : f.value || "—"}{" "}
+                  {f.suffix}
+                </p>
+              ))}
+              {item.comment && <p>{item.comment}</p>}
+            </div>
+          ))}
+        </section>
+      )}
+      {r.serviceType === "ACR" && (
+        <section>
+          <h2>
+            ACR{" "}
+            {
+              (
+                { doc: "서류", full: "정밀", pretest: "사전 TEST" } as Record<
+                  string,
+                  string
+                >
+              )[d.acrKind]
+            }
+          </h2>
+          <fieldset
+            disabled
+            className="work-readonly"
+          >
+            <ServiceFields
+              type="ACR"
+              details={d}
+              onChange={() => {}}
+            />
+          </fieldset>
+        </section>
+      )}
+      <PhotoGallery recordId={r.id} />
     </article>
   );
 }

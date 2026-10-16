@@ -1,0 +1,439 @@
+{
+  "pm": [
+    [
+      "Image Quality",
+      [
+        ["Alignment Light Check", "IQ"],
+        [
+          "DQA Tool",
+          "IQ",
+          {
+            "fields": ["New iso center", "X", "Y", "Z"],
+            "noCheck": true
+          }
+        ],
+        [
+          "DAQA",
+          "IQ",
+          {
+            "fields": [
+              {
+                "label": "Coil",
+                "default": "Head coil"
+              },
+              "AXI",
+              "COR",
+              "SAG"
+            ],
+            "noCheck": true
+          }
+        ],
+        [
+          "Performed Save Info",
+          "",
+          {
+            "checkOptions": [
+              {
+                "v": "done",
+                "l": "시행",
+                "t": "ok"
+              },
+              {
+                "v": "skip",
+                "l": "미시행",
+                "t": "muted"
+              }
+            ]
+          }
+        ]
+      ]
+    ],
+    [
+      "RF / System Cabinet",
+      [
+        ["Fan & Filter for SFRD", "Clean"],
+        ["Check RF Output Power", "Check"],
+        ["Power Monitor Check", "Check"]
+      ]
+    ],
+    ["Patient Handling", [["Patient Table Check", "Safety"]]],
+    [
+      "Gradient",
+      [
+        [
+          "Lytron System Check",
+          "Check temp.",
+          {
+            "fields": [
+              {
+                "label": "온도",
+                "type": "text",
+                "suffix": "°C"
+              },
+              {
+                "label": "비고",
+                "type": "text",
+                "placeholder": "예: 누수 냉각수 회수"
+              }
+            ],
+            "noCheck": true
+          }
+        ],
+        [
+          "LV Shim",
+          "IQ",
+          {
+            "checkOptions": [
+              {
+                "v": "done",
+                "l": "시행",
+                "t": "ok"
+              },
+              {
+                "v": "skip",
+                "l": "미시행",
+                "t": "muted"
+              },
+              {
+                "v": "cant",
+                "l": "시행불가",
+                "t": "warn"
+              }
+            ],
+            "fields": [
+              {
+                "label": "주파수",
+                "type": "text",
+                "suffix": "Hz"
+              },
+              {
+                "label": "X",
+                "type": "text"
+              },
+              {
+                "label": "Y",
+                "type": "text"
+              },
+              {
+                "label": "Z",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      ]
+    ],
+    [
+      "Computer",
+      [
+        [
+          "Storelog",
+          "",
+          {
+            "checkOptions": [
+              {
+                "v": "done",
+                "l": "시행",
+                "t": "ok"
+              },
+              {
+                "v": "skip",
+                "l": "미시행",
+                "t": "muted"
+              }
+            ]
+          }
+        ],
+        ["Clean Dust / Set Time", ""]
+      ]
+    ],
+    [
+      "Magnet",
+      [
+        ["Inspect MRU", "Safety"],
+        [
+          "Check Magnet LHe Level",
+          "Safety",
+          {
+            "fields": [
+              {
+                "label": "LHe Level",
+                "type": "text",
+                "suffix": "%"
+              }
+            ],
+            "noCheck": true
+          }
+        ],
+        [
+          "Check Magnet Pressure",
+          "Safety",
+          {
+            "noCheck": true,
+            "fields": [
+              {
+                "label": "Magnet Pressure",
+                "type": "text",
+                "suffix": "psi"
+              },
+              {
+                "label": "Shield Cooler",
+                "type": "range",
+                "suffix": "MPa"
+              },
+              {
+                "label": "He 보충 시행",
+                "type": "check"
+              }
+            ]
+          }
+        ]
+      ]
+    ]
+  ],
+  "acr": [
+    {
+      "k": "sag0",
+      "t": "0. 시상 위치확인 영상 (Sag Local — Save Screen)",
+      "method": [
+        "시상위치확인(Sag Local) 영상에서 표준 T1·표준 T2 촬영 조건으로 각각 Save Screen.",
+        "제출영상 순서 [1](T1), [2](T2)로 저장."
+      ],
+      "crit": "[1]·[2] 두 영상 모두 저장하면 자동 '합격'",
+      "compact": true,
+      "inputs": [
+        ["img1", "[1] Sag Local T1 Save Screen", "check"],
+        ["img2", "[2] Sag Local T2 Save Screen", "check"]
+      ]
+    },
+    {
+      "k": "geo",
+      "t": "1. 기하학적 정확도 (Geometric accuracy)",
+      "figs": ["image4", "image5", "image6"],
+      "grid": 3,
+      "method": [
+        "WW를 1로 놓고 WL을 조절해 팬텀 경계가 가장 뚜렷할 때(경계 소실 직전) 측정.",
+        "시상위치확인영상: 팬텀 중앙부의 위·아래 길이를 측정 (기준 148mm).",
+        "표준 T1 절편 #5: 중앙부의 상하·좌우 길이를 측정 (기준 190mm)."
+      ],
+      "crit": "합격기준: 시상 146~150mm (148±2) · 표준T1 #5 가로세로·대각선 각각 188~192mm (190±2)",
+      "compact": true,
+      "inputs": [
+        ["geoval", "측정값 (Window level 기록)"],
+        ["geoww", "→ WW", "calc"],
+        ["geowl", "→ WL (절반)", "calc"],
+        ["sag", "시상 (mm)", "", "상하 길이"],
+        ["img3", "[3] 시상", "check", "pair"],
+        ["axc", "표준T1 #5 (mm)", "", "가로세로"],
+        ["img4", "[4] 가로세로", "check", "pair"],
+        ["axd", "표준T1 #5 (mm)", "", "대각선"],
+        ["img5", "[5] 대각선", "check", "pair"]
+      ]
+    },
+    {
+      "k": "hcsr",
+      "t": "2. 공간분해능 (High contrast spatial resolution)",
+      "figs": ["image7"],
+      "grid": 2,
+      "method": [
+        "표준·병원 T1/T2 절편 #1의 Resolution insert(hole array pairs) 사용. 배열은 1.1 / 1.0 / 0.9 mm.",
+        "UL(좌상단 배열): 횡렬(좌우)의 점이 잘 보이게 WL·WW 조절. 4점이 모두 구별되는 횡렬이 하나라도 있으면 그 크기에서 분해능 있음.",
+        "LR(우하단 배열): 종렬(상하)의 점으로 동일하게 판정.",
+        "입력할 측정값은 없음 — 아래 순서대로 영상을 저장하고 체크. 판정은 육안 확인 후 직접 선택."
+      ],
+      "crit": "합격기준: UL·LR 모두 1.0mm 이하 구별 (8매 모두 저장하면 자동 '합격', 이상 시 직접 '불합격' 선택)",
+      "compact": true,
+      "inputs": [
+        ["img6", "[6] 표준T1 #1 UL", "check"],
+        ["img7", "[7] 표준T1 #1 LR", "check"],
+        ["img8", "[8] 표준T2 #1 UL", "check"],
+        ["img9", "[9] 표준T2 #1 LR", "check"],
+        ["img10", "[10] 병원T1 #1 UL", "check"],
+        ["img11", "[11] 병원T1 #1 LR", "check"],
+        ["img12", "[12] 병원T2 #1 UL", "check"],
+        ["img13", "[13] 병원T2 #1 LR", "check"]
+      ]
+    },
+    {
+      "k": "sta",
+      "t": "3. 절편 두께 정확도 (Slice thickness accuracy)",
+      "figs": ["image8", "image9"],
+      "method": [
+        "표준 T1/T2 절편 #1의 signal ramp가 잘 보이게 WL·WW 조정.",
+        "ramp 중간부에 상·하 직사각형 ROI를 각각 그려 평균 신호강도를 측정.",
+        "두 ROI 평균의 1/2 을 WL 로, WW 는 0(에 가깝게) set.",
+        "그 window에서 상·하 signal ramp의 길이를 측정 → 절편두께 = 0.2 × (상부길이 × 하부길이) ÷ (상부길이 + 하부길이)."
+      ],
+      "crit": "합격기준: 표준 T1·T2 절편두께 = 5.0 ± 0.7mm (4.3~5.7)",
+      "compact": true,
+      "inputs": [
+        ["t1rtop", "T1 상부 ROI"],
+        ["t1rbot", "T1 하부 ROI"],
+        ["t1wl", "→ T1 WL(평균)", "calc"],
+        ["img14", "[14] 표준 T1 · 직사각형 2개 그린 영상", "check", "full"],
+        ["t1top", "T1 상부 ramp(mm)"],
+        ["t1bot", "T1 하부 ramp(mm)"],
+        ["t1thk", "→ T1 절편두께(mm)", "calc"],
+        [
+          "img15",
+          "[15] 표준 T1 · 상·하부 ramp 길이 측정 영상",
+          "check",
+          "full"
+        ],
+        ["t2rtop", "T2 상부 ROI"],
+        ["t2rbot", "T2 하부 ROI"],
+        ["t2wl", "→ T2 WL(평균)", "calc"],
+        ["img16", "[16] 표준 T2 · 직사각형 2개 그린 영상", "check", "full"],
+        ["t2top", "T2 상부 ramp(mm)"],
+        ["t2bot", "T2 하부 ramp(mm)"],
+        ["t2thk", "→ T2 절편두께(mm)", "calc"],
+        ["img17", "[17] 표준 T2 · 상·하부 ramp 길이 측정 영상", "check", "full"]
+      ]
+    },
+    {
+      "k": "spa",
+      "t": "4. 절편 위치 정확도 (Slice position accuracy)",
+      "figs": ["image10"],
+      "method": [
+        "정의: 얼마나 정확한 위치에서 절편 영상이 얻어지는지 평가한다.",
+        "① 표준 T1, T2의 절편 #1번 및 #11번을 사용한다.",
+        "② Window width를 최소한으로 설정 (WW1) 한다.",
+        "③ #1번에서 가장 강한 신호값의 절반을 Window level로 설정한다.",
+        "④ 한 쌍의 검은 수직막대의 길이 차이를 총 4개의 절편에서 측정한다."
+      ],
+      "crit": "합격기준: 표준 T1·T2 #1·#11 수직막대 길이차 4곳 모두 5mm 이하",
+      "compact": true,
+      "grid": 2,
+      "inputs": [
+        ["t1peak", "T1 #1 가장 강한 신호값"],
+        ["t1peakhalf", "→ Window level (절반값)", "calc"],
+        ["t1s1", "표준T1 #1 길이차 (mm)"],
+        ["img18", "[18] 표준T1 #1 측정영상", "check", "pair"],
+        ["t1s11", "표준T1 #11 길이차 (mm)"],
+        ["img19", "[19] 표준T1 #11 측정영상", "check", "pair"],
+        ["t2peak", "T2 #1 가장 강한 신호값"],
+        ["t2peakhalf", "→ Window level (절반값)", "calc"],
+        ["t2s1", "표준T2 #1 길이차 (mm)"],
+        ["img20", "[20] 표준T2 #1 측정영상", "check", "pair"],
+        ["t2s11", "표준T2 #11 길이차 (mm)"],
+        ["img21", "[21] 표준T2 #11 측정영상", "check", "pair"]
+      ]
+    },
+    {
+      "k": "piu",
+      "t": "5. 영상 강도 균일성 PIU (Image intensity uniformity)",
+      "figs": ["image11", "image12"],
+      "grid": 3,
+      "method": [
+        "표준 T1/T2 절편 #7 내부에 원형 ROI(195~205 cm², 상단 검은 사각형 제외)를 그린다.",
+        "WW를 좁히며 WL을 내려 ROI 내 가장 어두운 부분이 나타나기 시작할 때, 그 부분에 1cm² ROI 로 평균신호(low) 측정.",
+        "WL을 올려 ROI 내 마지막 밝은 부분에 1cm² ROI 로 평균신호(high) 측정.",
+        "PIU = 100 × [1 − (high − low) ÷ (high + low)].  T2는 T1과 동일 절차.",
+        "※ 표준 T2에서는 기준이 되는 큰 원(Large ROI)을 그리기는 하지만, 그 영상은 저장하지 않는다."
+      ],
+      "crit": "합격기준: PIU 87.5% 이상 (3.0T 는 82% 이상, multi-channel coil 기준)",
+      "compact": true,
+      "inputs": [
+        ["siglarge", "내부 평균 신호강도"],
+        ["sighalf", "→ 절반값", "calc"],
+        [
+          "img22",
+          "[22] 표준 T1 절편 #7 큰 원(Large ROI) 영상",
+          "check",
+          "full"
+        ],
+        ["t1low", "표준T1 low 평균신호강도"],
+        ["t1high", "표준T1 high 평균신호강도"],
+        ["t1piu", "→ 표준T1 PIU (%)", "calc"],
+        ["img23", "[23] 표준T1 최소신호강도 작은원", "check", "group"],
+        ["img24", "[24] 표준T1 최대신호강도 작은원", "check", "group"],
+        ["t2low", "표준T2 low 평균신호강도"],
+        ["t2high", "표준T2 high 평균신호강도"],
+        ["t2piu", "→ 표준T2 PIU (%)", "calc"],
+        ["img25", "[25] 표준T2 최소신호강도 작은원", "check", "group"],
+        ["img26", "[26] 표준T2 최대신호강도 작은원", "check", "group"]
+      ]
+    },
+    {
+      "k": "psg",
+      "t": "6. 고스트 신호 백분율 (Percent signal ghosting)",
+      "figs": ["image13"],
+      "method": [
+        "표준 T1 절편 #7 중앙에 원형 ROI(195~205 cm²)를 그리고, 팬텀의 상하좌우에 각각 10 크기의 직사각형(타원형) ROI를 그린다. (상단 검은 사각형 제외)",
+        "각 ROI 평균신호를 측정.",
+        "고스트 비율 = |((상 + 하) − (좌 + 우)) ÷ (2 × Large ROI)| × 100 (%)."
+      ],
+      "crit": "합격기준: 고스트 비율 2.5% 이하",
+      "compact": true,
+      "inputs": [
+        ["large", "Large ROI 평균신호강도"],
+        ["top", "상단 타원 ROI"],
+        ["bot", "하단 타원 ROI"],
+        ["left", "좌측 타원 ROI"],
+        ["right", "우측 타원 ROI"],
+        ["ratio", "→ 고스트 비율 (%)", "calc"],
+        ["img27", "[27] Large ROI + 상/하 사각형 영상", "check", "group"],
+        ["img28", "[28] Large ROI + 좌/우 사각형 영상", "check", "group"]
+      ]
+    },
+    {
+      "k": "lcod",
+      "t": "7. 대조도 분해능 (Low contrast object detectability)",
+      "figs": ["image14", "image15"],
+      "grid": 4,
+      "method": [
+        "표준·병원 T1/T2 절편 #8~#11 사용. WL·WW를 low contrast object가 잘 보이게 조절.",
+        "1바퀴살 = 3개의 low contrast object. 절편당 10바퀴살, 12시 방향부터 시계방향으로 센다.",
+        "입력할 측정값은 없음 — 아래 순서대로 영상을 저장하고 체크. 판정은 육안 확인 후 직접 선택."
+      ],
+      "crit": "합격기준: 표준 T1+T2 바퀴살 합이 기준 이상 (3.0T 미만 9 / 3.0T 37). 16매 모두 저장하면 자동 '합격', 이상 시 직접 '불합격' 선택",
+      "compact": true,
+      "inputs": [
+        ["img29", "[29] 표준T1 #8", "check"],
+        ["img30", "[30] 표준T1 #9", "check"],
+        ["img31", "[31] 표준T1 #10", "check"],
+        ["img32", "[32] 표준T1 #11", "check"],
+        ["img33", "[33] 표준T2 #8", "check"],
+        ["img34", "[34] 표준T2 #9", "check"],
+        ["img35", "[35] 표준T2 #10", "check"],
+        ["img36", "[36] 표준T2 #11", "check"],
+        ["img37", "[37] 병원T1 #8", "check"],
+        ["img38", "[38] 병원T1 #9", "check"],
+        ["img39", "[39] 병원T1 #10", "check"],
+        ["img40", "[40] 병원T1 #11", "check"],
+        ["img41", "[41] 병원T2 #8", "check"],
+        ["img42", "[42] 병원T2 #9", "check"],
+        ["img43", "[43] 병원T2 #10", "check"],
+        ["img44", "[44] 병원T2 #11", "check"]
+      ]
+    }
+  ],
+  "pulseRows": ["시상위치확인", "표준 T1", "표준 T2", "병원 T1", "병원 T2"],
+  "pulseCols": [
+    "Seq",
+    "TR",
+    "TE",
+    "FOV",
+    "#slice",
+    "두께",
+    "Gap",
+    "NEX",
+    "Matrix"
+  ],
+  "pulseDefaults": {
+    "시상위치확인": ["SE", "200", "20", "25", "1", "20", "N/A", "1", "256"],
+    "표준 T1": ["SE", "500", "20", "25", "11", "5", "5", "1", "256"],
+    "표준 T2": ["SE", "2000", "20/80", "25", "11", "5", "5", "1", "256"],
+    "병원 T1": ["", "", "", "", "", "", "", "", ""],
+    "병원 T2": ["", "", "", "", "", "", "", "", ""]
+  },
+  "prep": {
+    "figs": ["image1", "image2"],
+    "method": [
+      "ACR PH-1 팬텀(약 148×190mm, 10mM NiCl₂ / 75mM NaCl)을 헤드코일 중앙에 거치. 'NOSE'·'CHIN' 표시를 정위치로. (약 22kg)",
+      "시상위치확인(Sagittal localizer) → 표준 T1 / T2 축상 시리즈 → 병원고유 T1 / T2 순으로 스캔.",
+      "절편 #1은 팬텀 아래쪽 쐐기 가운데 홈에 중심을 맞추고, 100mm 위 쐐기 홈에 절편 #11이 오도록 11매 획득. (#8~#11 절편 설정에 특히 유의)",
+      "평가용 제출영상은 Window setting을 바꿔 측정(ROI·SI·길이)한 상태로, 검사항목 순서대로 배열. 검사예정일 1개월 내 촬영분. DICOM(필요시 JPEG 첨부), 평가 종료까지 보관."
+    ]
+  }
+}

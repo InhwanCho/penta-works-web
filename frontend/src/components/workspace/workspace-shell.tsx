@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { ReactNode } from "react";
 const items = [
-  { href: "/", label: "오늘", icon: "home" },
-  { href: "/monitoring", label: "모니터링", icon: "monitor" },
+  { href: "/", label: "모니터링", icon: "monitor" },
+  { href: "/overview", label: "업무 현황", icon: "home" },
   { href: "/hospitals", label: "병원", icon: "hospital" },
   { href: "/work", label: "업무", icon: "work" },
   { href: "/schedule", label: "일정", icon: "calendar" },

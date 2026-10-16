@@ -34,6 +34,8 @@ services:
       MONITOR_SCHEDULER_ENABLED: "false"
       MRTB_SYNC_ENABLED: "false"
       WORKSPACE_ENABLED: "true"
+      MULTIPART_MAX_FILE_SIZE: "20MB"
+      MULTIPART_MAX_REQUEST_SIZE: "24MB"
       MAIL_ENABLED: "false"
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-펜타웍스 알림 (회신불가)}

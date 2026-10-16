@@ -34,8 +34,8 @@ spring:
             enable: ${SMTP_STARTTLS:true}
   servlet:
     multipart:
-      max-file-size: 10MB
-      max-request-size: 11MB
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:10MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:11MB}
 
 management:
   health:

@@ -16,6 +16,7 @@ export type WorkRecord = {
   workDate: string;
   status: string;
   updatedAt: string;
+  detailsJson?: string | null;
 };
 export type WorkSchedule = {
   id: number;
@@ -29,8 +30,9 @@ export type WorkSchedule = {
   endAt: string;
 };
 export const serviceLabels: Record<string, string> = {
-  REPAIR: "정비",
-  PM: "PM",
+  PM: "정기점검 (PM)",
+  REPAIR: "고장수리",
+  COLDHEAD: "Cold Head",
   ACR: "ACR",
   CALL: "콜",
   INSTALL: "설치",
@@ -78,4 +80,30 @@ export function dateTime(value: string) {
 }
 export function errorText(error: unknown) {
   return error instanceof Error ? error.message : "불러오지 못했습니다.";
+}
+export type HospitalPlan = {
+  siteId: string;
+  pmIntervalMonths: number;
+  pmOverride: string | null;
+  acrFullOverride: string | null;
+  acrDocOverride: string | null;
+};
+export type Preparation = {
+  id: number;
+  authorId: number;
+  siteId: string | null;
+  siteName: string | null;
+  content: string;
+  done: boolean;
+};
+export function usePlanning() {
+  const { session } = useAuth();
+  return useQuery({
+    queryKey: ["workspace-planning", session?.id],
+    queryFn: () =>
+      apiFetch<{ plans: HospitalPlan[]; preparations: Preparation[] }>(
+        "/workspace/planning",
+      ),
+    enabled: !!session,
+  });
 }

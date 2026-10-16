@@ -92,4 +92,4 @@ Development uses the separate `pentaworks_mreyes_dev` schema and `mreyes_dev` da
 
 Development frontend API URL is `/api/v1` (same-origin proxy), so both `http://192.168.0.210:3000` and `http://100.111.148.7:3000` work. Mail and Kakao senders, monitoring scheduler, cron evaluation and MRTB sync are explicitly disabled in development Compose. Monitoring can display the copied data and settings, but external messages are not sent. Development JWT secret and sessions are separate from production. Existing Office assets integration remains read-only.
 
-This phase adds basic text work records and schedules; it does not migrate Pentaservice's complete PM/ACR forms or photo editing. Existing hospital histories and photos are still shown through the read-only Office integration.
+The development work editor now includes PM/ACR/repair/Cold Head/Call/general-work sections, radio choices and authenticated photo attachments (20 MiB/file, 40 photos, 200 MiB/record). Monitoring is `/`; 업무 현황 is `/overview`. Existing historical hospital records and photos remain available through the read-only Office integration. See `docs/handovers/2026-10-16-service-workspace-update.md`.

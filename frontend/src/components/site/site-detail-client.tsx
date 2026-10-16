@@ -200,7 +200,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       <div className="mb-2 sm:mb-3">
         <Link
           className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex min-h-10 items-center justify-center gap-x-1.5 rounded-lg px-2 text-sm font-bold transition-colors"
-          href={`/monitoring?scrollTo=${encodeURIComponent(slug)}`}
+          href={`/?scrollTo=${encodeURIComponent(slug)}`}
         >
           <ArrowBackIconMini className="h-4 w-4" /> 대시보드
         </Link>

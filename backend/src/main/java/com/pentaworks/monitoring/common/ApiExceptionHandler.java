@@ -44,7 +44,7 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ResponseEntity<Map<String, Object>> uploadTooLarge(MaxUploadSizeExceededException error) {
-        return response(HttpStatus.BAD_REQUEST, "첨부 파일은 10MB 이하여야 합니다.");
+        return response(HttpStatus.BAD_REQUEST, "업로드 크기 제한을 초과했습니다. 화면에 표시된 파일 용량 제한을 확인해주세요.");
     }
 
     @ExceptionHandler(OfficeIntegrationException.class)

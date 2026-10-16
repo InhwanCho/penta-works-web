@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import HospitalPicker from "./hospital-picker";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
   useWorkspace,
@@ -173,7 +174,7 @@ export function TodayPage() {
         <section className="work-notice">
           <strong>병원 상태를 확인하세요</strong>
           <p>모니터링에서 최신 측정값과 확인할 알림을 조회합니다.</p>
-          <Link href="/monitoring">모니터링 열기 →</Link>
+          <Link href="/">모니터링 열기 →</Link>
         </section>
       </div>
       <div className="work-two-columns">
@@ -268,12 +269,14 @@ export function HospitalsPage() {
     </main>
   );
 }
-export function WorkPage() {
+export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   const { records } = useWorkspace();
   const [kind, setKind] = useState("ALL"),
     [search, setSearch] = useState("");
+  const [openOnly, setOpenOnly] = useState(onlyOpen);
   const rows = (records.data || []).filter(
     (r) =>
+      (!openOnly || r.status !== "COMPLETED") &&
       (kind === "ALL" || r.kind === kind) &&
       `${r.title} ${r.siteName || ""} ${r.body}`.includes(search),
   );
@@ -306,6 +309,14 @@ export function WorkPage() {
           </button>
         ))}
       </div>
+      <label className="work-check mb-4">
+        <input
+          type="checkbox"
+          checked={openOnly}
+          onChange={(e) => setOpenOnly(e.target.checked)}
+        />
+        미완료 작업만 보기
+      </label>
       <input
         className="work-input work-search"
         value={search}
@@ -447,21 +458,12 @@ export function SchedulePage() {
           </label>
           <label>
             병원 (선택)
-            <select
-              className="work-input"
+            <HospitalPicker
+              sites={sites.data || []}
               value={form.siteId}
-              onChange={(e) => setForm({ ...form, siteId: e.target.value })}
-            >
-              <option value="">병원과 관계없는 일정</option>
-              {sites.data?.map((s) => (
-                <option
-                  key={s.siteDb}
-                  value={s.siteDb}
-                >
-                  {s.name}
-                </option>
-              ))}
-            </select>
+              onChange={(siteId) => setForm({ ...form, siteId })}
+              optional
+            />
           </label>
           <div className="work-form-row">
             <label>
