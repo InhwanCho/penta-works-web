@@ -82,8 +82,18 @@ fi
 
 compose=(docker compose --project-name "$COMPOSE_PROJECT" --env-file "$ENV_FILE" -f "$COMPOSE_FILE")
 
+if [[ "$DEPLOY_ENV" == "dev" ]]; then
+    [[ "${DEV_DB_URL:-}" == *"/pentaworks_mreyes_dev" ]] || { echo "Refusing non-isolated development DB" >&2; exit 1; }
+fi
+
 "${compose[@]}" build backend frontend
-"${compose[@]}" up -d --remove-orphans
+if [[ "$DEPLOY_ENV" == "dev" ]]; then
+    # The shared database container is infrastructure; only replace development apps.
+    [[ "$DEV_DB_URL" == *"/pentaworks_mreyes_dev" ]] || { echo "Refusing non-isolated development DB" >&2; exit 1; }
+    "${compose[@]}" up -d --no-deps backend frontend
+else
+    "${compose[@]}" up -d --remove-orphans
+fi
 
 for attempt_no in $(seq 1 30); do
     if curl --fail --silent "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null \

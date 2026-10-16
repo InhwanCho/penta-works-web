@@ -1,4 +1,5 @@
 import { ContextHelpHost } from "@/components/common/context-help";
+import WorkspaceShell from "@/components/workspace/workspace-shell";
 import Navbar from "@/components/common/navbar";
 import AuthGate from "@/components/auth/auth-gate";
 import { AuthProvider } from "@/components/provider/auth-provider";
@@ -104,7 +105,7 @@ export default function RootLayout({
                 <Navbar />
                 <ToastViewport />
                 <ContextHelpHost />
-                <div id="app-content"><AuthGate>{children}</AuthGate></div>
+                <div id="app-content"><AuthGate><WorkspaceShell>{children}</WorkspaceShell></AuthGate></div>
               </ModalProvider>
             </AuthProvider>
           </ThemeProvider>

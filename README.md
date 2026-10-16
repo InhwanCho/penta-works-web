@@ -83,3 +83,13 @@ PWA 업데이트는 새 파일 준비가 끝나면 자동 적용하고 저장된
 2026-10-12 V32에서 기존 병원·개인 설정과 아직 적용하지 않은 공유 패턴의 허용편차를 모두 50%로 일괄 변경합니다. 평균 사용 여부·수동 범위·활성화·알림 시간 등 나머지 설정은 유지합니다. 적용된 공유 패턴의 과거 스냅샷은 기록으로 보존합니다.
 
 헬륨 압력(hepres) 항목 누락은 기본 켜짐·연속 5회입니다. 실제 데이터가 수신되면서 해당 수치만 누락된 기록을 세며, 전체 수집 중단·중복 수신·수집 간격의 공백은 항목 누락 횟수로 누적하지 않습니다. V33에서 기존 기본3회/미설정 헬륨 압력도 켜짐·5회로 전환하며 별도로 지정한 횟수와 다른 알림 설정은 유지합니다.
+
+## Development employee workspace (dev branch)
+
+The dev branch has the employee workspace: Today `/`, existing monitoring `/monitoring`, hospitals `/hospitals`, work records `/work`, and schedules `/schedule`. Work type is chosen inside `/work/new`. Workshop repairs, manuals, accounting, and HR remain in Intranet. V38 adds company-scoped work records and schedules; authors and company admins can change their own company's records, subject to hospital access.
+
+Development uses the separate `pentaworks_mreyes_dev` schema and `mreyes_dev` database user. Set `DEV_DB_URL`, `DEV_DB_USERNAME`, `DEV_DB_PASSWORD` in the development env before deployment. Development deployment refuses a non-isolated DB and replaces only frontend/backend containers. The database infrastructure container and production application are left running. Development snapshots do not receive live measurement synchronization.
+
+Development frontend API URL is `/api/v1` (same-origin proxy), so both `http://192.168.0.210:3000` and `http://100.111.148.7:3000` work. Mail and Kakao senders, monitoring scheduler, cron evaluation and MRTB sync are explicitly disabled in development Compose. Monitoring can display the copied data and settings, but external messages are not sent. Development JWT secret and sessions are separate from production. Existing Office assets integration remains read-only.
+
+This phase adds basic text work records and schedules; it does not migrate Pentaservice's complete PM/ACR forms or photo editing. Existing hospital histories and photos are still shown through the read-only Office integration.

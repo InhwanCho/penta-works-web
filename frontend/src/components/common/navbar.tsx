@@ -76,7 +76,7 @@ export default function Navbar() {
           <Link href="/" onClick={goToAll} className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white">
             <Image src="/favicon/android-chrome-192x192.png" alt="MReyes" width={32} height={32} priority
               className="h-8 w-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:-rotate-3 group-hover:scale-105" />
-            <span className="text-[15px] font-bold tracking-[-0.02em]">MReyes</span>
+            <span className="text-[15px] font-bold tracking-[-0.02em]">MReyes</span><span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/80">개발</span>
           </Link>
 
           <nav className="flex items-center gap-1.5">
@@ -109,7 +109,7 @@ export default function Navbar() {
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
                     <div className="py-1.5">
-                      <MenuLink onSelect={goToAll} href="/" icon={<HomeIcon />}>대시보드</MenuLink>
+                      <MenuLink onSelect={goToAll} href="/monitoring" icon={<HomeIcon />}>모니터링</MenuLink>
                       <MenuLink onSelect={() => setMenuOpen(false)} href="/baselines" icon={<GaugeIcon />}>알림 확인·관리 {unread && <UnreadAlertDot />}</MenuLink>
                       {session.role === "PLATFORM_ADMIN" && <MenuLink onSelect={() => setMenuOpen(false)} href="/companies" icon={<CompanyIcon />}>회사 관리</MenuLink>}
                       {isAdmin && <MenuLink onSelect={() => setMenuOpen(false)} href="/admin" icon={<UsersIcon />}>관리 설정</MenuLink>}

@@ -23,15 +23,18 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
-      DB_URL: jdbc:mariadb://database:3306/pentaworks_mri_db
-      DB_USERNAME: ${DB_USERNAME}
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_URL: ${DEV_DB_URL:?DEV_DB_URL must point to the isolated development database}
+      DB_USERNAME: ${DEV_DB_USERNAME:?DEV_DB_USERNAME is required}
+      DB_PASSWORD: ${DEV_DB_PASSWORD:?DEV_DB_PASSWORD is required}
       JWT_SECRET: ${JWT_SECRET}
       JWT_ACCESS_EXPIRATION_MINUTES: ${JWT_ACCESS_EXPIRATION_MINUTES:-43200}
       JWT_REFRESH_EXPIRATION_DAYS: ${JWT_REFRESH_EXPIRATION_DAYS:-365}
       JWT_SECURE_COOKIE: ${JWT_SECURE_COOKIE:-false}
-      CRON_SECRET: ${CRON_SECRET}
-      MAIL_ENABLED: ${MAIL_ENABLED:-false}
+      CRON_SECRET: ""
+      MONITOR_SCHEDULER_ENABLED: "false"
+      MRTB_SYNC_ENABLED: "false"
+      WORKSPACE_ENABLED: "true"
+      MAIL_ENABLED: "false"
       MAIL_FROM: ${MAIL_FROM:-}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-펜타웍스 알림 (회신불가)}
       PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:3000}
@@ -42,7 +45,7 @@ services:
       SMTP_AUTH: ${SMTP_AUTH:-true}
       SMTP_STARTTLS: ${SMTP_STARTTLS:-true}
       SMTP_SSL_ENABLED: ${SMTP_SSL_ENABLED:-false}
-      BARO_KAKAO_ENABLED: ${BARO_KAKAO_ENABLED:-false}
+      BARO_KAKAO_ENABLED: "false"
       BARO_KAKAO_DEEP_LINK_ENABLED: ${BARO_KAKAO_DEEP_LINK_ENABLED:-false}
       BARO_CERT_KEY: ${BARO_CERT_KEY:-}
       BARO_CORP_NUM: ${BARO_CORP_NUM:-}

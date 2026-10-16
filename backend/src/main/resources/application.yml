@@ -80,3 +80,5 @@ app:
     interval-ms: ${MRTB_SYNC_INTERVAL_MS:10000}
     batch-size: ${MRTB_SYNC_BATCH_SIZE:1000}
     max-batches-per-run: ${MRTB_SYNC_MAX_BATCHES_PER_RUN:100}
+  workspace:
+    enabled: ${WORKSPACE_ENABLED:false}
