@@ -1,9 +1,16 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useImperativeHandle,
+  type Ref,
+} from "react";
 import Image from "next/image";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { errorText } from "./workspace-data";
+export type PhotoAttachmentApi = { addFiles: (files: File[]) => void };
 export type PhotoMeta = {
   id: number;
   name: string;
@@ -117,8 +124,10 @@ export function PhotoAttachments({
   recordId,
   onChange,
   onBusy,
+  attachmentApi,
 }: {
   recordId?: number;
+  attachmentApi?: Ref<PhotoAttachmentApi>;
   onChange: (ids: number[]) => void;
   onBusy: (busy: boolean) => void;
 }) {
@@ -143,6 +152,11 @@ export function PhotoAttachments({
     }
   }, [initial.data, loaded, onChange]);
   useEffect(() => onBusy(busy || !loaded), [busy, loaded, onBusy]);
+  useImperativeHandle(attachmentApi, () => ({
+    addFiles: (files) => {
+      void add(files);
+    },
+  }));
   async function add(files: File[]) {
     if (lock.current || !loaded || !files.length) return;
     setError("");
@@ -207,6 +221,7 @@ export function PhotoAttachments({
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setDragging(false);
           void add(Array.from(e.dataTransfer.files));
         }}
@@ -214,6 +229,7 @@ export function PhotoAttachments({
           const files = Array.from(e.clipboardData.files);
           if (files.length) {
             e.preventDefault();
+            e.stopPropagation();
             void add(files);
           }
         }}

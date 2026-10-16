@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
@@ -23,7 +23,11 @@ import {
   computedDetails,
   type WorkDetails,
 } from "./service-form-model";
-import { PhotoAttachments, PhotoGallery } from "./work-photos";
+import {
+  PhotoAttachments,
+  PhotoGallery,
+  type PhotoAttachmentApi,
+} from "./work-photos";
 const generalTypes: [string, string][] = [
   ["office", "사무실 업무"],
   ["education", "교육 · 세미나"],
@@ -31,6 +35,7 @@ const generalTypes: [string, string][] = [
   ["etc", "기타 일정"],
 ];
 export default function WorkEditor({ id }: { id?: string }) {
+  const attachmentApi = useRef<PhotoAttachmentApi>(null);
   const router = useRouter(),
     search = useSearchParams(),
     qc = useQueryClient();
@@ -189,6 +194,23 @@ export default function WorkEditor({ id }: { id?: string }) {
       )}
       {editing ? (
         <form
+          onDragOver={(e) => {
+            if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+          }}
+          onDrop={(e) => {
+            if (e.dataTransfer.files.length) {
+              e.preventDefault();
+              attachmentApi.current?.addFiles(Array.from(e.dataTransfer.files));
+            }
+          }}
+          onPaste={(e) => {
+            if (e.clipboardData.files.length) {
+              e.preventDefault();
+              attachmentApi.current?.addFiles(
+                Array.from(e.clipboardData.files),
+              );
+            }
+          }}
           onSubmit={save}
           className="work-panel work-form"
         >
@@ -355,6 +377,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             </label>
           )}
           <PhotoAttachments
+            attachmentApi={attachmentApi}
             key={id || "new"}
             recordId={id ? Number(id) : undefined}
             onChange={setPhotoIds}
