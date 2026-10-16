@@ -1,5 +1,6 @@
 "use client";
 
+import LogoutControls from "@/components/account/logout-controls";
 import { useUnreadAlerts } from "@/hooks/use-unread-alerts";
 import UnreadAlertDot from "./unread-alert-dot";
 import dynamic from "next/dynamic";
@@ -9,7 +10,7 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 const ICON_BUTTON =
@@ -22,21 +23,21 @@ const SiteSearchModal = dynamic(
 
 export default function Navbar() {
   const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
-  const { session, isAdmin, logout } = useAuth();
+  const { session, isAdmin } = useAuth();
   const { open: openSearchModal, isOpen: searchOpen } = useModal("SearchModal");
-  const router = useRouter();
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [logoutError, setLogoutError] = useState<string | null>(null);
 
   useEffect(() => setMenuOpen(false), [pathname]);
   useEffect(() => {
     if (!menuOpen) return;
     function close(event: MouseEvent) {
+      if (document.querySelector("[data-logout-dialog][open]")) return;
       if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false);
     }
     function escape(event: KeyboardEvent) {
+      if (document.querySelector("[data-logout-dialog][open]")) return;
       if (event.key === "Escape") setMenuOpen(false);
     }
     document.addEventListener("click", close);
@@ -68,6 +69,14 @@ export default function Navbar() {
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 1023px)");
+    const close = () => {
+      if (media.matches) setMenuOpen(false);
+    };
+    media.addEventListener("change", close);
+    return () => media.removeEventListener("change", close);
+  }, []);
   const unread = useUnreadAlerts();
   const goToAll = () => {
     setMenuOpen(false);
@@ -111,12 +120,34 @@ export default function Navbar() {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1.5">
+          {session && (
+            <span className="min-w-0 truncate px-2 text-sm font-semibold text-white/90 lg:hidden">
+              {pathname === "/"
+                ? "모니터링"
+                : pathname.startsWith("/admin")
+                  ? "관리 설정"
+                  : pathname.startsWith("/companies")
+                    ? "회사 관리"
+                    : pathname.startsWith("/account")
+                      ? "내 계정"
+                      : pathname.startsWith("/settings")
+                        ? "설정"
+                        : pathname.startsWith("/hospitals") ||
+                            pathname.startsWith("/sites/")
+                          ? "병원"
+                          : pathname.startsWith("/baselines") ||
+                              pathname.includes("notification-settings") ||
+                              pathname.includes("alert-settings")
+                            ? "알림"
+                            : "업무 현황"}
+            </span>
+          )}
+          <nav className="flex shrink-0 items-center gap-1.5">
             {session && (
               <Link
                 href="/baselines?view=events"
                 aria-label="알림 확인 및 관리"
-                className={ICON_BUTTON}
+                className={`${ICON_BUTTON} hidden lg:inline-flex`}
               >
                 <BellIcon />
                 {unread && <UnreadAlertDot />}
@@ -138,7 +169,7 @@ export default function Navbar() {
 
             {session ? (
               <div
-                className="relative"
+                className="relative hidden lg:block"
                 ref={menuRef}
               >
                 <button
@@ -223,34 +254,7 @@ export default function Navbar() {
                         {isDark ? "밝게" : "어둡게"}
                       </PreferenceButton>
                     </div>
-                    {logoutError && (
-                      <p
-                        role="alert"
-                        className="px-3 py-2 text-xs text-rose-600"
-                      >
-                        {logoutError}
-                      </p>
-                    )}
-                    <button
-                      type="button"
-                      role="menuitem"
-                      title="이 기기에서 로그아웃"
-                      onClick={async () => {
-                        setLogoutError(null);
-                        try {
-                          await logout();
-                          setMenuOpen(false);
-                          router.replace("/login");
-                        } catch {
-                          setLogoutError(
-                            "로그아웃하지 못했습니다. 다시 시도해주세요.",
-                          );
-                        }
-                      }}
-                      className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
-                    >
-                      <LogoutIcon /> 로그아웃
-                    </button>
+                    <LogoutControls compact />
                   </div>
                 )}
               </div>
@@ -446,19 +450,6 @@ function SunIcon() {
         r="4"
       />
       <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-    </svg>
-  );
-}
-function LogoutIcon() {
-  return (
-    <svg
-      className={iconClass}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="M10 17l5-5-5-5M15 12H3M14 3h5a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-5" />
     </svg>
   );
 }

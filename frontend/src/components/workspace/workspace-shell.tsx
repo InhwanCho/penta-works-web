@@ -1,4 +1,5 @@
 "use client";
+import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -8,6 +9,7 @@ const items = [
   { href: "/overview", label: "업무 현황", icon: "home" },
   { href: "/hospitals", label: "병원", icon: "hospital" },
   { href: "/baselines", label: "알림", icon: "bell" },
+  { href: "/settings", label: "설정", icon: "settings" },
 ];
 export function WorkIcon({ name }: { name: string }) {
   return (
@@ -20,7 +22,21 @@ export function WorkIcon({ name }: { name: string }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {name === "bell" ? (
+      {name === "settings" ? (
+        <>
+          <circle
+            cx="12"
+            cy="12"
+            r="8"
+          />
+          <circle
+            cx="12"
+            cy="12"
+            r="3"
+          />
+          <path d="M12 1v3m0 16v3M1 12h3m16 0h3M4 4l2 2m12 12 2 2M4 20l2-2M18 6l2-2" />
+        </>
+      ) : name === "bell" ? (
         <>
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
         </>
@@ -83,6 +99,8 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   if (!session) return children;
   const active = (href: string) =>
     path === href ||
+    (href === "/settings" &&
+      ["/account", "/admin", "/companies"].some((p) => path.startsWith(p))) ||
     (href === "/overview" &&
       (path.startsWith("/work") || path.startsWith("/schedule"))) ||
     (href === "/hospitals" && path.startsWith("/sites/")) ||
@@ -125,6 +143,11 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           >
             <WorkIcon name={i.icon} />
             <span>{i.label}</span>
+            {i.href === "/baselines" && (
+              <span className="workspace-alert-dot">
+                <DeferredUnreadAlertDot />
+              </span>
+            )}
           </Link>
         ))}
       </nav>
