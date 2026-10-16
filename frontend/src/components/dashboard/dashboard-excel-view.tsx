@@ -236,6 +236,7 @@ export default function DashboardExcelView({
           onScroll={event => syncScroll(event.currentTarget, headerScrollRef.current)}
           data-ptr-ignore
           data-dashboard-scroll
+          data-dashboard-layout-ready={columnWidths.length === columns.length + 1 && !operatingHours.isPending ? "true" : "false"}
           tabIndex={0}
           aria-label="병원별 전체표, 가로로 스크롤할 수 있습니다"
           className="dashboard-touch-scroll overflow-x-auto pb-2"

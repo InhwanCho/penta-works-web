@@ -33,11 +33,11 @@ class BaroKakaoServiceTest {
         var humidity=new Transition(3,"001","테스트 병원","achumi","항온항습기 습도","%","HIGH",90.0,null,70.0,"이탈");
         var noData=new Transition(4,"001","테스트 병원","__data__","데이터 수집 5회 연속 누락","분","NO_DATA",50.0,null,50.0,"누락");
         String request=service.bundleRequest("01099998888",java.util.List.of(pressure,temperature,humidity,noData),ZonedDateTime.now());
-        assertTrue(request.contains("감지 항목: 헬륨 압력, 항온항습기 온도, 항온항습기 습도, 데이터 수집 5회 연속 누락"));
-        assertTrue(request.contains("현재 값: 헬륨 압력 [항목 누락] 5회\n항온항습기 온도 [항목 누락] 6회"));
+        assertTrue(request.contains("감지항목: 헬륨 압력, 항온항습기 온도, 항온항습기 습도, 데이터 수집 5회 연속 누락"));
+        assertTrue(request.contains("현재값: 헬륨 압력 [항목 누락] 5회\n항온항습기 온도 [항목 누락] 6회"));
         assertTrue(request.contains("항온항습기 습도 [상한 초과] 90%"));
         assertTrue(request.contains("데이터 수집 5회 연속 누락 [수집 누락] 50분"));
-        assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림 - 간소화</TemplateName>"));
+        assertTrue(request.contains("<TemplateName>MRI 상태 이상 감지</TemplateName>"));
         var other=new Transition(3,"002","다른 병원","hepres","압력","회","METRIC_MISSING",5.0,null,5.0,"누락");
         org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,()->service.bundleRequest("01099998888",java.util.List.of(pressure,other),ZonedDateTime.now()));
     }
@@ -59,12 +59,13 @@ class BaroKakaoServiceTest {
             "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
         String request = service.request("01099998888", alert,
             ZonedDateTime.of(2026, 9, 30, 12, 0, 0, 0, ZoneId.of("Asia/Seoul")));
+        assertTrue(request.contains("<Message>[MReyes 모니터링 알림]\n\n병원명: 테스트 병원\n감지항목: He Pressure\n현재값: 3.25psi\n감지시각: 2026-09-30 12:00 (수)\n\n담당자님, 상세 내용을 확인해주세요.</Message>"));
         assertTrue(service.ready());
         assertTrue(request.contains("<SmsReply>A</SmsReply>"));
         assertTrue(request.contains("<SmsMessage>[MRI] 테스트 병원 He Pressure 3.25psi</SmsMessage>"));
-        assertTrue(request.contains("<TemplateName>MRI 장비 상태 이상 감지 알림 - 간소화</TemplateName>"));
+        assertTrue(request.contains("<TemplateName>MRI 상태 이상 감지</TemplateName>"));
         assertTrue(request.contains("<ReceiverNum>01099998888</ReceiverNum>"));
-        assertTrue(request.contains("감지 시각: 2026-09-30 12:00 (수)"));
+        assertTrue(request.contains("감지시각: 2026-09-30 12:00 (수)"));
         assertTrue(request.contains("<Url1>https://app.pentaworks.net/?scrollTo=001</Url1>"));
         assertFalse(new BaroKakaoService(false, "", "", "", "", false).ready());
     }

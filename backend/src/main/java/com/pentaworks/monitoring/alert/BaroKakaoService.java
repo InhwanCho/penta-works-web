@@ -99,7 +99,7 @@ public class BaroKakaoService {
     }
 
     String request(String phone, Transition alert, ZonedDateTime now) {
-        // Approved template BB0836851023705085; this API identifies it by TemplateName.
+        // Approved template BB0836851023705545; this API identifies it by TemplateName.
         return request(phone, alert, now, value(alert.value(), alert.unit()));
     }
 
@@ -134,13 +134,14 @@ public class BaroKakaoService {
     }
 
     private String request(String phone, Transition alert, ZonedDateTime now, String value) {
-        String message = "[MrEyes MRI 모니터링 알림]\n담당자님, 설정 범위 이탈이 감지되었습니다.\n\n병원명: "
-            + safe(alert.siteName()) + "\n감지 시각: " + now.format(ALERT_TIME)
-            + "\n감지 항목: " + safe(alert.metricLabel()) + "\n현재 값: " + value;
+        String message = "[MReyes 모니터링 알림]\n\n병원명: " + safe(alert.siteName())
+            + "\n감지항목: " + safe(alert.metricLabel()) + "\n현재값: " + value
+            + "\n감지시각: " + now.format(ALERT_TIME)
+            + "\n\n담당자님, 상세 내용을 확인해주세요.";
         String buttonUrl = "https://app.pentaworks.net/?scrollTo="
             + URLEncoder.encode(safe(alert.siteId()), StandardCharsets.UTF_8);
         String inner = tag("CERTKEY", certKey) + tag("CorpNum", corpNum) + tag("SenderID", senderId)
-            + tag("YellowId", "@pentaworks_mri") + tag("TemplateName", "MRI 장비 상태 이상 감지 알림 - 간소화")
+            + tag("YellowId", "@pentaworks_mri") + tag("TemplateName", "MRI 상태 이상 감지")
             + tag("SendDT", "") + tag("SmsReply", "A") + tag("SmsSenderNum", smsSenderNum)
             + "<KakaotalkMessage>" + tag("ReceiverName", "MRI 알림") + tag("ReceiverNum", phone)
             + tag("Title", "") + tag("Message", message) + tag("SmsMessage", sms(alert))
