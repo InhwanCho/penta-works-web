@@ -904,3 +904,7 @@ h4,
     min-height: 46px;
   }
 }
+/* Keep actions on the dark next-visit surface readable in both themes. */
+.work-next a {
+  color: #fff;
+}

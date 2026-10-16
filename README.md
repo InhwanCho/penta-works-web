@@ -34,7 +34,7 @@ MReyes 브라우저는 로그인 JWT로 `GET /api/v1/sites/{siteId}/office-asset
 | `pentaworks-dev` | `dev` | `pentaworks` | `http://192.168.0.210:3000` |
 | `pentaworks-prod` | `main` | `pentaworks-prod` | `https://app.pentaworks.net` |
 
-개발 환경은 `docker-compose.yml`과 `/home/inhwan/pentaworks-secrets/.env`를 사용합니다. 운영 환경은 `docker-compose.prod.yml`과 `/home/inhwan/pentaworks-secrets/prod.env`를 사용하며, 프로토타입 기간에는 개발 환경의 `pentaworks_default` Docker 네트워크를 통해 같은 MariaDB를 공유합니다.
+개발 환경은 `docker-compose.yml`과 `/home/inhwan/pentaworks-secrets/.env`를 사용합니다. 운영 환경은 `docker-compose.prod.yml`과 `/home/inhwan/pentaworks-secrets/prod.env`를 사용합니다. 같은 MariaDB 인스턴스를 사용하되 개발은 `pentaworks_mreyes_dev`, 운영은 `pentaworks_mri_db` 스키마와 별도 DB 계정으로 분리합니다.
 
 운영 컨테이너는 호스트의 loopback 포트 `3100`(frontend), `8180`(backend)에만 바인딩됩니다. Nginx 설정은 `deploy/nginx/app.pentaworks.net.conf`에 있으며, 회사 홈페이지가 준비되기 전까지 `pentaworks.net`은 운영 앱으로 임시 리다이렉트됩니다.
 
