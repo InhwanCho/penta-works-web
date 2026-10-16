@@ -16,6 +16,7 @@ export type PmItem = {
   options: { v: string; l: string }[];
 };
 export type WorkDetails = {
+  assetIds: number[];
   model: string;
   engineer: string;
   personalKind: string;
@@ -66,6 +67,7 @@ export const pulseRows = definitions.pulseRows,
   pulseCols = definitions.pulseCols;
 export function initialDetails(): WorkDetails {
   return {
+    assetIds: [],
     model: "",
     engineer: "",
     personalKind: "office",
@@ -151,6 +153,16 @@ export function parseDetails(value?: string | null): WorkDetails {
     ] as const;
     for (const key of textKeys)
       if (raw[key] != null) fallback[key] = asText(raw[key]);
+    fallback.assetIds = Array.isArray(raw.assetIds)
+      ? [
+          ...new Set<number>(
+            raw.assetIds.filter(
+              (id: unknown): id is number =>
+                typeof id === "number" && Number.isSafeInteger(id) && id > 0,
+            ),
+          ),
+        ]
+      : [];
     fallback.countsAsPm = raw.countsAsPm === true;
     if (Array.isArray(raw.pm))
       fallback.pm = fallback.pm.map((item) => {

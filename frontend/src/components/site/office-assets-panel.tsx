@@ -11,8 +11,6 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-type Tab = "equipment" | "components" | "maintenance";
-
 const SERVICE_LABELS: Record<string, string> = {
   PM: "정기점검",
   REPAIR: "고장수리",
@@ -30,7 +28,6 @@ export default function OfficeAssetsPanel({
   siteId: string;
   returnPath: string;
 }) {
-  const [tab, setTab] = useState<Tab>("equipment");
   const { session, isLoading: isAuthLoading } = useAuth();
   const query = useOfficeAssetsQuery(siteId, Boolean(session));
 
@@ -48,7 +45,7 @@ export default function OfficeAssetsPanel({
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-extrabold">장비·정비 정보</h2>
+            <h2 className="font-extrabold">기존 장비·부품</h2>
             <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
               사내 장비, 부품, 정비 이력은 로그인 후 볼 수 있습니다.
             </p>
@@ -69,7 +66,7 @@ export default function OfficeAssetsPanel({
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-extrabold">장비·정비 정보</h2>
+            <h2 className="font-extrabold">기존 장비·부품</h2>
             <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
               연결된 인트라넷 사이트가 없거나 현재 정보를 불러올 수 없습니다.
             </p>
@@ -87,23 +84,14 @@ export default function OfficeAssetsPanel({
   }
 
   const data = query.data;
-  const tabs: { key: Tab; label: string; count: number }[] = [
-    { key: "equipment", label: "장비", count: data.equipment.length },
-    { key: "components", label: "부품", count: data.components.length },
-    {
-      key: "maintenance",
-      label: "정비 이력",
-      count: data.maintenanceHistory.length,
-    },
-  ];
 
   return (
     <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm sm:p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-lg font-extrabold">장비·정비 정보</h2>
+          <h2 className="text-lg font-extrabold">기존 장비·부품</h2>
           <p className="text-text-secondary dark:text-text-dark-primary/65 mt-0.5 text-xs sm:text-sm">
-            PENTA OFFICE 연동 · 읽기 전용
+            이전 서비스 기록
             {data.site.address ? ` · ${data.site.address}` : ""}
           </p>
         </div>
@@ -112,27 +100,8 @@ export default function OfficeAssetsPanel({
         </span>
       </div>
 
-      <div
-        className="bg-background-tertiary dark:bg-background-dark-secondary/60 mt-3 grid grid-cols-3 rounded-lg p-1"
-        role="tablist"
-        aria-label="인트라넷 자산 정보"
-      >
-        {tabs.map((item) => (
-          <button
-            key={item.key}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.key}
-            onClick={() => setTab(item.key)}
-            className={`min-h-11 rounded-md px-1 text-sm font-extrabold ${tab === item.key ? "dark:bg-background-dark-card bg-white shadow-sm" : "text-text-secondary dark:text-text-dark-primary/70"}`}
-          >
-            {item.label} <span className="tabular-nums">{item.count}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="mt-3" role="tabpanel">
-        {tab === "equipment" && (
+      <div className="mt-3">
+        {
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {data.equipment.map((equipment) => (
               <article
@@ -170,9 +139,9 @@ export default function OfficeAssetsPanel({
             ))}
             {!data.equipment.length && <Empty text="등록된 장비가 없습니다." />}
           </div>
-        )}
+        }
 
-        {tab === "components" && (
+        {data.components.length > 0 && (
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {data.components.map((component) => {
               const equipment = data.equipment.find(
@@ -190,7 +159,9 @@ export default function OfficeAssetsPanel({
                   <p className="text-text-secondary dark:text-text-dark-primary/70 mt-1 text-sm">
                     {join([
                       component.componentType,
-                      component.partNumber ? `P/N ${component.partNumber}` : null,
+                      component.partNumber
+                        ? `P/N ${component.partNumber}`
+                        : null,
                       component.serialNumber
                         ? `S/N ${component.serialNumber}`
                         : null,
@@ -208,24 +179,15 @@ export default function OfficeAssetsPanel({
                     ])}
                   </p>
                   {component.notes && (
-                    <p className="mt-2 whitespace-pre-wrap text-sm">
+                    <p className="mt-2 text-sm whitespace-pre-wrap">
                       {component.notes}
                     </p>
                   )}
                 </article>
               );
             })}
-            {!data.components.length && <Empty text="등록된 부품이 없습니다." />}
-          </div>
-        )}
-
-        {tab === "maintenance" && (
-          <div className="space-y-2">
-            {data.maintenanceHistory.map((item) => (
-              <MaintenanceRow key={item.id} item={item} siteId={siteId} />
-            ))}
-            {!data.maintenanceHistory.length && (
-              <Empty text="등록된 정비 이력이 없습니다." />
+            {!data.components.length && (
+              <Empty text="등록된 부품이 없습니다." />
             )}
           </div>
         )}
@@ -234,7 +196,13 @@ export default function OfficeAssetsPanel({
   );
 }
 
-function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: string }) {
+export function MaintenanceRow({
+  item,
+  siteId,
+}: {
+  item: OfficeMaintenance;
+  siteId: string;
+}) {
   const title =
     item.serviceTitle ||
     SERVICE_LABELS[item.serviceType ?? ""] ||
@@ -262,8 +230,12 @@ function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: str
             ]) || "상세 정보 미등록"}
           </span>
         </span>
-        <span className="shrink-0 text-sm font-bold group-open:hidden">열기</span>
-        <span className="hidden shrink-0 text-sm font-bold group-open:inline">닫기</span>
+        <span className="shrink-0 text-sm font-bold group-open:hidden">
+          열기
+        </span>
+        <span className="hidden shrink-0 text-sm font-bold group-open:inline">
+          닫기
+        </span>
       </summary>
       <div className="dark:border-background-dark-secondary mt-2 border-t pt-3">
         <div className="mb-3 flex flex-wrap gap-2 text-xs">
@@ -274,7 +246,9 @@ function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: str
               text={`${item.workStartTime.slice(0, 5)}${item.workEndTime ? `–${item.workEndTime.slice(0, 5)}` : ""}`}
             />
           )}
-          {item.photos.length > 0 && <Tag text={`사진 ${item.photos.length}장`} />}
+          {item.photos.length > 0 && (
+            <Tag text={`사진 ${item.photos.length}장`} />
+          )}
         </div>
         {details.length ? (
           <dl className="space-y-3">
@@ -283,7 +257,7 @@ function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: str
                 <dt className="text-text-secondary dark:text-text-dark-primary/60 text-xs font-bold">
                   {label}
                 </dt>
-                <dd className="mt-0.5 whitespace-pre-wrap text-sm leading-6">
+                <dd className="mt-0.5 text-sm leading-6 whitespace-pre-wrap">
                   {value}
                 </dd>
               </div>
@@ -295,7 +269,11 @@ function MaintenanceRow({ item, siteId }: { item: OfficeMaintenance; siteId: str
           </p>
         )}
         {item.photos.length > 0 && (
-          <PhotoGrid siteId={siteId} maintenanceId={item.id} photos={item.photos} />
+          <PhotoGrid
+            siteId={siteId}
+            maintenanceId={item.id}
+            photos={item.photos}
+          />
         )}
       </div>
     </details>
@@ -316,7 +294,7 @@ function PhotoGrid({
       <h3 className="text-text-secondary dark:text-text-dark-primary/60 mb-2 text-xs font-bold">
         작업 사진
       </h3>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {photos.map((photo) => (
           <OfficePhotoThumbnail
             key={photo.id}
@@ -371,7 +349,9 @@ function OfficePhotoThumbnail({
   }
 
   if (!source) {
-    return <div className="aspect-[4/3] animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />;
+    return (
+      <div className="aspect-[4/3] animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+    );
   }
 
   return (
@@ -396,14 +376,18 @@ function OfficePhotoThumbnail({
 
 function Status({ value }: { value: string | null }) {
   const label =
-    ({
-      ACTIVE: "사용 중",
-      REMOVED: "사용 종료",
-      REPLACED: "교체됨",
-      RECEIVED: "접수",
-      IN_PROGRESS: "진행 중",
-      COMPLETED: "완료",
-    } as Record<string, string>)[value ?? ""] ?? value ?? "상태 미등록";
+    (
+      {
+        ACTIVE: "사용 중",
+        REMOVED: "사용 종료",
+        REPLACED: "교체됨",
+        RECEIVED: "접수",
+        IN_PROGRESS: "진행 중",
+        COMPLETED: "완료",
+      } as Record<string, string>
+    )[value ?? ""] ??
+    value ??
+    "상태 미등록";
   return (
     <span className="shrink-0 rounded-full bg-slate-100 px-2 py-1 text-xs font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
       {label}

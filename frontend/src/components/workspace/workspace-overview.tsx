@@ -130,7 +130,7 @@ export default function OverviewPage() {
       ["ACR 정밀", nextDue(full, plan?.acrFullOverride, 36)],
       ["ACR 서류", nextDue(doc, plan?.acrDocOverride, 12)],
     ] as [string, string | null][]) {
-      if (date && daysBetween(date, today) <= 45)
+      if (date)
         due.push({
           siteId: site.siteDb,
           siteName: site.name || site.siteDb,
@@ -141,8 +141,8 @@ export default function OverviewPage() {
     }
   }
   due.sort((a, b) => a.date.localeCompare(b.date));
+  const upcomingDue = due.filter((d) => d.days <= 45);
   const preparations = planning.data?.preparations || [];
-  const pending = preparations.filter((p) => !p.done);
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
   const daySchedules = (schedules.data || []).filter(
@@ -182,38 +182,6 @@ export default function OverviewPage() {
           </Link>
         }
       />
-      <div className="work-stats">
-        <Link href="/hospitals">
-          <span>관리 병원</span>
-          <strong>
-            {sites.data?.length ?? "…"}
-            <small>곳</small>
-          </strong>
-        </Link>
-        <a href="#work-due">
-          <span>기한 지남</span>
-          <strong>
-            {loading ? "…" : due.filter((d) => d.days < 0).length}
-            <small>건</small>
-          </strong>
-        </a>
-        <Link href="/work?status=open">
-          <span>미완료 작업</span>
-          <strong>
-            {loading
-              ? "…"
-              : summaries.filter((r) => r.status !== "COMPLETED").length}
-            <small>건</small>
-          </strong>
-        </Link>
-        <a href="#work-preparation">
-          <span>챙길 것</span>
-          <strong>
-            {planning.isPending ? "…" : pending.length}
-            <small>건</small>
-          </strong>
-        </a>
-      </div>
       {(records.error || sites.error) && (
         <ErrorState
           error={records.error || sites.error}
@@ -293,7 +261,7 @@ export default function OverviewPage() {
                 type: "schedule",
               })),
               ...logs.map((r) => ({
-                title: r.siteName,
+                title: `${r.siteName} · ${serviceLabels[r.type] || r.title}`,
                 type: r.status === "COMPLETED" ? "record" : "open",
               })),
               ...dueItems.map((d) => ({
@@ -312,15 +280,16 @@ export default function OverviewPage() {
               >
                 <span>{Number(day.slice(8))}</span>
                 <div className="work-calendar-tags">
-                  {tags.slice(0, 2).map((t, i) => (
+                  {tags.slice(0, 3).map((t, i) => (
                     <span
                       className={t.type}
+                      title={t.title}
                       key={i}
                     >
                       {t.title}
                     </span>
                   ))}
-                  {tags.length > 2 && <small>+{tags.length - 2}</small>}
+                  {tags.length > 3 && <small>+{tags.length - 3}</small>}
                 </div>
                 <div
                   className="work-calendar-dots"
@@ -332,18 +301,22 @@ export default function OverviewPage() {
                       key={t}
                     />
                   ))}
+                  {tags.length > 0 && <small>{tags.length}</small>}
                 </div>
               </button>
             );
           })}
         </div>
         <div className="work-calendar-legend">
-          <span>● 작업일지</span>
-          <span>● 진행 중·재방문</span>
-          <span>● 점검 예정</span>
-          <span>● 등록 일정</span>
+          <span className="record">● 완료</span>
+          <span className="open">● 진행 중·재방문</span>
+          <span className="due">● 점검 예정</span>
+          <span className="schedule">● 일정</span>
         </div>
-        <div className="work-calendar-agenda">
+        <div
+          className="work-calendar-agenda"
+          aria-live="polite"
+        >
           <div className="work-section">
             <h3>{dateLabel(selected)}</h3>
             <Link href={`/work/new?date=${selected}`}>＋ 일지 작성</Link>
@@ -351,7 +324,7 @@ export default function OverviewPage() {
           {dayRecords.map((r) => (
             <Link
               href={r.href}
-              className="work-agenda-row"
+              className={`work-agenda-row ${r.status === "COMPLETED" ? "record" : "open"}`}
               key={r.key}
             >
               <span className="work-badge">
@@ -359,14 +332,17 @@ export default function OverviewPage() {
               </span>
               <div>
                 <strong>{r.siteName}</strong>
-                <p>{r.title}</p>
+                <p>
+                  {r.title}
+                  {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
+                </p>
               </div>
             </Link>
           ))}
           {daySchedules.map((s) => (
             <Link
               href="/schedule"
-              className="work-agenda-row"
+              className="work-agenda-row schedule"
               key={"s" + s.id}
             >
               <span className="work-badge">일정</span>
@@ -381,7 +357,7 @@ export default function OverviewPage() {
           {dayDue.map((d, i) => (
             <Link
               href={`/sites/${Number(d.siteId) || d.siteId}`}
-              className="work-agenda-row"
+              className="work-agenda-row due"
               key={"d" + i}
             >
               <span className="work-badge">예정</span>
@@ -406,7 +382,7 @@ export default function OverviewPage() {
             기록과 병원별 지정일로 계산합니다.
           </p>
           <div className="work-panel">
-            {due.slice(0, 30).map((d) => (
+            {upcomingDue.slice(0, 30).map((d) => (
               <Link
                 className="work-due-row"
                 href={`/sites/${Number(d.siteId) || d.siteId}`}
@@ -423,7 +399,7 @@ export default function OverviewPage() {
                 </span>
               </Link>
             ))}
-            {!due.length && (
+            {!upcomingDue.length && (
               <Empty>
                 {loading
                   ? "예정일을 계산하는 중…"
@@ -489,7 +465,10 @@ export default function OverviewPage() {
           >
             <div>
               <strong>{r.siteName}</strong>
-              <p>{r.title}</p>
+              <p>
+                {r.title}
+                {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
+              </p>
               <small>{r.date}</small>
             </div>
             <span className="work-badge">

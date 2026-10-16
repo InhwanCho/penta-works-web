@@ -65,7 +65,9 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
             key={r.id}
           >
             <div>
-              <span className="work-badge">
+              <span
+                className={`work-badge service-${r.serviceType?.toLowerCase() || "general"}`}
+              >
                 {r.kind === "GENERAL"
                   ? "일반 업무"
                   : serviceLabels[r.serviceType || ""] || "현장 서비스"}

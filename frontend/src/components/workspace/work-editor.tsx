@@ -28,6 +28,7 @@ import {
   PhotoGallery,
   type PhotoAttachmentApi,
 } from "./work-photos";
+import { AssetSelection, AssetRecordSummary } from "./hospital-assets";
 const generalTypes: [string, string][] = [
   ["office", "사무실 업무"],
   ["education", "교육 · 세미나"],
@@ -50,7 +51,13 @@ export default function WorkEditor({ id }: { id?: string }) {
     workDate: search.get("date") || dayString(),
     status: "COMPLETED",
   });
-  const [details, setDetails] = useState<WorkDetails>(() => initialDetails()),
+  const [details, setDetails] = useState<WorkDetails>(() => ({
+      ...initialDetails(),
+      assetIds:
+        search.get("asset") && /^\d+$/.test(search.get("asset")!)
+          ? [Number(search.get("asset"))]
+          : [],
+    })),
     [photoIds, setPhotoIds] = useState<number[] | null>(null),
     [photoBusy, setPhotoBusy] = useState(false);
   const [loadedId, setLoadedId] = useState<string | undefined>(),
@@ -85,6 +92,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       const computed = computedDetails({
         ...details,
         engineer: details.engineer || session?.name || "",
+        assetIds: form.kind === "FIELD" ? details.assetIds : [],
       });
       const title =
         form.title.trim() ||
@@ -115,6 +123,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
         qc.invalidateQueries({ queryKey: ["workspace-planning"] }),
         qc.invalidateQueries({ queryKey: ["workspace-photos"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-assets"] }),
       ]);
       if (id) setEditing(false);
       else router.replace(`/work/${result.id}`);
@@ -242,7 +251,10 @@ export default function WorkEditor({ id }: { id?: string }) {
                 <HospitalPicker
                   sites={sites.data || []}
                   value={form.siteId}
-                  onChange={(siteId) => setForm({ ...form, siteId })}
+                  onChange={(siteId) => {
+                    setForm({ ...form, siteId });
+                    setDetails({ ...details, assetIds: [] });
+                  }}
                 />
                 {sites.error && (
                   <span role="alert">병원 목록을 불러오지 못했습니다.</span>
@@ -272,7 +284,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             </label>
             {(!field || type !== "CALL") && (
               <label>
-                담당 엔지니어
+                담당자
                 <input
                   className="work-input"
                   maxLength={100}
@@ -297,6 +309,13 @@ export default function WorkEditor({ id }: { id?: string }) {
                 placeholder="예: Signa HDxt 1.5T"
               />
             </label>
+          )}
+          {field && (
+            <AssetSelection
+              siteId={form.siteId}
+              value={details.assetIds}
+              onChange={(assetIds) => setDetails({ ...details, assetIds })}
+            />
           )}
           <label>
             제목
@@ -423,7 +442,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       ) : (
         record && <ReadRecord record={record} />
       )}
-      {!editing && canEdit && (
+      {!editing && canEdit && !record?.assetChange && (
         <button
           className="work-delete"
           disabled={saving}
@@ -440,7 +459,9 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
   return (
     <article className="work-panel work-form">
       <div>
-        <span className="work-badge">
+        <span
+          className={`work-badge service-${r.serviceType?.toLowerCase() || "general"}`}
+        >
           {r.kind === "GENERAL"
             ? "일반 업무"
             : serviceLabels[r.serviceType || ""]}
@@ -459,7 +480,7 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
       <dl className="work-details">
         {[
           ["장비", d.model],
-          ["엔지니어", d.engineer],
+          ["담당자", d.engineer],
           ["증상 / 요청", d.symptom],
           ["교체 부품", d.parts],
           [
@@ -537,6 +558,12 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
             />
           </fieldset>
         </section>
+      )}
+      {r.siteId && (
+        <AssetRecordSummary
+          siteId={r.siteId}
+          recordId={r.id}
+        />
       )}
       <PhotoGallery recordId={r.id} />
     </article>

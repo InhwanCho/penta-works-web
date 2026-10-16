@@ -37,7 +37,8 @@ public class WorkspaceController {
     public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt) {}
     private static final String RECORDS="""
         SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,
-               w.kind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,w.details_json detailsJson,w.updated_at updatedAt
+               w.kind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,w.details_json detailsJson,w.updated_at updatedAt,
+               EXISTS(SELECT 1 FROM workspace_asset_history h WHERE h.record_id=w.id AND h.change_kind IN ('REGISTER','UPDATE')) assetChange
         FROM workspace_record w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.work_date DESC,w.id DESC LIMIT 500
         """;
@@ -63,7 +64,7 @@ public class WorkspaceController {
         db.update("INSERT INTO workspace_record(company_id,author_id,site_id,kind,service_type,title,body,work_date,status,details_json) VALUES(?,?,?,?,?,?,?,?,?,?)",u.companyId(),u.id(),sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input));
         long id=db.queryForObject("SELECT LAST_INSERT_ID()",Long.class);
         new WorkspacePhotos(db,users).attach(u,id,input.photoIds());
-        syncPreparation(u,id,sid,input.details());
+        syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());
         return Map.of("id",id);
     }
     private void syncPreparation(CurrentUser u,long id,String sid,Map<String,Object> details){
@@ -87,10 +88,10 @@ public class WorkspaceController {
     @PutMapping("/records/{id}") @Transactional
     public Map<String,Boolean> update(@PathVariable long id,@RequestBody WorkInput input,Authentication auth){
         var u=users.require(auth);requireRecordOwner(id,u);validate(input);String sid="FIELD".equals(input.kind())?site(u,input.siteId()):null;
-        db.update("UPDATE workspace_record SET site_id=?,kind=?,service_type=?,title=?,body=?,work_date=?,status=?,details_json=? WHERE id=? AND company_id=? AND deleted_at IS NULL",sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input),id,u.companyId());new WorkspacePhotos(db,users).attach(u,id,input.photoIds());syncPreparation(u,id,sid,input.details());return Map.of("saved",true);
+        db.update("UPDATE workspace_record SET site_id=?,kind=?,service_type=?,title=?,body=?,work_date=?,status=?,details_json=? WHERE id=? AND company_id=? AND deleted_at IS NULL",sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input),id,u.companyId());new WorkspacePhotos(db,users).attach(u,id,input.photoIds());syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());return Map.of("saved",true);
     }
     @DeleteMapping("/records/{id}") @Transactional
-    public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}
+    public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}
     @GetMapping("/schedules")
     public List<Map<String,Object>> schedules(Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);return db.queryForList("""
         SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt

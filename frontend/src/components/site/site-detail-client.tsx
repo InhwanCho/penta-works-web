@@ -1,4 +1,5 @@
 "use client";
+import HospitalAssets from "@/components/workspace/hospital-assets";
 import HospitalWork from "@/components/workspace/hospital-work";
 
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
@@ -225,12 +226,14 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
       <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
 
-      <HospitalWork siteId={data.site.siteDb} />
+      <HospitalAssets siteId={data.site.siteDb} />
 
       <OfficeAssetsPanel
         siteId={data.site.siteDb}
         returnPath={`/sites/${encodeURIComponent(slug)}`}
       />
+
+      <HospitalWork siteId={data.site.siteDb} />
 
       <fieldset className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">

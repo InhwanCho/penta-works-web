@@ -17,6 +17,7 @@ export type WorkRecord = {
   status: string;
   updatedAt: string;
   detailsJson?: string | null;
+  assetChange?: boolean | number;
 };
 export type WorkSchedule = {
   id: number;

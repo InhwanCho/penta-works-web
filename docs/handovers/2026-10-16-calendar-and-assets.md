@@ -1,0 +1,7 @@
+# Development calendar and hospital asset management
+
+Development only, dev branch. Removes the four overview stat cards, emphasizes the month calendar with distinct event colors, today/selection rings, mobile markers/counts and selected-day agenda. All known due dates appear in the browsed month; the separate upcoming list remains limited to 45 days. No Google Calendar integration or credentials added.
+
+V41 adds company/site-scoped MR.EYES equipment/components and per-work-record history snapshots. MRI, gradient chiller, Cold Head and other parts have model/version/serial, installed date, status and notes. Each registration/update atomically writes an ordinary hospital work record plus before/after snapshots. Optimistic revisions prevent overwriting another user's changes. Work forms can link multiple registered assets, validating company/site ownership server-side and retaining the snapshot on later edits. Registration/update audit links cannot be detached or their records deleted. Replacements retain the previous component as replaced; the new physical unit is registered separately.
+
+Legacy Office assets remain read-only and visible without equipment tabs. Hospital maintenance combines legacy and MR.EYES records chronologically. Native assets and their histories are writable without an Office mapping. Engineer UI labels become 담당자. Brighter primary actions and category/status badges support light/dark mobile and desktop layouts.
