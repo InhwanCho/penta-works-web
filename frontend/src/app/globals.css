@@ -1962,7 +1962,6 @@ h4,
 .schedule-card-menu > summary::-webkit-details-marker { display: none; }
 .schedule-card-menu > div { position: absolute; top: 46px; right: 0; z-index: 5; min-width: 140px; padding: 4px 12px; background: var(--work-paper); border: 1px solid var(--work-line); border-radius: 10px; box-shadow: 0 4px 15px #0001; }
 .schedule-card-menu .work-text-button { width: 100%; font-size: 14px; text-align: left; }
-.schedule-page .work-pills .selected { background: var(--work-paper); border-color: #527ca7; color: var(--work-ink); box-shadow: inset 0 -2px #527ca7; }
 @media (max-width: 767px) {
  .schedule-page .work-heading p { display: none; }
  .schedule-page .work-pills { display: grid; grid-template-columns: 1fr 1fr; }
