@@ -34,7 +34,7 @@ public class WorkspaceController {
         try {String json=mapper.writeValueAsString(input.details()==null?Map.of():input.details());if(json.length()>250000)throw new BadRequestException("점검 항목의 내용이 너무 큽니다.");return json;}
         catch(JsonProcessingException e){throw new BadRequestException("작업 상세를 확인해주세요.");}
     }
-    public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt) {}
+    public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt,String targetKind,String personalKind,String serviceType) {}
     private static final String RECORDS="""
         SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,
                w.kind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,w.details_json detailsJson,w.updated_at updatedAt,
@@ -94,7 +94,7 @@ public class WorkspaceController {
     public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}
     @GetMapping("/schedules")
     public List<Map<String,Object>> schedules(Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);return db.queryForList("""
-        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
+        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
         FROM workspace_schedule w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.start_at,w.id LIMIT 1000
         """,u.companyId()).stream().filter(r->visible(r,allowed)).toList();}
@@ -102,7 +102,16 @@ public class WorkspaceController {
     public Map<String,Object> schedule(@RequestBody ScheduleInput input,Authentication auth){
         var u=users.require(auth);text(input.title(),200,"제목");if(input.body()!=null&&input.body().length()>10000)throw new BadRequestException("내용이 너무 깁니다.");
         if(input.startAt()==null||input.endAt()==null||input.endAt().isBefore(input.startAt()))throw new BadRequestException("일정의 시작·종료 시간을 확인해주세요.");
-        String sid=site(u,input.siteId());db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at) VALUES(?,?,?,?,?,?,?)",u.companyId(),u.id(),sid,input.title().trim(),input.body()==null?"":input.body(),input.startAt(),input.endAt());return Map.of("id",db.queryForObject("SELECT LAST_INSERT_ID()",Long.class));
+        String sid=site(u,input.siteId());
+        String target=input.targetKind()==null?(sid==null?"GENERAL":"HOSPITAL"):input.targetKind();
+        if(!List.of("HOSPITAL","GENERAL").contains(target))throw new BadRequestException("일정 대상을 확인해주세요.");
+        String personal="GENERAL".equals(target)?input.personalKind():null;
+        String service="HOSPITAL".equals(target)?input.serviceType():null;
+        if("HOSPITAL".equals(target)&&sid==null)throw new BadRequestException("병원을 선택해주세요.");
+        if("GENERAL".equals(target)&&sid!=null)throw new BadRequestException("병원 외 일정에는 병원을 지정할 수 없습니다.");
+        if(personal!=null&&!List.of("office","edu","leave","etc").contains(personal))throw new BadRequestException("병원 외 일정 분류를 확인해주세요.");
+        if(service!=null&&!List.of("PM","REPAIR","COLDHEAD","ACR","CALL","INSTALL","ETC").contains(service))throw new BadRequestException("서비스 유형을 확인해주세요.");
+        db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at,target_kind,personal_kind,service_type) VALUES(?,?,?,?,?,?,?,?,?,?)",u.companyId(),u.id(),sid,input.title().trim(),input.body()==null?"":input.body(),input.startAt(),input.endAt(),target,personal,service);return Map.of("id",db.queryForObject("SELECT LAST_INSERT_ID()",Long.class));
     }
     @DeleteMapping("/schedules/{id}")
     public Map<String,Boolean> deleteSchedule(@PathVariable long id,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT author_id,site_id siteId FROM workspace_schedule WHERE id=? AND company_id=? AND deleted_at IS NULL",id,u.companyId());if(rows.isEmpty())throw new NotFoundException("일정을 찾을 수 없습니다.");var r=rows.get(0);if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());if(!u.isAdmin()&&((Number)r.get("author_id")).longValue()!=u.id())throw new ForbiddenException("작성한 일정만 삭제할 수 있습니다.");db.update("UPDATE workspace_schedule SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}

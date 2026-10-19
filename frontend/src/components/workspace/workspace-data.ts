@@ -20,6 +20,9 @@ export type WorkRecord = {
   assetChange?: boolean | number;
 };
 export type WorkSchedule = {
+  targetKind?: "HOSPITAL" | "GENERAL" | null;
+  personalKind?: string | null;
+  serviceType?: string | null;
   id: number;
   authorId: number;
   authorName: string;
@@ -124,4 +127,17 @@ export function scheduleTimeLabel(startAt: string, endAt: string) {
   return wholeDay
     ? `${shortDate(start)}–${shortDate(end)} · 종일`
     : `${shortDate(start)} ${start.slice(11, 16)}–${shortDate(end)} ${end.slice(11, 16)}`;
+}
+
+export const personalScheduleLabels: Record<string, string> = {
+  office: "사무실",
+  edu: "교육·세미나",
+  leave: "휴가·연차",
+  etc: "기타 일정",
+};
+export function scheduleCategory(s: WorkSchedule) {
+  if (s.personalKind)
+    return personalScheduleLabels[s.personalKind] || s.personalKind;
+  if (s.serviceType) return serviceLabels[s.serviceType] || s.serviceType;
+  return "분류 미등록";
 }

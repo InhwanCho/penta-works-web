@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import HospitalPicker from "./hospital-picker";
+import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
   useWorkspace,
@@ -15,6 +16,8 @@ import {
   serviceLabels,
   statusLabels,
   scheduleTimeLabel,
+  scheduleCategory,
+  personalScheduleLabels,
   type WorkRecord,
   type WorkSchedule,
 } from "./workspace-data";
@@ -104,9 +107,10 @@ function ScheduleRows({ rows }: { rows: WorkSchedule[] }) {
             key={s.id}
           >
             <span className="work-time">
-              {dateTime(s.startAt).slice(11, 16)}
+              {scheduleTimeLabel(s.startAt, s.endAt)}
             </span>
             <div>
+              <span className="work-badge">{scheduleCategory(s)}</span>
               <strong>{s.title}</strong>
               <p>
                 {s.siteName ? `${s.siteName} · ` : ""}
@@ -355,6 +359,9 @@ export function SchedulePage() {
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
   const [form, setForm] = useState({
+    targetKind: "GENERAL",
+    personalKind: "etc",
+    serviceType: "ETC",
     title: "",
     siteId: "",
     body: "",
@@ -376,7 +383,12 @@ export function SchedulePage() {
     try {
       await apiFetch("/workspace/schedules", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          personalKind:
+            form.targetKind === "GENERAL" ? form.personalKind : null,
+          serviceType: form.targetKind === "HOSPITAL" ? form.serviceType : null,
+        }),
       });
       await qc.invalidateQueries({ queryKey: ["workspace-schedules"] });
       setSelected(form.startAt.slice(0, 10));
@@ -474,15 +486,42 @@ export function SchedulePage() {
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
           </label>
-          <label>
-            병원 (선택)
-            <HospitalPicker
-              sites={sites.data || []}
-              value={form.siteId}
-              onChange={(siteId) => setForm({ ...form, siteId })}
-              optional
+          <ChoiceGroup
+            legend="대상"
+            value={form.targetKind}
+            options={[
+              ["HOSPITAL", "병원"],
+              ["GENERAL", "병원 외 일정"],
+            ]}
+            onChange={(targetKind) =>
+              setForm({ ...form, targetKind, siteId: "" })
+            }
+          />
+          {form.targetKind === "GENERAL" ? (
+            <ChoiceGroup
+              legend="분류"
+              value={form.personalKind}
+              options={Object.entries(personalScheduleLabels)}
+              onChange={(personalKind) => setForm({ ...form, personalKind })}
             />
-          </label>
+          ) : (
+            <>
+              <ChoiceGroup
+                legend="서비스 유형"
+                value={form.serviceType}
+                options={Object.entries(serviceLabels)}
+                onChange={(serviceType) => setForm({ ...form, serviceType })}
+              />
+              <label>
+                병원 *
+                <HospitalPicker
+                  sites={sites.data || []}
+                  value={form.siteId}
+                  onChange={(siteId) => setForm({ ...form, siteId })}
+                />
+              </label>
+            </>
+          )}
           <div className="work-form-row">
             <label>
               시작
@@ -552,6 +591,11 @@ export function SchedulePage() {
                   <span className="schedule-time">
                     {scheduleTimeLabel(s.startAt, s.endAt)}
                   </span>
+                  <span
+                    className={`schedule-category category-${s.personalKind || s.serviceType?.toLowerCase() || "unknown"}`}
+                  >
+                    {scheduleCategory(s)}
+                  </span>
                   <h3>{s.title}</h3>
                 </div>
                 {(s.authorId === session?.id || isAdmin) && (
@@ -570,6 +614,16 @@ export function SchedulePage() {
                 )}
               </div>
               <dl className="schedule-card-meta">
+                <div>
+                  <dt>대상</dt>
+                  <dd>
+                    {s.targetKind === "GENERAL" || s.personalKind
+                      ? "병원 외 일정"
+                      : s.targetKind === "HOSPITAL" || s.siteId
+                        ? "병원"
+                        : "미등록"}
+                  </dd>
+                </div>
                 {s.siteName && (
                   <div>
                     <dt>병원</dt>

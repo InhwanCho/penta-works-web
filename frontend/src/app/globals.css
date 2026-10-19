@@ -1970,3 +1970,12 @@ h4,
  .schedule-page .work-date-picker { display: block; margin: 16px 0; }
  .schedule-page .work-date-picker input { display: block; width: 100%; max-width: none; margin-top: 6px; }
 }
+
+.schedule-category { display: inline-flex; margin-left: 8px; padding: 4px 9px; border-radius: 6px; background: #e3edf7; color: #345b7c; font-size: 13px; font-weight: 750; }
+.schedule-category.category-leave { background: #dcefe2; color: #28633a; }
+.schedule-category.category-edu { background: #e9e2f3; color: #634388; }
+.schedule-category.category-office { background: #e1e9ee; color: #38586c; }
+.dark .schedule-category { background: #2b4358; color: #d0e5f8; }
+.dark .schedule-category.category-leave { background: #274638; color: #bfe9cb; }
+.dark .schedule-category.category-edu { background: #41314f; color: #e4ccff; }
+.dark .schedule-category.category-office { background: #30434d; color: #c8e1ef; }

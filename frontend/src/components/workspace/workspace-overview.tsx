@@ -13,6 +13,7 @@ import {
   serviceLabels,
   statusLabels,
   scheduleTimeLabel,
+  scheduleCategory,
 } from "./workspace-data";
 import { parseDetails } from "./service-form-model";
 import {
@@ -258,7 +259,7 @@ export default function OverviewPage() {
               dueItems = due.filter((d) => d.date === day);
             const tags = [
               ...events.map((s) => ({
-                title: s.siteName || s.title,
+                title: `${scheduleCategory(s)} · ${s.siteName || s.title}`,
                 type: "schedule",
               })),
               ...logs.map((r) => ({
@@ -352,7 +353,7 @@ export default function OverviewPage() {
               className="work-agenda-row schedule"
               key={"s" + s.id}
             >
-              <span className="work-badge">일정</span>
+              <span className="work-badge">{scheduleCategory(s)}</span>
               <div>
                 <strong>{s.title}</strong>
                 <p>
