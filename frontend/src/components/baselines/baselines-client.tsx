@@ -5,7 +5,7 @@ import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
 import HelpButton from "@/components/common/context-help";
 import { ALERT_HELP } from "@/lib/alert-help";
-import { NotificationPreferencesSummary } from "./notification-preferences";
+import AlertSettingsMenu from "./alert-settings-menu";
 import AlertSettingsTable from "./alert-settings-table";
 import { AlertSection, AlertSwitch } from "./alert-controls";
 import {useOperatingHours,nextMonitoringLabel} from "@/lib/site-operating-hours";
@@ -64,11 +64,22 @@ export default function BaselinesClient({
   onRetryDelivery: (eventId: number) => Promise<{ ok: boolean; eventId: number }>;
 
 }) {
-  const [view, setView] = useState<"sites" | "thresholds" | "events">("events");
+  type View = "sites" | "thresholds" | "events" | "settings";
+  const [view, setView] = useState<View>("events");
   useEffect(() => {
-    const requested = new URLSearchParams(window.location.search).get("view");
-    if (requested === "thresholds" || requested === "events" || requested === "sites") setView(requested);
+    const sync = () => {
+      const requested = new URLSearchParams(window.location.search).get("view");
+      setView(requested === "thresholds" || requested === "sites" || requested === "settings" ? requested : "events");
+    };
+    sync(); window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
   }, []);
+  function navigateView(next: View) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", next);
+    window.history.pushState(null, "", url);
+    setView(next);
+  }
   const hours=useOperatingHours();
   const router=useRouter();
   const {session:actor}=useAuth();
@@ -131,19 +142,20 @@ export default function BaselinesClient({
         </Link>
       </div>
 
-      <header className="mb-3 flex flex-wrap items-center justify-between gap-2 py-2 lg:block lg:rounded-2xl lg:bg-[linear-gradient(120deg,#123b5d,#176083)] lg:px-7 lg:py-6 lg:text-white">
-        <h1 className="text-xl font-extrabold tracking-tight lg:text-3xl">알림 관리</h1>
-        <Link href="/notification-settings?from=baselines" className="inline-flex min-h-11 items-center text-sm font-semibold text-sky-700 dark:text-sky-300 lg:hidden">수신 시간 · 반복 설정 →</Link>
-        <p className="mt-2 hidden max-w-2xl text-base leading-7 text-white/90 lg:block">어느 병원에 무슨 문제가 생겼는지 확인하고, 내가 받을 알림을 설정하세요.</p>
+      <header className="mb-4 py-2">
+        <h1 className="text-2xl font-extrabold tracking-tight">알림</h1>
       </header>
-      {view !== "thresholds" && <div className="hidden lg:block"><NotificationPreferencesSummary/></div>}
-      <ManagementTabs large label="알림 관리" value={view} onChange={setView} items={[
-        {value:"events",label:"알림 확인",},
-        {value:"thresholds",label:"알림 설정"},
-        ...(canManageHospital ? [{value:"sites" as const,label:"병원 설정"}] : []),
+      <ManagementTabs large label="알림" value={view === "events" ? "events" : "settings"} onChange={navigateView} items={[
+        {value:"events",label:"도착한 알림"},
+        {value:"settings",label:"알림 설정"},
       ]} />
+      {view !== "events" && view !== "settings" && <div className="mb-5">
+        <button type="button" onClick={() => navigateView("settings")} className="mb-2 inline-flex min-h-12 items-center rounded-lg px-2 text-base font-bold text-sky-800 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/30">← 알림 설정 메뉴</button>
+        <h2 className="text-xl font-extrabold">{view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"}</h2>
+        <p className="mt-2 text-base leading-7 text-text-secondary">{view === "sites" ? "설정할 병원을 찾은 뒤 원하는 항목을 바꾸세요." : "병원을 찾은 뒤 바꾸려는 항목의 기준값을 눌러주세요. 내 계정에만 적용됩니다."}</p>
+      </div>}
 
-      {view === "sites" ? <section className="space-y-3">
+      {view === "settings" ? <AlertSettingsMenu canManageHospital={canManageHospital} onSelect={navigateView} /> : view === "sites" ? <section className="space-y-3">
         <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-background-dark-secondary dark:text-sky-100">
           <p className="font-bold">병원 표시 · 알림 사용 · 공통 운영 시간</p>
           <p className="mt-1 text-sm opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 상세 설정에서 정한 운영 시간은 모든 담당자에게 공통 적용됩니다.</p>
@@ -154,10 +166,10 @@ export default function BaselinesClient({
         <div className="space-y-2">{filtered.map((entry) => <article key={entry.siteid} className="flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_10px_rgba(22,58,82,0.035)] lg:flex-row lg:items-center dark:border-white/8 dark:bg-background-dark-card">
           <div className="min-w-0 flex-1"><h2 className="truncate font-bold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-0.5 text-sm">{entry.siteid} · {entry.dashboardVisible ? (entry.alertsEnabled ? "대시보드 표시 · 알림 켜짐" : "대시보드 표시 · 알림 꺼짐") : "대시보드 숨김 · 알림 불가"}</p>{hours.data?.[entry.siteid]?.status.enabled && <p className="mt-1 text-xs text-sky-800 dark:text-sky-200">공통 운영 시간 · {hours.data[entry.siteid].status.label}{hours.data[entry.siteid].status.nextMonitoringAt?` · 다음 감시 ${nextMonitoringLabel(hours.data[entry.siteid].status.nextMonitoringAt)}`:""}</p>}</div>
           <SiteCoolingControl siteId={entry.siteid} name={entry.name ?? entry.siteid}/>
-          <div className="grid w-full shrink-0 grid-cols-[1.4fr_1fr_1fr] gap-2 lg:w-96">
-            {canEditCompany && <button type="button" disabled={busySite === entry.siteid} onClick={() => toggleVisibility(entry)} className={`min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-sm font-bold transition disabled:opacity-50 ${entry.dashboardVisible ? "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-sky-950/50 dark:text-sky-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`} aria-label={`${entry.name ?? entry.siteid} 대시보드 ${entry.dashboardVisible ? "숨기기" : "표시하기"}`}><span className="hidden lg:inline">대시보드 </span>{entry.dashboardVisible ? "표시 중" : "숨김"}</button>}
+          <div className="grid w-full shrink-0 grid-cols-2 gap-2 lg:w-96">
+            {canEditCompany && <button type="button" disabled={busySite === entry.siteid} onClick={() => toggleVisibility(entry)} className={`min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-sm font-bold transition disabled:opacity-50 ${entry.dashboardVisible ? "bg-sky-100 text-sky-800 hover:bg-sky-200 dark:bg-sky-950/50 dark:text-sky-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`} aria-label={`${entry.name ?? entry.siteid} 대시보드 ${entry.dashboardVisible ? "숨기기" : "표시하기"}`}><span>화면에 </span>{entry.dashboardVisible ? "표시 중" : "숨김"}</button>}
             {canEdit && <button type="button" disabled={busySite === entry.siteid || !entry.dashboardVisible} onClick={() => toggleAlerts(entry)} className={`min-h-11 cursor-pointer whitespace-nowrap rounded-lg px-2 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-40 ${entry.alertsEnabled && entry.dashboardVisible ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-200" : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/7 dark:text-white/70"}`}>{entry.alertsEnabled && entry.dashboardVisible ? "알림 켜짐" : "알림 꺼짐"}</button>}
-            <button type="button" onClick={() => router.push(`/hospital-settings/${encodeURIComponent(entry.siteid)}`)} className="min-h-11 cursor-pointer whitespace-nowrap rounded-lg border border-slate-200 px-2 text-sm font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">상세 설정</button>
+            <button type="button" onClick={() => router.push(`/hospital-settings/${encodeURIComponent(entry.siteid)}`)} className="col-span-2 min-h-12 cursor-pointer rounded-lg border border-slate-200 px-3 text-base font-bold text-sky-700 transition hover:bg-sky-50 dark:border-white/10 dark:text-sky-200">병원 운영시간 변경 →</button>
           </div>
         </article>)}</div>
         {filtered.length === 0 && <EmptyState />}
@@ -300,7 +312,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       {history.isFetching && <p role="status" className="mb-3 text-sm">알림 이력을 불러오는 중…</p>}
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      {!history.isPending && filtered.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-white/20 dark:bg-background-dark-card"><p className="text-xl font-bold">{failed ? "알림을 불러오지 못했습니다" : filter === "unacknowledged" && !query && kind === "all" ? "확인할 알림이 없습니다" : "조건에 맞는 알림이 없습니다"}</p><p className="mt-3 text-base text-text-secondary">{failed ? "잠시 후 다시 시도해주세요." : "병원별 알림 기준은 ‘알림 설정’에서 확인할 수 있습니다."}</p></div> : <div className="space-y-4">{filtered.map((event) => <AlertEventRow key={event.id} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}</div>}
+      {!history.isPending && filtered.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-white/20 dark:bg-background-dark-card"><p className="text-xl font-bold">{failed ? "알림을 불러오지 못했습니다" : filter === "unacknowledged" && !query && kind === "all" ? "확인할 알림이 없습니다" : "조건에 맞는 알림이 없습니다"}</p><p className="mt-3 text-base text-text-secondary">{failed ? "잠시 후 다시 시도해주세요." : "위의 ‘알림 설정’에서 병원별 기준이나 알림 받는 시간을 바꿀 수 있습니다."}</p></div> : <div className="space-y-4">{filtered.map((event) => <AlertEventRow key={event.id} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}</div>}
       {(total > 20 || currentPage > 1) && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.max(1, Math.ceil(total / 20))}</span><button type="button" disabled={history.isFetching || currentPage * 20 >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
     </section>
   );
@@ -339,7 +351,7 @@ function AlertEventRow({ event, selecting, selected, onSelect, acknowledging, re
     </div>
     <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/7">
       <div className="flex flex-wrap items-center gap-2"><span className={`text-sm font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "현재 종료" : "문제 지속"}</span><span className={`rounded-full px-2 py-1 text-sm font-bold ${event.acknowledgedAt ? "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-white/60" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"}`}>{event.acknowledgedAt ? "확인했어요" : "확인 필요"}</span>{event.recoveredAt && <span className="text-text-secondary text-sm">종료 {new Date(event.recoveredAt).toLocaleString("ko-KR")}</span>}</div>
-      <div className="flex max-w-full flex-wrap items-center gap-2"><button type="button" disabled={!settingsAvailable} onClick={onOpenSettings} className="min-h-11 rounded-lg border border-sky-200 px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:border-sky-900 dark:text-sky-300">알림 설정</button>{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="min-h-11 rounded-lg border border-rose-200 px-3 text-sm font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-sm">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="min-h-12 rounded-xl bg-sky-700 px-5 text-base font-bold text-white disabled:opacity-50">{acknowledging ? "처리 중…" : "확인했어요"}</button>}</div>
+      <div className="flex max-w-full flex-wrap items-center gap-2"><button type="button" disabled={!settingsAvailable} onClick={onOpenSettings} className="min-h-11 rounded-lg border border-sky-200 px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:border-sky-900 dark:text-sky-300">이 알림 기준 바꾸기</button>{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="min-h-11 rounded-lg border border-rose-200 px-3 text-sm font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-sm">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="min-h-12 rounded-xl bg-sky-700 px-5 text-base font-bold text-white disabled:opacity-50">{acknowledging ? "처리 중…" : "확인했어요"}</button>}</div>
     </div>
     {!recovered && <AlertSnooze event={event} />}
     {event.deliveryError && <p className="mt-3 hidden text-sm leading-5 text-amber-700 dark:text-amber-300 lg:block">{event.deliveryError}</p>}
@@ -475,7 +487,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
     <div className={page ? "mx-auto w-full max-w-4xl px-2 py-3 sm:px-4" : "fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 backdrop-blur-[2px] sm:items-center sm:p-4"} onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
       <form ref={dialogForm} role={page ? undefined : "dialog"} aria-modal={page ? undefined : true} aria-labelledby="threshold-editor-title" onSubmit={submit} className={page ? "w-full rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-background-dark-card" : `flex max-h-[calc(100dvh-env(safe-area-inset-top,0px))] sm:max-h-[92dvh] w-full flex-col rounded-t-2xl border border-slate-200 bg-white shadow-[0_14px_48px_rgba(12,37,54,0.2)] ${onlyMetricKey ? "sm:max-w-lg" : "sm:max-w-4xl"} sm:rounded-2xl dark:border-white/10 dark:bg-background-dark-card`}>
         <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4 sm:px-6 dark:border-white/7">
-          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">내 알림 설정</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "이 병원의 수치·누락 기준과 이상 지속 시간을 설정하세요."}</p></div>
+          <div><p className="text-sm font-bold text-sky-700 dark:text-sky-300">병원별 알림 기준</p><h2 id="threshold-editor-title" className="mt-1 text-xl font-extrabold">{entry.name ?? "이름 없는 병원"}</h2><p className="text-text-secondary mt-1 text-sm">{onlyMetricKey ? "선택한 항목의 수치 범위와 연속 누락 횟수를 설정하세요." : "이 병원의 수치·누락 기준과 이상 지속 시간을 설정하세요."}</p></div>
           <button type="button" onClick={onClose} disabled={saving} aria-label="닫기" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-500 transition hover:bg-slate-200 dark:bg-white/5 dark:text-white/70">×</button>
         </header>
         <div className={page ? "p-4 sm:p-6" : "min-h-0 flex-1 overflow-y-auto p-4 sm:p-6"}>
@@ -497,7 +509,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
           {!onlyMetricKey && <div className="mt-5"><AlertSection title="콜드칠러 정지 의심" description="IN·OUT 온도 차이가 0.1°C 이하면 냉각이 멈췄을 가능성을 알려드립니다. 고장이 확정된다는 뜻은 아닙니다. 미측정 값은 제외합니다."><AlertSwitch label="콜드칠러 정지 의심" checked={coldChillerActive && !airCooled} disabled={!canEdit || saving || airCooled || cooling.isPending || cooling.isError} onChange={setColdChillerActive} />{airCooled && <p className="mt-2 text-sm font-semibold text-text-secondary">공냉식 병원이라 사용하지 않음 · 전체 담당자 적용</p>}</AlertSection></div>}
           </>}
           {onlyMetricKey && <div className="mt-5 space-y-3">{thresholds.map(threshold=><MetricMissingEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={patch=>update(threshold.key,patch)} />)}</div>}
-          {!onlyMetricKey && pane === "schedule" && <AlertSection title="이상 지속 시간" description="이 병원의 수치·콜드칠러 이상이 얼마나 지속되면 알릴지 정합니다."><NumberField label="몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes}/><p className="mt-3 text-base leading-7 text-text-secondary">수치 알림은 실제 측정값이 2회 연속 범위를 벗어나야 발생합니다. 0분은 추가 대기 없이, 1분 이상은 지속 시간도 충족해야 합니다. 콜드칠러 감지와 데이터 누락은 각각의 기준을 사용합니다.</p><Link href="/notification-settings" className="mt-4 inline-flex min-h-11 items-center font-bold text-sky-800 dark:text-sky-200">내 알림 수신 시간·반복 설정 →</Link></AlertSection>}
+          {!onlyMetricKey && pane === "schedule" && <AlertSection title="이상 지속 시간" description="이 병원의 수치·콜드칠러 이상이 얼마나 지속되면 알릴지 정합니다."><NumberField label="몇 분 지속되면 알릴까요?" value={triggerAfterMinutes} min={0} max={1440} disabled={!canEdit || saving} onChange={setTriggerAfterMinutes}/><p className="mt-3 text-base leading-7 text-text-secondary">수치 알림은 실제 측정값이 2회 연속 범위를 벗어나야 발생합니다. 0분은 추가 대기 없이, 1분 이상은 지속 시간도 충족해야 합니다. 콜드칠러 감지와 데이터 누락은 각각의 기준을 사용합니다.</p><Link href="/notification-settings" className="mt-4 inline-flex min-h-11 items-center font-bold text-sky-800 dark:text-sky-200">알림 받는 시간·반복 바꾸기 →</Link></AlertSection>}
           {!onlyMetricKey && pane === "missing" && <div className="space-y-5">
             <AlertSection title="병원 전체 수집 중단" description="이 병원에서 새 데이터가 통째로 오지 않을 때 알려드립니다. 정전이나 공유기 종료 등이 원인일 수 있으니 전원과 인터넷 연결을 확인하세요.">
               <AlertSwitch label="병원 전체 수집 중단" checked={noDataActive} disabled={!canEdit || saving} onChange={setNoDataActive} />

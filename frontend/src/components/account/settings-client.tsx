@@ -88,13 +88,13 @@ export default function SettingsClient() {
         <h2>알림</h2>
         <SettingsLink
           href="/baselines"
-          title="알림 확인·설정"
-          description="병원별 알림 내역과 기준값"
+          title="도착한 알림"
+          description="문제 확인과 알림 일시 중지"
         />
         <SettingsLink
-          href="/notification-settings?from=baselines"
-          title="알림 수신 설정"
-          description="수신 시간과 반복 알림"
+          href="/baselines?view=settings"
+          title="알림 설정"
+          description="병원별 기준 · 받는 시간 · 반복"
         />
       </section>
       {isAdmin && (
