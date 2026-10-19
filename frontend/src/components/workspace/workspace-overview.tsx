@@ -11,6 +11,7 @@ import {
   dateLabel,
   errorText,
   serviceLabels,
+  statusLabels,
 } from "./workspace-data";
 import { parseDetails } from "./service-form-model";
 import {
@@ -144,6 +145,9 @@ export default function OverviewPage() {
   due.sort((a, b) => a.date.localeCompare(b.date));
   const upcomingDue = due.filter((d) => d.days <= 45);
   const preparations = planning.data?.preparations || [];
+  const recentRecords = [...(records.data || [])]
+    .sort((a, b) => b.workDate.localeCompare(a.workDate) || b.id - a.id)
+    .slice(0, 8);
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
   const daySchedules = (schedules.data || []).filter(
@@ -468,43 +472,71 @@ export default function OverviewPage() {
         <details className="overview-fold">
           <summary>
             <span>최근 작업일지</span>
-            <small>최근 8건</small>
+            <small>
+              {records.isPending
+                ? "불러오는 중…"
+                : records.isError
+                  ? "조회 실패"
+                  : `${recentRecords.length}건`}
+            </small>
           </summary>
           <div className="overview-fold-body">
             <Link
               className="work-back"
               href="/work"
             >
-              MR.EYES에서 작성한 작업일지 →
+              작업일지 전체 보기 →
             </Link>
-            <div className="work-panel">
-              {summaries.slice(0, 8).map((r) => (
-                <Link
-                  href={r.href}
-                  className="work-overview-record"
-                  key={r.key}
-                >
-                  <div>
-                    <strong>{r.siteName}</strong>
-                    <p>
-                      {r.title}
-                      {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
-                    </p>
-                    <small>{r.date}</small>
-                  </div>
-                  <span className="work-badge">
-                    {serviceLabels[r.type] || "일반 업무"}
-                  </span>
-                </Link>
-              ))}
-              {!summaries.length && (
-                <Empty>
-                  {loading
-                    ? "작업일지를 불러오는 중…"
-                    : "아직 작성된 작업일지가 없습니다."}
-                </Empty>
-              )}
-            </div>
+            {records.isError ? (
+              <ErrorState
+                error={records.error}
+                retry={() => void records.refetch()}
+              />
+            ) : (
+              <div className="work-panel">
+                {recentRecords.map((r) => (
+                  <Link
+                    href={`/work/${r.id}`}
+                    className="work-overview-record recent-work-record"
+                    key={r.id}
+                  >
+                    <div className="recent-work-content">
+                      <small>
+                        {r.workDate} · {r.siteName || "일반 업무"}
+                      </small>
+                      <strong>{r.title || "제목 없는 작업일지"}</strong>
+                      <div className="recent-work-meta">
+                        <span className="work-badge">
+                          {r.kind === "GENERAL"
+                            ? "일반 업무"
+                            : serviceLabels[r.serviceType || ""] ||
+                              "현장 서비스"}
+                        </span>
+                        <span
+                          className={`work-status ${r.status === "COMPLETED" ? "done" : ""}`}
+                        >
+                          {statusLabels[r.status] || "상태 미등록"}
+                        </span>
+                        <small>{r.authorName}</small>
+                      </div>
+                    </div>
+                    <span
+                      aria-hidden="true"
+                      className="recent-work-arrow"
+                    >
+                      ›
+                    </span>
+                  </Link>
+                ))}
+                {!recentRecords.length && (
+                  <Empty>
+                    {records.isPending
+                      ? "작업일지를 불러오는 중…"
+                      : "아직 작성된 작업일지가 없습니다."}
+                  </Empty>
+                )}
+              </div>
+            )}
           </div>
         </details>
       </div>

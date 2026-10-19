@@ -1858,3 +1858,10 @@ h4,
 
 .equipment-management-dialog { --work-ink: #0f172a; --work-bg: #f8fafc; --work-soft: #eaf3ff; }
 .dark .equipment-management-dialog { --work-ink: #f1f5f9; --work-bg: #0f172a; --work-soft: #1e293b; }
+
+.recent-work-record { gap: 12px; align-items: center; }
+.recent-work-content { min-width: 0; flex: 1; }
+.recent-work-content > strong { display: block; margin: 6px 0 10px; overflow-wrap: anywhere; }
+.recent-work-content > small { display: block; overflow-wrap: anywhere; }
+.recent-work-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
+.recent-work-arrow { color: var(--work-muted); font-size: 24px; }
