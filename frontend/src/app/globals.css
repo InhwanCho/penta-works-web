@@ -1979,3 +1979,11 @@ h4,
 .dark .schedule-category.category-leave { background: #274638; color: #bfe9cb; }
 .dark .schedule-category.category-edu { background: #41314f; color: #e4ccff; }
 .dark .schedule-category.category-office { background: #30434d; color: #c8e1ef; }
+
+/* Align every calendar agenda label and its content to shared columns. */
+.work-day-body .work-agenda-row { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 12px; align-items: start; }
+.work-day-body .work-agenda-row > .work-badge { width: 100%; min-height: 30px; display: flex; align-items: center; justify-content: center; padding: 6px 8px; margin: 0; text-align: center; white-space: normal; overflow-wrap: anywhere; line-height: 1.5; }
+.work-day-body .work-agenda-row > div { width: 100%; }
+.schedule-category.category-annual { background: #e5eaf8; color: #41598b; }
+.dark .schedule-category.category-annual { background: #303e5b; color: #cddcff; }
+@media (max-width: 479px) { .work-day-body .work-agenda-row { grid-template-columns: 92px minmax(0, 1fr); gap: 10px; } }

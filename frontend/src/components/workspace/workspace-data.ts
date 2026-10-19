@@ -132,7 +132,8 @@ export function scheduleTimeLabel(startAt: string, endAt: string) {
 export const personalScheduleLabels: Record<string, string> = {
   office: "사무실",
   edu: "교육·세미나",
-  leave: "휴가·연차",
+  leave: "휴가",
+  annual: "연차",
   etc: "기타 일정",
 };
 export function scheduleCategory(s: WorkSchedule) {

@@ -109,7 +109,7 @@ public class WorkspaceController {
         String service="HOSPITAL".equals(target)?input.serviceType():null;
         if("HOSPITAL".equals(target)&&sid==null)throw new BadRequestException("병원을 선택해주세요.");
         if("GENERAL".equals(target)&&sid!=null)throw new BadRequestException("병원 외 일정에는 병원을 지정할 수 없습니다.");
-        if(personal!=null&&!List.of("office","edu","leave","etc").contains(personal))throw new BadRequestException("병원 외 일정 분류를 확인해주세요.");
+        if(personal!=null&&!List.of("office","edu","leave","annual","etc").contains(personal))throw new BadRequestException("병원 외 일정 분류를 확인해주세요.");
         if(service!=null&&!List.of("PM","REPAIR","COLDHEAD","ACR","CALL","INSTALL","ETC").contains(service))throw new BadRequestException("서비스 유형을 확인해주세요.");
         db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at,target_kind,personal_kind,service_type) VALUES(?,?,?,?,?,?,?,?,?,?)",u.companyId(),u.id(),sid,input.title().trim(),input.body()==null?"":input.body(),input.startAt(),input.endAt(),target,personal,service);return Map.of("id",db.queryForObject("SELECT LAST_INSERT_ID()",Long.class));
     }
