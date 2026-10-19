@@ -1652,17 +1652,21 @@ h4,
 .work-calendar-grid.weekdays span:last-child { color: #1967d2; }
 .work-calendar-day { min-height: 124px; padding: 5px; text-align: center; vertical-align: top; display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; }
 .work-calendar-day > span { width: 28px; height: 28px; margin: 0 auto; border-radius: 50%; font-weight: 650; }
-.work-calendar-day.today > span { background: #1967d2; color: #fff; }
-.work-calendar-day.selected { background: var(--work-soft); box-shadow: inset 0 0 0 2px #4285f4; }
-.work-calendar-day.selected > span { outline: 2px solid #4285f4; outline-offset: 1px; }
+.work-calendar-day.today > span { background: #e5edf7; color: #31577e; font-weight: 750; }
+.work-calendar-day.selected { background: #f5f8fc; box-shadow: inset 0 0 0 1px #9ab1ca; }
+.work-calendar-day.selected > span { outline: none; }
 .work-calendar-day.outside { opacity: 1; background: var(--work-hover); }
 .work-calendar-day.outside > span { color: var(--work-muted); }
 .work-calendar-tags { gap: 3px; text-align: left; }
 .work-calendar-tags > span { padding: 3px 6px; font-size: 11px; font-weight: 650; border-radius: 4px; line-height: 1.4; }
-.work-calendar-tags .record, .dark .work-calendar-tags .record { background: #18845a; color: #fff; }
-.work-calendar-tags .open, .dark .work-calendar-tags .open { background: #b65309; color: #fff; }
-.work-calendar-tags .due, .dark .work-calendar-tags .due { background: #7751c2; color: #fff; }
-.work-calendar-tags .schedule, .dark .work-calendar-tags .schedule { background: #1967d2; color: #fff; }
+.work-calendar-tags .record { background: #f0f3f6; color: #4e5d70; }
+.dark .work-calendar-tags .record { background: #293542; color: #c2ceda; }
+.work-calendar-tags .open { background: #fbf3e5; color: #805f29; }
+.dark .work-calendar-tags .open { background: #3b3428; color: #dfc69c; }
+.work-calendar-tags .due { background: #f3eff8; color: #6d578a; }
+.dark .work-calendar-tags .due { background: #342e40; color: #cfbddf; }
+.work-calendar-tags .schedule { background: #edf3f8; color: #466581; }
+.dark .work-calendar-tags .schedule { background: #293849; color: #b9cde0; }
 .work-calendar-legend { margin: 0; padding: 14px 20px; font-size: 12px; font-weight: 650; border-top: 1px solid var(--work-line); gap: 10px 18px; }
 .work-calendar-legend .record { color: #08784d; }
 .work-calendar-legend .open { color: #a94800; }
@@ -1894,3 +1898,15 @@ h4,
 .dark .received-alert-reading span, .dark .received-alert-time { color:#b3c6d6; }
 .dark .received-alert-more { color:#c2ddf0; border-color:#50687d; }
 .dark .received-alert-manage { border-color:#395064; }
+
+/* Quiet calendar surfaces; keyboard focus remains clearly visible. */
+.dark .work-calendar-day.selected { background: #213342; box-shadow: inset 0 0 0 1px #657e97; }
+.dark .work-calendar-day.today > span { background: #344b61; color: #e0ebf5; }
+.work-calendar-legend .record { color: #596b7c; }
+.work-calendar-legend .open { color: #896a36; }
+.work-calendar-legend .due { color: #7d6898; }
+.work-calendar-legend .schedule { color: #557997; }
+.work-calendar-dots i { background: #738698; }
+.work-calendar-dots .open { background: #ad8b51; }
+.work-calendar-dots .due { background: #9781b0; }
+.work-calendar-dots .schedule { background: #7398b6; }
