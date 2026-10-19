@@ -81,8 +81,8 @@ function Photo({
   );
 }
 async function prepare(file: File): Promise<File> {
-  if (file.size > 20 * 1024 * 1024)
-    throw Error(`${file.name}: 사진 한 장은 20MB 이하여야 합니다.`);
+  if (file.size > 10 * 1024 * 1024)
+    throw Error(`${file.name}: 사진 한 장은 10MB 이하여야 합니다.`);
   if (
     !/\.(jpe?g|png|gif)$/i.test(file.name) &&
     !["image/jpeg", "image/png", "image/gif"].includes(file.type)
@@ -260,7 +260,7 @@ export function PhotoAttachments({
         />
       </div>
       <p className="work-hint">
-        JPG·PNG·GIF · 장당 최대 20MB · 최대 40장 · 기록당 합계 200MB
+        JPG·PNG·GIF · 장당 최대 10MB · 최대 40장 · 기록당 합계 200MB
         <br />큰 사진은 화면 방향을 유지해 긴 변 2,560px로 자동 축소합니다.
         HEIC·WebP는 JPG로 변환 후 첨부해주세요.
       </p>

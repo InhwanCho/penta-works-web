@@ -22,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/api/v1/workspace/photos")
 @ConditionalOnProperty(name="app.workspace.enabled",havingValue="true")
 public class WorkspacePhotos {
-    static final long MAX_BYTES=20L*1024*1024, MAX_TOTAL=200L*1024*1024;
+    static final long MAX_BYTES=10L*1024*1024, MAX_TOTAL=200L*1024*1024;
     static final int MAX_COUNT=40;
     private final JdbcTemplate db;
     private final CurrentUserService users;
@@ -31,7 +31,7 @@ public class WorkspacePhotos {
     public Map<String,Object> limits(){return Map.of("maxFileBytes",MAX_BYTES,"maxTotalBytes",MAX_TOTAL,"maxCount",MAX_COUNT,"formats",List.of("JPEG","PNG","GIF"));}
     record ImageData(byte[] bytes,String mime,int width,int height) {}
     static ImageData validateImage(byte[] bytes) {
-        if(bytes.length==0||bytes.length>MAX_BYTES)throw new BadRequestException("사진 한 장은 20MB 이하여야 합니다.");
+        if(bytes.length==0||bytes.length>MAX_BYTES)throw new BadRequestException("사진 한 장은 10MB 이하여야 합니다.");
         try(ImageInputStream stream=ImageIO.createImageInputStream(new ByteArrayInputStream(bytes))){
             var readers=ImageIO.getImageReaders(stream);if(!readers.hasNext())throw new BadRequestException("JPG·PNG·GIF 사진을 선택해주세요. HEIC·WebP는 JPG로 변환 후 첨부해주세요.");
             var reader=readers.next();
@@ -52,7 +52,7 @@ public class WorkspacePhotos {
     }
     @PostMapping @Transactional
     public Map<String,Object> upload(@RequestParam("file") MultipartFile file,Authentication auth) throws IOException {
-        var u=users.require(auth);if(file.isEmpty()||file.getSize()>MAX_BYTES)throw new BadRequestException("사진 한 장은 20MB 이하여야 합니다.");
+        var u=users.require(auth);if(file.isEmpty()||file.getSize()>MAX_BYTES)throw new BadRequestException("사진 한 장은 10MB 이하여야 합니다.");
         db.queryForList("SELECT id FROM app_user WHERE id=? FOR UPDATE",u.id());
         // Unsaved uploads expire after a day; committed record photos are not touched.
         db.update("DELETE FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL AND created_at<DATE_SUB(NOW(),INTERVAL 1 DAY)",u.companyId(),u.id());
