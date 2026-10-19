@@ -1865,3 +1865,32 @@ h4,
 .recent-work-content > small { display: block; overflow-wrap: anywhere; }
 .recent-work-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
 .recent-work-arrow { color: var(--work-muted); font-size: 24px; }
+
+.received-alert { padding: 18px; border: 1px solid #dce4ed; border-left: 4px solid #e09a34; border-radius: 16px; background: #fff; box-shadow: 0 3px 12px #163a5206; }
+.received-alert.is-recovered { border-left-color: #269875; }
+.received-alert-top { display:flex; align-items:flex-start; gap:10px; }
+.received-alert-top h3 { flex:1; min-width:0; font-size:18px; line-height:1.5; font-weight:800; overflow-wrap:anywhere; }
+.received-alert-state { flex-shrink:0; padding:4px 8px; border-radius:6px; background:#fff1dd; color:#854800; font-size:12px; font-weight:750; }
+.is-recovered .received-alert-state { background:#e5f5ed; color:#156748; }
+.received-alert-issue { margin-top:8px; font-size:16px; line-height:1.6; font-weight:650; color:#b33d28; overflow-wrap:anywhere; }
+.is-recovered .received-alert-issue { color:#506173; }
+.received-alert-reading { margin-top:12px; padding:12px 14px; border-radius:10px; background:#f4f7fa; display:flex; flex-direction:column; gap:3px; }
+.received-alert-reading strong { font-size:23px; font-weight:800; line-height:1.4; }
+.received-alert-reading span { color:#526477; font-size:13px; line-height:1.6; }
+.received-alert-time { margin-top:12px; display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px; font-size:12px; color:#617082; }
+.received-alert-actions { display:flex; gap:10px; margin-top:14px; }
+.received-alert-actions button { min-height:46px; flex:1; padding:8px; border-radius:10px; font-size:15px; font-weight:750; }
+.received-alert-confirm { background:#176ca1; color:white; }
+.received-alert-confirm:disabled { opacity:.5; }
+.received-alert-more { border:1px solid #cdd8e4; color:#33536c; }
+.received-alert-manage { border-top:1px solid #dce4ed; margin-top:16px; padding-top:12px; }
+.dark .received-alert { background:#182938; border-color:#395064; border-left-color:#df9c48; }
+.dark .received-alert.is-recovered { border-left-color:#5dbf99; }
+.dark .received-alert-state { background:#543b20; color:#ffd8a1; }
+.dark .is-recovered .received-alert-state { background:#183f34; color:#a3e9cc; }
+.dark .received-alert-issue { color:#ffb3a1; }
+.dark .is-recovered .received-alert-issue { color:#b4c7d6; }
+.dark .received-alert-reading { background:#223848; }
+.dark .received-alert-reading span, .dark .received-alert-time { color:#b3c6d6; }
+.dark .received-alert-more { color:#c2ddf0; border-color:#50687d; }
+.dark .received-alert-manage { border-color:#395064; }

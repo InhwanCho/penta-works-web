@@ -318,24 +318,88 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
   );
 }
 
-function AlertEventRow({ event, selecting, selected, onSelect, acknowledging, retrying, onAcknowledge, onRetry, onOpenSettings, settingsAvailable }: { event: AlertEventSummary; selecting: boolean; selected: boolean; onSelect: (checked: boolean) => void; acknowledging: boolean; retrying: boolean; onAcknowledge: () => void; onRetry: () => void; onOpenSettings: () => void; settingsAvailable: boolean }) {
+function AlertEventRow({
+  event,
+  selecting,
+  selected,
+  onSelect,
+  acknowledging,
+  retrying,
+  onAcknowledge,
+  onRetry,
+  onOpenSettings,
+  settingsAvailable,
+}: {
+  event: AlertEventSummary;
+  selecting: boolean;
+  selected: boolean;
+  onSelect: (checked: boolean) => void;
+  acknowledging: boolean;
+  retrying: boolean;
+  onAcknowledge: () => void;
+  onRetry: () => void;
+  onOpenSettings: () => void;
+  settingsAvailable: boolean;
+}) {
   const { isAdmin } = useAuth();
   const [showDelivery, setShowDelivery] = useState(false);
   const queryClient = useQueryClient();
   const [resolving, setResolving] = useState(false);
   const [deliveryMessage, setDeliveryMessage] = useState("");
   async function confirmDelivery(resultId: number, received: boolean) {
-    if (!window.confirm(received ? "해당 수신처에 알림이 도착한 것을 확인했나요?" : "해당 수신처에 알림이 도착하지 않은 것을 확인했나요? 이후 재시도할 수 있습니다.")) return;
-    setResolving(true); setDeliveryMessage("");
+    if (
+      !window.confirm(
+        received
+          ? "해당 수신처에 알림이 도착한 것을 확인했나요?"
+          : "해당 수신처에 알림이 도착하지 않은 것을 확인했나요? 이후 재시도할 수 있습니다.",
+      )
+    )
+      return;
+    setResolving(true);
+    setDeliveryMessage("");
     try {
-      await apiFetch(`/alerts/events/${event.id}/deliveries/${resultId}`, { method: "PATCH", body: JSON.stringify({ received }) });
-      await Promise.all([queryClient.invalidateQueries({ queryKey: ["alert-events"] }), queryClient.invalidateQueries({ queryKey: ["alert-deliveries", event.id] })]);
-    } catch (error) { setDeliveryMessage(error instanceof Error ? error.message : "처리하지 못했습니다."); }
-    finally { setResolving(false); }
+      await apiFetch(`/alerts/events/${event.id}/deliveries/${resultId}`, {
+        method: "PATCH",
+        body: JSON.stringify({ received }),
+      });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["alert-events"] }),
+        queryClient.invalidateQueries({
+          queryKey: ["alert-deliveries", event.id],
+        }),
+      ]);
+    } catch (error) {
+      setDeliveryMessage(
+        error instanceof Error ? error.message : "처리하지 못했습니다.",
+      );
+    } finally {
+      setResolving(false);
+    }
   }
   const results = useQuery({
-    queryKey: ["alert-deliveries", event.id, event.deliveryStatus, event.notificationCount],
-    queryFn: () => apiFetch<{ id: number; recipientLabel: string; status: AlertEventSummary["deliveryStatus"]; attemptCount: number; errorMessage: string | null; startedAt: string | null; currentBatch: boolean; providerSendStatus: number | null; providerResultCode: number | null; providerResultMessage: string | null; smsSendState: string | null; providerCheckedAt: string | null }[]>(`/alerts/events/${event.id}/deliveries`),
+    queryKey: [
+      "alert-deliveries",
+      event.id,
+      event.deliveryStatus,
+      event.notificationCount,
+    ],
+    queryFn: () =>
+      apiFetch<
+        {
+          id: number;
+          recipientLabel: string;
+          status: AlertEventSummary["deliveryStatus"];
+          attemptCount: number;
+          errorMessage: string | null;
+          startedAt: string | null;
+          currentBatch: boolean;
+          providerSendStatus: number | null;
+          providerResultCode: number | null;
+          providerResultMessage: string | null;
+          smsSendState: string | null;
+          providerCheckedAt: string | null;
+        }[]
+      >(`/alerts/events/${event.id}/deliveries`),
     enabled: showDelivery,
     refetchInterval: showDelivery ? 30000 : false,
   });
@@ -344,34 +408,226 @@ function AlertEventRow({ event, selecting, selected, onSelect, acknowledging, re
   const isNoData = event.metricKey === "__data__";
   const isMetricMissing = event.eventType === "METRIC_MISSING";
   const isColdChiller = event.metricKey === "__cold_chiller__";
-  return <article className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-[0_3px_12px_rgba(22,58,82,0.04)] dark:border-white/8 dark:bg-background-dark-card">
-    <div className="grid grid-cols-1 gap-3">
-      <div className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-start gap-x-3 gap-y-2">{selecting && <input type="checkbox" aria-label={`${event.siteName ?? event.siteId} 알림 선택`} checked={selected} disabled={!needsAcknowledgement(event) || acknowledging} onChange={(changeEvent) => onSelect(changeEvent.target.checked)} className="mt-1 h-5 w-5 shrink-0 accent-sky-700 disabled:opacity-30" />}<div className={selecting ? "" : "col-span-2"}><EventBadge type={isColdChiller ? "COLD_CHILLER" : event.eventType} /></div><div className="col-span-2 min-w-0"><h3 className="break-words text-base font-bold leading-6 lg:text-xl lg:leading-8">{event.siteName ?? event.siteId} · {isNoData ? "병원 전체 수집 중단" : isColdChiller ? "콜드칠러 정지 의심" : metricName(event.metricKey, metric?.label)}</h3><p className="text-text-secondary mt-1 hidden text-base leading-7 lg:block">{recovered ? "현재 이 알림은 종료됐습니다. 당시 발생한 문제를 확인해주세요." : isNoData ? "이 병원에서 새 데이터가 들어오지 않습니다. 전원과 인터넷 연결을 확인하세요." : isColdChiller ? "IN·OUT 온도 차이가 0.1°C 이하입니다. 냉각장치 상태를 확인하세요." : isMetricMissing ? "데이터는 들어오지만 이 측정항목의 값이 연속으로 빠졌습니다." : event.eventType === "LOW" ? "측정값이 정상 범위보다 낮습니다." : "측정값이 정상 범위보다 높습니다."}</p><p className="mt-2 text-sm font-semibold leading-6 tabular-nums lg:mt-3 lg:text-lg lg:leading-8">{isNoData ? event.measuredValue == null ? "아직 수집된 데이터가 없습니다." : `수집 중단 ${formatValue(event.measuredValue, "분")} · ${formatValue(event.max, "분")}부터 알림` : isColdChiller ? `IN 온도: ${formatValue(event.measuredValue, "°C")} · IN/OUT 차이 0.1°C 이하` : isMetricMissing ? `연속 ${formatValue(event.measuredValue, "회")} 누락 · ${formatValue(event.max, "회")}부터 알림` : `측정 ${formatMetricMeasurement(event.measuredValue, metric?.unit)} · 범위 ${formatValue(event.min, metric?.unit)} – ${formatValue(event.max, metric?.unit)}`}</p></div></div>
-      <div className="text-left"><p className="text-text-secondary text-xs tabular-nums lg:text-base">{new Date(event.occurredAt).toLocaleString("ko-KR")}</p><p className="text-text-secondary mt-1 text-xs lg:text-sm">전송 {deliveryLabel(event.deliveryStatus)}</p></div>
-    </div>
-    <div className="mt-3 flex flex-wrap items-start justify-between gap-3 border-t border-slate-100 pt-3 dark:border-white/7">
-      <div className="flex flex-wrap items-center gap-2"><span className={`text-sm font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "현재 종료" : "문제 지속"}</span><span className={`rounded-full px-2 py-1 text-sm font-bold ${event.acknowledgedAt ? "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-white/60" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"}`}>{event.acknowledgedAt ? "확인했어요" : "확인 필요"}</span>{event.recoveredAt && <span className="text-text-secondary text-sm">종료 {new Date(event.recoveredAt).toLocaleString("ko-KR")}</span>}</div>
-      <div className="flex max-w-full flex-wrap items-center gap-2"><button type="button" disabled={!settingsAvailable} onClick={onOpenSettings} className="min-h-11 rounded-lg border border-sky-200 px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:border-sky-900 dark:text-sky-300">이 알림 기준 바꾸기</button>{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="min-h-11 rounded-lg border border-rose-200 px-3 text-sm font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-sm">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="min-h-12 rounded-xl bg-sky-700 px-5 text-base font-bold text-white disabled:opacity-50">{acknowledging ? "처리 중…" : "확인했어요"}</button>}</div>
-    </div>
-    {!recovered && <AlertSnooze event={event} />}
-    {event.deliveryError && <p className="mt-3 hidden text-sm leading-5 text-amber-700 dark:text-amber-300 lg:block">{event.deliveryError}</p>}
-    <button type="button" aria-expanded={showDelivery} onClick={() => setShowDelivery(!showDelivery)} className="min-h-11 cursor-pointer text-sm font-semibold text-sky-700 dark:text-sky-300">{showDelivery ? "발송 정보 접기" : "자세한 내용 · 발송 정보"}</button>
-    {showDelivery && <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-white/5">
-      <p className="mb-3 text-base leading-7">{event.message}</p>{event.deliveryError && <p className="text-amber-700 dark:text-amber-300 lg:hidden">{event.deliveryError}</p>}
-      {results.isLoading ? <p>불러오는 중…</p> : results.isError ? <button type="button" onClick={() => results.refetch()}>결과를 불러오지 못했습니다. 다시 시도</button> : !results.data?.length ? <p>기록된 수신처별 결과가 없습니다. 이전 발송 또는 미발송 건일 수 있습니다.</p> : results.data.map((result) => <div key={result.id} className="space-y-1">
-        <p className="font-semibold">{result.recipientLabel} · {deliveryLabel(result.status)} · 시도 {result.attemptCount}회</p>
-        {result.providerCheckedAt && <p className="text-text-secondary">{result.providerSendStatus === 1 ? "알림톡 전송 성공" : result.providerSendStatus === 2 ? "알림톡 실패" : result.providerSendStatus === 0 ? "알림톡 전송 중" : "바로빌 상태 확인 필요"}{result.smsSendState ? ` · 대체문자: ${result.smsSendState}` : ""} · 확인 {new Date(result.providerCheckedAt).toLocaleString("ko-KR")}</p>}
-        {result.providerResultMessage && result.providerSendStatus !== 1 && <p className="text-amber-700 dark:text-amber-300">{result.providerResultMessage}</p>}
-        {result.startedAt && <p className="text-text-secondary">{new Date(result.startedAt).toLocaleString("ko-KR")}</p>}
-        {result.errorMessage && <p className="text-amber-700 dark:text-amber-300">{result.errorMessage}</p>}
-        {isAdmin && result.currentBatch && event.deliveryStatus === "UNKNOWN" && result.status === "UNKNOWN" && <div className="flex gap-3">
-          <button type="button" disabled={resolving} onClick={() => confirmDelivery(result.id, true)} className="min-h-10 cursor-pointer font-semibold text-sky-700 dark:text-sky-300">수신 확인</button>
-          <button type="button" disabled={resolving} onClick={() => confirmDelivery(result.id, false)} className="min-h-10 cursor-pointer font-semibold text-rose-600">미수신 확인</button>
-        </div>}
-      </div>)}
-      {deliveryMessage && <p role="alert">{deliveryMessage}</p>}
-    </div>}
-  </article>;
+  const simpleMetricName = metricName(event.metricKey, metric?.label).replace(/\s*\([^)]*\)/g, "");
+  const issue = isNoData
+    ? "장비 데이터가 들어오지 않아요"
+    : isColdChiller
+      ? "냉각장치 정지가 의심돼요"
+      : isMetricMissing
+        ? `${simpleMetricName} 값이 들어오지 않아요`
+        : `${simpleMetricName} · 기준보다 ${event.eventType === "LOW" ? "낮아요" : "높아요"}`;
+  const value = isNoData
+    ? event.measuredValue == null
+      ? "수집 기록 없음"
+      : `${formatValue(event.measuredValue, "분")}째 중단`
+    : isMetricMissing
+      ? `${formatValue(event.measuredValue, "회")} 연속 누락`
+      : formatMetricMeasurement(event.measuredValue, metric?.unit);
+  const reference = isNoData
+    ? `${formatValue(event.max, "분")}부터 알림`
+    : isMetricMissing
+      ? `${formatValue(event.max, "회")}부터 알림`
+      : isColdChiller
+        ? "IN·OUT 온도 차이 0.1°C 이하"
+        : `설정 범위 ${formatValue(event.min, metric?.unit)} ~ ${formatValue(event.max, metric?.unit)}`;
+  return (
+    <article
+      className={`received-alert ${recovered ? "is-recovered" : "is-active"}`}
+    >
+      <div className="received-alert-top">
+        {selecting && (
+          <input
+            type="checkbox"
+            aria-label={`${event.siteName ?? event.siteId} 알림 선택`}
+            checked={selected}
+            disabled={!needsAcknowledgement(event) || acknowledging}
+            onChange={(e) => onSelect(e.target.checked)}
+            className="h-5 w-5 shrink-0 accent-sky-700"
+          />
+        )}
+        <h3>{event.siteName ?? event.siteId}</h3>
+        <span className="received-alert-state">
+          {recovered ? "정상 복구" : "문제 지속"}
+        </span>
+      </div>
+      <p className="received-alert-issue">{issue}</p>
+      <div className="received-alert-reading">
+        <strong>{value}</strong>
+        <span>{reference}</span>
+      </div>
+      <div className="received-alert-time">
+        <time dateTime={event.occurredAt}>
+          {new Date(event.occurredAt).toLocaleString("ko-KR", {
+            timeZone: "Asia/Seoul",
+            month: "numeric",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}{" "}
+          발생
+        </time>
+        {event.acknowledgedAt && <span>✓ 확인한 알림</span>}
+      </div>
+      <div className="received-alert-actions">
+        {!event.acknowledgedAt && (
+          <button
+            type="button"
+            disabled={acknowledging}
+            onClick={onAcknowledge}
+            className="received-alert-confirm"
+          >
+            {acknowledging ? "처리 중…" : "확인했어요"}
+          </button>
+        )}
+        <button
+          type="button"
+          aria-expanded={showDelivery}
+          onClick={() => setShowDelivery(!showDelivery)}
+          className="received-alert-more"
+        >
+          {showDelivery ? "접기 ↑" : "자세히 · 관리 ›"}
+        </button>
+      </div>
+      {showDelivery && (
+        <div className="received-alert-manage">
+          <div className="flex items-center justify-between">
+            <strong className="text-base">알림 관리</strong>
+            <HelpButton
+              title="확인과 잠시 중지"
+              message="확인했어요는 현재 문제의 반복 알림을 끝냅니다. 정상 복구 후 다시 발생하면 새 알림을 받습니다. 시간 지정 중지는 그 시간까지 같은 병원·항목·유형의 알림을 받지 않는 기능입니다."
+            />
+          </div>
+          {!recovered && <AlertSnooze event={event} />}
+          <button
+            type="button"
+            disabled={!settingsAvailable}
+            onClick={onOpenSettings}
+            className="mt-3 min-h-12 w-full rounded-xl border border-slate-300 px-3 text-base font-bold text-sky-800 disabled:opacity-40 dark:border-slate-600 dark:text-sky-200"
+          >
+            이 알림 기준 바꾸기
+          </button>
+          {event.recoveredAt && (
+            <p className="mt-3 text-sm">
+              복구 {new Date(event.recoveredAt).toLocaleString("ko-KR")}
+            </p>
+          )}
+          <p className="mt-3 text-sm">
+            발송 상태: {deliveryLabel(event.deliveryStatus)}
+          </p>
+          {isAdmin &&
+            !recovered &&
+            ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && (
+              <button
+                type="button"
+                disabled={retrying}
+                onClick={onRetry}
+                className="mt-2 min-h-11 rounded-lg border px-3 font-bold"
+              >
+                {retrying ? "재전송 중…" : "전송 재시도"}
+              </button>
+            )}
+          {event.deliveryError && (
+            <p className="mt-2 text-sm text-amber-800 dark:text-amber-300">
+              {event.deliveryError}
+            </p>
+          )}
+        </div>
+      )}
+      {showDelivery && (
+        <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-white/5">
+          <p className="mb-3 text-base leading-7">{event.message}</p>
+          {event.deliveryError && (
+            <p className="text-amber-700 lg:hidden dark:text-amber-300">
+              {event.deliveryError}
+            </p>
+          )}
+          {results.isLoading ? (
+            <p>불러오는 중…</p>
+          ) : results.isError ? (
+            <button
+              type="button"
+              onClick={() => results.refetch()}
+            >
+              결과를 불러오지 못했습니다. 다시 시도
+            </button>
+          ) : !results.data?.length ? (
+            <p>
+              기록된 수신처별 결과가 없습니다. 이전 발송 또는 미발송 건일 수
+              있습니다.
+            </p>
+          ) : (
+            results.data.map((result) => (
+              <div
+                key={result.id}
+                className="space-y-1"
+              >
+                <p className="font-semibold">
+                  {result.recipientLabel} · {deliveryLabel(result.status)} ·
+                  시도 {result.attemptCount}회
+                </p>
+                {result.providerCheckedAt && (
+                  <p className="text-text-secondary">
+                    {result.providerSendStatus === 1
+                      ? "알림톡 전송 성공"
+                      : result.providerSendStatus === 2
+                        ? "알림톡 실패"
+                        : result.providerSendStatus === 0
+                          ? "알림톡 전송 중"
+                          : "바로빌 상태 확인 필요"}
+                    {result.smsSendState
+                      ? ` · 대체문자: ${result.smsSendState}`
+                      : ""}{" "}
+                    · 확인{" "}
+                    {new Date(result.providerCheckedAt).toLocaleString("ko-KR")}
+                  </p>
+                )}
+                {result.providerResultMessage &&
+                  result.providerSendStatus !== 1 && (
+                    <p className="text-amber-700 dark:text-amber-300">
+                      {result.providerResultMessage}
+                    </p>
+                  )}
+                {result.startedAt && (
+                  <p className="text-text-secondary">
+                    {new Date(result.startedAt).toLocaleString("ko-KR")}
+                  </p>
+                )}
+                {result.errorMessage && (
+                  <p className="text-amber-700 dark:text-amber-300">
+                    {result.errorMessage}
+                  </p>
+                )}
+                {isAdmin &&
+                  result.currentBatch &&
+                  event.deliveryStatus === "UNKNOWN" &&
+                  result.status === "UNKNOWN" && (
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        disabled={resolving}
+                        onClick={() => confirmDelivery(result.id, true)}
+                        className="min-h-10 cursor-pointer font-semibold text-sky-700 dark:text-sky-300"
+                      >
+                        수신 확인
+                      </button>
+                      <button
+                        type="button"
+                        disabled={resolving}
+                        onClick={() => confirmDelivery(result.id, false)}
+                        className="min-h-10 cursor-pointer font-semibold text-rose-600"
+                      >
+                        미수신 확인
+                      </button>
+                    </div>
+                  )}
+              </div>
+            ))
+          )}
+          {deliveryMessage && <p role="alert">{deliveryMessage}</p>}
+        </div>
+      )}
+    </article>
+  );
 }
 
 function EventBadge({ type }: { type: AlertEventSummary["eventType"] | "COLD_CHILLER" }) {
