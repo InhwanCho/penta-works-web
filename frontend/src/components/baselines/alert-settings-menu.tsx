@@ -9,7 +9,7 @@ export default function AlertSettingsMenu({
   onSelect: (view: "thresholds" | "sites") => void;
 }) {
   const card =
-    "flex min-h-28 w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-sky-500 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:bg-background-dark-card dark:hover:border-sky-400 dark:hover:bg-sky-950/30";
+    "flex min-h-24 w-full items-center gap-3 lg:min-h-28 lg:gap-4 rounded-2xl border border-slate-200 bg-white p-3 text-left lg:p-5 shadow-sm transition hover:border-sky-500 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:bg-background-dark-card dark:hover:border-sky-400 dark:hover:bg-sky-950/30";
   return (
     <section
       aria-labelledby="alert-settings-menu-title"
@@ -22,7 +22,7 @@ export default function AlertSettingsMenu({
         >
           어떤 설정을 바꾸시겠어요?
         </h2>
-        <p className="text-text-secondary mt-2 text-base leading-7">
+        <p className="text-text-secondary mt-2 hidden text-base leading-7 lg:block">
           아래에서 원하는 항목을 선택하세요.
         </p>
       </div>
@@ -38,12 +38,14 @@ export default function AlertSettingsMenu({
           ≷
         </span>
         <span className="min-w-0 flex-1">
-          <strong className="block text-lg">병원별 알림 기준</strong>
-          <span className="text-text-secondary mt-1 block text-base leading-7">
+          <strong className="block text-base font-bold lg:text-lg">
+            병원별 알림 기준
+          </strong>
+          <span className="text-text-secondary mt-1 hidden text-base leading-7 lg:block">
             온도·압력이 얼마일 때 알릴지, 데이터가 안 들어오면 알릴지 정해요.
           </span>
           <span className="mt-2 block text-sm font-semibold text-sky-700 dark:text-sky-300">
-            내 계정에만 적용 · 병원을 먼저 선택
+            온도·압력·데이터 누락 기준
           </span>
         </span>
         <span
@@ -64,12 +66,14 @@ export default function AlertSettingsMenu({
           ◷
         </span>
         <span className="min-w-0 flex-1">
-          <strong className="block text-lg">알림 받는 시간·반복</strong>
-          <span className="text-text-secondary mt-1 block text-base leading-7">
+          <strong className="block text-base font-bold lg:text-lg">
+            알림 받는 시간·반복
+          </strong>
+          <span className="text-text-secondary mt-1 hidden text-base leading-7 lg:block">
             밤이나 주말에는 받지 않기, 같은 알림을 몇 분마다 받을지 정해요.
           </span>
           <span className="mt-2 block text-sm font-semibold text-violet-700 dark:text-violet-300">
-            내 계정에만 적용 · 모든 병원에 공통
+            야간·주말 제외, 반복 간격
           </span>
         </span>
         <span
@@ -92,13 +96,15 @@ export default function AlertSettingsMenu({
             ＋
           </span>
           <span className="min-w-0 flex-1">
-            <strong className="block text-lg">병원 운영시간·표시</strong>
-            <span className="text-text-secondary mt-1 block text-base leading-7">
+            <strong className="block text-base font-bold lg:text-lg">
+              병원 운영시간·표시
+            </strong>
+            <span className="text-text-secondary mt-1 hidden text-base leading-7 lg:block">
               병원 운영시간과 장비 냉각 방식, 화면 표시와 알림 켜기·끄기를
               관리해요.
             </span>
             <span className="mt-2 block text-sm font-semibold text-slate-600 dark:text-slate-300">
-              관리자용 · 운영시간과 냉각 방식은 담당자 공통
+              관리자용 · 운영시간, 화면 표시
             </span>
           </span>
           <span
@@ -109,7 +115,7 @@ export default function AlertSettingsMenu({
           </span>
         </button>
       )}
-      <p className="text-text-secondary px-1 pt-2 text-sm leading-6">
+      <p className="text-text-secondary hidden px-1 pt-2 text-sm leading-6 lg:block">
         특정 알림만 잠깐 쉬려면 ‘도착한 알림’에서 ‘동일 알림 잠시 받지 않기’를
         눌러주세요.
       </p>

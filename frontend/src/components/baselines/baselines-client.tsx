@@ -151,14 +151,14 @@ export default function BaselinesClient({
       ]} />
       {view !== "events" && view !== "settings" && <div className="mb-5">
         <button type="button" onClick={() => navigateView("settings")} className="mb-2 inline-flex min-h-12 items-center rounded-lg px-2 text-base font-bold text-sky-800 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/30">← 알림 설정 메뉴</button>
-        <h2 className="text-xl font-extrabold">{view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"}</h2>
-        <p className="mt-2 text-base leading-7 text-text-secondary">{view === "sites" ? "설정할 병원을 찾은 뒤 원하는 항목을 바꾸세요." : "병원을 찾은 뒤 바꾸려는 항목의 기준값을 눌러주세요. 내 계정에만 적용됩니다."}</p>
+        <div className="flex items-center justify-between gap-2"><h2 className="text-xl font-extrabold">{view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"}</h2><span className="lg:hidden"><HelpButton title={view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"} message={view === "sites" ? "병원을 찾은 뒤 원하는 항목을 바꾸세요. 운영시간과 냉각 방식은 모든 담당자에게 적용됩니다." : "병원을 검색하고 변경할 기준값을 누르세요. 변경한 알림 기준은 내 계정에만 적용됩니다."}/></span></div>
+        <p className="mt-2 hidden text-base leading-7 text-text-secondary lg:block">{view === "sites" ? "설정할 병원을 찾은 뒤 원하는 항목을 바꾸세요." : "병원을 찾은 뒤 바꾸려는 항목의 기준값을 눌러주세요. 내 계정에만 적용됩니다."}</p>
       </div>}
 
       {view === "settings" ? <AlertSettingsMenu canManageHospital={canManageHospital} onSelect={navigateView} /> : view === "sites" ? <section className="space-y-3">
         <div className="rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm text-sky-900 dark:border-sky-900/40 dark:bg-background-dark-secondary dark:text-sky-100">
-          <p className="font-bold">병원 표시 · 알림 사용 · 공통 운영 시간</p>
-          <p className="mt-1 text-sm opacity-75">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 상세 설정에서 정한 운영 시간은 모든 담당자에게 공통 적용됩니다.</p>
+          <div className="flex items-center justify-between"><p className="font-bold">병원 표시 · 알림 켜기/끄기</p><HelpButton title="병원 표시와 운영시간" message="표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 운영시간은 모든 담당자에게 공통 적용됩니다."/></div>
+          <p className="mt-1 hidden text-sm opacity-75 lg:block">표시를 끄면 대시보드에서 사라지고 이 병원의 알림 발송도 중지됩니다. 상세 설정에서 정한 운영 시간은 모든 담당자에게 공통 적용됩니다.</p>
         </div>
         {actionError && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
         {loadFailed && <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">병원 설정을 불러오지 못했습니다.</p>}
@@ -178,11 +178,11 @@ export default function BaselinesClient({
       {loadFailed && <div role="alert" className="mb-4 rounded-xl border border-red-200 bg-red-50/70 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">기준값을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>}
       {actionError && <p role="alert" className="mb-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-200">{actionError}</p>}
 
-      <div className="mb-5 flex flex-wrap items-end gap-3">
-        <label className="min-w-0 flex-1 text-base font-bold">병원 찾기<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="병원 이름을 입력하세요" className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base dark:border-white/20 dark:bg-background-dark-card" /></label>
-        <p className="pb-3 text-base text-text-secondary">{entries.length}개 병원 · {activeCount}개 알림 사용</p>
+      <div className="mb-3 flex flex-col gap-2 lg:mb-5 lg:flex-row lg:flex-wrap lg:items-end lg:gap-3">
+        <label className="w-full min-w-0 flex-1 text-base font-bold">병원 찾기<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="병원 이름을 입력하세요" className="mt-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base dark:border-white/20 dark:bg-background-dark-card" /></label>
+        <p className="text-sm text-text-secondary lg:pb-3 lg:text-base">{filtered.length}개 병원<span className="hidden lg:inline"> · {activeCount}개 알림 사용</span></p>
       </div>
-      <p className="mb-5 text-base leading-7 text-text-secondary">설정은 내 계정에만 적용됩니다.</p>
+      
       {filtered.length === 0 ? <EmptyState /> : <AlertSettingsTable entries={filtered} canEdit={canEdit} busySite={busySite} onToggle={toggleAlerts} onOpen={openSettings} actions={entry=>canEdit && entry.configured ? <button type="button" disabled={restoringSite===entry.siteid} onClick={()=>restoreCompany(entry)} className="mt-2 min-h-12 rounded-lg border px-3 text-base dark:border-white/15">처음 설정으로</button> : null} />}
 
       {canEditCompany && <div className="mt-8"><CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} /></div>}
