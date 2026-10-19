@@ -259,11 +259,11 @@ export default function OverviewPage() {
               dueItems = due.filter((d) => d.date === day);
             const tags = [
               ...events.map((s) => ({
-                title: `${scheduleCategory(s)} · ${s.siteName || s.title}`,
+                title: `${s.serviceType === "PM" ? "PM" : scheduleCategory(s)} · ${s.siteName || s.title}`,
                 type: "schedule",
               })),
               ...logs.map((r) => ({
-                title: `${r.siteName} · ${serviceLabels[r.type] || r.title}`,
+                title: `${r.siteName} · ${r.type === "PM" ? "PM" : serviceLabels[r.type] || r.title}`,
                 type: r.status === "COMPLETED" ? "record" : "open",
               })),
               ...dueItems.map((d) => ({
