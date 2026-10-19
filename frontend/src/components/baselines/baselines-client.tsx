@@ -1,4 +1,5 @@
 "use client";
+import AlertSnooze from "./alert-snooze";
 
 import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
 import { averagePeriodMessage, previewAlertRange } from "@/lib/alert-range";
@@ -340,6 +341,7 @@ function AlertEventRow({ event, selecting, selected, onSelect, acknowledging, re
       <div className="flex flex-wrap items-center gap-2"><span className={`text-sm font-bold ${recovered ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-300"}`}>{recovered ? "현재 종료" : "문제 지속"}</span><span className={`rounded-full px-2 py-1 text-sm font-bold ${event.acknowledgedAt ? "bg-slate-100 text-slate-600 dark:bg-white/5 dark:text-white/60" : "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300"}`}>{event.acknowledgedAt ? "확인했어요" : "확인 필요"}</span>{event.recoveredAt && <span className="text-text-secondary text-sm">종료 {new Date(event.recoveredAt).toLocaleString("ko-KR")}</span>}</div>
       <div className="flex max-w-full flex-wrap items-center gap-2"><button type="button" disabled={!settingsAvailable} onClick={onOpenSettings} className="min-h-11 rounded-lg border border-sky-200 px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:border-sky-900 dark:text-sky-300">알림 설정</button>{isAdmin && !recovered && ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && <button type="button" disabled={retrying} onClick={onRetry} className="min-h-11 rounded-lg border border-rose-200 px-3 text-sm font-bold text-rose-600 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900/60 dark:text-rose-300 dark:hover:bg-rose-950/30">{retrying ? "재전송 중…" : "전송 재시도"}</button>}{event.acknowledgedAt ? <span className="text-text-secondary text-sm">확인 {new Date(event.acknowledgedAt).toLocaleString("ko-KR")}</span> : <button type="button" disabled={acknowledging} onClick={onAcknowledge} className="min-h-12 rounded-xl bg-sky-700 px-5 text-base font-bold text-white disabled:opacity-50">{acknowledging ? "처리 중…" : "확인했어요"}</button>}</div>
     </div>
+    {!recovered && <AlertSnooze event={event} />}
     {event.deliveryError && <p className="mt-3 hidden text-sm leading-5 text-amber-700 dark:text-amber-300 lg:block">{event.deliveryError}</p>}
     <button type="button" aria-expanded={showDelivery} onClick={() => setShowDelivery(!showDelivery)} className="min-h-11 cursor-pointer text-sm font-semibold text-sky-700 dark:text-sky-300">{showDelivery ? "발송 정보 접기" : "자세한 내용 · 발송 정보"}</button>
     {showDelivery && <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-white/5">

@@ -128,7 +128,9 @@ public class MonitorService {
             alertEvents.markDelivery(recoveries.stream().map(Transition::eventId).toList(),
                 "SKIPPED", "정상 복구 알림톡 템플릿이 등록되지 않았습니다.", 0);
         }
-        Map<String, List<Transition>> bySite = alerts.stream().filter(alert -> !"RECOVERY".equals(alert.eventType()))
+        if (manual && alerts.stream().anyMatch(a -> alertEvents.isSnoozed(a.eventId())))
+            throw new BadRequestException("일시 중지 중인 알림입니다. 알림 받기를 재개한 뒤 재시도해주세요.");
+        Map<String, List<Transition>> bySite = alerts.stream().filter(a -> !alertEvents.isSnoozed(a.eventId())).filter(alert -> !"RECOVERY".equals(alert.eventType()))
             .collect(Collectors.groupingBy(Transition::siteId, LinkedHashMap::new, Collectors.toList()));
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         for (Map.Entry<String, List<Transition>> entry : bySite.entrySet()) {

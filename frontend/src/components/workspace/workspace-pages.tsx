@@ -229,7 +229,7 @@ export function HospitalsPage() {
   const { sites } = useWorkspace();
   const [search, setSearch] = useState("");
   return (
-    <main className="work-page">
+    <main className="work-page work-hospitals">
       <PageHeading
         title="병원 · 장비"
         description="병원별 모니터링, 장비와 서비스 이력을 확인하세요."

@@ -21,7 +21,7 @@ public class AlertDeliveryService {
 
     @Transactional
     public Batch begin(long eventId, List<String> destinations, boolean retry) {
-        Event event = jdbc.query("SELECT delivery_status,delivery_batch_id,last_notified_at FROM alert_event WHERE id=? AND recovered_at IS NULL FOR UPDATE",
+        Event event = jdbc.query("SELECT delivery_status,delivery_batch_id,last_notified_at FROM alert_event WHERE id=? AND recovered_at IS NULL AND NOT EXISTS (SELECT 1 FROM alert_snooze z WHERE z.rule_id=alert_event.rule_id AND z.event_type=alert_event.event_type AND z.until_at>CURRENT_TIMESTAMP(6)) FOR UPDATE",
             rs -> rs.next() ? new Event(rs.getString(1), rs.getString(2), rs.getTimestamp(3) == null ? null : rs.getTimestamp(3).toInstant()) : null, eventId);
         if (event == null || "SENDING".equals(event.status()) || "UNKNOWN".equals(event.status())) return null;
         if (!retry && event.lastNotifiedAt() != null && event.lastNotifiedAt().plusSeconds(60).isAfter(Instant.now())) return null;
@@ -66,6 +66,7 @@ public class AlertDeliveryService {
             UPDATE alert_delivery_result SET status='SENDING',started_at=CURRENT_TIMESTAMP(6),
                 finished_at=NULL,attempt_count=attempt_count+1
              WHERE event_id=? AND batch_id=? AND recipient_key=? AND status='PENDING'
+               AND NOT EXISTS (SELECT 1 FROM alert_event e JOIN alert_snooze z ON z.rule_id=e.rule_id AND z.event_type=e.event_type WHERE e.id=alert_delivery_result.event_id AND z.until_at>CURRENT_TIMESTAMP(6))
             """, batch.eventId(), batch.id(), tokens.hash(destination)) == 1;
     }
 

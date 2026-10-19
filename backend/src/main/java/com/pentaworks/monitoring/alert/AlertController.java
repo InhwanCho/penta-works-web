@@ -113,6 +113,19 @@ public class AlertController {
         return personal.save(currentUsers.require(authentication),siteId,request);
     }
 
+    @GetMapping("/snoozes")
+    public List<AlertEventService.SnoozeView> snoozes(Authentication authentication) {
+        return alertEvents.snoozes(currentUsers.require(authentication));
+    }
+
+    public record SnoozeRequest(java.time.Instant until) {}
+
+    @PatchMapping("/events/{eventId}/snooze")
+    public Map<String,Boolean> snooze(@PathVariable long eventId, @RequestBody SnoozeRequest request, Authentication authentication) {
+        alertEvents.snooze(currentUsers.require(authentication),eventId,request.until());
+        return Map.of("ok",true);
+    }
+
     @GetMapping("/events")
     public List<AlertEventSummary> events(@RequestParam(defaultValue = "200") int limit,
                                           Authentication authentication) {

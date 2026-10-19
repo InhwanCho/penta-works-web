@@ -78,6 +78,11 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
   function begin(asset?: HospitalAsset, type = "CHILLER") {
     setError("");
     setEditing(asset?.id ?? null);
+    requestAnimationFrame(() =>
+      document
+        .querySelector(".asset-editor")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" }),
+    );
     setForm(
       asset
         ? {
@@ -294,75 +299,123 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
             시작하세요.
           </p>
         )}
-      <div className="asset-grid">
-        {assets.map((asset) => (
-          <article
-            className={`asset-card asset-${asset.assetType.toLowerCase()}`}
-            key={asset.id}
+      {[
+        {
+          title: "MRI 장비",
+          items: assets.filter(
+            (a) => a.assetType === "MRI" && a.status === "ACTIVE",
+          ),
+          equipment: true,
+        },
+        {
+          title: "사용 중인 부품",
+          items: assets.filter(
+            (a) => a.assetType !== "MRI" && a.status === "ACTIVE",
+          ),
+          equipment: false,
+        },
+        {
+          title: "교체·사용 종료 이력",
+          items: assets.filter((a) => a.status !== "ACTIVE"),
+          archived: true,
+        },
+      ].map((group) => {
+        if (!group.items.length) return null;
+        const cards = (
+          <div
+            className={`asset-grid ${group.equipment ? "asset-grid-equipment" : ""}`}
           >
-            <div className="work-section">
-              <span className="work-badge">{assetTypes[asset.assetType]}</span>
-              <span
-                className={`asset-state ${asset.status === "ACTIVE" ? "active" : ""}`}
+            {group.items.map((asset) => (
+              <article
+                className={`asset-card asset-${asset.assetType.toLowerCase()}`}
+                key={asset.id}
               >
-                {assetStatus[asset.status]}
-              </span>
-            </div>
-            <h3>{asset.name}</h3>
-            <dl className="asset-specs">
-              <div>
-                <dt>모델 · 버전</dt>
-                <dd>
-                  {[asset.model, asset.version].filter(Boolean).join(" · ") ||
-                    "미등록"}
-                </dd>
-              </div>
-              <div>
-                <dt>시리얼 번호</dt>
-                <dd>{asset.serialNumber || "미등록"}</dd>
-              </div>
-              <div>
-                <dt>설치일</dt>
-                <dd>{asset.installedAt || "미등록"}</dd>
-              </div>
-            </dl>
-            {asset.notes && <p className="work-prewrap">{asset.notes}</p>}
-            <div className="asset-actions">
-              <button
-                className="work-secondary"
-                onClick={() => begin(asset)}
-              >
-                정보 변경·기록
-              </button>
-              <Link
-                className="work-secondary"
-                href={`/work/new?site=${encodeURIComponent(siteId)}&asset=${asset.id}`}
-              >
-                정비일지 작성 →
-              </Link>
-            </div>
-            <details className="asset-history">
-              <summary>
-                부품·장비 이력{" "}
-                {
-                  (query.data?.history || []).filter(
-                    (h) => h.assetId === asset.id,
-                  ).length
-                }
-                건
-              </summary>
-              {(query.data?.history || [])
-                .filter((h) => h.assetId === asset.id)
-                .map((h) => (
-                  <AssetHistoryRow
-                    key={h.id}
-                    item={h}
-                  />
-                ))}
-            </details>
-          </article>
-        ))}
-      </div>
+                <div className="work-section">
+                  <span className="work-badge">
+                    {assetTypes[asset.assetType]}
+                  </span>
+                  <span
+                    className={`asset-state ${asset.status === "ACTIVE" ? "active" : ""}`}
+                  >
+                    {assetStatus[asset.status]}
+                  </span>
+                </div>
+                <h3>{asset.name}</h3>
+                <dl className="asset-specs">
+                  <div>
+                    <dt>모델 · 버전</dt>
+                    <dd>
+                      {[asset.model, asset.version]
+                        .filter(Boolean)
+                        .join(" · ") || "미등록"}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>시리얼 번호</dt>
+                    <dd>{asset.serialNumber || "미등록"}</dd>
+                  </div>
+                  <div>
+                    <dt>설치일</dt>
+                    <dd>{asset.installedAt || "미등록"}</dd>
+                  </div>
+                </dl>
+                {asset.notes && <p className="work-prewrap">{asset.notes}</p>}
+                <div className="asset-actions">
+                  <button
+                    className="work-secondary"
+                    onClick={() => begin(asset)}
+                  >
+                    정보 변경·기록
+                  </button>
+                  <Link
+                    className="work-secondary"
+                    href={`/work/new?site=${encodeURIComponent(siteId)}&asset=${asset.id}`}
+                  >
+                    정비일지 작성 →
+                  </Link>
+                </div>
+                <details className="asset-history">
+                  <summary>
+                    부품·장비 이력{" "}
+                    {
+                      (query.data?.history || []).filter(
+                        (h) => h.assetId === asset.id,
+                      ).length
+                    }
+                    건
+                  </summary>
+                  {(query.data?.history || [])
+                    .filter((h) => h.assetId === asset.id)
+                    .map((h) => (
+                      <AssetHistoryRow
+                        key={h.id}
+                        item={h}
+                      />
+                    ))}
+                </details>
+              </article>
+            ))}
+          </div>
+        );
+        return group.archived ? (
+          <details
+            className="asset-archived"
+            key={group.title}
+          >
+            <summary>
+              {group.title} · {group.items.length}개
+            </summary>
+            {cards}
+          </details>
+        ) : (
+          <section key={group.title}>
+            <h3 className="asset-group-title">
+              {group.title} · {group.items.length}개
+            </h3>
+            {cards}
+          </section>
+        );
+      })}
     </section>
   );
 }

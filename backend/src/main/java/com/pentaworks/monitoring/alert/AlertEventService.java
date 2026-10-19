@@ -39,6 +39,43 @@ public class AlertEventService {
         this.audit = audit;
     }
 
+    public record SnoozeView(String siteId, String metricKey, String eventType, Instant until) {}
+
+    public List<SnoozeView> snoozes(CurrentUser actor) {
+        var allowed = currentUsers.allowedSiteIds(actor);
+        return jdbcTemplate.query("""
+            SELECT r.site_id,r.metric_key,z.event_type,z.until_at FROM alert_snooze z
+            JOIN alert_rule r ON r.id=z.rule_id
+            WHERE r.user_id=? AND z.until_at>CURRENT_TIMESTAMP(6)
+            """, (rs,n)->new SnoozeView(rs.getString(1),rs.getString(2),rs.getString(3),rs.getTimestamp(4).toInstant()),actor.id())
+            .stream().filter(z->allowed.contains(z.siteId())).toList();
+    }
+
+    @Transactional
+    public void snooze(CurrentUser actor, long eventId, Instant until) {
+        requireEventAccess(eventId,actor);
+        if (until != null && (!until.isAfter(Instant.now()) || until.isAfter(Instant.now().plus(Duration.ofDays(7)))))
+            throw new BadRequestException("현재 이후부터 7일 이내의 시간을 지정해주세요.");
+        if (until == null) {
+            jdbcTemplate.update("DELETE z FROM alert_snooze z JOIN alert_event e ON e.rule_id=z.rule_id AND e.event_type=z.event_type WHERE e.id=?",eventId);
+        } else {
+            jdbcTemplate.update("""
+                INSERT INTO alert_snooze(rule_id,event_type,until_at)
+                SELECT rule_id,event_type,? FROM alert_event WHERE id=? AND event_type<>'RECOVERY'
+                ON DUPLICATE KEY UPDATE until_at=VALUES(until_at)
+                """,Timestamp.from(until),eventId);
+        }
+        audit.record(actor,"ALERT_SNOOZE_UPDATED","ALERT_EVENT",Long.toString(eventId),Map.of("until",until==null?"RESUMED":until.toString()));
+    }
+
+    public boolean isSnoozed(long eventId) {
+        return Boolean.TRUE.equals(jdbcTemplate.query("""
+            SELECT 1 FROM alert_event e JOIN alert_snooze z
+              ON z.rule_id=e.rule_id AND z.event_type=e.event_type
+            WHERE e.id=? AND z.until_at>CURRENT_TIMESTAMP(6)
+            """,rs->rs.next(),eventId));
+    }
+
     public boolean airCooled(String siteId) {
         return Boolean.TRUE.equals(jdbcTemplate.query("SELECT air_cooled FROM site_cooling_config WHERE site_id=?", rs->rs.next()?rs.getBoolean(1):false, siteId));
     }
@@ -501,6 +538,7 @@ public class AlertEventService {
         if ("UNKNOWN".equals(open.deliveryStatus()) || "SENDING".equals(open.deliveryStatus())) return false;
         // A quiet-hours/no-recipient skip is not a notification, including one-shot rules.
         if ("SKIPPED".equals(open.deliveryStatus()) && open.lastNotifiedAt() == null) return true;
+        if ("PENDING".equals(open.deliveryStatus()) && open.lastNotifiedAt() == null) return true;
         if (repeatMinutes <= 0) return false;
         if (open.lastNotifiedAt() == null) return true;
         return Duration.between(open.lastNotifiedAt(), Instant.now()).toMinutes() >= repeatMinutes;
