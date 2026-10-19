@@ -14,6 +14,7 @@ import {
   errorText,
   serviceLabels,
   statusLabels,
+  scheduleTimeLabel,
   type WorkRecord,
   type WorkSchedule,
 } from "./workspace-data";
@@ -360,12 +361,14 @@ export function SchedulePage() {
     startAt: initialDate + "T09:00",
     endAt: initialDate + "T10:00",
   });
-  const rows = (schedules.data || []).filter(
-    (s) =>
-      s.startAt.slice(0, 10) <= selected &&
-      s.endAt.slice(0, 10) >= selected &&
-      (scope === "TEAM" || s.authorId === session?.id),
-  );
+  const rows = (schedules.data || [])
+    .filter(
+      (s) =>
+        s.startAt.slice(0, 10) <= selected &&
+        s.endAt.slice(0, 10) >= selected &&
+        (scope === "TEAM" || s.authorId === session?.id),
+    )
+    .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id - b.id);
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -395,7 +398,13 @@ export function SchedulePage() {
     }
   }
   return (
-    <main className="work-page">
+    <main className="work-page schedule-page">
+      <Link
+        className="work-back"
+        href="/overview"
+      >
+        ← 업무현황 달력
+      </Link>
       <PageHeading
         title="일정"
         description="방문·점검과 팀의 일정을 함께 확인하세요."
@@ -418,16 +427,18 @@ export function SchedulePage() {
       />
       <div className="work-pills">
         <button
+          aria-pressed={scope === "TEAM"}
           className={scope === "TEAM" ? "selected" : ""}
           onClick={() => setScope("TEAM")}
         >
-          팀 일정
+          전체 일정
         </button>
         <button
+          aria-pressed={scope === "ME"}
           className={scope === "ME" ? "selected" : ""}
           onClick={() => setScope("ME")}
         >
-          내 일정
+          내가 등록한 일정
         </button>
       </div>
       <label className="work-date-picker">
@@ -530,30 +541,53 @@ export function SchedulePage() {
           retry={() => void schedules.refetch()}
         />
       ) : (
-        <div className="work-panel">
+        <div className="schedule-list">
           {rows.map((s) => (
-            <div
-              className="work-schedule"
+            <article
+              className="schedule-card"
               key={s.id}
             >
-              <div className="work-time">
-                {dateTime(s.startAt).slice(11, 16)}–
-                {dateTime(s.endAt).slice(11, 16)}
+              <div className="schedule-card-heading">
+                <div className="schedule-card-title">
+                  <span className="schedule-time">
+                    {scheduleTimeLabel(s.startAt, s.endAt)}
+                  </span>
+                  <h3>{s.title}</h3>
+                </div>
+                {(s.authorId === session?.id || isAdmin) && (
+                  <details className="schedule-card-menu">
+                    <summary aria-label={`${s.title} 일정 메뉴`}>⋮</summary>
+                    <div>
+                      <button
+                        type="button"
+                        className="work-text-button"
+                        onClick={() => void remove(s.id)}
+                      >
+                        일정 삭제
+                      </button>
+                    </div>
+                  </details>
+                )}
               </div>
-              <strong>{s.title}</strong>
-              <p>
-                {s.siteName} · {s.authorName}
-              </p>
-              {s.body && <p className="work-prewrap">{s.body}</p>}
-              {(s.authorId === session?.id || isAdmin) && (
-                <button
-                  className="work-text-button"
-                  onClick={() => void remove(s.id)}
-                >
-                  삭제
-                </button>
+              <dl className="schedule-card-meta">
+                {s.siteName && (
+                  <div>
+                    <dt>병원</dt>
+                    <dd>{s.siteName}</dd>
+                  </div>
+                )}
+                <div>
+                  <dt>등록자</dt>
+                  <dd>{s.authorName || "정보 없음"}</dd>
+                </div>
+              </dl>
+              {s.body?.trim() && s.body.trim() !== s.title.trim() && (
+                <div className="schedule-card-note">
+                  <span>내용</span>
+                  <p className="work-prewrap">{s.body}</p>
+                </div>
               )}
-            </div>
+            </article>
           ))}
           {!rows.length && (
             <Empty>

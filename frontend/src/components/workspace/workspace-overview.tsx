@@ -12,6 +12,7 @@ import {
   errorText,
   serviceLabels,
   statusLabels,
+  scheduleTimeLabel,
 } from "./workspace-data";
 import { parseDetails } from "./service-form-model";
 import {
@@ -355,7 +356,9 @@ export default function OverviewPage() {
               <div>
                 <strong>{s.title}</strong>
                 <p>
-                  {s.startAt.slice(11, 16)} · {s.siteName || s.authorName}
+                  {scheduleTimeLabel(s.startAt, s.endAt)}
+                  {s.siteName ? ` · 병원 ${s.siteName}` : ""} · 등록자{" "}
+                  {s.authorName}
                 </p>
               </div>
             </Link>

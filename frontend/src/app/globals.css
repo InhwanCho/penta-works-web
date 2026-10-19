@@ -1914,9 +1914,9 @@ h4,
 /* Explicit interaction states, separate from muted adjacent-month cells. */
 .work-calendar .work-calendar-day { transition: background-color .12s, box-shadow .12s; }
 .work-calendar .work-calendar-day.outside { background: #f5f6f8; }
-.work-calendar .work-calendar-day:hover { background: #e7f0fb; box-shadow: inset 0 0 0 2px #91add0; }
-.work-calendar .work-calendar-day.selected { background: #e0ecfc; box-shadow: inset 0 0 0 3px #3979c6; }
-.work-calendar .work-calendar-day.selected:hover { background: #d5e5fa; box-shadow: inset 0 0 0 3px #2864ab; }
+.work-calendar .work-calendar-day:hover { background: var(--work-paper); box-shadow: inset 0 0 0 2px #91add0; }
+.work-calendar .work-calendar-day.selected { background: var(--work-paper); box-shadow: inset 0 0 0 3px #3979c6; }
+.work-calendar .work-calendar-day.selected:hover { background: var(--work-paper); box-shadow: inset 0 0 0 3px #2864ab; }
 .work-calendar .work-calendar-day.today > span { background: #2869b2; color: white; font-weight: 800; }
 .work-calendar .work-calendar-day:focus-visible { outline: none; box-shadow: inset 0 0 0 3px #245ba0; }
 .work-calendar .work-calendar-tags > span { border-left: 3px solid; font-weight: 700; font-size: 12px; }
@@ -1929,9 +1929,9 @@ h4,
 .work-calendar .work-calendar-legend .due { color: #725091; }
 .work-calendar .work-calendar-legend .schedule { color: #326d93; }
 .dark .work-calendar .work-calendar-day.outside { background: #17242f; }
-.dark .work-calendar .work-calendar-day:hover { background: #2d4156; box-shadow: inset 0 0 0 2px #6b8eaf; }
-.dark .work-calendar .work-calendar-day.selected { background: #2c4765; box-shadow: inset 0 0 0 3px #88b6ec; }
-.dark .work-calendar .work-calendar-day.selected:hover { background: #365577; }
+.dark .work-calendar .work-calendar-day:hover { background: var(--work-paper); box-shadow: inset 0 0 0 2px #6b8eaf; }
+.dark .work-calendar .work-calendar-day.selected { background: var(--work-paper); box-shadow: inset 0 0 0 3px #88b6ec; }
+.dark .work-calendar .work-calendar-day.selected:hover { background: var(--work-paper); }
 .dark .work-calendar .work-calendar-day.today > span { background: #a8cdf6; color: #163752; }
 .dark .work-calendar .work-calendar-day:focus-visible { box-shadow: inset 0 0 0 3px #a8cdf6; }
 .dark .work-calendar .work-calendar-tags .record { background: #354452; color: #e0e8f0; border-color: #9badbf; }
@@ -1942,3 +1942,31 @@ h4,
 .dark .work-calendar .work-calendar-legend .open { color: #ebc783; }
 .dark .work-calendar .work-calendar-legend .due { color: #d6b4ef; }
 .dark .work-calendar .work-calendar-legend .schedule { color: #a3d2ef; }
+
+.work-calendar .work-calendar-day:active { background: var(--work-paper); }
+.schedule-page > .work-back { display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 10px; }
+.schedule-list { display: grid; gap: 12px; }
+.schedule-card { min-width: 0; padding: 18px; background: var(--work-paper); border: 1px solid var(--work-line); border-radius: 14px; }
+.schedule-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.schedule-card-title { min-width: 0; }
+.schedule-time { display: inline-flex; align-items: center; min-height: 28px; padding: 3px 9px; border-radius: 6px; background: var(--work-soft); color: var(--work-ink); font-size: 13px; font-weight: 700; }
+.schedule-card-title h3 { margin-top: 10px; font-size: 19px; font-weight: 750; line-height: 1.5; overflow-wrap: anywhere; }
+.schedule-card-meta { display: grid; gap: 6px; margin-top: 14px; font-size: 14px; line-height: 1.7; }
+.schedule-card-meta > div { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 10px; }
+.schedule-card-meta dt { color: var(--work-muted); }
+.schedule-card-meta dd { overflow-wrap: anywhere; }
+.schedule-card-note { border-top: 1px solid var(--work-line); margin-top: 14px; padding-top: 12px; font-size: 14px; line-height: 1.7; }
+.schedule-card-note > span { color: var(--work-muted); font-size: 13px; }
+.schedule-card-menu { position: relative; flex-shrink: 0; }
+.schedule-card-menu > summary { display: flex; justify-content: center; align-items: center; width: 44px; height: 44px; border-radius: 8px; cursor: pointer; list-style: none; font-size: 26px; }
+.schedule-card-menu > summary::-webkit-details-marker { display: none; }
+.schedule-card-menu > div { position: absolute; top: 46px; right: 0; z-index: 5; min-width: 140px; padding: 4px 12px; background: var(--work-paper); border: 1px solid var(--work-line); border-radius: 10px; box-shadow: 0 4px 15px #0001; }
+.schedule-card-menu .work-text-button { width: 100%; font-size: 14px; text-align: left; }
+.schedule-page .work-pills .selected { background: var(--work-paper); border-color: #527ca7; color: var(--work-ink); box-shadow: inset 0 -2px #527ca7; }
+@media (max-width: 767px) {
+ .schedule-page .work-heading p { display: none; }
+ .schedule-page .work-pills { display: grid; grid-template-columns: 1fr 1fr; }
+ .schedule-page .work-pills button { min-width: 0; padding: 10px 8px; }
+ .schedule-page .work-date-picker { display: block; margin: 16px 0; }
+ .schedule-page .work-date-picker input { display: block; width: 100%; max-width: none; margin-top: 6px; }
+}

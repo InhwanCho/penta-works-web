@@ -111,3 +111,17 @@ export function usePlanning() {
     enabled: !!session,
   });
 }
+
+export function scheduleTimeLabel(startAt: string, endAt: string) {
+  const start = dateTime(startAt),
+    end = dateTime(endAt);
+  const wholeDay =
+    start.slice(11, 16) === "00:00" && end.slice(11, 16) === "23:59";
+  if (start.slice(0, 10) === end.slice(0, 10))
+    return wholeDay ? "종일" : `${start.slice(11, 16)}–${end.slice(11, 16)}`;
+  const shortDate = (value: string) =>
+    `${Number(value.slice(5, 7))}월 ${Number(value.slice(8, 10))}일`;
+  return wholeDay
+    ? `${shortDate(start)}–${shortDate(end)} · 종일`
+    : `${shortDate(start)} ${start.slice(11, 16)}–${shortDate(end)} ${end.slice(11, 16)}`;
+}
