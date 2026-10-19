@@ -24,9 +24,11 @@ const SERVICE_LABELS: Record<string, string> = {
 export default function OfficeAssetsPanel({
   siteId,
   returnPath,
+  embedded = false,
 }: {
   siteId: string;
   returnPath: string;
+  embedded?: boolean;
 }) {
   const { session, isLoading: isAuthLoading } = useAuth();
   const query = useOfficeAssetsQuery(siteId, Boolean(session));
@@ -45,7 +47,7 @@ export default function OfficeAssetsPanel({
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-extrabold">기존 장비·부품</h2>
+            {!embedded && <h2 className="font-extrabold">기존 장비·부품</h2>}
             <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
               사내 장비, 부품, 정비 이력은 로그인 후 볼 수 있습니다.
             </p>
@@ -66,7 +68,7 @@ export default function OfficeAssetsPanel({
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-extrabold">기존 장비·부품</h2>
+            {!embedded && <h2 className="font-extrabold">기존 장비·부품</h2>}
             <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
               연결된 인트라넷 사이트가 없거나 현재 정보를 불러올 수 없습니다.
             </p>
@@ -86,8 +88,20 @@ export default function OfficeAssetsPanel({
   const data = query.data;
 
   return (
-    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm sm:p-4">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <section
+      className={
+        embedded
+          ? "min-w-0"
+          : "dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm sm:p-4"
+      }
+    >
+      <div
+        className={
+          embedded
+            ? "hidden"
+            : "flex flex-wrap items-start justify-between gap-2"
+        }
+      >
         <div>
           <h2 className="text-lg font-extrabold">기존 장비·부품</h2>
           <p className="text-text-secondary dark:text-text-dark-primary/65 mt-0.5 text-xs sm:text-sm">

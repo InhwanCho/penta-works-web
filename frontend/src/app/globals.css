@@ -1845,3 +1845,16 @@ h4,
 @media (min-width: 768px) and (max-width: 1023px) {
  .work-overview > .work-heading p, .work-hospitals > .work-heading p { display: none; }
 }
+
+@media (max-width: 1023px) {
+ .work-overview > .work-heading, .work-hospitals > .work-heading { display: none; }
+}
+.equipment-management-dialog { margin: auto; width: min(900px,calc(100% - 24px)); max-height: 90dvh; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 16px; color: #0f172a; background: white; --work-paper: #fff; --work-line: #dbe3ed; --work-muted: #64748b; --work-hover: #f1f5f9; --work-focus: #1967d2; }
+.equipment-management-dialog::backdrop { background: rgb(15 23 42 / .5); }
+.equipment-management-dialog > .hospital-assets { border: 0; box-shadow: none; margin: 0; }
+.equipment-management-dialog > .hospital-assets > .work-section h2, .equipment-management-dialog > .hospital-assets > .work-section .work-hint { display: none; }
+.dark .equipment-management-dialog { background: #0f172a; color: #f1f5f9; border-color: #475569; --work-paper: #0f172a; --work-line: #475569; --work-muted: #cbd5e1; --work-hover: #1e293b; --work-focus: #93c5fd; }
+@media (max-width: 767px) { .equipment-management-dialog { width: 100%; max-height: 94dvh; margin: auto 0 0; border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom); } .equipment-management-dialog .asset-editor .work-form-actions { bottom: 0; } }
+
+.equipment-management-dialog { --work-ink: #0f172a; --work-bg: #f8fafc; --work-soft: #eaf3ff; }
+.dark .equipment-management-dialog { --work-ink: #f1f5f9; --work-bg: #0f172a; --work-soft: #1e293b; }

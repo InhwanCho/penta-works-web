@@ -142,7 +142,7 @@ export default function BaselinesClient({
         </Link>
       </div>
 
-      <header className="mb-4 py-2">
+      <header className="mb-4 hidden py-2 lg:block">
         <h1 className="text-2xl font-extrabold tracking-tight">알림</h1>
       </header>
       <ManagementTabs large label="알림" value={view === "events" ? "events" : "settings"} onChange={navigateView} items={[

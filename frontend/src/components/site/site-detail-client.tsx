@@ -1,11 +1,10 @@
 "use client";
-import HospitalAssets from "@/components/workspace/hospital-assets";
+import HospitalEquipmentPanel from "./hospital-equipment-panel";
 import HospitalWork from "@/components/workspace/hospital-work";
 
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
-import OfficeAssetsPanel from "@/components/site/office-assets-panel";
 import SiteAlertSummary from "@/components/site/site-alert-summary";
 import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
@@ -226,9 +225,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
       <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
 
-      <HospitalAssets siteId={data.site.siteDb} />
-
-      <OfficeAssetsPanel
+      <HospitalEquipmentPanel
         siteId={data.site.siteDb}
         returnPath={`/sites/${encodeURIComponent(slug)}`}
       />

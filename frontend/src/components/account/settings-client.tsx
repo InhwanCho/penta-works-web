@@ -30,7 +30,7 @@ export default function SettingsClient() {
   }[session.role];
   return (
     <main className="work-page settings-page">
-      <h1>설정</h1>
+      <h1 className="hidden lg:block">설정</h1>
       <Link
         href="/account"
         className="settings-account"

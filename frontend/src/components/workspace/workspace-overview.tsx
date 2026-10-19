@@ -174,14 +174,6 @@ export default function OverviewPage() {
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 준비물을 한눈에 확인하세요."
-        action={
-          <Link
-            className="work-primary"
-            href="/work/new"
-          >
-            ＋ 작업일지
-          </Link>
-        }
       />
       {(records.error || sites.error) && (
         <ErrorState
