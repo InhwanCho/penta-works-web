@@ -73,7 +73,7 @@ public class AlertEventService {
             SELECT 1 FROM alert_event e JOIN alert_snooze z
               ON z.rule_id=e.rule_id AND z.event_type=e.event_type
             WHERE e.id=? AND z.until_at>CURRENT_TIMESTAMP(6)
-            """,rs->rs.next(),eventId));
+            """,rs->{ return rs.next(); },eventId));
     }
 
     public boolean airCooled(String siteId) {
