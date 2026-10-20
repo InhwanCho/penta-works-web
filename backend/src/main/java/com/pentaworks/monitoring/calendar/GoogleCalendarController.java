@@ -30,6 +30,7 @@ public class GoogleCalendarController {
  private final JdbcTemplate db;
  private final CurrentUserService users;
  private final RestClient http;
+ @org.springframework.beans.factory.annotation.Autowired private GoogleCalendarSync sync;
  private final SecureRandom random=new SecureRandom();
  @Value("${google.calendar.client-id:}") private String clientId;
  @Value("${google.calendar.client-secret:}") private String clientSecret;
@@ -47,10 +48,17 @@ public class GoogleCalendarController {
  @GetMapping
  public Map<String,Object> status(Authentication auth){
   var u=users.require(auth);
-  var rows=db.queryForList("SELECT status,calendar_id,last_error_code FROM user_calendar_connection WHERE user_id=? AND company_id=? AND provider='GOOGLE'",u.id(),u.companyId());
+  var rows=db.queryForList("SELECT status,calendar_id,last_error_code,sync_error_code,last_synced_at,synced_event_count FROM user_calendar_connection WHERE user_id=? AND company_id=? AND provider='GOOGLE'",u.id(),u.companyId());
   String status=rows.isEmpty()?"DISCONNECTED":rows.get(0).get("status").toString();
-  return Map.of("configured",configured(),"status",status,"connected",status.equals("CONNECTED"),"errorCode",rows.isEmpty()||rows.get(0).get("last_error_code")==null?"":rows.get(0).get("last_error_code"));
+  var result=new LinkedHashMap<String,Object>();result.put("configured",configured());result.put("status",status);result.put("connected",status.equals("CONNECTED"));
+  var row=rows.isEmpty()?Map.<String,Object>of():rows.get(0);
+  result.put("errorCode",Objects.toString(row.get("last_error_code"),""));
+  result.put("syncError",Objects.toString(row.get("sync_error_code"),""));
+  result.put("lastSyncedAt",Objects.toString(row.get("last_synced_at"),""));
+  result.put("syncedEventCount",row.getOrDefault("synced_event_count",0));return result;
  }
+ @PostMapping("/sync")
+ public Map<String,Object> sync(Authentication auth){return sync.syncUser(users.require(auth));}
  @PostMapping("/connect")
  @Transactional
  public Map<String,String> connect(Authentication auth,HttpServletResponse response){

@@ -2343,3 +2343,5 @@ h4,
 .calendar-settings-actions button:disabled { opacity: .55; cursor: not-allowed; }
 .calendar-settings-note { margin: 0; color: var(--work-muted); font-size: 12px; line-height: 1.6; }
 @media (hover: hover) { .calendar-settings-actions button:not(:disabled):hover { background: var(--work-soft); } }
+
+.calendar-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }

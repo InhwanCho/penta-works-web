@@ -89,3 +89,4 @@ google:
     client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
     redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
     encryption-key: ${GOOGLE_CALENDAR_ENCRYPTION_KEY:}
+    sync-enabled: ${GOOGLE_CALENDAR_SYNC_ENABLED:false}
