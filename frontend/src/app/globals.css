@@ -2318,3 +2318,13 @@ h4,
 .calendar-connection-actions button:disabled { opacity: .55; cursor: not-allowed; }
 
 @media (hover: hover) { .calendar-connection-actions button:not(:disabled):hover { background: var(--work-soft); border-color: var(--color-brand-primary); } }
+
+/* Compact hospital directory on small screens, retaining equipment and address. */
+@media (max-width: 1023px) {
+ .work-hospitals .work-hospital-grid { grid-template-columns: 1fr; gap: 8px; }
+ .work-hospitals .work-hospital-grid .work-hospital { padding: 12px 14px; gap: 10px; border-radius: 12px; }
+ .work-hospitals .work-hospital-grid .work-hospital strong { display: inline; font-size: 16px; line-height: 1.4; }
+ .work-hospitals .hospital-list-connection { margin: 0 0 0 8px; padding: 2px 5px; font-size: 10px; vertical-align: middle; }
+ .work-hospitals .work-hospital-grid .hospital-directory-equipment { margin-top: 4px; font-size: 12px; line-height: 1.4; }
+ .work-hospitals .work-hospital-grid .hospital-directory-address { margin-top: 3px; font-size: 12px; line-height: 1.4; }
+}

@@ -62,6 +62,7 @@ services:
       context: ./frontend
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_DEPLOY_ENV: production
     restart: unless-stopped
     ports:
       - "127.0.0.1:${FRONTEND_PORT:-3100}:3000"

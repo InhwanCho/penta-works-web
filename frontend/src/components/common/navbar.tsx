@@ -115,9 +115,9 @@ export default function Navbar() {
             <span className="text-[15px] font-bold tracking-[-0.02em]">
               MReyes
             </span>
-            <span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/80">
-              개발
-            </span>
+            {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && (
+              <span className="rounded border border-white/25 px-1.5 py-0.5 text-[10px] text-white/80">개발</span>
+            )}
           </Link>
 
           <nav className="flex shrink-0 items-center gap-1.5">
