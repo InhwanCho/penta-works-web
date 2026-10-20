@@ -2253,3 +2253,10 @@ h4,
  .hospital-always-section > .hospital-section-toggle { padding: 14px; font-size: 16px; }
  .hospital-section-action { min-height: 36px; padding: 6px 10px; font-size: 12px; }
 }
+@media(max-width:1023px) {
+ .workspace-bottom { column-gap: 4px; padding-left: 7px; padding-right: 7px; }
+ .workspace-bottom > a { transition: color 100ms ease; }
+ .workspace-bottom > a:not(.selected):hover { background: transparent; color: var(--work-muted); }
+ .workspace-bottom > a.selected:hover { background: var(--work-soft); }
+ .workspace-bottom > a:active { background: var(--work-soft); }
+}
