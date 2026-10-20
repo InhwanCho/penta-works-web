@@ -151,7 +151,7 @@ export function TodayPage() {
             className="work-primary desktop-work-action"
             href="/work/new"
           >
-            ＋ 업무 기록
+            ＋ 업무기록
           </Link>
         }
       />
@@ -179,7 +179,7 @@ export function TodayPage() {
                 next?.siteId ? `/work/new?site=${next.siteId}` : "/work/new"
               }
             >
-              업무 기록 시작
+              업무기록 시작
             </Link>
           </div>
         </section>
@@ -229,7 +229,7 @@ export function TodayPage() {
         href="/work/new"
         className="work-primary work-floating"
       >
-        ＋ 업무 기록
+        ＋ 업무기록
       </Link>
     </main>
   );
@@ -295,7 +295,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   return (
     <main className="work-page">
       <PageHeading
-        title="업무 기록"
+        title="업무기록"
         description="현장 서비스와 일반 업무를 함께 기록하세요."
         action={
           <Link
@@ -611,7 +611,7 @@ export function SchedulePage() {
                   className="work-back"
                   href={`/work/new?schedule=${s.id}`}
                 >
-                  ＋ 이 일정의 작업일지 작성
+                  ＋ 이 일정의 업무기록 작성
                 </Link>
                 {(records.data || [])
                   .filter((r) => r.scheduleId === s.id)

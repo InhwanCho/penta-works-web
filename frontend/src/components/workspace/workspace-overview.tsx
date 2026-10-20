@@ -200,8 +200,7 @@ export default function OverviewPage() {
       <div className="work-section">
         <h2>일정 달력</h2>
         <div className="overview-shortcuts">
-          <Link href="/work">작업일지 목록</Link>
-          <Link href="/schedule">＋ 일정 작성·관리</Link>
+          <Link href="/work">업무기록 목록</Link>
         </div>
       </div>
       <section className="work-panel work-calendar">
@@ -327,15 +326,15 @@ export default function OverviewPage() {
           title={dateLabel(selected)}
         >
           <section className="day-agenda-section">
-            <h3>작성된 일지 ({dayRecords.length})</h3>
+            <h3>작성된 업무기록 ({dayRecords.length})</h3>
             {dayRecords.length ? <div className="day-entry-list">
               {dayRecords.map((r) => <DayEntry key={r.key} href={r.href} date={r.date}
                 category={r.type} completed={r.status === "COMPLETED"}
                 type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "기타"}
                 title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
                 meta={statusLabels[r.status] || r.status} />)}
-            </div> : <p className="day-empty">작성된 일지가 없습니다.</p>}
-            <Link className="day-write" href={`/work/new?date=${selected}`}>＋ 이 날짜로 일지 작성</Link>
+            </div> : <p className="day-empty">작성된 업무기록가 없습니다.</p>}
+            <Link className="day-write" href={`/work/new?date=${selected}`}>＋ 이 날짜로 업무기록 작성</Link>
           </section>
           <section className="day-agenda-section">
             <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
@@ -452,7 +451,7 @@ export default function OverviewPage() {
                 ))}
                 {!preparations.length && (
                   <Empty>
-                    작업일지에 방문 전 확인사항을 적으면 여기에 표시됩니다.
+                    업무기록에 방문 전 확인사항을 적으면 여기에 표시됩니다.
                   </Empty>
                 )}
               </div>
@@ -461,7 +460,7 @@ export default function OverviewPage() {
         </details>
         <details className="overview-fold">
           <summary>
-            <span>최근 작업일지</span>
+            <span>최근 업무기록</span>
             <small>
               {records.isPending
                 ? "불러오는 중…"
@@ -475,7 +474,7 @@ export default function OverviewPage() {
               className="work-back"
               href="/work"
             >
-              작업일지 전체 보기 →
+              업무기록 전체 보기 →
             </Link>
             {records.isError ? (
               <ErrorState
@@ -494,7 +493,7 @@ export default function OverviewPage() {
                       <small>
                         {r.workDate} · {r.siteName || "일반 업무"}
                       </small>
-                      <strong>{r.title || "제목 없는 작업일지"}</strong>
+                      <strong>{r.title || "제목 없는 업무기록"}</strong>
                       <div className="recent-work-meta">
                         <span className="work-badge">
                           {r.kind === "GENERAL"
@@ -521,8 +520,8 @@ export default function OverviewPage() {
                 {!recentRecords.length && (
                   <Empty>
                     {records.isPending
-                      ? "작업일지를 불러오는 중…"
-                      : "아직 작성된 작업일지가 없습니다."}
+                      ? "업무기록를 불러오는 중…"
+                      : "아직 작성된 업무기록가 없습니다."}
                   </Empty>
                 )}
               </div>
@@ -566,6 +565,7 @@ function DayDialog({
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     dialog.showModal();
+    dialog.focus({ preventScroll: true });
     return () => {
       dialog.close();
       document.body.style.overflow = previous;
@@ -575,6 +575,7 @@ function DayDialog({
     <dialog
       ref={ref}
       className="work-day-dialog"
+      tabIndex={-1}
       aria-labelledby="work-day-title"
       data-ptr-ignore
       onCancel={(e) => {
@@ -599,7 +600,6 @@ function DayDialog({
           type="button"
           className="day-close"
           onClick={onClose}
-          autoFocus
           aria-label="날짜 상세 닫기"
         >
           ×

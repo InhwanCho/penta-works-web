@@ -2100,3 +2100,30 @@ h4,
  .site-detail-page .planning-summary { grid-template-columns: 1fr; }
  .planning-editor-fields { grid-template-columns: 1fr; }
 }
+
+/* Small screens use the same behavior on a phone, tablet or narrow desktop. */
+@media(max-width:1023px) {
+ .work-overview .overview-folds { width: 100%; margin: 12px 0 0; }
+ .work-day-dialog {
+   inset: 0;
+   margin: auto;
+   width: min(640px, calc(100% - 24px));
+   max-height: calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+   border-radius: 18px;
+   padding-bottom: 0;
+ }
+ .work-calendar .work-calendar-day:hover,
+ .dark .work-calendar .work-calendar-day:hover { background: var(--work-paper); box-shadow: none; }
+ .work-calendar .work-calendar-day.outside:hover { background: #f5f6f8; }
+ .dark .work-calendar .work-calendar-day.outside:hover { background: #17242f; }
+ .work-calendar .work-calendar-day.selected,
+ .work-calendar .work-calendar-day.selected:hover,
+ .work-calendar .work-calendar-day:active { box-shadow: inset 0 0 0 3px #2864ab; }
+ .dark .work-calendar .work-calendar-day.selected,
+ .dark .work-calendar .work-calendar-day.selected:hover,
+ .dark .work-calendar .work-calendar-day:active { box-shadow: inset 0 0 0 3px #88b6ec; }
+ .work-calendar .work-calendar-toolbar button:hover { background: var(--work-paper); color: var(--work-ink); }
+ .work-day-dialog .day-close:hover { background: transparent; color: var(--day-secondary); }
+ .work-day-dialog .day-close:active { background: var(--work-hover); }
+}
+.work-day-dialog:focus { outline: none; }

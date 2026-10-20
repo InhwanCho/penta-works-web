@@ -373,7 +373,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
                     className="work-secondary"
                     href={`/work/new?site=${encodeURIComponent(siteId)}&asset=${asset.id}`}
                   >
-                    정비일지 작성 →
+                    업무기록 작성 →
                   </Link>
                 </div>
                 <details className="asset-history">

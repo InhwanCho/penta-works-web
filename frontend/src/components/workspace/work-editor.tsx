@@ -171,7 +171,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     }
   }
   async function remove() {
-    if (!window.confirm("이 작업일지를 삭제할까요?")) return;
+    if (!window.confirm("이 업무기록를 삭제할까요?")) return;
     setSaving(true);
     try {
       await apiFetch(`/workspace/records/${id}`, { method: "DELETE" });
@@ -193,7 +193,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       </main>
     );
   if (id && records.isPending)
-    return <main className="work-page">작업일지를 불러오는 중…</main>;
+    return <main className="work-page">업무기록를 불러오는 중…</main>;
   if (id && !record)
     return (
       <main className="work-page">
@@ -210,10 +210,10 @@ export default function WorkEditor({ id }: { id?: string }) {
         href="/work"
         className="work-back"
       >
-        ← 작업일지
+        ← 업무기록
       </Link>
       <PageHeading
-        title={id ? (editing ? "작업일지 수정" : "작업일지") : "새 작업일지"}
+        title={id ? (editing ? "업무기록 수정" : "업무기록") : "새 업무기록"}
         description={
           editing
             ? "작업 구분에 맞는 점검·서비스 기록을 작성하세요."
@@ -221,7 +221,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         }
         action={
           !editing && canEdit ? (
-            <ActionMenu label="작업일지 메뉴" items={[
+            <ActionMenu label="업무기록 메뉴" items={[
               { label: "수정", onSelect: () => setEditing(true), disabled: saving },
               ...(!record?.assetChange ? [{ label: "삭제", danger: true, onSelect: () => void remove(), disabled: saving }] : []),
             ]} />
@@ -354,7 +354,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           )}
           <details className="work-schedule-link" key={details.scheduleId ? "linked" : "unlinked"} open={details.scheduleId ? true : undefined}>
             <summary>{details.scheduleId ? "연결된 일정" : "예정된 일정과 연결 (선택)"}</summary>
-            <p className="work-hint">일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 일지를 작성할 수 있습니다.</p>
+            <p className="work-hint">일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 업무기록을 작성할 수 있습니다.</p>
           <label>
             연결할 일정
             <select
@@ -510,7 +510,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                   ? "사진 처리 중…"
                   : id
                     ? "변경 저장"
-                    : "작업일지 저장"}
+                    : "업무기록 저장"}
             </button>
           </div>
         </form>

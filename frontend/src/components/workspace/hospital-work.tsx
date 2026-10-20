@@ -44,7 +44,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           className="work-primary"
           href={`/work/new?site=${encodeURIComponent(siteId)}`}
         >
-          ＋ 정비일지
+          ＋ 업무기록
         </Link>
       </div>
       {records.error && (
