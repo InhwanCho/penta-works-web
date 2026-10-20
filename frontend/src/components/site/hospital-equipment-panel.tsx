@@ -6,6 +6,7 @@ import HospitalAssets, {
   assetTypes,
 } from "@/components/workspace/hospital-assets";
 import OfficeAssetsPanel from "./office-assets-panel";
+import ActionMenu from "@/components/common/action-menu";
 import { useAuth } from "@/components/provider/auth-provider";
 
 export default function HospitalEquipmentPanel({
@@ -18,38 +19,12 @@ export default function HospitalEquipmentPanel({
   const { session } = useAuth();
   const query = useHospitalAssets(siteId);
   const [managing, setManaging] = useState(false);
-  const menu = useRef<HTMLDetailsElement>(null);
   return (
     <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm sm:p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold">장비·부품</h2>
         {session && (
-          <details
-            ref={menu}
-            className="relative"
-          >
-            <summary
-              aria-label="장비·부품 메뉴"
-              className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-lg text-2xl hover:bg-slate-100 dark:hover:bg-white/10 [&::-webkit-details-marker]:hidden"
-            >
-              ⋮
-            </summary>
-            <div className="absolute top-12 right-0 z-20 w-56 rounded-xl border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-600 dark:bg-slate-900">
-              <button
-                type="button"
-                className="min-h-12 w-full rounded-lg px-3 text-left text-base font-bold hover:bg-sky-50 dark:hover:bg-slate-800"
-                onClick={() => {
-                  if (menu.current) menu.current.open = false;
-                  setManaging(true);
-                }}
-              >
-                장비·부품 관리
-              </button>
-              <p className="px-3 pb-2 text-sm text-slate-500 dark:text-slate-300">
-                등록 · 정보 수정 · 변경 이력
-              </p>
-            </div>
-          </details>
+          <ActionMenu label="장비·부품 메뉴" items={[{label: "장비·부품 관리", onSelect: () => setManaging(true)}]} />
         )}
       </div>
       <OfficeAssetsPanel
@@ -149,11 +124,12 @@ function EquipmentDialog({
         </h2>
         <button
           autoFocus
+          aria-label="장비·부품 관리 닫기"
           type="button"
           onClick={onClose}
           className="min-h-11 rounded-lg px-3 font-bold"
         >
-          닫기 ×
+          ×
         </button>
       </header>
       <HospitalAssets siteId={siteId} />

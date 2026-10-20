@@ -5,6 +5,7 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import HospitalPicker from "./hospital-picker";
+import ActionMenu from "@/components/common/action-menu";
 import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
@@ -602,18 +603,7 @@ export function SchedulePage() {
                   <h3>{s.title}</h3>
                 </div>
                 {(s.authorId === session?.id || isAdmin) && (
-                  <details className="schedule-card-menu">
-                    <summary aria-label={`${s.title} 일정 메뉴`}>⋮</summary>
-                    <div>
-                      <button
-                        type="button"
-                        className="work-text-button"
-                        onClick={() => void remove(s.id)}
-                      >
-                        일정 삭제
-                      </button>
-                    </div>
-                  </details>
+                  <ActionMenu label={`${s.title} 일정 메뉴`} items={[{label: "삭제", danger: true, onSelect: () => void remove(s.id)}]} />
                 )}
               </div>
               <div className="work-section">

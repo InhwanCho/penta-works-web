@@ -2,6 +2,7 @@
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import ActionMenu from "@/components/common/action-menu";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -220,12 +221,10 @@ export default function WorkEditor({ id }: { id?: string }) {
         }
         action={
           !editing && canEdit ? (
-            <button
-              className="work-secondary"
-              onClick={() => setEditing(true)}
-            >
-              수정
-            </button>
+            <ActionMenu label="작업일지 메뉴" items={[
+              { label: "수정", onSelect: () => setEditing(true), disabled: saving },
+              ...(!record?.assetChange ? [{ label: "삭제", danger: true, onSelect: () => void remove(), disabled: saving }] : []),
+            ]} />
           ) : undefined
         }
       />
@@ -517,15 +516,6 @@ export default function WorkEditor({ id }: { id?: string }) {
         </form>
       ) : (
         record && <ReadRecord record={record} />
-      )}
-      {!editing && canEdit && !record?.assetChange && (
-        <button
-          className="work-delete"
-          disabled={saving}
-          onClick={() => void remove()}
-        >
-          기록 삭제
-        </button>
       )}
     </main>
   );

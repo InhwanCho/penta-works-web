@@ -602,7 +602,7 @@ function DayDialog({
           autoFocus
           aria-label="날짜 상세 닫기"
         >
-          ✕
+          ×
         </button>
       </header>
       <div className="work-day-body">{children}</div>

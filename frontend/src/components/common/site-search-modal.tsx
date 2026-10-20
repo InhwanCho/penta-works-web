@@ -132,7 +132,7 @@ export default function SiteSearchModal() {
               aria-label="닫기"
               className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute right-2 inline-flex h-11 min-w-11 items-center justify-center rounded-lg border border-border px-2 text-xs font-semibold sm:right-3 sm:h-7 sm:min-w-0 sm:rounded sm:px-1.5 sm:text-[11px] dark:border-background-dark-secondary"
             >
-              <span className="sm:hidden">닫기</span><span className="hidden sm:inline">ESC</span>
+              <span aria-hidden="true" className="text-xl">×</span>
             </button>
           </div>
         </form>

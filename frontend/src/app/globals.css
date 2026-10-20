@@ -2058,3 +2058,16 @@ h4,
 .work-schedule-link > summary::-webkit-details-marker { display: none; }
 .work-schedule-link > label { display: grid; gap: 8px; padding: 12px 0 16px; font-size: 14px; font-weight: 600; }
 .work-schedule-link .work-input { width: 100%; min-width: 0; }
+/* Shared overflow actions: one trigger, placement and outside-dismiss behavior. */
+.action-menu { position: relative; flex-shrink: 0; color: var(--work-ink, #223e50); }
+.action-menu > summary { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; font-size: 26px; line-height: 1; list-style: none; cursor: pointer; }
+.action-menu > summary::-webkit-details-marker { display: none; }
+.action-menu > summary:hover { background: var(--work-hover, #eef4ff); }
+.action-menu-items { position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 160px; padding: 5px; border: 1px solid var(--work-line, #dbe3ed); border-radius: 10px; background: var(--work-paper, #fff); box-shadow: 0 8px 24px #0002; }
+.action-menu-items > button { display: block; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 14px; font-weight: 650; color: inherit; cursor: pointer; }
+.action-menu-items > button:hover { background: var(--work-hover, #eef4ff); }
+.action-menu-items > button.is-danger { color: #b42318; }
+.action-menu-items > button:disabled { opacity: .5; cursor: default; }
+.dark .action-menu { color: var(--work-ink, #e1eaf0); }
+.dark .action-menu-items { background: var(--work-paper, #1b2c39); border-color: var(--work-line, #304656); }
+.dark .action-menu-items > button.is-danger { color: #fda4a4; }

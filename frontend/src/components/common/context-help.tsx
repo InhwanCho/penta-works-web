@@ -78,7 +78,7 @@ export function ContextHelpHost() {
           className="min-h-11 shrink-0 rounded-lg px-3 text-base font-bold hover:bg-white/10"
           aria-label="도움말 닫기"
         >
-          닫기 ×
+          ×
         </button>
       </div>
       <p className="mt-1 text-base leading-7 font-normal break-words">
