@@ -220,7 +220,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               {lastAtLabel}
             </span>
           </span>
-          <SiteAlertSettingsButton siteId={data.site.siteDb} />
+          <div className="ml-auto shrink-0">
+            <SiteAlertSettingsButton siteId={data.site.siteDb} />
+          </div>
         </div>
       </div>
 
