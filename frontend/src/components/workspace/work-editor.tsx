@@ -403,7 +403,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             onBusy={setPhotoBusy}
           />
           <label>
-            다음 방문 준비물
+            방문 전 확인사항
             <textarea
               className="work-input"
               maxLength={10000}
@@ -412,10 +412,10 @@ export default function WorkEditor({ id }: { id?: string }) {
               onChange={(e) =>
                 setDetails({ ...details, prepItems: e.target.value })
               }
-              placeholder="다음에 가져갈 부품·물품을 한 줄에 하나씩 입력하세요."
+              placeholder="부품 챙기기, 병원에 연락하기 등 방문 전에 확인할 일을 한 줄에 하나씩 입력하세요."
             />
             <small className="work-hint">
-              업무 현황의 ‘챙길 것’에 표시됩니다.
+              업무 현황의 ‘방문 전 확인사항’에 표시됩니다.
             </small>
           </label>
           <div className="work-form-actions">
@@ -495,7 +495,7 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
               : "",
           ],
           ["후속 조치", d.followUp],
-          ["다음 준비물", d.prepItems],
+          ["방문 전 확인사항", d.prepItems],
         ]
           .filter(([, v]) => v)
           .map(([k, v]) => (

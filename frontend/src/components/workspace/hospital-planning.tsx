@@ -1,0 +1,188 @@
+"use client";
+import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/provider/auth-provider";
+import { apiFetch } from "@/lib/api";
+import HelpButton from "@/components/common/context-help";
+import { usePlanning, errorText, type HospitalPlan } from "./workspace-data";
+
+export default function HospitalPlanning({ siteId }: { siteId: string }) {
+  const { session, isAdmin } = useAuth();
+  const query = usePlanning();
+  const plan = query.data?.plans.find((p) => p.siteId === siteId);
+  const [editing, setEditing] = useState(false);
+  if (!session) return null;
+  return (
+    <section
+      className="work-panel hospital-planning"
+      id="inspection-plan"
+    >
+      <div className="work-section">
+        <div className="flex items-center gap-1">
+          <h2>점검 주기·지정일</h2>
+          <HelpButton
+            title="점검 주기·지정일"
+            message="완료된 점검 이력과 설정한 주기로 달력의 점검 기한을 계산합니다. 지정일은 마지막 점검일보다 이후일 때 우선 적용됩니다. 실제 방문 일정은 달력에서 따로 등록하세요. 이 설정은 회사 내 담당자에게 공통 적용됩니다."
+          />
+        </div>
+        {isAdmin && !query.isPending && !query.isError && (
+          <button
+            type="button"
+            className="work-secondary"
+            onClick={() => setEditing(!editing)}
+          >
+            {editing ? "닫기" : "변경"}
+          </button>
+        )}
+      </div>
+      {query.isPending ? (
+        <p role="status">점검 기준을 불러오는 중…</p>
+      ) : query.isError ? (
+        <p className="work-error">
+          {errorText(query.error)}{" "}
+          <button onClick={() => void query.refetch()}>다시 시도</button>
+        </p>
+      ) : editing ? (
+        <PlanEditor
+          siteId={siteId}
+          plan={plan}
+          onSaved={() => setEditing(false)}
+        />
+      ) : (
+        <>
+          <dl className="planning-summary">
+            <div>
+              <dt>PM 주기</dt>
+              <dd>{plan?.pmIntervalMonths || 2}개월</dd>
+            </div>
+            <div>
+              <dt>PM 지정일</dt>
+              <dd>{plan?.pmOverride || "자동 계산"}</dd>
+            </div>
+            <div>
+              <dt>ACR 정밀 지정일</dt>
+              <dd>{plan?.acrFullOverride || "자동 계산 · 36개월"}</dd>
+            </div>
+            <div>
+              <dt>ACR 서류 지정일</dt>
+              <dd>{plan?.acrDocOverride || "자동 계산 · 12개월"}</dd>
+            </div>
+          </dl>
+          <p className="work-hint">
+            완료 이력으로 점검 기한을 계산합니다. 방문 일정과는 별도입니다.
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+function PlanEditor({
+  siteId,
+  plan,
+  onSaved,
+}: {
+  siteId: string;
+  plan?: HospitalPlan;
+  onSaved: () => void;
+}) {
+  const qc = useQueryClient();
+  const [value, setValue] = useState({
+    pmIntervalMonths: plan?.pmIntervalMonths || 2,
+    pmOverride: plan?.pmOverride || "",
+    acrFullOverride: plan?.acrFullOverride || "",
+    acrDocOverride: plan?.acrDocOverride || "",
+  });
+  const [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  async function save(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      await apiFetch(`/workspace/planning/${encodeURIComponent(siteId)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...value,
+          pmOverride: value.pmOverride || null,
+          acrFullOverride: value.acrFullOverride || null,
+          acrDocOverride: value.acrDocOverride || null,
+        }),
+      });
+      await qc.invalidateQueries({ queryKey: ["workspace-planning"] });
+      onSaved();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <form
+      onSubmit={save}
+      className="work-form"
+    >
+      <fieldset
+        disabled={busy}
+        className="work-form"
+      >
+        <label>
+          PM 주기 (개월)
+          <input
+            type="number"
+            min={1}
+            max={120}
+            required
+            value={value.pmIntervalMonths}
+            className="work-input"
+            onChange={(e) =>
+              setValue({ ...value, pmIntervalMonths: Number(e.target.value) })
+            }
+          />
+        </label>
+        {(
+          [
+            ["pmOverride", "PM 지정일"],
+            ["acrFullOverride", "ACR 정밀 지정일"],
+            ["acrDocOverride", "ACR 서류 지정일"],
+          ] as const
+        ).map(([key, label]) => (
+          <label key={key}>
+            {label}
+            <input
+              className="work-input"
+              type="date"
+              value={value[key]}
+              onChange={(e) => setValue({ ...value, [key]: e.target.value })}
+            />
+          </label>
+        ))}
+        <p className="work-hint">
+          지정일을 비우면 완료 이력과 주기로 자동 계산합니다.
+        </p>
+        {error && (
+          <p
+            role="alert"
+            className="work-error"
+          >
+            {error}
+          </p>
+        )}
+        <div className="work-form-actions">
+          <button
+            type="button"
+            className="work-secondary"
+            onClick={onSaved}
+          >
+            취소
+          </button>
+          <button
+            className="work-primary"
+            disabled={busy}
+          >
+            {busy ? "저장 중…" : "점검 기준 저장"}
+          </button>
+        </div>
+      </fieldset>
+    </form>
+  );
+}

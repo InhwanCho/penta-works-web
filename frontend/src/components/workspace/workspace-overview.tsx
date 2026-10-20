@@ -179,7 +179,7 @@ export default function OverviewPage() {
     <main className="work-page work-overview">
       <PageHeading
         title="업무 현황"
-        description="점검 예정일, 일정과 방문 준비물을 한눈에 확인하세요."
+        description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
       />
       {(records.error || sites.error) && (
         <ErrorState
@@ -325,58 +325,104 @@ export default function OverviewPage() {
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
         >
-          <div className="work-section">
-            <Link href={`/schedule?date=${selected}&new=1`}>＋ 일정 작성</Link>
-            <Link href={`/work/new?date=${selected}`}>＋ 일지 작성</Link>
+          <div className="day-create-actions">
+            <Link href={`/schedule?date=${selected}&new=1`}>＋ 일정 등록</Link>
+            <Link href={`/work/new?date=${selected}`}>＋ 작업일지 작성</Link>
           </div>
-          {dayRecords.map((r) => (
-            <Link
-              href={r.href}
-              className={`work-agenda-row ${r.status === "COMPLETED" ? "record" : "open"}`}
-              key={r.key}
-            >
-              <span className="work-badge">
-                {serviceLabels[r.type] || "일반 업무"}
-              </span>
-              <div>
-                <strong>{r.siteName}</strong>
-                <p>
-                  {r.title}
-                  {r.status !== "COMPLETED" ? " · 진행 중·재방문" : ""}
-                </p>
-              </div>
-            </Link>
-          ))}
-          {daySchedules.map((s) => (
-            <Link
-              href={`/schedule?date=${selected}`}
-              className="work-agenda-row schedule"
-              key={"s" + s.id}
-            >
-              <span className="work-badge">{scheduleCategory(s)}</span>
-              <div>
-                <strong>{s.title}</strong>
-                <p>
-                  {scheduleTimeLabel(s.startAt, s.endAt)}
-                  {s.siteName ? ` · 병원 ${s.siteName}` : ""} · 등록자{" "}
-                  {s.authorName}
-                </p>
-              </div>
-            </Link>
-          ))}
-          {dayDue.map((d, i) => (
-            <Link
-              href={`/sites/${Number(d.siteId) || d.siteId}`}
-              className="work-agenda-row due"
-              key={"d" + i}
-            >
-              <span className="work-badge">예정</span>
-              <div>
-                <strong>{d.siteName}</strong>
-                <p>{d.type}</p>
-              </div>
-            </Link>
-          ))}
+          {!!daySchedules.length && (
+            <section className="day-agenda-section">
+              <h3>
+                등록 일정 <span>{daySchedules.length}건</span>
+              </h3>
+              {daySchedules.map((s) => (
+                <Link
+                  href={`/schedule?date=${selected}`}
+                  className="day-entry"
+                  key={"s" + s.id}
+                >
+                  <div className="day-entry-top">
+                    <span className="day-type">
+                      {s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
+                    </span>
+                    <small>{scheduleTimeLabel(s.startAt, s.endAt)}</small>
+                    <span
+                      className="day-entry-arrow"
+                      aria-hidden="true"
+                    >
+                      ›
+                    </span>
+                  </div>
+                  <strong>{s.siteName || s.title}</strong>
+                  {s.siteName && s.title !== s.siteName && <p>{s.title}</p>}
+                  <small className="day-entry-meta">
+                    등록자 {s.authorName}
+                  </small>
+                </Link>
+              ))}
+            </section>
+          )}
+          {!!dayDue.length && (
+            <section className="day-agenda-section day-due-section">
+              <h3>
+                점검 기한 <span>{dayDue.length}건</span>
+
+              </h3>
+              <details className="day-due-help"><summary>점검 기한이란?</summary><p>완료 이력과 병원별 점검 주기·지정일로 계산한 날짜입니다. 방문이 확정된 일정과는 다릅니다. 병원 상세에서 점검 기준을 변경할 수 있습니다.</p></details>
+              {dayDue.map((d, i) => (
+                <Link
+                  href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
+                  className="day-entry"
+                  key={"d" + i}
+                >
+                  <div className="day-entry-top">
+                    <span className="day-type">{d.type}</span>
+                    <small>점검 기준으로 계산</small>
+                    <span
+                      className="day-entry-arrow"
+                      aria-hidden="true"
+                    >
+                      ›
+                    </span>
+                  </div>
+                  <strong>{d.siteName}</strong>
+                  <small className="day-entry-meta">
+                    병원 점검 기준 보기 →
+                  </small>
+                </Link>
+              ))}
+            </section>
+          )}
+          {!!dayRecords.length && (
+            <section className="day-agenda-section">
+              <h3>
+                작업일지 <span>{dayRecords.length}건</span>
+              </h3>
+              {dayRecords.map((r) => (
+                <Link
+                  href={r.href}
+                  className="day-entry"
+                  key={r.key}
+                >
+                  <div className="day-entry-top">
+                    <span className="day-type">
+                      {r.type === "PM"
+                        ? "PM"
+                        : serviceLabels[r.type] || "일반 업무"}
+                    </span>
+                    <small>{statusLabels[r.status] || r.status}</small>
+                    <span
+                      className="day-entry-arrow"
+                      aria-hidden="true"
+                    >
+                      ›
+                    </span>
+                  </div>
+                  <strong>{r.siteName}</strong>
+                  <p>{r.title}</p>
+                </Link>
+              ))}
+            </section>
+          )}
           {!dayRecords.length && !daySchedules.length && !dayDue.length && (
             <Empty>이 날짜에 등록된 일정과 작업일지가 없습니다.</Empty>
           )}
@@ -429,7 +475,7 @@ export default function OverviewPage() {
           className="overview-fold"
         >
           <summary>
-            <span>다음 방문 준비물</span>
+            <span>방문 전 확인사항</span>
             <small>{preparations.filter((p) => !p.done).length}건 남음</small>
           </summary>
           <div className="overview-fold-body">
@@ -466,7 +512,7 @@ export default function OverviewPage() {
                 ))}
                 {!preparations.length && (
                   <Empty>
-                    작업일지에 다음 방문 준비물을 적으면 여기에 표시됩니다.
+                    작업일지에 방문 전 확인사항을 적으면 여기에 표시됩니다.
                   </Empty>
                 )}
               </div>

@@ -71,9 +71,9 @@ public class WorkspaceController {
         if(details==null||!details.containsKey("prepItems"))return;
         // Preserve checked items; replace only this record's still-open preparation list.
         Object raw=details.get("prepItems");String text=raw instanceof String value?value:"";
-        if(text.length()>10000)throw new BadRequestException("준비물은 10,000자 이내로 입력해주세요.");
+        if(text.length()>10000)throw new BadRequestException("방문 전 확인사항은 10,000자 이내로 입력해주세요.");
         java.util.Set<String> lines=new java.util.LinkedHashSet<>();
-        for(String line:text.split("\\R")){line=line.trim();if(line.isEmpty())continue;if(line.length()>1000)throw new BadRequestException("준비물 한 항목은 1,000자 이내로 입력해주세요.");lines.add(line);}
+        for(String line:text.split("\\R")){line=line.trim();if(line.isEmpty())continue;if(line.length()>1000)throw new BadRequestException("방문 전 확인사항 한 항목은 1,000자 이내로 입력해주세요.");lines.add(line);}
         for(var previous:db.queryForList("SELECT id,content,done FROM workspace_preparation WHERE record_id=? AND company_id=?",id,u.companyId())){
             if(!lines.contains(previous.get("content"))&&!Boolean.TRUE.equals(previous.get("done")))db.update("DELETE FROM workspace_preparation WHERE id=? AND company_id=? AND done=FALSE",previous.get("id"),u.companyId());
         }

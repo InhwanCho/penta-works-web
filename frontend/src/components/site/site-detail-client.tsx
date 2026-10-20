@@ -1,4 +1,5 @@
 "use client";
+import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
 import HospitalWork from "@/components/workspace/hospital-work";
 
@@ -229,6 +230,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         siteId={data.site.siteDb}
         returnPath={`/sites/${encodeURIComponent(slug)}`}
       />
+
+      <HospitalPlanning siteId={data.site.siteDb} />
 
       <HospitalWork siteId={data.site.siteDb} />
 

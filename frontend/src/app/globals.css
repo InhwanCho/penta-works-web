@@ -1986,3 +1986,32 @@ h4,
 .schedule-category.category-annual { background: #e5eaf8; color: #41598b; }
 .dark .schedule-category.category-annual { background: #303e5b; color: #cddcff; }
 @media (max-width: 479px) { .work-day-body .work-agenda-row { grid-template-columns: 92px minmax(0, 1fr); gap: 10px; } }
+
+.day-create-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.day-create-actions a { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 8px; border: 1px solid var(--work-line); border-radius: 10px; color: var(--work-ink); font-size: 14px; font-weight: 700; }
+.day-create-actions a:hover { border-color: var(--work-focus); }
+.day-agenda-section + .day-agenda-section { margin-top: 24px; }
+.day-agenda-section > h3 { display: flex; align-items: center; gap: 8px; min-height: 36px; margin-bottom: 8px; font-size: 16px; font-weight: 800; }
+.day-agenda-section > h3 > span { color: var(--work-muted); font-size: 12px; font-weight: 500; }
+.day-entry { display: block; padding: 14px 0; border-bottom: 1px solid var(--work-line); color: var(--work-ink); }
+.day-entry:last-child { border-bottom: 0; }
+.day-entry:hover { outline: 1px solid var(--work-line); outline-offset: 4px; border-radius: 6px; }
+.day-entry-top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.day-type { display: flex; align-items: center; justify-content: center; width: 104px; min-height: 28px; flex-shrink: 0; padding: 4px 8px; border-radius: 6px; background: var(--work-soft); font-size: 12px; line-height: 1.5; font-weight: 750; text-align: center; overflow-wrap: anywhere; }
+.day-entry-top small, .day-entry-meta { font-size: 12px; line-height: 1.6; color: var(--work-muted); }
+.day-entry-top small { min-width: 0; }
+.day-entry-arrow { margin-left: auto; color: var(--work-muted); }
+.day-entry > strong { display: block; font-size: 17px; font-weight: 750; line-height: 1.5; overflow-wrap: anywhere; }
+.day-entry > p { margin-top: 5px; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.day-entry-meta { display: block; margin-top: 6px; }
+.day-due-section .day-type { background: #f0e9f7; color: #684388; }
+.dark .day-due-section .day-type { background: #3c2e4c; color: #dbc2ef; }
+.planning-summary { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px 24px; margin: 12px 0; }
+.planning-summary dt { color: var(--work-muted); font-size: 13px; }
+.planning-summary dd { margin-top: 4px; font-size: 15px; font-weight: 650; }
+.hospital-planning { scroll-margin-top: 90px; }
+@media (max-width: 479px) { .day-type { width: 92px; } .planning-summary { grid-template-columns: 1fr; } }
+
+.day-due-help { color: var(--work-muted); font-size: 13px; line-height: 1.7; }
+.day-due-help summary { cursor: pointer; padding: 4px 0 8px; }
+.day-due-help p { padding-bottom: 10px; }
