@@ -2204,3 +2204,19 @@ h4,
  .work-calendar-toolbar > div:has(input[type="month"]) { min-width: 0; }
  .work-calendar-toolbar input[type="month"] { min-width: 0; box-sizing: border-box; }
 }
+
+.hospital-mobile-section { display: contents; }
+.hospital-section-toggle { display: none; }
+.site-query-grid > :is(a,button) { width: 100%; min-width: 0; min-height: 44px; box-sizing: border-box; }
+.site-period-form > label { display: grid; gap: 6px; min-width: 0; }
+.site-detail-page .site-period-form input[type="datetime-local"] { display: flex; align-items: center; box-sizing: border-box; width: 100%; min-width: 0; height: 48px; margin: 0; padding: 10px 12px; font-size: 16px; line-height: 24px; }
+.site-period-form input::-webkit-datetime-edit { display: inline-flex; align-items: center; min-height: 24px; padding: 0; }
+.site-period-form input::-webkit-date-and-time-value { line-height: 24px; text-align: left; }
+@media(max-width:1023px) {
+ .site-detail-page .hospital-dashboard-back { display: none; }
+ .hospital-mobile-section { display: block; margin-bottom: 12px; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
+ .hospital-section-toggle { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px; color: var(--work-ink); text-align: left; font-size: 16px; font-weight: 650; }
+ .hospital-section-toggle > span:last-child { color: var(--work-focus); font-size: 22px; line-height: 1; }
+ .hospital-section-content[data-open="false"] { display: none; }
+ .site-detail-page .hospital-section-content > .hospital-detail-card { margin: 0; border: 0; border-radius: 0 0 14px 14px; border-top: 1px solid var(--work-line); }
+}

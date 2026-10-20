@@ -1,4 +1,5 @@
 "use client";
+import HospitalSection from "./hospital-section";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
 import HospitalWork from "@/components/workspace/hospital-work";
@@ -198,7 +199,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
   return (
     <main className="site-detail-page mobile-safe-inline mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-      <div className="mb-2 sm:mb-3">
+      <div className="hospital-dashboard-back mb-2 sm:mb-3">
         <Link
           className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex min-h-10 items-center justify-center gap-x-1.5 rounded-lg px-2 text-sm font-bold transition-colors"
           href={`/?scrollTo=${encodeURIComponent(slug)}`}
@@ -228,14 +229,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
       <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
 
-      <HospitalEquipmentPanel
-        siteId={data.site.siteDb}
-        returnPath={`/sites/${encodeURIComponent(slug)}`}
-      />
-
-      <HospitalPlanning siteId={data.site.siteDb} />
-
-      <HospitalWork siteId={data.site.siteDb} />
+      <HospitalSection title="장비·부품" anchor="hospital-equipment">
+        <HospitalEquipmentPanel siteId={data.site.siteDb} returnPath={`/sites/${encodeURIComponent(slug)}`} />
+      </HospitalSection>
+      <HospitalSection title="점검 주기·지정일" anchor="inspection-plan">
+        <HospitalPlanning siteId={data.site.siteDb} />
+      </HospitalSection>
+      <HospitalSection title="병원 정비이력" anchor="hospital-history">
+        <HospitalWork siteId={data.site.siteDb} />
+      </HospitalSection>
 
       <fieldset className="hospital-detail-card">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
@@ -244,7 +246,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-xs">
           표시할 측정값의 건수를 선택하세요.
         </p>
-        <div className="bg-background-tertiary dark:bg-background-dark-secondary/60 grid min-h-11 w-full grid-cols-4 rounded-lg p-1">
+        <div className="site-query-grid grid min-h-11 w-full grid-cols-4 gap-2">
           <TakeLink
             slug={slug}
             from={from}
@@ -274,7 +276,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             active={take === 100}
           />
         </div>
-        <div role="group" aria-label="빠른 기간 조회" className="mt-3 grid grid-cols-4 gap-2">
+        <div role="group" aria-label="빠른 기간 조회" className="site-query-grid mt-3 grid grid-cols-4 gap-2">
           {[{label:"1주",months:0},{label:"3달",months:3},{label:"6달",months:6},{label:"1년",months:12}].map(period=><button key={period.label} type="button" disabled={isFetching} onClick={()=>{
             const end = new Date();
             const start = new Date(end.getTime() + 9*60*60*1000);
@@ -290,7 +292,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:start.toISOString(),to:end.toISOString(),take:String(take)})}`,{scroll:false});
           }} className="min-h-11 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2 text-sm font-bold text-sky-800 disabled:opacity-50 dark:border-slate-600 dark:bg-background-dark-secondary dark:text-sky-200">{period.label}</button>)}
         </div>
-        <form className="mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
+        <form className="site-period-form mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
           event.preventDefault();
           // Read the actual inputs: native date pickers can update their value before React state.
           const inputs = new FormData(event.currentTarget);
@@ -539,10 +541,10 @@ function TakeLink({
       scroll={false}
       aria-current={active ? "true" : undefined}
       className={[
-        "inline-flex min-h-11 min-w-0 items-center justify-center rounded-md px-1 text-sm font-extrabold tabular-nums transition-all sm:px-3",
+        "site-take-button inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg border px-2 text-sm font-extrabold tabular-nums transition-colors",
         active
-          ? "text-text-major dark:bg-background-dark-card dark:text-text-dark-primary bg-white shadow-sm"
-          : "text-text-secondary hover:text-text-major dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
+          ? "border-brand-primary bg-brand-primary text-white"
+          : "border-slate-300 bg-white text-text-secondary hover:text-text-major dark:border-slate-600 dark:bg-background-dark-secondary dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
       ].join(" ")}
     >
       {take}건
