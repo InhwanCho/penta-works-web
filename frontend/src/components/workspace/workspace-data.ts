@@ -59,7 +59,7 @@ export function useWorkspace() {
   const scope = session?.id;
   const sites = useQuery({
     queryKey: ["workspace-sites", scope],
-    queryFn: () => apiFetch<Hospital[]>("/sites"),
+    queryFn: () => apiFetch<Hospital[]>("/workspace/hospitals"),
     enabled,
   });
   const records = useQuery({

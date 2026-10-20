@@ -37,7 +37,8 @@ public class SiteController {
                                @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
                                Authentication authentication) {
         var user = currentUsers.require(authentication);
-        currentUsers.requireVisibleSiteAccess(user, SiteService.normalizeSiteId(siteid));
+        // Dashboard visibility controls the monitoring list; assigned hospitals still have service detail pages.
+        currentUsers.requireSiteAccess(user, SiteService.normalizeSiteId(siteid));
         return siteService.detail(siteid, take, from, to, page).withMetrics(metrics.metrics(user.companyId()));
     }
 }
