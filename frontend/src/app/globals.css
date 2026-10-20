@@ -2232,3 +2232,24 @@ h4,
  .hospital-section-content > .hospital-detail-card > .hospital-card-heading > .action-menu { margin-left: auto; }
  .site-detail-page .hospital-record-create { min-height: 36px; padding: 6px 10px; font-size: 12px; }
 }
+
+.hospital-panel-actions { display: flex; align-items: flex-start; justify-content: flex-end; gap: 12px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--work-line); }
+.hospital-section-action { display: inline-flex; justify-content: center; align-items: center; min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 650; flex-shrink: 0; }
+.planning-actions { justify-content: space-between; }
+.planning-guide { min-width: 0; color: var(--work-muted); font-size: 13px; }
+.planning-guide > summary { display: flex; align-items: center; min-height: 40px; gap: 8px; cursor: pointer; list-style: none; color: var(--work-focus); }
+.planning-guide > summary::after { content: '⌄'; }
+.planning-guide[open] > summary::after { content: '⌃'; }
+.planning-guide > summary::-webkit-details-marker { display: none; }
+.planning-guide > p { max-width: 440px; padding: 4px 0; line-height: 1.8; }
+.hospital-always-section { display: block; margin-bottom: 16px; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
+.hospital-always-section > .hospital-section-toggle { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; color: var(--work-ink); text-align: left; font-size: 17px; font-weight: 650; }
+.hospital-always-section > .hospital-section-content[data-open="false"] { display: none; }
+.site-detail-page .hospital-always-section > .hospital-section-content > .hospital-detail-card { margin: 0; border: 0; border-radius: 0 0 14px 14px; border-top: 1px solid var(--work-line); }
+.hospital-always-section .hospital-detail-card > h2 { display: none; }
+@media(max-width:1023px) {
+ .site-detail-page .hospital-section-content > .hospital-detail-card > .hospital-title-heading { display: none; }
+ .hospital-always-section { margin-bottom: 12px; }
+ .hospital-always-section > .hospital-section-toggle { padding: 14px; font-size: 16px; }
+ .hospital-section-action { min-height: 36px; padding: 6px 10px; font-size: 12px; }
+}

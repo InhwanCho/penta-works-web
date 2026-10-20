@@ -3,7 +3,6 @@ import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
-import HelpButton from "@/components/common/context-help";
 import { usePlanning, errorText, type HospitalPlan } from "./workspace-data";
 
 export default function HospitalPlanning({ siteId }: { siteId: string }) {
@@ -17,23 +16,8 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
       className="work-panel hospital-planning hospital-detail-card"
       id="inspection-plan"
     >
-      <div className="work-section planning-heading hospital-card-heading">
-        <div className="flex items-center gap-1">
-          <h2>점검 주기·지정일</h2>
-          <HelpButton
-            title="점검 주기·지정일"
-            message="완료된 점검 이력과 설정한 주기로 달력의 점검 기한을 계산합니다. 지정일은 마지막 점검일보다 이후일 때 우선 적용됩니다. 실제 방문 일정은 달력에서 따로 등록하세요. 이 설정은 회사 내 담당자에게 공통 적용됩니다."
-          />
-        </div>
-        {isAdmin && !query.isPending && !query.isError && (
-          <button
-            type="button"
-            className="work-secondary"
-            onClick={() => setEditing(!editing)}
-          >
-            {editing ? "취소" : "변경"}
-          </button>
-        )}
+      <div className="work-section planning-heading hospital-card-heading hospital-title-heading">
+        <h2>점검 주기·지정일</h2>
       </div>
       {query.isPending ? (
         <p role="status">점검 기준을 불러오는 중…</p>
@@ -68,6 +52,13 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
               <dd>{plan?.acrDocOverride || "자동 계산 · 12개월"}</dd>
             </div>
           </dl>
+          <div className="hospital-panel-actions planning-actions">
+            <details className="planning-guide">
+              <summary>점검 기준 안내</summary>
+              <p>완료 이력과 점검 주기로 기한을 계산합니다. 지정일은 마지막 점검일보다 이후일 때 우선 적용됩니다. 방문 일정은 달력에서 별도로 등록하며, 이 기준은 회사 내 담당자에게 공통 적용됩니다.</p>
+            </details>
+            {isAdmin && <button type="button" className="work-secondary hospital-section-action" onClick={() => setEditing(true)}>설정 변경</button>}
+          </div>
         </>
       )}
     </section>

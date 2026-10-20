@@ -227,7 +227,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
+      <HospitalSection title="내 알림 기준" anchor="hospital-alert-summary" allScreens>
+        <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
+      </HospitalSection>
 
       <HospitalSection title="장비·부품" anchor="hospital-equipment">
         <HospitalEquipmentPanel siteId={data.site.siteDb} returnPath={`/sites/${encodeURIComponent(slug)}`} />
