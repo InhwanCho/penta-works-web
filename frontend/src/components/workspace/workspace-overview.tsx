@@ -326,7 +326,10 @@ export default function OverviewPage() {
           title={dateLabel(selected)}
         >
           <section className={`day-agenda-section${!dayRecords.length ? " day-section-empty" : ""}`}>
-            <h3>작성된 업무기록 ({dayRecords.length})</h3>
+            <div className="day-section-toolbar">
+              <h3>작성된 업무기록 ({dayRecords.length})</h3>
+              <Link className="day-section-action" href={`/work/new?date=${selected}`}>작성</Link>
+            </div>
             {dayRecords.length ? <div className="day-entry-list">
               {dayRecords.map((r) => <DayEntry key={r.key} href={r.href} date={r.date}
                 category={r.type} completed={r.status === "COMPLETED"}
@@ -334,10 +337,12 @@ export default function OverviewPage() {
                 title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
                 meta={statusLabels[r.status] || r.status} />)}
             </div> : <p className="day-empty">작성된 업무기록이 없습니다.</p>}
-            <Link className="day-write" href={`/work/new?date=${selected}`}>작성</Link>
           </section>
           <section className={`day-agenda-section${!daySchedules.length ? " day-section-empty" : ""}`}>
-            <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
+            <div className="day-section-toolbar">
+              <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
+              <Link className="day-section-action" href={`/schedule?date=${selected}&new=1`}>일정 등록</Link>
+            </div>
             {daySchedules.length ? <div className="day-entry-list">
               {daySchedules.map((s) => <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
                 category={s.serviceType || "GENERAL"}
@@ -346,7 +351,6 @@ export default function OverviewPage() {
                 description={s.siteName && s.title !== s.siteName ? s.title : undefined}
                 meta={scheduleTimeLabel(s.startAt, s.endAt)} />)}
             </div> : <p className="day-empty">등록된 일정이 없습니다.</p>}
-            <Link className="day-add-schedule" href={`/schedule?date=${selected}&new=1`}>＋ 일정 등록</Link>
           </section>
           {!!dayDue.length && (
             <section className="day-agenda-section day-due-section">
