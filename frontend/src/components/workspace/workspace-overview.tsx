@@ -332,102 +332,46 @@ export default function OverviewPage() {
           </div>
           {!!daySchedules.length && (
             <section className="day-agenda-section">
-              <h3>
-                등록 일정 <span>{daySchedules.length}건</span>
-              </h3>
-              {daySchedules.map((s) => (
-                <Link
-                  href={`/schedule?date=${selected}`}
-                  className="day-entry"
-                  key={"s" + s.id}
-                >
-                  <div className="day-entry-top">
-                    <span className="day-type">
-                      {s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
-                    </span>
-                    <small>{scheduleTimeLabel(s.startAt, s.endAt)}</small>
-                    <span
-                      className="day-entry-arrow"
-                      aria-hidden="true"
-                    >
-                      ›
-                    </span>
-                  </div>
-                  <strong>{s.siteName || s.title}</strong>
-                  {s.siteName && s.title !== s.siteName && <p>{s.title}</p>}
-                  <small className="day-entry-meta">
-                    등록자 {s.authorName}
-                  </small>
-                </Link>
-              ))}
+              <h3>등록 일정 <span>{daySchedules.length}</span></h3>
+              <div className="day-entry-list">
+                {daySchedules.map((s) => (
+                  <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
+                    type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
+                    title={s.siteName || s.title}
+                    description={s.siteName && s.title !== s.siteName ? s.title : undefined}
+                    meta={scheduleTimeLabel(s.startAt, s.endAt)} />
+                ))}
+              </div>
             </section>
           )}
           {!!dayDue.length && (
             <section className="day-agenda-section day-due-section">
-              <h3>
-                점검 기한 <span>{dayDue.length}건</span>
-              </h3>
-              <details className="day-due-help">
-                <summary>점검 기한이란?</summary>
-                <p>
-                  완료 이력과 병원별 점검 주기·지정일로 계산한 날짜입니다.
-                  방문이 확정된 일정과는 다릅니다. 병원 상세에서 점검 기준을
-                  변경할 수 있습니다.
-                </p>
-              </details>
-              {dayDue.map((d, i) => (
-                <Link
-                  href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
-                  className="day-entry"
-                  key={"d" + i}
-                >
-                  <div className="day-entry-top">
-                    <span className="day-type">{d.type}</span>
-                    <small>점검 기준으로 계산</small>
-                    <span
-                      className="day-entry-arrow"
-                      aria-hidden="true"
-                    >
-                      ›
-                    </span>
-                  </div>
-                  <strong>{d.siteName}</strong>
-                  <small className="day-entry-meta">
-                    병원 점검 기준 보기 →
-                  </small>
-                </Link>
-              ))}
+              <div className="day-section-heading">
+                <h3>점검 기한 <span>{dayDue.length}</span></h3>
+                <details className="day-due-help">
+                  <summary aria-label="점검 기한 안내">?</summary>
+                  <p>점검 주기와 완료 이력으로 계산한 날짜입니다. 방문 확정 일정은 아니며, 병원 상세에서 기준을 변경할 수 있습니다.</p>
+                </details>
+              </div>
+              <div className="day-entry-list">
+                {dayDue.map((d, i) => (
+                  <DayEntry key={"d" + i} href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
+                    type={d.type} title={d.siteName} meta="점검 기준 확인" />
+                ))}
+              </div>
             </section>
           )}
           {!!dayRecords.length && (
             <section className="day-agenda-section">
-              <h3>
-                작업일지 <span>{dayRecords.length}건</span>
-              </h3>
-              {dayRecords.map((r) => (
-                <Link
-                  href={r.href}
-                  className="day-entry"
-                  key={r.key}
-                >
-                  <div className="day-entry-top">
-                    <span className="day-type">
-                      {r.type === "PM"
-                        ? "PM"
-                        : serviceLabels[r.type] || "일반 업무"}
-                    </span>
-                    <small>{statusLabels[r.status] || r.status}</small>
-                    <span
-                      className="day-entry-arrow"
-                      aria-hidden="true"
-                    >
-                      ›
-                    </span>
-                  </div>
-                  <strong>{r.siteName}</strong>
-                  <p>{r.title}</p>
-                </Link>
-              ))}
+              <h3>작업일지 <span>{dayRecords.length}</span></h3>
+              <div className="day-entry-list">
+                {dayRecords.map((r) => (
+                  <DayEntry key={r.key} href={r.href}
+                    type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "일반 업무"}
+                    title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
+                    meta={statusLabels[r.status] || r.status} />
+                ))}
+              </div>
             </section>
           )}
           {!dayRecords.length && !daySchedules.length && !dayDue.length && (
@@ -601,6 +545,20 @@ export default function OverviewPage() {
   );
 }
 
+function DayEntry({ href, type, title, description, meta }: {
+  href: string; type: string; title: string; description?: string; meta: string;
+}) {
+  return <Link href={href} className="day-entry">
+    <span className="day-type">{type}</span>
+    <div className="day-entry-content">
+      <strong>{title}</strong>
+      {description && <p>{description}</p>}
+      <small>{meta}</small>
+    </div>
+    <span className="day-entry-arrow" aria-hidden="true">›</span>
+  </Link>;
+}
+
 function DayDialog({
   title,
   onClose,
@@ -648,12 +606,12 @@ function DayDialog({
         <h2 id="work-day-title">{title}</h2>
         <button
           type="button"
-          className="work-secondary"
+          className="day-close"
           onClick={onClose}
           autoFocus
           aria-label="날짜 상세 닫기"
         >
-          닫기 ✕
+          ✕
         </button>
       </header>
       <div className="work-day-body">{children}</div>
