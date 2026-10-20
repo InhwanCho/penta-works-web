@@ -435,7 +435,7 @@ function AssetHistoryRow({ item: h }: { item: AssetHistory }) {
         {h.workDate} ·{" "}
         {h.engineerName
           ? `담당 ${h.engineerName}`
-          : `${h.sourceId ? "이관 계정" : "등록자"} ${h.authorName}`}
+          : `작성자 ${h.authorName}`}
       </small>
       <p className="work-prewrap">{h.body}</p>
       {snapshot.after && (

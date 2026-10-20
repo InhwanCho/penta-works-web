@@ -89,7 +89,7 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
               {r.workDate} ·{" "}
               {r.engineerName
                 ? `담당 ${r.engineerName}`
-                : `${r.sourceId ? "이관 계정" : "등록자"} ${r.authorName}`}
+                : `작성자 ${r.authorName}`}
             </small>
           </Link>
         ))

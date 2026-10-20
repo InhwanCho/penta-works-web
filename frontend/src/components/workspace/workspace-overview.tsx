@@ -326,24 +326,29 @@ export default function OverviewPage() {
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
         >
-          <div className="day-create-actions">
-            <Link href={`/schedule?date=${selected}&new=1`}>＋ 일정 등록</Link>
-            <Link href={`/work/new?date=${selected}`}>＋ 작업일지 작성</Link>
-          </div>
-          {!!daySchedules.length && (
-            <section className="day-agenda-section">
-              <h3>등록 일정 <span>{daySchedules.length}</span></h3>
-              <div className="day-entry-list">
-                {daySchedules.map((s) => (
-                  <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
-                    type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
-                    title={s.siteName || s.title}
-                    description={s.siteName && s.title !== s.siteName ? s.title : undefined}
-                    meta={scheduleTimeLabel(s.startAt, s.endAt)} />
-                ))}
-              </div>
-            </section>
-          )}
+          <section className="day-agenda-section">
+            <h3>작성된 일지 ({dayRecords.length})</h3>
+            {dayRecords.length ? <div className="day-entry-list">
+              {dayRecords.map((r) => <DayEntry key={r.key} href={r.href} date={r.date}
+                category={r.type} completed={r.status === "COMPLETED"}
+                type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "기타"}
+                title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
+                meta={statusLabels[r.status] || r.status} />)}
+            </div> : <p className="day-empty">작성된 일지가 없습니다.</p>}
+            <Link className="day-write" href={`/work/new?date=${selected}`}>＋ 이 날짜로 일지 작성</Link>
+          </section>
+          <section className="day-agenda-section">
+            <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
+            {daySchedules.length ? <div className="day-entry-list">
+              {daySchedules.map((s) => <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
+                category={s.serviceType || "GENERAL"}
+                type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
+                title={s.siteName || s.title}
+                description={s.siteName && s.title !== s.siteName ? s.title : undefined}
+                meta={scheduleTimeLabel(s.startAt, s.endAt)} />)}
+            </div> : <p className="day-empty">등록된 일정이 없습니다.</p>}
+            <Link className="day-add-schedule" href={`/schedule?date=${selected}&new=1`}>＋ 일정 등록</Link>
+          </section>
           {!!dayDue.length && (
             <section className="day-agenda-section day-due-section">
               <div className="day-section-heading">
@@ -360,23 +365,6 @@ export default function OverviewPage() {
                 ))}
               </div>
             </section>
-          )}
-          {!!dayRecords.length && (
-            <section className="day-agenda-section">
-              <h3>작업일지 <span>{dayRecords.length}</span></h3>
-              <div className="day-entry-list">
-                {dayRecords.map((r) => (
-                  <DayEntry key={r.key} href={r.href}
-                    date={r.date} completed={r.status === "COMPLETED"}
-                    type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "일반 업무"}
-                    title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
-                    meta={statusLabels[r.status] || r.status} />
-                ))}
-              </div>
-            </section>
-          )}
-          {!dayRecords.length && !daySchedules.length && !dayDue.length && (
-            <Empty>이 날짜에 등록된 일정과 작업일지가 없습니다.</Empty>
           )}
         </DayDialog>
       )}
@@ -546,17 +534,17 @@ export default function OverviewPage() {
   );
 }
 
-function DayEntry({ href, type, title, description, meta, date, completed }: {
-  href: string; type: string; title: string; description?: string; meta: string; date?: string; completed?: boolean;
+function DayEntry({ href, type, title, description, meta, date, completed, category = "PM" }: {
+  href: string; type: string; title: string; description?: string; meta: string; date?: string; completed?: boolean; category?: string;
 }) {
-  return <Link href={href} className="day-entry">
+  return <Link href={href} className={`day-entry day-category-${category.toLowerCase()}`}>
     <div className="day-entry-content">
       <strong>{title}</strong>
       {description && <p>{description}</p>}
       <span className="day-type">{type}</span>
     </div>
     <div className="day-entry-aside">
-      {date && <time dateTime={date}>{date.replaceAll("-", ". ")}</time>}
+      {date && <time dateTime={date}>{new Date(date + "T12:00:00+09:00").toLocaleDateString("ko-KR", { year: "numeric", month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" })}</time>}
       <span className={`day-entry-status${completed ? " is-completed" : ""}`}>{meta}</span>
     </div>
   </Link>;

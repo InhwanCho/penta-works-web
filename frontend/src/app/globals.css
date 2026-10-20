@@ -1993,95 +1993,60 @@ h4,
 .hospital-planning { scroll-margin-top: 90px; }
 @media (max-width: 479px) { .planning-summary { grid-template-columns: 1fr; } }
 
-/* Calendar detail: a single aligned list, with explicit hover/focus states. */
-.work-day-dialog { width: min(640px, calc(100% - 32px)); outline: none; }
-.work-day-dialog > header { padding: 20px 24px; }
-.work-day-dialog .day-close { display: grid; place-items: center; width: 44px; height: 44px; flex-shrink: 0; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--work-muted); font-size: 20px; cursor: pointer; }
-.work-day-dialog .work-day-body { padding: 20px 24px 24px; }
-.day-create-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 28px; }
-.work-day-dialog .day-create-actions a { display: flex; align-items: center; justify-content: center; min-height: 46px; padding: 10px 8px; border: 1px solid var(--work-line); border-radius: 10px; color: var(--work-ink); background: var(--work-paper); font-size: 14px; font-weight: 700; text-decoration: none; }
-.day-agenda-section + .day-agenda-section { margin-top: 26px; }
-.day-agenda-section h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 14px; font-weight: 750; color: var(--work-muted); }
-.day-agenda-section h3 > span { font-size: 12px; font-weight: 600; }
+/* Calendar day sheet. Keep all day-sheet styling here rather than layering overrides. */
+.work-day-dialog { --day-text: var(--work-ink); --day-secondary: color-mix(in srgb, var(--work-ink) 78%, var(--work-paper)); width: min(640px, calc(100% - 32px)); max-height: 88dvh; background: var(--work-bg); outline: none; border-radius: 18px; }
+.work-day-dialog::backdrop { background: #16203466; backdrop-filter: none; }
+.work-day-dialog > header { display: flex; padding: 16px 18px 10px; background: var(--work-bg); border: 0; }
+.work-day-dialog h2 { font-size: 17px; line-height: 1.5; }
+.work-day-dialog .day-close { display: grid; place-items: center; width: 40px; height: 40px; border: 0; padding: 0; border-radius: 8px; background: transparent; color: var(--day-secondary); cursor: pointer; }
+.work-day-dialog .work-day-body { display: grid; gap: 12px; padding: 0 16px 16px; }
+.work-day-dialog .day-agenda-section { margin: 0; padding: 18px; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
+.work-day-dialog .day-agenda-section h3 { display: flex; align-items: center; gap: 6px; margin: 0 0 16px; color: var(--day-secondary); font-size: 14px; font-weight: 700; }
 .day-entry-list { border: 1px solid var(--work-line); border-radius: 12px; overflow: hidden; }
-.work-day-dialog .day-entry { display: grid; grid-template-columns: 78px minmax(0, 1fr) 16px; align-items: start; gap: 14px; padding: 17px 16px; margin: 0; border: 0; border-radius: 0; color: var(--work-ink); background: var(--work-paper); outline: none; box-shadow: none; text-decoration: none; }
+.work-day-dialog .day-entry { --day-accent: #9a6a23; --day-badge-bg: #fbefcf; --day-badge-ink: #8c5c11; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 16px; padding: 15px 16px; border: 0; border-left: 3px solid var(--day-accent); color: var(--day-text); background: var(--work-paper); text-decoration: none; transition: background-color 140ms; }
 .work-day-dialog .day-entry + .day-entry { border-top: 1px solid var(--work-line); }
-.work-day-dialog .day-type { display: flex; align-items: center; justify-content: center; width: 78px; min-height: 30px; padding: 5px 4px; border-radius: 6px; background: #f0f3f6; color: #405568; font-size: 12px; line-height: 1.5; font-weight: 700; text-align: center; overflow-wrap: anywhere; }
-.day-entry-content { min-width: 0; }
-.day-entry-content strong { display: block; font-size: 17px; line-height: 1.65; font-weight: 750; overflow-wrap: anywhere; }
-.day-entry-content p { margin-top: 3px; font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
-.day-entry-content small { display: block; margin-top: 5px; color: var(--work-muted); font-size: 12px; line-height: 1.6; }
-.day-entry-arrow { align-self: center; color: var(--work-muted); font-size: 23px; line-height: 1; }
-.day-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; position: relative; }
-.day-due-help summary { display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--work-line); border-radius: 50%; cursor: pointer; list-style: none; font-size: 13px; font-weight: 700; color: var(--work-muted); }
-.day-due-help summary::-webkit-details-marker { display: none; }
-.day-due-help p { position: absolute; right: 0; top: 34px; z-index: 2; width: min(320px, 100%); padding: 14px; background: var(--work-paper); border: 1px solid var(--work-line); border-radius: 10px; box-shadow: 0 8px 24px #0002; color: var(--work-ink); font-size: 13px; line-height: 1.7; }
-.work-day-dialog .day-due-section .day-type { background: #f2edf7; color: #71518c; }
-.dark .work-day-dialog .day-type { background: #293747; color: #d3dce8; }
-.dark .work-day-dialog .day-due-section .day-type { background: #382f45; color: #dbc6ed; }
-@media (hover: hover) {
-  .work-day-dialog .day-entry:hover { background: #f7f8fa; color: var(--work-ink); outline: none; box-shadow: none; }
-  .work-day-dialog .day-create-actions a:hover, .work-day-dialog .day-close:hover { background: #f3f5f7; color: var(--work-ink); }
-  .dark .work-day-dialog .day-entry:hover, .dark .work-day-dialog .day-create-actions a:hover, .dark .work-day-dialog .day-close:hover { background: #263241; }
-}
-.work-day-dialog .day-entry:active { background: var(--work-paper); color: var(--work-ink); box-shadow: inset 3px 0 var(--work-focus); }
-.work-day-dialog .day-entry:focus-visible { outline: 2px solid var(--work-focus); outline-offset: -3px; }
-.work-day-dialog .day-close:focus-visible, .work-day-dialog .day-create-actions a:focus-visible, .day-due-help summary:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
-@media (max-width: 639px) {
-  .work-day-dialog { width: 100%; max-height: 88dvh; border-radius: 20px 20px 0 0; }
-  .work-day-dialog > header { padding: 14px 16px; }
-  .work-day-dialog .work-day-body { padding: 16px 16px 24px; }
-  .work-day-dialog .day-entry { grid-template-columns: 68px minmax(0, 1fr) 12px; gap: 10px; padding: 14px 12px; }
-  .work-day-dialog .day-type { width: 68px; }
-  .day-entry-content strong { font-size: 16px; }
-  .day-create-actions { margin-bottom: 22px; }
-}
-/* Inherit the workspace palette; keep contrast without a separate modal theme. */
-.work-day-dialog { --day-secondary: color-mix(in srgb, var(--work-ink) 82%, var(--work-paper)); }
-.work-day-dialog .day-agenda-section h3,
-.work-day-dialog .day-agenda-section h3 > span,
-.work-day-dialog .day-entry-content p,
-.work-day-dialog .day-entry-content small,
-.work-day-dialog .day-entry-arrow,
-.work-day-dialog .day-close { color: var(--day-secondary); }
-.work-day-dialog .day-entry-content small { font-size: 13px; }
-.work-day-dialog .day-type,
-.dark .work-day-dialog .day-type { background: var(--work-soft); color: var(--work-focus); }
-.work-day-dialog .day-due-section .day-type,
-.dark .work-day-dialog .day-due-section .day-type { background: var(--work-soft); color: var(--work-focus); }
-.work-day-dialog .day-create-actions a { border-color: color-mix(in srgb, var(--work-focus) 40%, var(--work-line)); color: var(--work-focus); }
-/* Inner rows follow the container's rounded corners, including keyboard focus. */
-.work-day-dialog .day-entry { transition: background-color 140ms ease; }
 .work-day-dialog .day-entry:first-child { border-start-start-radius: 11px; border-start-end-radius: 11px; }
 .work-day-dialog .day-entry:last-child { border-end-start-radius: 11px; border-end-end-radius: 11px; }
-@media (hover: hover) {
-  .work-day-dialog .day-entry:hover,
-  .dark .work-day-dialog .day-entry:hover { background: var(--work-hover); color: var(--work-ink); box-shadow: none; outline: none; }
-  .work-day-dialog .day-entry:hover strong,
-  .work-day-dialog .day-entry:hover .day-entry-arrow { color: var(--work-focus); }
-  .work-day-dialog .day-create-actions a:hover,
-  .dark .work-day-dialog .day-create-actions a:hover,
-  .work-day-dialog .day-close:hover,
-  .dark .work-day-dialog .day-close:hover { background: var(--work-hover); color: var(--work-focus); box-shadow: none; }
+.work-day-dialog .day-category-pm { --day-accent: #578c67; --day-badge-bg: #e2f1e7; --day-badge-ink: #28633a; }
+.work-day-dialog .day-category-acr { --day-accent: #8261aa; --day-badge-bg: #eee6f7; --day-badge-ink: #684388; }
+.work-day-dialog :is(.day-category-general,.day-category-etc) { --day-accent: #b1bccb; --day-badge-bg: #f0f2f6; --day-badge-ink: #4c5c72; }
+.day-entry-content { min-width: 0; }
+.work-day-dialog .day-entry-content strong { display: block; color: var(--work-focus); font-size: 14px; font-weight: 750; line-height: 1.5; overflow-wrap: anywhere; }
+.work-day-dialog .day-entry-content p { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 5px; color: var(--day-text); font-size: 16px; line-height: 1.5; font-weight: 650; overflow-wrap: anywhere; }
+.work-day-dialog .day-type { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 52px; min-height: 26px; padding: 4px 9px; margin-top: 6px; border-radius: 16px; background: var(--day-badge-bg); color: var(--day-badge-ink); font-size: 12px; line-height: 1.5; font-weight: 700; }
+.day-entry-aside { display: flex; flex-direction: column; align-items: flex-end; justify-content: center; gap: 8px; color: var(--day-secondary); font-size: 12px; white-space: nowrap; }
+.day-entry-status { color: var(--day-secondary); font-weight: 600; }
+.day-entry-status.is-completed { padding: 5px 9px; border-radius: 20px; background: #ddf2e6; color: #17633e; }
+.work-day-dialog .day-write { display: block; min-height: 44px; padding: 12px 14px; margin-top: 16px; border-radius: 10px; background: #1967d2; color: white; font-size: 15px; font-weight: 700; }
+.work-day-dialog .day-add-schedule { display: inline-flex; align-items: center; min-height: 44px; margin-top: 8px; color: var(--work-focus); font-size: 14px; font-weight: 650; }
+.day-empty { padding: 20px 0; text-align: center; color: var(--day-secondary); font-size: 14px; }
+.day-section-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; position: relative; }
+.day-due-help summary { display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--work-line); border-radius: 50%; cursor: pointer; list-style: none; font-size: 13px; color: var(--day-secondary); }
+.day-due-help summary::-webkit-details-marker { display: none; }
+.day-due-help p { position: absolute; top: 32px; right: 0; z-index: 2; width: min(320px,100%); padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); color: var(--day-text); font-size: 13px; line-height: 1.6; box-shadow: 0 5px 20px #0002; }
+@media(hover:hover) {
+ .work-day-dialog .day-entry:hover { color: var(--day-text); background: var(--work-hover); box-shadow: none; outline: none; }
+ .work-day-dialog .day-write:hover { background: #1254b3; color: white; }
+ .work-day-dialog .day-close:hover { background: var(--work-hover); }
 }
-.work-day-dialog .day-entry:active { background: var(--work-soft); color: var(--work-ink); box-shadow: none; }
-
-/* Hospital page and its card grid must not share the same grid layout. */
+.work-day-dialog .day-entry:active { background: var(--work-soft); }
+.work-day-dialog .day-entry:focus-visible { outline: 2px solid var(--work-focus); outline-offset: -3px; }
+.dark .work-day-dialog .day-entry { --day-accent: #bd934a; --day-badge-bg: #493d25; --day-badge-ink: #f5d590; }
+.dark .work-day-dialog .day-category-pm { --day-accent: #7db98b; --day-badge-bg: #274638; --day-badge-ink: #bfe9cb; }
+.dark .work-day-dialog .day-category-acr { --day-accent: #b392d5; --day-badge-bg: #41314f; --day-badge-ink: #e4ccff; }
+.dark .work-day-dialog :is(.day-category-general,.day-category-etc) { --day-accent: #8092a7; --day-badge-bg: #30434d; --day-badge-ink: #c8e1ef; }
+.dark .work-day-dialog .is-completed { background: #234b39; color: #bcf1d3; }
+@media(max-width:639px) {
+ .work-day-dialog { inset: auto 0 0; width: 100%; max-height: 90dvh; border-radius: 18px 18px 0 0; }
+ .work-day-dialog .work-day-body { padding: 0 10px 16px; }
+ .work-day-dialog .day-agenda-section { padding: 14px 12px; }
+ .work-day-dialog .day-entry { gap: 10px; padding: 13px 10px; }
+ .day-entry-aside { font-size: 11px; }
+ .work-day-dialog .day-entry-content p { font-size: 15px; }
+}
+/* Hospital grid belongs to the list, never the entire page. */
 .work-hospital-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
 .work-hospital { min-width: 0; }
 .work-hospital > div { min-width: 0; overflow-wrap: anywhere; }
 .work-hospital-icon { flex-shrink: 0; }
 .work-hospital .work-chevron { margin-left: auto; }
-/* Day records follow the familiar service-history list. */
-.work-day-dialog .day-entry { grid-template-columns: minmax(0, 1fr) auto; border-left: 3px solid var(--work-focus); gap: 16px; }
-.work-day-dialog .day-entry-content strong { color: var(--work-focus); font-size: 14px; }
-.work-day-dialog .day-entry-content p { font-size: 16px; font-weight: 650; margin: 4px 0 8px; }
-.work-day-dialog .day-type { width: auto; min-width: 60px; display: inline-flex; padding: 4px 10px; }
-.day-entry-aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; color: var(--day-secondary); font-size: 12px; padding-top: 4px; white-space: nowrap; }
-.day-entry-status { border-radius: 20px; padding: 5px 10px; background: var(--work-soft); color: var(--work-focus); font-weight: 700; }
-.day-entry-status.is-completed { background: #dff2e8; color: #17633e; }
-.dark .day-entry-status.is-completed { background: #234b39; color: #bcf1d3; }
-@media(max-width:479px) {
-  .work-day-dialog .day-entry { gap: 8px; padding: 14px 10px; }
-  .day-entry-aside { font-size: 11px; }
-}

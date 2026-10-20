@@ -216,7 +216,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         description={
           editing
             ? "작업 구분에 맞는 점검·서비스 기록을 작성하세요."
-            : `${record?.workDate} · ${record?.sourceId ? "이관 계정" : "등록자"} ${record?.authorName}`
+            : `${record?.workDate} · 작성자 ${record?.authorName}`
         }
         action={
           !editing && canEdit ? (
