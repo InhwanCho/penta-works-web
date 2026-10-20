@@ -197,7 +197,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const lastAtLabel = data.lastAt ? fmtDate(new Date(data.lastAt)) : "-";
 
   return (
-    <main className="mobile-safe-inline mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+    <main className="site-detail-page mobile-safe-inline mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       <div className="mb-2 sm:mb-3">
         <Link
           className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex min-h-10 items-center justify-center gap-x-1.5 rounded-lg px-2 text-sm font-bold transition-colors"
@@ -207,7 +207,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </Link>
       </div>
 
-      <div className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-3 shadow-sm sm:mb-4 sm:p-4">
+      <div className="hospital-detail-card">
         <div className="min-w-0">
           <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight break-words">
             {data.site.name || "-"}
@@ -235,7 +235,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
       <HospitalWork siteId={data.site.siteDb} />
 
-      <fieldset className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm">
+      <fieldset className="hospital-detail-card">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
           표시 건수 · 기간 조회
         </legend>
@@ -318,7 +318,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </fieldset>
 
       <section
-        className="dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3"
+        className="hospital-detail-card"
         aria-label="차트 표시 설정"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">

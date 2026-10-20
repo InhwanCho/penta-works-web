@@ -32,7 +32,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
   return (
-    <section className="work-panel hospital-assets">
+    <section className="work-panel hospital-assets hospital-detail-card">
       <div className="work-section">
         <div>
           <h2>병원 정비이력</h2>

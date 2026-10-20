@@ -14,10 +14,10 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
   if (!session) return null;
   return (
     <section
-      className="work-panel hospital-planning"
+      className="work-panel hospital-planning hospital-detail-card"
       id="inspection-plan"
     >
-      <div className="work-section">
+      <div className="work-section planning-heading">
         <div className="flex items-center gap-1">
           <h2>점검 주기·지정일</h2>
           <HelpButton
@@ -31,7 +31,7 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
             className="work-secondary"
             onClick={() => setEditing(!editing)}
           >
-            {editing ? "닫기" : "변경"}
+            {editing ? "취소" : "변경"}
           </button>
         )}
       </div>
@@ -68,9 +68,6 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
               <dd>{plan?.acrDocOverride || "자동 계산 · 12개월"}</dd>
             </div>
           </dl>
-          <p className="work-hint">
-            완료 이력으로 점검 기한을 계산합니다. 방문 일정과는 별도입니다.
-          </p>
         </>
       )}
     </section>
@@ -119,11 +116,11 @@ function PlanEditor({
   return (
     <form
       onSubmit={save}
-      className="work-form"
+      className="work-form planning-editor"
     >
       <fieldset
         disabled={busy}
-        className="work-form"
+        className="planning-editor-fields"
       >
         <label>
           PM 주기 (개월)

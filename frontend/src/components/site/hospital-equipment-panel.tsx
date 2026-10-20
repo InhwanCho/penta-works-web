@@ -20,7 +20,7 @@ export default function HospitalEquipmentPanel({
   const query = useHospitalAssets(siteId);
   const [managing, setManaging] = useState(false);
   return (
-    <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 min-w-0 rounded-xl border bg-white p-3 shadow-sm sm:p-4">
+    <section className="hospital-detail-card">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold">장비·부품</h2>
         {session && (
