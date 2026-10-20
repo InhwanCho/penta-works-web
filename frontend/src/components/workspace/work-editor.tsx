@@ -532,6 +532,8 @@ export default function WorkEditor({ id }: { id?: string }) {
 }
 function ReadRecord({ record: r }: { record: WorkRecord }) {
   const d = parseDetails(r.detailsJson);
+  const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
+  const showBody = !!r.body.trim() && ![d.symptom, d.parts, d.followUp].some((text) => !!text.trim() && normalize(text) === normalize(r.body));
   return (
     <article className="work-panel work-form">
       <div>
@@ -589,7 +591,7 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
           연결된 일정 보기 →
         </Link>
       )}
-      <p className="work-prewrap">{r.body}</p>
+      {showBody && <p className="work-prewrap">{r.body}</p>}
       {r.serviceType === "PM" && (
         <section>
           <h2>PM 점검표</h2>

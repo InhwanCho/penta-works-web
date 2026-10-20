@@ -304,6 +304,7 @@ export function PhotoGallery({ recordId }: { recordId: number }) {
     queryFn: () =>
       apiFetch<PhotoMeta[]>(`/workspace/photos?recordId=${recordId}`),
   });
+  if (!query.error && !query.data?.length) return null;
   return (
     <section>
       <h2>사진</h2>
@@ -323,9 +324,6 @@ export function PhotoGallery({ recordId }: { recordId: number }) {
             />
           ))}
         </div>
-      )}
-      {query.data?.length === 0 && (
-        <p className="work-hint">첨부된 사진이 없습니다.</p>
       )}
     </section>
   );
