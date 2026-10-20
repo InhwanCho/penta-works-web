@@ -2157,3 +2157,6 @@ h4,
  .work-day-dialog .day-section-empty { display: block; }
  .work-day-dialog .day-section-empty .day-section-toolbar { margin-bottom: 4px; }
 }
+@media(max-width:1023px) {
+ .work-day-dialog .day-section-action { min-width: 64px; min-height: 36px; padding: 6px 10px; font-size: 12px; }
+}
