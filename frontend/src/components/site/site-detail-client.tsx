@@ -31,6 +31,20 @@ const TimeSeriesLines = dynamic(
   },
 );
 
+const QUICK_PERIODS = [{label:"1주",months:0},{label:"3달",months:3},{label:"6달",months:6},{label:"1년",months:12}];
+function quickPeriodStart(end: Date, months: number) {
+  const start = new Date(end.getTime() + 9*60*60*1000);
+  if (months) {
+    const day = start.getUTCDate();
+    start.setUTCDate(1);
+    start.setUTCMonth(start.getUTCMonth()-months);
+    const lastDay = new Date(Date.UTC(start.getUTCFullYear(),start.getUTCMonth()+1,0)).getUTCDate();
+    start.setUTCDate(Math.min(day,lastDay));
+  } else start.setUTCDate(start.getUTCDate()-7);
+  start.setTime(start.getTime()-9*60*60*1000);
+  return start;
+}
+
 type ViewMode = "single" | "grid" | "list";
 const MODES: { key: ViewMode; label: string }[] = [
   { key: "single", label: "집중 보기" },
@@ -58,6 +72,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const from = sp.get("from");
   const to = sp.get("to");
   const periodActive = !!(from && to);
+  const activePeriod = from && to ? QUICK_PERIODS.find(period => Math.abs(quickPeriodStart(new Date(to), period.months).getTime() - new Date(from).getTime()) < 1000)?.label : undefined;
   const [periodStart, setPeriodStart] = useState(() => localDateTime(from, new Date(Date.now() - 86400000)));
   const [periodEnd, setPeriodEnd] = useState(() => localDateTime(to, new Date()));
   const [periodError, setPeriodError] = useState("");
@@ -279,20 +294,12 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           />
         </div>
         <div role="group" aria-label="빠른 기간 조회" className="site-query-grid mt-3 grid grid-cols-4 gap-2">
-          {[{label:"1주",months:0},{label:"3달",months:3},{label:"6달",months:6},{label:"1년",months:12}].map(period=><button key={period.label} type="button" disabled={isFetching} onClick={()=>{
+          {QUICK_PERIODS.map(period=><button key={period.label} type="button" aria-pressed={activePeriod === period.label} disabled={isFetching} onClick={()=>{
             const end = new Date();
-            const start = new Date(end.getTime() + 9*60*60*1000);
-            if (period.months) {
-              const day = start.getUTCDate();
-              start.setUTCDate(1);
-              start.setUTCMonth(start.getUTCMonth()-period.months);
-              const lastDay = new Date(Date.UTC(start.getUTCFullYear(),start.getUTCMonth()+1,0)).getUTCDate();
-              start.setUTCDate(Math.min(day,lastDay));
-            } else start.setUTCDate(start.getUTCDate()-7);
-            start.setTime(start.getTime()-9*60*60*1000);
+            const start = quickPeriodStart(end, period.months);
             setPeriodError("");
             router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:start.toISOString(),to:end.toISOString(),take:String(take)})}`,{scroll:false});
-          }} className="min-h-11 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-2 text-sm font-bold text-sky-800 disabled:opacity-50 dark:border-slate-600 dark:bg-background-dark-secondary dark:text-sky-200">{period.label}</button>)}
+          }} className={`min-h-11 whitespace-nowrap rounded-lg border px-2 text-sm font-bold disabled:opacity-50 ${activePeriod === period.label ? "border-brand-primary bg-brand-primary text-white" : "border-slate-300 bg-white text-sky-800 dark:border-slate-600 dark:bg-background-dark-secondary dark:text-sky-200"}`}>{period.label}</button>)}
         </div>
         <form className="site-period-form mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
           event.preventDefault();
