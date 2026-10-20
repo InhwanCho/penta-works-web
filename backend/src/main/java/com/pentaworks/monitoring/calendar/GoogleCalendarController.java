@@ -47,9 +47,9 @@ public class GoogleCalendarController {
  @GetMapping
  public Map<String,Object> status(Authentication auth){
   var u=users.require(auth);
-  var rows=db.queryForList("SELECT status,calendar_id FROM user_calendar_connection WHERE user_id=? AND company_id=? AND provider='GOOGLE'",u.id(),u.companyId());
+  var rows=db.queryForList("SELECT status,calendar_id,last_error_code FROM user_calendar_connection WHERE user_id=? AND company_id=? AND provider='GOOGLE'",u.id(),u.companyId());
   String status=rows.isEmpty()?"DISCONNECTED":rows.get(0).get("status").toString();
-  return Map.of("configured",configured(),"status",status,"connected",status.equals("CONNECTED"));
+  return Map.of("configured",configured(),"status",status,"connected",status.equals("CONNECTED"),"errorCode",rows.isEmpty()||rows.get(0).get("last_error_code")==null?"":rows.get(0).get("last_error_code"));
  }
  @PostMapping("/connect")
  @Transactional
@@ -71,18 +71,18 @@ public class GoogleCalendarController {
  @Transactional
  public void callback(@RequestParam(required=false) String state,@RequestParam(required=false) String code,
   @RequestParam(required=false) String error,HttpServletRequest request,HttpServletResponse response)throws java.io.IOException {
-  String outcome="failed";
+  String outcome="failed";String reason="invalid_state";
   String browser="";if(request.getCookies()!=null)for(var c:request.getCookies())if(c.getName().equals("mreyes_calendar_oauth"))browser=c.getValue();
   if(configured()&&state!=null&&!browser.isBlank()) {
    var rows=db.queryForList("SELECT s.connection_id,c.calendar_id,c.user_id,c.company_id FROM calendar_oauth_state s JOIN user_calendar_connection c ON c.id=s.connection_id JOIN app_user u ON u.id=c.user_id AND u.company_id=c.company_id JOIN company co ON co.id=c.company_id WHERE s.state_hash=? AND s.browser_hash=? AND s.expires_at>NOW() AND u.status='ACTIVE' AND co.status='ACTIVE' FOR UPDATE",hash(state),hash(browser));
    if(!rows.isEmpty()) {
     var row=rows.get(0);Object id=row.get("connection_id");db.update("DELETE FROM calendar_oauth_state WHERE state_hash=?",hash(state));
     if(error!=null)outcome="cancelled";
-    else if(code!=null)try {
+    else if(code!=null){String stage="token";try {
      var form=new LinkedMultiValueMap<String,String>();form.add("code",code);form.add("client_id",clientId);form.add("client_secret",clientSecret);form.add("redirect_uri",redirectUri);form.add("grant_type","authorization_code");
      Map<?,?> token=http.post().uri("https://oauth2.googleapis.com/token").body(form).retrieve().body(Map.class);
-     if(token==null||!(token.get("refresh_token") instanceof String refresh)||refresh.isBlank()||!(token.get("access_token") instanceof String access))throw new IllegalStateException();
-     String calendarId=null;
+     if(token==null||!(token.get("refresh_token") instanceof String refresh)||refresh.isBlank()||!(token.get("access_token") instanceof String access))throw new IllegalStateException("missing_token");
+     stage="calendar";String calendarId=null;
      // Reuse the app calendar only if the newly authorized account can access it.
      if(row.get("calendar_id") instanceof String old)try {
       var existing=http.get().uri("https://www.googleapis.com/calendar/v3/calendars/{id}",old).header("Authorization","Bearer "+access).retrieve().body(Map.class);
@@ -94,14 +94,27 @@ public class GoogleCalendarController {
       if(calendar==null||calendar.get("id")==null)throw new IllegalStateException();calendarId=calendar.get("id").toString();
      }
      if(!Objects.equals(calendarId,row.get("calendar_id")))db.update("DELETE FROM calendar_event_mapping WHERE connection_id=?",id);
-     db.update("UPDATE user_calendar_connection SET calendar_id=?,refresh_token_encrypted=?,status='CONNECTED' WHERE id=?",calendarId,encrypt(refresh),id);
+     db.update("UPDATE user_calendar_connection SET calendar_id=?,refresh_token_encrypted=?,status='CONNECTED',last_error_code=NULL WHERE id=?",calendarId,encrypt(refresh),id);
      outcome="connected";
-    }catch(Exception e){outcome="failed";} // Never log Google responses, authorization codes or tokens.
+    }catch(Exception e){
+     outcome="failed";reason=stage+"_failed";
+     if(e instanceof org.springframework.web.client.RestClientResponseException re){
+      reason=stage+"_http_"+re.getStatusCode().value();
+      // Read only a known error reason; never persist or log the Google response or token.
+      try {
+       var json=new com.fasterxml.jackson.databind.ObjectMapper().readTree(re.getResponseBodyAsString());
+       String googleReason=json.path("error").path("errors").path(0).path("reason").asText("");
+       if(Set.of("accessNotConfigured","insufficientPermissions","forbidden","rateLimitExceeded","dailyLimitExceeded").contains(googleReason))reason=googleReason;
+       for(var detail:json.path("error").path("details"))if("SERVICE_DISABLED".equals(detail.path("reason").asText()))reason="accessNotConfigured";
+      }catch(Exception ignored){}
+     }else if("missing_token".equals(e.getMessage()))reason="missing_token";
+     db.update("UPDATE user_calendar_connection SET last_error_code=? WHERE id=?",reason,id);
+    }} // Never log Google responses, authorization codes or tokens.
    }
   }
   cookie(response,"",0);response.setHeader("Cache-Control","no-store");response.setHeader("Referrer-Policy","no-referrer");
   // Keep the redirect relative so reverse proxies cannot expose the backend origin/port.
-  response.setStatus(302);response.setHeader("Location","/settings?googleCalendar="+outcome);
+  response.setStatus(302);response.setHeader("Location","/settings?googleCalendar="+outcome+("failed".equals(outcome)?"&calendarError="+reason:"")+"#google-calendar");
  }
  @DeleteMapping
  @Transactional
@@ -110,7 +123,7 @@ public class GoogleCalendarController {
   var rows=db.queryForList("SELECT id FROM user_calendar_connection WHERE user_id=? AND company_id=? FOR UPDATE",u.id(),u.companyId());
   if(!rows.isEmpty()){
    Object id=rows.get(0).get("id");db.update("DELETE FROM calendar_oauth_state WHERE connection_id=?",id);
-   db.update("UPDATE user_calendar_connection SET refresh_token_encrypted=NULL,status='DISCONNECTED' WHERE id=?",id);
+   db.update("UPDATE user_calendar_connection SET refresh_token_encrypted=NULL,status='DISCONNECTED',last_error_code=NULL WHERE id=?",id);
   }
   // Existing Google events remain; clearing the token stops this application's access.
   return Map.of("disconnected",true);

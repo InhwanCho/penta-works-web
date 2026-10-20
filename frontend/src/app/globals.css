@@ -2339,3 +2339,6 @@ h4,
  :root { --workspace-bottom-height: calc(68px + env(safe-area-inset-bottom, 0px)); }
  .workspace-frame { padding-bottom: calc(var(--workspace-bottom-height) + 12px); }
 }
+
+.calendar-connection-section { scroll-margin-top: calc(5rem + env(safe-area-inset-top, 0px)); }
+.calendar-connection-result { margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-brand-primary); border-radius: 10px; background: var(--work-soft); color: var(--work-ink); font-size: 14px; line-height: 1.6; }

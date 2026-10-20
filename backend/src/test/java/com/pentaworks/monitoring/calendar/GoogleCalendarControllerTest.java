@@ -49,25 +49,25 @@ class GoogleCalendarControllerTest {
  }
  @Test void callbackWithoutBrowserBindingCannotExchangeCode()throws Exception{
   var response=new MockHttpServletResponse();controller.callback("forged","code",null,new MockHttpServletRequest(),response);
-  assertEquals("/settings?googleCalendar=failed",response.getHeader("Location"));verifyNoInteractions(db);
+  assertEquals("/settings?googleCalendar=failed&calendarError=invalid_state#google-calendar",response.getHeader("Location"));verifyNoInteractions(db);
  }
  void validState(){when(db.queryForList(contains("SELECT s.connection_id"),anyString(),anyString())).thenReturn(List.of(Map.of("connection_id",5L,"user_id",12L,"company_id",1L)));}
  MockHttpServletRequest request(){var r=new MockHttpServletRequest();r.setCookies(new Cookie("mreyes_calendar_oauth","browser-nonce"));return r;}
  @Test void unknownOrExpiredStateCannotConnect()throws Exception{
   var response=new MockHttpServletResponse();controller.callback("unknown","code",null,request(),response);
-  assertEquals("/settings?googleCalendar=failed",response.getHeader("Location"));
+  assertEquals("/settings?googleCalendar=failed&calendarError=invalid_state#google-calendar",response.getHeader("Location"));
   verify(db,never()).update(anyString(),any(Object[].class));
  }
  @Test void googleTokenFailureDoesNotSaveConnection()throws Exception{
   validState();var builder=RestClient.builder();var server=MockRestServiceServer.bindTo(builder).build();ReflectionTestUtils.setField(controller,"http",builder.build());
   server.expect(requestTo("https://oauth2.googleapis.com/token")).andRespond(withBadRequest());
   var response=new MockHttpServletResponse();controller.callback("nonce","bad-code",null,request(),response);
-  assertEquals("/settings?googleCalendar=failed",response.getHeader("Location"));
+  assertEquals("/settings?googleCalendar=failed&calendarError=token_http_400#google-calendar",response.getHeader("Location"));
   verify(db,never()).update(contains("status='CONNECTED'"),any(),any(),any());server.verify();
  }
  @Test void consentCancellationConsumesStateWithoutConnecting()throws Exception{
   validState();var response=new MockHttpServletResponse();controller.callback("nonce",null,"access_denied",request(),response);
-  assertEquals("/settings?googleCalendar=cancelled",response.getHeader("Location"));
+  assertEquals("/settings?googleCalendar=cancelled#google-calendar",response.getHeader("Location"));
   verify(db).update(contains("DELETE FROM calendar_oauth_state WHERE state_hash"),anyString());
   verify(db,never()).update(contains("status='CONNECTED'"),any(),any(),any());
  }
@@ -79,7 +79,7 @@ class GoogleCalendarControllerTest {
    .andExpect(content().string(org.hamcrest.Matchers.containsString("Asia/Seoul")))
    .andRespond(withSuccess("{\"id\":\"test-calendar\"}",MediaType.APPLICATION_JSON));
   var response=new MockHttpServletResponse();controller.callback("nonce","code",null,request(),response);
-  assertEquals("/settings?googleCalendar=connected",response.getHeader("Location"));
+  assertEquals("/settings?googleCalendar=connected#google-calendar",response.getHeader("Location"));
   var encrypted=org.mockito.ArgumentCaptor.forClass(String.class);
   verify(db).update(contains("status='CONNECTED'"),eq("test-calendar"),encrypted.capture(),eq(5L));
   assertNotEquals("refresh-test",encrypted.getValue());byte[] bytes=Base64.getDecoder().decode(encrypted.getValue());

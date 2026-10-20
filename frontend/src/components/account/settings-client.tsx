@@ -54,6 +54,7 @@ export default function SettingsClient() {
           </span>
         </div>
       </Link>
+      <CalendarConnection userId={session.id} />
       <section className="work-panel settings-section">
         <h2>화면 설정</h2>
         <ChoiceGroup
@@ -115,7 +116,6 @@ export default function SettingsClient() {
           )}
         </section>
       )}
-      <CalendarConnection userId={session.id} />
       <LogoutControls />
     </main>
   );
