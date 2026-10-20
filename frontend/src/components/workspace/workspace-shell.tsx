@@ -3,7 +3,7 @@ import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 const items = [
   { href: "/", label: "모니터링", icon: "monitor" },
   { href: "/overview", label: "업무 현황", icon: "home" },
@@ -96,6 +96,16 @@ export function WorkIcon({ name }: { name: string }) {
 export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { session } = useAuth();
+  const bottomNav = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = bottomNav.current;
+    if (!nav) return;
+    const measure = () => document.documentElement.style.setProperty("--workspace-bottom-height", `${nav.getBoundingClientRect().height}px`);
+    const observer = new ResizeObserver(measure);
+    observer.observe(nav);
+    measure();
+    return () => { observer.disconnect(); document.documentElement.style.removeProperty("--workspace-bottom-height"); };
+  }, [session]);
   if (!session) return children;
   const active = (href: string) =>
     path === href ||
@@ -131,6 +141,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
       </aside>
       <div className="workspace-content">{children}</div>
       <nav
+        ref={bottomNav}
         className="workspace-bottom"
         aria-label="주 메뉴"
       >

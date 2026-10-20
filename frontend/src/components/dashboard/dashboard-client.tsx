@@ -204,7 +204,7 @@ export default function DashboardClient() {
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
         {viewOptions}
       </MobileFilterDialog>}
-      <button type="button" aria-label="대시보드 필터" aria-expanded={showMobileFilters} aria-controls="dashboard-mobile-tools" onClick={() => setShowMobileFilters(open => !open)} className="fixed right-0 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] z-[55] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">필터 {showMobileFilters ? "›" : "‹"}{statusFilter !== "all" && <span className="ml-1 inline-block h-2 w-2 rounded-full bg-sky-500" aria-label={`${STATUS_FILTER_LABEL[statusFilter]} ${sortedRows.length}개`} />}</button>
+      <button type="button" aria-label="대시보드 필터" aria-expanded={showMobileFilters} aria-controls="dashboard-mobile-tools" onClick={() => setShowMobileFilters(open => !open)} className="dashboard-filter-trigger fixed right-0 z-[35] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">필터 {showMobileFilters ? "›" : "‹"}{statusFilter !== "all" && <span className="ml-1 inline-block h-2 w-2 rounded-full bg-sky-500" aria-label={`${STATUS_FILTER_LABEL[statusFilter]} ${sortedRows.length}개`} />}</button>
     </div>
   );
 
@@ -309,7 +309,7 @@ function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClos
       const bounds = event.currentTarget.getBoundingClientRect();
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
     }}
-    className="fixed inset-x-3 top-auto bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] m-0 mx-auto max-h-[70dvh] w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-text-major shadow-xl backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
+    className="dashboard-filter-dialog fixed inset-x-3 top-auto m-0 mx-auto w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-text-major shadow-xl backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
     {children}
   </dialog>;
 }

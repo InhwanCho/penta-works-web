@@ -2328,3 +2328,14 @@ h4,
  .work-hospitals .work-hospital-grid .hospital-directory-equipment { margin-top: 4px; font-size: 12px; line-height: 1.4; }
  .work-hospitals .work-hospital-grid .hospital-directory-address { margin-top: 3px; font-size: 12px; line-height: 1.4; }
 }
+
+/* Reserve the measured bottom navigation height, including safe-area and large text. */
+.dashboard-filter-trigger { bottom: calc(var(--workspace-bottom-height, 0px) + 12px); }
+.dashboard-filter-dialog {
+ bottom: calc(var(--workspace-bottom-height, 0px) + 12px);
+ max-height: min(70dvh, calc(100dvh - var(--workspace-bottom-height, 0px) - 5rem - env(safe-area-inset-top, 0px)));
+}
+@media (max-width: 1023px) {
+ :root { --workspace-bottom-height: calc(68px + env(safe-area-inset-bottom, 0px)); }
+ .workspace-frame { padding-bottom: calc(var(--workspace-bottom-height) + 12px); }
+}
