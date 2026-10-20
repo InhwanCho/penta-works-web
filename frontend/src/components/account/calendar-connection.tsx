@@ -14,10 +14,17 @@ export default function CalendarConnection({ userId }: { userId: number }) {
     const url = new URL(window.location.href);
     const result = url.searchParams.get("googleCalendar");
     if (!result) return;
-    setMessage(result === "connected" ? "구글캘린더 연결이 완료되었습니다." : result === "cancelled" ? "연결을 취소했습니다." : calendarErrorMessage(url.searchParams.get("calendarError") || ""));
+    setMessage(result === "connected" ? "" : result === "cancelled" ? "연결을 취소했습니다." : calendarErrorMessage(url.searchParams.get("calendarError") || ""));
     section.current?.scrollIntoView({ block: "start" });
   }, []);
+  function clearCallbackResult() {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("googleCalendar");
+    url.searchParams.delete("calendarError");
+    window.history.replaceState(window.history.state, "", url.toString());
+  }
   async function connect() {
+    clearCallbackResult();
     setBusy(true); setMessage("");
     try {
       const result = await apiFetch<{ url: string }>("/integrations/google-calendar/connect", { method: "POST" });
@@ -26,22 +33,30 @@ export default function CalendarConnection({ userId }: { userId: number }) {
   }
   async function disconnect() {
     if (!window.confirm("구글캘린더 연결을 해제할까요? 구글에 있는 캘린더와 일정은 그대로 남습니다.")) return;
+    clearCallbackResult();
     setBusy(true); setMessage("");
-    try { await apiFetch("/integrations/google-calendar", { method: "DELETE" }); await cache.invalidateQueries({ queryKey: key }); setMessage("연결을 해제했습니다."); }
+    try { await apiFetch("/integrations/google-calendar", { method: "DELETE" }); await cache.invalidateQueries({ queryKey: key }); setMessage("연동을 해제했습니다."); }
     catch (e) { setMessage(e instanceof Error ? e.message : "연결을 해제하지 못했습니다."); }
     finally { setBusy(false); }
   }
   const storedError = !message && query.data?.errorCode ? calendarErrorMessage(query.data.errorCode) : "";
   return <section ref={section} id="google-calendar" className="work-panel settings-section calendar-connection-section">
     {(message || storedError) && <div className="calendar-connection-result" role="status" aria-live="polite"><strong>{message || storedError}</strong></div>}
-    <h2>구글캘린더</h2>
-    <p>{query.isPending ? "연결 상태를 불러오는 중…" : query.isError ? "연결 상태를 불러오지 못했습니다." : query.data.connected ? "연결됨" : query.data.status === "RECONNECT_REQUIRED" ? "다시 연결해주세요" : "연결되지 않음"}</p>
-    <p>내 구글 계정의 MReyes 전용 캘린더를 연결합니다. 일정 자동 동기화는 아직 제공하지 않습니다.</p>
-    {query.isError ? <button type="button" onClick={() => query.refetch()}>다시 불러오기</button> : query.data && <div className="calendar-connection-actions">
-      <button type="button" className="work-button" disabled={busy || !query.data.configured} onClick={connect}>{busy ? "처리 중…" : query.data.connected ? "다시 연결" : "구글캘린더 연결"}</button>
-      {query.data.connected && <button type="button" className="work-button-secondary" disabled={busy} onClick={disconnect}>연결 해제</button>}
-      {!query.data.configured && <small>관리자가 구글캘린더 연결을 준비 중입니다.</small>}
-    </div>}
+    <h2>외부 연동</h2>
+    <div className="settings-link calendar-settings-row">
+      <span>
+        <strong>구글캘린더</strong>
+        <small role="status">{query.isPending ? "불러오는 중…" : query.isError ? "상태 확인 실패" : query.data.connected ? "연동완료" : query.data.status === "RECONNECT_REQUIRED" ? "재연동 필요" : "연동 안 됨"}</small>
+      </span>
+      <div className="calendar-settings-actions">
+        {query.isError ? <button type="button" onClick={() => query.refetch()}>다시 확인</button> : query.data && (
+          query.data.connected
+            ? <button type="button" disabled={busy} onClick={disconnect}>{busy ? "처리 중…" : "해제"}</button>
+            : <button type="button" disabled={busy || !query.data.configured} onClick={connect}>{busy ? "처리 중…" : query.data.status === "RECONNECT_REQUIRED" ? "다시 연동" : "연동하기"}</button>
+        )}
+      </div>
+    </div>
+    <p className="calendar-settings-note">{query.data && !query.data.configured ? "연동 기능을 준비 중입니다." : "내 구글 계정에 연결합니다. 일정 자동 동기화는 준비 중입니다."}</p>
 
   </section>;
 }

@@ -2313,12 +2313,6 @@ h4,
 .planning-guide > summary > svg { display: block; flex-shrink: 0; align-self: center; }
 .planning-guide[open] > summary > svg { transform: rotate(180deg); }
 
-.calendar-connection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-.calendar-connection-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--work-line); border-radius: 10px; font-weight: 600; background: var(--work-paper); color: var(--work-ink); }
-.calendar-connection-actions button:disabled { opacity: .55; cursor: not-allowed; }
-
-@media (hover: hover) { .calendar-connection-actions button:not(:disabled):hover { background: var(--work-soft); border-color: var(--color-brand-primary); } }
-
 /* Compact hospital directory on small screens, retaining equipment and address. */
 @media (max-width: 1023px) {
  .work-hospitals .work-hospital-grid { grid-template-columns: 1fr; gap: 8px; }
@@ -2342,3 +2336,10 @@ h4,
 
 .calendar-connection-section { scroll-margin-top: calc(5rem + env(safe-area-inset-top, 0px)); }
 .calendar-connection-result { margin-bottom: 16px; padding: 14px; border: 1px solid var(--color-brand-primary); border-radius: 10px; background: var(--work-soft); color: var(--work-ink); font-size: 14px; line-height: 1.6; }
+
+.calendar-settings-row { padding-top: 0; min-height: 56px; }
+.calendar-settings-actions { flex-shrink: 0; }
+.calendar-settings-actions button { min-height: 36px; padding: 7px 12px; border: 1px solid var(--work-line); border-radius: 8px; background: var(--work-paper); color: var(--work-ink); font-size: 12px; font-weight: 600; }
+.calendar-settings-actions button:disabled { opacity: .55; cursor: not-allowed; }
+.calendar-settings-note { margin: 0; color: var(--work-muted); font-size: 12px; line-height: 1.6; }
+@media (hover: hover) { .calendar-settings-actions button:not(:disabled):hover { background: var(--work-soft); } }
