@@ -2051,11 +2051,12 @@ h4,
 .dark .work-day-dialog .day-due-section .day-type { background: var(--work-soft); color: var(--work-focus); }
 .work-day-dialog .day-create-actions a { border-color: color-mix(in srgb, var(--work-focus) 40%, var(--work-line)); color: var(--work-focus); }
 /* Inner rows follow the container's rounded corners, including keyboard focus. */
+.work-day-dialog .day-entry { transition: background-color 140ms ease; }
 .work-day-dialog .day-entry:first-child { border-start-start-radius: 11px; border-start-end-radius: 11px; }
 .work-day-dialog .day-entry:last-child { border-end-start-radius: 11px; border-end-end-radius: 11px; }
 @media (hover: hover) {
   .work-day-dialog .day-entry:hover,
-  .dark .work-day-dialog .day-entry:hover { background: var(--work-paper); color: var(--work-ink); box-shadow: none; outline: none; }
+  .dark .work-day-dialog .day-entry:hover { background: var(--work-hover); color: var(--work-ink); box-shadow: none; outline: none; }
   .work-day-dialog .day-entry:hover strong,
   .work-day-dialog .day-entry:hover .day-entry-arrow { color: var(--work-focus); }
   .work-day-dialog .day-create-actions a:hover,
