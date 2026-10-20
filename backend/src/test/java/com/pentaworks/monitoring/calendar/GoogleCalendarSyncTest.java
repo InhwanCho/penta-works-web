@@ -22,4 +22,17 @@ class GoogleCalendarSyncTest {
   assertEquals("[휴가] 홍길동",GoogleCalendarSync.event(s,"https://app.example.com").get("summary"));
   s.put("personal_kind","annual");assertEquals("[연차] 홍길동",GoogleCalendarSync.event(s,"https://app.example.com").get("summary"));
  }
+ @Test void deadlinesUseSameOverrideAndMonthEndRulesAsOverview(){
+  var last=java.time.LocalDate.of(2026,8,31);
+  assertEquals(java.time.LocalDate.of(2026,10,31),GoogleCalendarSync.nextDue(last,null,2));
+  assertEquals(java.time.LocalDate.of(2026,10,21),GoogleCalendarSync.nextDue(last,java.time.LocalDate.of(2026,10,21),2));
+  assertEquals(java.time.LocalDate.of(2026,10,31),GoogleCalendarSync.nextDue(last,last,2));
+  assertNull(GoogleCalendarSync.nextDue(null,null,2));
+ }
+ @Test void recordLinksAndAllDayEndAreSpecific(){
+  var e=GoogleCalendarSync.dayEvent("기록",java.time.LocalDate.of(2026,10,20),"내용","/work/219","record:219","https://app.example.com/");
+  assertEquals(Map.of("date","2026-10-21"),e.get("end"));
+  assertTrue(e.get("description").toString().endsWith("https://app.example.com/work/219"));
+  assertTrue(GoogleCalendarSync.event(schedule("2026-10-21 00:00:00","2026-10-21 23:59:59"),"https://app.example.com").get("description").toString().endsWith("#schedule-6"));
+ }
 }

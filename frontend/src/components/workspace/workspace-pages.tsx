@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { HospitalRegistration } from "./hospital-profile";
@@ -386,6 +386,10 @@ export function SchedulePage() {
         s.endAt.slice(0, 10) >= selected,
     )
     .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id - b.id);
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (/^#schedule-\d+$/.test(hash)) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "center" });
+  }, [schedules.data]);
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -559,6 +563,7 @@ export function SchedulePage() {
           {rows.map((s) => (
             <article
               className="schedule-card"
+              id={`schedule-${s.id}`}
               key={s.id}
             >
               <div className="schedule-card-heading">
