@@ -79,7 +79,7 @@ export default function CustomModal({
           "shadow-[0_7px_26px_-10px_rgba(22,23,24,0.18),_0_6px_14px_-12px_rgba(22,23,24,0.1)]",
           "border border-border/80 dark:border-background-dark-secondary/80",
           // 모바일: 바텀 시트
-          "max-h-[92vh] overflow-hidden rounded-t-xl",
+          "max-h-[80dvh] lg:max-h-[92vh] overflow-hidden rounded-t-xl",
           // 데스크탑: 중앙 카드
           "sm:max-w-[560px] sm:rounded-lg",
         ].join(" ")}

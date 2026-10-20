@@ -197,7 +197,7 @@ export default function OverviewPage() {
           기준으로 집계합니다.
         </p>
       )}
-      <div className="work-section">
+      <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>
         <div className="overview-shortcuts">
           <Link href="/work">업무기록 목록</Link>

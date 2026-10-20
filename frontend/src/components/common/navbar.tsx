@@ -120,28 +120,6 @@ export default function Navbar() {
             </span>
           </Link>
 
-          {session && (
-            <span className="min-w-0 truncate px-2 text-sm font-semibold text-white/90 lg:hidden">
-              {pathname === "/"
-                ? "모니터링"
-                : pathname.startsWith("/admin")
-                  ? "관리 설정"
-                  : pathname.startsWith("/companies")
-                    ? "회사 관리"
-                    : pathname.startsWith("/account")
-                      ? "내 계정"
-                      : pathname.startsWith("/settings")
-                        ? "설정"
-                        : pathname.startsWith("/hospitals") ||
-                            pathname.startsWith("/sites/")
-                          ? "병원"
-                          : pathname.startsWith("/baselines") ||
-                              pathname.includes("notification-settings") ||
-                              pathname.includes("alert-settings")
-                            ? "알림"
-                            : "업무 현황"}
-            </span>
-          )}
           <nav className="flex shrink-0 items-center gap-1.5">
             {session && (
               <Link

@@ -2141,3 +2141,10 @@ h4,
  .work-day-dialog .day-section-empty .day-write,
  .work-day-dialog .day-section-empty .day-add-schedule { grid-column: 2; grid-row: 1 / 3; margin: 0; min-height: 40px; padding: 10px 12px; font-size: 13px; }
 }
+
+@media(max-width:1023px) {
+ .work-overview > .overview-calendar-heading { display: none; }
+ .work-overview { padding-top: 4px; }
+ .work-day-dialog, .work-picker-dialog, .equipment-management-dialog { max-height: min(80dvh, calc(100dvh - 32px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))); }
+ .work-picker-dialog ul { max-height: 40dvh; }
+}
