@@ -90,7 +90,7 @@ public class WorkspaceAssets {
         if(ids==null)ids=db.queryForList("SELECT asset_id FROM workspace_asset_history WHERE record_id=?",Long.class,recordId);
         if(sid==null&&!ids.isEmpty())throw new BadRequestException("부품 정비 기록은 병원 업무로 작성해주세요.");
         var snapshots=new LinkedHashMap<Long,Map<String,Object>>();
-        for(long id:ids){var rows=db.queryForList("SELECT "+COLUMNS+" FROM workspace_asset WHERE id=? AND company_id=? AND site_id=? FOR UPDATE",id,u.companyId(),sid);if(rows.isEmpty())throw new BadRequestException("선택한 병원에 속한 장비·부품을 선택해주세요.");snapshots.put(id,rows.get(0));}
+        for(long id:ids){var rows=db.queryForList("SELECT "+COLUMNS+" FROM workspace_asset WHERE id=? AND company_id=? AND site_id=? FOR UPDATE",id,u.companyId(),sid);if(rows.isEmpty())throw new BadRequestException("선택한 병원에 속한 장비·부품을 선택해주세요.");if(!"MRI".equals(rows.get(0).get("assetType")))snapshots.put(id,rows.get(0));}
         for(var row:db.queryForList("SELECT asset_id,change_kind FROM workspace_asset_history WHERE record_id=?",recordId)){
             long old=((Number)row.get("asset_id")).longValue();
             if(!ids.contains(old)){

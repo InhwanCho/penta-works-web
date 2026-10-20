@@ -259,41 +259,6 @@ export default function WorkEditor({ id }: { id?: string }) {
           onSubmit={save}
           className="work-panel work-form"
         >
-          <label className="work-label">
-            연결 일정
-            <select
-              value={details.scheduleId || ""}
-              onChange={(e) =>
-                setDetails({
-                  ...details,
-                  scheduleId: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-            >
-              <option value="">연결하지 않음</option>
-              {(schedules.data || [])
-                .filter(
-                  (s) =>
-                    s.siteId === (form.kind === "FIELD" ? form.siteId : null) ||
-                    s.id === details.scheduleId,
-                )
-                .map((s) => (
-                  <option
-                    key={s.id}
-                    value={s.id}
-                  >
-                    {s.startAt.slice(0, 10)} · {s.siteName || s.title} ·{" "}
-                    {s.title}
-                  </option>
-                ))}
-              {details.scheduleId &&
-                !schedules.data?.some((s) => s.id === details.scheduleId) && (
-                  <option value={details.scheduleId}>
-                    기존 연결 일정 (삭제되었거나 조회 불가)
-                  </option>
-                )}
-            </select>
-          </label>
           <ChoiceGroup
             legend="대상"
             value={form.kind}
@@ -388,6 +353,46 @@ export default function WorkEditor({ id }: { id?: string }) {
               onChange={(assetIds) => setDetails({ ...details, assetIds })}
             />
           )}
+          <details className="work-schedule-link" key={details.scheduleId ? "linked" : "unlinked"} open={details.scheduleId ? true : undefined}>
+            <summary>{details.scheduleId ? "연결된 일정" : "예정된 일정과 연결 (선택)"}</summary>
+            <p className="work-hint">일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 일지를 작성할 수 있습니다.</p>
+          <label>
+            연결할 일정
+            <select
+              className="work-input"
+              value={details.scheduleId || ""}
+              onChange={(e) =>
+                setDetails({
+                  ...details,
+                  scheduleId: e.target.value ? Number(e.target.value) : null,
+                })
+              }
+            >
+              <option value="">일정 없이 작성</option>
+              {(schedules.data || [])
+                .filter(
+                  (s) =>
+                    s.siteId === (form.kind === "FIELD" ? form.siteId : null) ||
+                    s.id === details.scheduleId,
+                )
+                .map((s) => (
+                  <option
+                    key={s.id}
+                    value={s.id}
+                  >
+                    {s.startAt.slice(0, 10)} · {s.siteName || s.title} ·{" "}
+                    {s.title}
+                  </option>
+                ))}
+              {details.scheduleId &&
+                !schedules.data?.some((s) => s.id === details.scheduleId) && (
+                  <option value={details.scheduleId}>
+                    기존 연결 일정 (삭제되었거나 조회 불가)
+                  </option>
+                )}
+            </select>
+          </label>
+          </details>
           <label>
             제목
             <input

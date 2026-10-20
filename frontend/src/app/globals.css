@@ -2050,3 +2050,11 @@ h4,
 .work-hospital > div { min-width: 0; overflow-wrap: anywhere; }
 .work-hospital-icon { flex-shrink: 0; }
 .work-hospital .work-chevron { margin-left: auto; }
+
+.work-schedule-link { border: 1px solid var(--work-line); border-radius: 10px; padding: 0 14px; }
+.work-schedule-link > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 48px; color: var(--work-ink); font-size: 14px; font-weight: 650; cursor: pointer; list-style: none; }
+.work-schedule-link > summary::after { content: '+'; font-size: 20px; color: var(--work-focus); }
+.work-schedule-link[open] > summary::after { content: '−'; }
+.work-schedule-link > summary::-webkit-details-marker { display: none; }
+.work-schedule-link > label { display: grid; gap: 8px; padding: 12px 0 16px; font-size: 14px; font-weight: 600; }
+.work-schedule-link .work-input { width: 100%; min-width: 0; }

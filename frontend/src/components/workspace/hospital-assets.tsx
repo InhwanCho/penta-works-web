@@ -476,12 +476,13 @@ export function AssetSelection({
   onChange: (ids: number[]) => void;
 }) {
   const query = useHospitalAssets(siteId);
+  const components = (query.data?.assets || []).filter((a) => a.assetType !== "MRI");
   if (!siteId) return null;
   return (
     <fieldset className="asset-selection">
-      <legend>관련 장비·부품</legend>
+      <legend>정비 부품</legend>
       <p className="work-hint">
-        정비한 항목을 선택하면 해당 부품의 이력에도 함께 남습니다.
+        칠러·콜드헤드 등 정비한 부품을 선택해주세요. MRI 본체 작업은 병원 정비이력에 남습니다.
       </p>
       {query.error ? (
         <ErrorState
@@ -490,9 +491,9 @@ export function AssetSelection({
         />
       ) : query.isPending ? (
         <p>불러오는 중…</p>
-      ) : query.data?.assets.length ? (
+      ) : components.length ? (
         <div className="asset-options">
-          {query.data.assets.map((a) => (
+          {components.map((a) => (
             <label
               className="work-check"
               key={a.id}
@@ -529,7 +530,7 @@ export function AssetSelection({
           className="work-back"
           href={`/sites/${Number(siteId) || siteId}`}
         >
-          병원 상세에서 장비·부품 등록 →
+          병원 상세에서 부품 등록 →
         </Link>
       )}
     </fieldset>
@@ -545,12 +546,12 @@ export function AssetRecordSummary({
 }) {
   const query = useHospitalAssets(siteId);
   const rows = (query.data?.history || []).filter(
-    (h) => h.recordId === recordId,
+    (h) => h.recordId === recordId && query.data?.assets.some((a) => a.id === h.assetId && a.assetType !== "MRI"),
   );
   if (!rows.length) return null;
   return (
     <section className="asset-selection">
-      <h3>관련 장비·부품</h3>
+      <h3>정비 부품</h3>
       {rows.map((h) => {
         let a: HospitalAsset | undefined;
         let historicalModel: string | undefined;
