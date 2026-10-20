@@ -86,6 +86,8 @@ export default function OfficeAssetsPanel({
   }
 
   const data = query.data;
+  if (embedded && !data.equipment.length && !data.components.length)
+    return null;
 
   return (
     <section

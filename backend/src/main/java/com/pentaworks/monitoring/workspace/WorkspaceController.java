@@ -37,6 +37,8 @@ public class WorkspaceController {
     public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt,String targetKind,String personalKind,String serviceType) {}
     private static final String RECORDS="""
         SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,
+               w.engineer_name engineerName,w.counts_as_pm countsAsPm,w.acr_kind acrKind,w.schedule_id scheduleId,w.source_id sourceId,
+               (SELECT DATE_FORMAT(sc.start_at,'%Y-%m-%d') FROM workspace_schedule sc WHERE sc.id=w.schedule_id AND sc.company_id=w.company_id) scheduleDate,
                w.kind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,w.details_json detailsJson,w.updated_at updatedAt,
                EXISTS(SELECT 1 FROM workspace_asset_history h WHERE h.record_id=w.id AND h.change_kind IN ('REGISTER','UPDATE')) assetChange
         FROM workspace_record w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
@@ -64,8 +66,40 @@ public class WorkspaceController {
         db.update("INSERT INTO workspace_record(company_id,author_id,site_id,kind,service_type,title,body,work_date,status,details_json) VALUES(?,?,?,?,?,?,?,?,?,?)",u.companyId(),u.id(),sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input));
         long id=db.queryForObject("SELECT LAST_INSERT_ID()",Long.class);
         new WorkspacePhotos(db,users).attach(u,id,input.photoIds());
-        syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());
+        syncRecordFields(u,id,sid,input);syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());
         return Map.of("id",id);
+    }
+    private void syncRecordFields(CurrentUser u,long id,String sid,WorkInput input) {
+        Map<String,Object> details=input.details()==null?Map.of():input.details();
+        if(details.containsKey("engineer")) {
+            Object value=details.get("engineer");
+            if(!(value instanceof String name)||name.length()>200)throw new BadRequestException("담당자는 200자 이내로 입력해주세요.");
+            db.update("UPDATE workspace_record SET engineer_name=? WHERE id=? AND company_id=?",name.trim(),id,u.companyId());
+        }
+        if(details.containsKey("countsAsPm")) {
+            if(!(details.get("countsAsPm") instanceof Boolean))throw new BadRequestException("PM 점검 포함 여부를 확인해주세요.");
+            db.update("UPDATE workspace_record SET counts_as_pm=? WHERE id=? AND company_id=?",details.get("countsAsPm"),id,u.companyId());
+        }
+        if(details.containsKey("acrKind")) {
+            Object value=details.get("acrKind");
+            if(!(value instanceof String kind)||!Set.of("","doc","full","pretest").contains(kind))throw new BadRequestException("ACR 구분을 확인해주세요.");
+            db.update("UPDATE workspace_record SET acr_kind=? WHERE id=? AND company_id=?",value,id,u.companyId());
+        }
+        // A schedule can have multiple work records; never infer linkage by date/title.
+        if(details.containsKey("scheduleId")) {
+            Object raw=details.get("scheduleId");Long schedule=null;
+            if(raw!=null) {
+                if(!(raw instanceof Number n)||n.longValue()<=0||n.doubleValue()!=n.longValue())throw new BadRequestException("연결할 일정을 확인해주세요.");
+                schedule=n.longValue();
+                var rows=db.queryForList("SELECT site_id FROM workspace_schedule WHERE id=? AND company_id=? AND (deleted_at IS NULL OR id=(SELECT schedule_id FROM workspace_record WHERE id=? AND company_id=?)) FOR UPDATE",schedule,u.companyId(),id,u.companyId());
+                if(rows.isEmpty()||!java.util.Objects.equals(sid,rows.get(0).get("site_id")))throw new BadRequestException("같은 병원의 일정만 연결할 수 있습니다.");
+                if(sid!=null)users.requireSiteAccess(u,sid);
+            }
+            db.update("UPDATE workspace_record SET schedule_id=? WHERE id=? AND company_id=?",schedule,id,u.companyId());
+        } else {
+            // Older clients must not leave a hospital-changing edit attached to another hospital.
+            if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_record r JOIN workspace_schedule s ON s.id=r.schedule_id AND s.company_id=r.company_id WHERE r.id=? AND r.company_id=? AND NOT(s.site_id <=> ?))",Boolean.class,id,u.companyId(),sid)))throw new BadRequestException("연결된 일정과 같은 병원을 선택해주세요.");
+        }
     }
     private void syncPreparation(CurrentUser u,long id,String sid,Map<String,Object> details){
         if(details==null||!details.containsKey("prepItems"))return;
@@ -88,7 +122,7 @@ public class WorkspaceController {
     @PutMapping("/records/{id}") @Transactional
     public Map<String,Boolean> update(@PathVariable long id,@RequestBody WorkInput input,Authentication auth){
         var u=users.require(auth);requireRecordOwner(id,u);validate(input);String sid="FIELD".equals(input.kind())?site(u,input.siteId()):null;
-        db.update("UPDATE workspace_record SET site_id=?,kind=?,service_type=?,title=?,body=?,work_date=?,status=?,details_json=? WHERE id=? AND company_id=? AND deleted_at IS NULL",sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input),id,u.companyId());new WorkspacePhotos(db,users).attach(u,id,input.photoIds());syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());return Map.of("saved",true);
+        db.update("UPDATE workspace_record SET site_id=?,kind=?,service_type=?,title=?,body=?,work_date=?,status=?,details_json=JSON_MERGE_PATCH(COALESCE(details_json,JSON_OBJECT()),?) WHERE id=? AND company_id=? AND deleted_at IS NULL",sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input),id,u.companyId());new WorkspacePhotos(db,users).attach(u,id,input.photoIds());syncRecordFields(u,id,sid,input);syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());return Map.of("saved",true);
     }
     @DeleteMapping("/records/{id}") @Transactional
     public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}

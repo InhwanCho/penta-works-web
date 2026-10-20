@@ -18,6 +18,12 @@ export type WorkRecord = {
   updatedAt: string;
   detailsJson?: string | null;
   assetChange?: boolean | number;
+  sourceId?: string | null;
+  engineerName?: string;
+  countsAsPm?: boolean | number;
+  acrKind?: string | null;
+  scheduleId?: number | null;
+  scheduleDate?: string | null;
 };
 export type WorkSchedule = {
   targetKind?: "HOSPITAL" | "GENERAL" | null;

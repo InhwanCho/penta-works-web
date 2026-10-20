@@ -86,7 +86,10 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
             <strong>{r.title}</strong>
             {r.siteName && <p>{r.siteName}</p>}
             <small>
-              {r.workDate} · {r.authorName}
+              {r.workDate} ·{" "}
+              {r.engineerName
+                ? `담당 ${r.engineerName}`
+                : `${r.sourceId ? "이관 계정" : "등록자"} ${r.authorName}`}
             </small>
           </Link>
         ))
@@ -351,7 +354,7 @@ export function SchedulePage() {
     ? search.get("date")!
     : dayString();
   const { session, isAdmin } = useAuth();
-  const { sites, schedules } = useWorkspace();
+  const { sites, schedules, records } = useWorkspace();
   const qc = useQueryClient();
   const [selected, setSelected] = useState(initialDate),
     [scope, setScope] = useState("TEAM"),
@@ -612,6 +615,25 @@ export function SchedulePage() {
                     </div>
                   </details>
                 )}
+              </div>
+              <div className="work-section">
+                <Link
+                  className="work-back"
+                  href={`/work/new?schedule=${s.id}`}
+                >
+                  ＋ 이 일정의 작업일지 작성
+                </Link>
+                {(records.data || [])
+                  .filter((r) => r.scheduleId === s.id)
+                  .map((r) => (
+                    <Link
+                      className="work-back"
+                      key={r.id}
+                      href={`/work/${r.id}`}
+                    >
+                      {r.workDate} · {r.title} →
+                    </Link>
+                  ))}
               </div>
               <dl className="schedule-card-meta">
                 <div>

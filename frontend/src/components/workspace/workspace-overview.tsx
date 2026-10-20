@@ -76,8 +76,9 @@ export default function OverviewPage() {
             type: r.kind === "FIELD" ? r.serviceType || "ETC" : "GENERAL",
             status: r.status,
             href: `/work/${r.id}`,
-            acrKind: d.acrKind,
-            countsAsPm: d.countsAsPm,
+            acrKind: r.acrKind ?? d.acrKind,
+            countsAsPm:
+              r.countsAsPm === undefined ? d.countsAsPm : !!r.countsAsPm,
           };
         }),
         ...old.flatMap((q, i) =>
@@ -365,9 +366,15 @@ export default function OverviewPage() {
             <section className="day-agenda-section day-due-section">
               <h3>
                 점검 기한 <span>{dayDue.length}건</span>
-
               </h3>
-              <details className="day-due-help"><summary>점검 기한이란?</summary><p>완료 이력과 병원별 점검 주기·지정일로 계산한 날짜입니다. 방문이 확정된 일정과는 다릅니다. 병원 상세에서 점검 기준을 변경할 수 있습니다.</p></details>
+              <details className="day-due-help">
+                <summary>점검 기한이란?</summary>
+                <p>
+                  완료 이력과 병원별 점검 주기·지정일로 계산한 날짜입니다.
+                  방문이 확정된 일정과는 다릅니다. 병원 상세에서 점검 기준을
+                  변경할 수 있습니다.
+                </p>
+              </details>
               {dayDue.map((d, i) => (
                 <Link
                   href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}

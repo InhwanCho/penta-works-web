@@ -25,14 +25,14 @@ public class OfficeAssetsController {
     @GetMapping("/{siteId}/office-assets")
     public OfficeAssetsResponse assets(@PathVariable String siteId, Authentication authentication) {
         currentUsers.requireSiteAccess(currentUsers.require(authentication), SiteService.normalizeSiteId(siteId));
-        return service.bySite(siteId);
+        return service.bySite(siteId,currentUsers.require(authentication).companyId());
     }
 
     @GetMapping("/{siteId}/office-assets/maintenance/{maintenanceId}/photos/{photoId}")
     public ResponseEntity<byte[]> photo(@PathVariable String siteId, @PathVariable long maintenanceId,
         @PathVariable long photoId, Authentication authentication) {
         currentUsers.requireSiteAccess(currentUsers.require(authentication), SiteService.normalizeSiteId(siteId));
-        var photo = service.photo(siteId, maintenanceId, photoId);
+        var photo = service.photo(siteId, maintenanceId, photoId,currentUsers.require(authentication).companyId());
         return ResponseEntity.ok()
             .cacheControl(CacheControl.maxAge(1, TimeUnit.DAYS).cachePrivate())
             .contentType(photo.mediaType())

@@ -41,6 +41,8 @@ type AssetHistory = {
   workDate: string;
   status: string;
   authorName: string;
+  engineerName?: string;
+  sourceId?: string | null;
 };
 export function useHospitalAssets(siteId: string) {
   const { session } = useAuth();
@@ -430,7 +432,10 @@ function AssetHistoryRow({ item: h }: { item: AssetHistory }) {
         <strong>{h.title} →</strong>
       </Link>
       <small>
-        {h.workDate} · 담당자 {h.authorName}
+        {h.workDate} ·{" "}
+        {h.engineerName
+          ? `담당 ${h.engineerName}`
+          : `${h.sourceId ? "이관 계정" : "등록자"} ${h.authorName}`}
       </small>
       <p className="work-prewrap">{h.body}</p>
       {snapshot.after && (
@@ -548,9 +553,25 @@ export function AssetRecordSummary({
       <h3>관련 장비·부품</h3>
       {rows.map((h) => {
         let a: HospitalAsset | undefined;
+        let historicalModel: string | undefined;
         try {
-          a = JSON.parse(h.snapshotJson).after;
+          const snapshot = JSON.parse(h.snapshotJson);
+          a = snapshot.after;
+          if (snapshot.historicalStateKnown === false)
+            historicalModel = snapshot.sourceModel;
         } catch {}
+        if (historicalModel)
+          return (
+            <p key={h.id}>
+              <Link
+                className="work-back"
+                href={`/sites/${Number(siteId) || siteId}`}
+              >
+                {historicalModel} →
+              </Link>
+              <small className="work-hint"> · 당시 버전·시리얼 미기록</small>
+            </p>
+          );
         return a ? (
           <p key={h.id}>
             <Link

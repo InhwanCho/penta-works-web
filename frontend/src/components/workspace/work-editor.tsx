@@ -32,7 +32,8 @@ import { AssetSelection, AssetRecordSummary } from "./hospital-assets";
 const generalTypes: [string, string][] = [
   ["office", "사무실 업무"],
   ["education", "교육 · 세미나"],
-  ["leave", "휴가 · 연차"],
+  ["leave", "휴가"],
+  ["annual", "연차"],
   ["etc", "기타 일정"],
 ];
 export default function WorkEditor({ id }: { id?: string }) {
@@ -41,7 +42,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     search = useSearchParams(),
     qc = useQueryClient();
   const { session, isAdmin } = useAuth();
-  const { sites, records } = useWorkspace();
+  const { sites, records, schedules } = useWorkspace();
   const [form, setForm] = useState({
     kind: "FIELD",
     siteId: search.get("site") || "",
@@ -76,11 +77,46 @@ export default function WorkEditor({ id }: { id?: string }) {
         workDate: record.workDate,
         status: record.status,
       });
-      setDetails(parseDetails(record.detailsJson));
+      setDetails({
+        ...parseDetails(record.detailsJson),
+        scheduleId: record.scheduleId || null,
+        engineer:
+          record.engineerName ?? parseDetails(record.detailsJson).engineer,
+      });
       setPhotoIds(null);
       setLoadedId(id);
     }
   }, [record, loadedId, id]);
+  const linkedFromQuery = useRef(false);
+  useEffect(() => {
+    if (
+      id ||
+      linkedFromQuery.current ||
+      !search.get("schedule") ||
+      !schedules.data
+    )
+      return;
+    const schedule = schedules.data.find(
+      (s) => String(s.id) === search.get("schedule"),
+    );
+    linkedFromQuery.current = true;
+    if (!schedule) {
+      setError("연결할 일정을 찾을 수 없습니다. 일정을 다시 선택해주세요.");
+      return;
+    }
+    setForm((f) => ({
+      ...f,
+      kind: schedule.siteId ? "FIELD" : "GENERAL",
+      siteId: schedule.siteId || "",
+      serviceType: schedule.serviceType || "ETC",
+      workDate: schedule.startAt.slice(0, 10),
+    }));
+    setDetails((d) => ({
+      ...d,
+      scheduleId: schedule.id,
+      personalKind: schedule.personalKind === "edu" ? "education" : schedule.personalKind || d.personalKind,
+    }));
+  }, [id, search, schedules.data]);
   async function save(e: FormEvent) {
     e.preventDefault();
     if (photoBusy) return;
@@ -180,7 +216,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         description={
           editing
             ? "작업 구분에 맞는 점검·서비스 기록을 작성하세요."
-            : `${record?.workDate} · ${record?.authorName}`
+            : `${record?.workDate} · ${record?.sourceId ? "이관 계정" : "등록자"} ${record?.authorName}`
         }
         action={
           !editing && canEdit ? (
@@ -223,6 +259,41 @@ export default function WorkEditor({ id }: { id?: string }) {
           onSubmit={save}
           className="work-panel work-form"
         >
+          <label className="work-label">
+            연결 일정
+            <select
+              value={details.scheduleId || ""}
+              onChange={(e) =>
+                setDetails({
+                  ...details,
+                  scheduleId: e.target.value ? Number(e.target.value) : null,
+                })
+              }
+            >
+              <option value="">연결하지 않음</option>
+              {(schedules.data || [])
+                .filter(
+                  (s) =>
+                    s.siteId === (form.kind === "FIELD" ? form.siteId : null) ||
+                    s.id === details.scheduleId,
+                )
+                .map((s) => (
+                  <option
+                    key={s.id}
+                    value={s.id}
+                  >
+                    {s.startAt.slice(0, 10)} · {s.siteName || s.title} ·{" "}
+                    {s.title}
+                  </option>
+                ))}
+              {details.scheduleId &&
+                !schedules.data?.some((s) => s.id === details.scheduleId) && (
+                  <option value={details.scheduleId}>
+                    기존 연결 일정 (삭제되었거나 조회 불가)
+                  </option>
+                )}
+            </select>
+          </label>
           <ChoiceGroup
             legend="대상"
             value={form.kind}
@@ -505,6 +576,14 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
             </div>
           ))}
       </dl>
+      {r.scheduleId && (
+        <Link
+          className="work-back"
+          href={`/schedule?date=${r.scheduleDate || r.workDate}`}
+        >
+          연결된 일정 보기 →
+        </Link>
+      )}
       <p className="work-prewrap">{r.body}</p>
       {r.serviceType === "PM" && (
         <section>

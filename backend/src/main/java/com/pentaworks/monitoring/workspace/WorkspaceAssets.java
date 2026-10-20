@@ -33,7 +33,7 @@ public class WorkspaceAssets {
         var assets=db.queryForList("SELECT "+COLUMNS+" FROM workspace_asset WHERE company_id=? AND site_id=? ORDER BY asset_type,id",u.companyId(),sid);
         var history=db.queryForList("""
             SELECT h.id,h.asset_id assetId,h.record_id recordId,h.snapshot_json snapshotJson,h.change_kind changeKind,
-             w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,u.name authorName
+             w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,u.name authorName,w.engineer_name engineerName,w.source_id sourceId
             FROM workspace_asset_history h JOIN workspace_asset a ON a.id=h.asset_id
              JOIN workspace_record w ON w.id=h.record_id JOIN app_user u ON u.id=w.author_id
             WHERE a.company_id=? AND a.site_id=? AND w.company_id=a.company_id AND w.site_id=a.site_id AND w.deleted_at IS NULL
@@ -72,9 +72,9 @@ public class WorkspaceAssets {
         var snapshot=new LinkedHashMap<String,Object>();snapshot.put("before",before);snapshot.put("after",after);
         var details=new LinkedHashMap<String,Object>();details.put("assetIds",List.of(id));details.put("engineer",u.name());details.put("model",value(i.model()));
         String title=i.name().trim()+ (before==null?" 등록":" 정보 변경·정비");
-        db.update("INSERT INTO workspace_record(company_id,author_id,site_id,kind,service_type,title,body,work_date,status,details_json) VALUES(?,?,?,'FIELD','ETC',?,?,?,'COMPLETED',?)",u.companyId(),u.id(),sid,title,i.changeNote().trim(),i.workDate(),json(details));
+        db.update("INSERT INTO workspace_record(company_id,author_id,site_id,kind,service_type,title,body,work_date,status,details_json,engineer_name) VALUES(?,?,?,'FIELD','ETC',?,?,?,'COMPLETED',?,?)",u.companyId(),u.id(),sid,title,i.changeNote().trim(),i.workDate(),json(details),u.name());
         long recordId=db.queryForObject("SELECT LAST_INSERT_ID()",Long.class);
-        db.update("INSERT INTO workspace_asset_history(asset_id,record_id,snapshot_json,change_kind) VALUES(?,?,?,?)",id,recordId,json(snapshot),before==null?"REGISTER":"UPDATE");
+        db.update("INSERT INTO workspace_asset_history(company_id,asset_id,record_id,snapshot_json,change_kind) VALUES(?,?,?,?,?)",u.companyId(),id,recordId,json(snapshot),before==null?"REGISTER":"UPDATE");
         return Map.of("id",id,"recordId",recordId);
     }
     static List<Long> assetIds(Map<String,Object> details) {
@@ -98,6 +98,6 @@ public class WorkspaceAssets {
                 db.update("DELETE FROM workspace_asset_history WHERE asset_id=? AND record_id=?",old,recordId);
             }
         }
-        for(var entry:snapshots.entrySet())db.update("INSERT IGNORE INTO workspace_asset_history(asset_id,record_id,snapshot_json,change_kind) VALUES(?,?,?,'SERVICE')",entry.getKey(),recordId,json(Map.of("after",entry.getValue())));
+        for(var entry:snapshots.entrySet())db.update("INSERT IGNORE INTO workspace_asset_history(company_id,asset_id,record_id,snapshot_json,change_kind) VALUES(?,?,?,?,'SERVICE')",u.companyId(),entry.getKey(),recordId,json(Map.of("after",entry.getValue())));
     }
 }

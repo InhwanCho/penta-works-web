@@ -16,6 +16,7 @@ export type PmItem = {
   options: { v: string; l: string }[];
 };
 export type WorkDetails = {
+  scheduleId: number | null;
   assetIds: number[];
   model: string;
   engineer: string;
@@ -67,6 +68,7 @@ export const pulseRows = definitions.pulseRows,
   pulseCols = definitions.pulseCols;
 export function initialDetails(): WorkDetails {
   return {
+    scheduleId: null,
     assetIds: [],
     model: "",
     engineer: "",
@@ -153,6 +155,10 @@ export function parseDetails(value?: string | null): WorkDetails {
     ] as const;
     for (const key of textKeys)
       if (raw[key] != null) fallback[key] = asText(raw[key]);
+    fallback.scheduleId =
+      Number.isSafeInteger(raw.scheduleId) && raw.scheduleId > 0
+        ? raw.scheduleId
+        : null;
     fallback.assetIds = Array.isArray(raw.assetIds)
       ? [
           ...new Set<number>(

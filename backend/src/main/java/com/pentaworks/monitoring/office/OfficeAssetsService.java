@@ -30,9 +30,10 @@ public class OfficeAssetsService {
             .baseUrl(baseUrl.isBlank() ? "http://127.0.0.1" : baseUrl).build();
     }
 
-    public OfficeAssetsResponse bySite(String rawSiteId) {
+    public OfficeAssetsResponse bySite(String rawSiteId) {return bySite(rawSiteId,null);}
+    public OfficeAssetsResponse bySite(String rawSiteId,Long companyId) {
         String siteId = normalizeSiteId(rawSiteId);
-        if(snapshot!=null) {var imported=snapshot.bySite(siteId);if(imported!=null)return imported;}
+        if(snapshot!=null) {var imported=snapshot.bySite(siteId,companyId);if(imported!=null)return imported;}
         requireEnabled();
         try {
             OfficeAssetsResponse response = client.get()
@@ -53,10 +54,11 @@ public class OfficeAssetsService {
         }
     }
 
-    public OfficePhoto photo(String rawSiteId, long maintenanceId, long photoId) {
+    public OfficePhoto photo(String rawSiteId, long maintenanceId, long photoId) {return photo(rawSiteId,maintenanceId,photoId,null);}
+    public OfficePhoto photo(String rawSiteId, long maintenanceId, long photoId,Long companyId) {
         String siteId = normalizeSiteId(rawSiteId);
         if(snapshot!=null && snapshot.bySite(siteId)!=null) {
-            var imported=snapshot.photo(siteId,maintenanceId,photoId);
+            var imported=snapshot.photo(siteId,maintenanceId,photoId,companyId);
             if(imported!=null)return imported;
         }
         requireEnabled();
