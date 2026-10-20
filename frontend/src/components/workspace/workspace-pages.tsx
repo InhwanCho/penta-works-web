@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import HospitalPicker from "./hospital-picker";
 import ActionMenu from "@/components/common/action-menu";
@@ -235,7 +235,8 @@ export function TodayPage() {
   );
 }
 export function HospitalsPage() {
-  const { sites } = useWorkspace();
+  const { session } = useAuth();
+  const sites = useQuery({queryKey: ["workspace-hospital-directory", session?.id], queryFn: () => apiFetch<{siteDb: string; name: string | null; address: string; equipment: string[]}[]>("/workspace/hospitals"), enabled: !!session});
   const [search, setSearch] = useState("");
   return (
     <main className="work-page work-hospitals">
@@ -245,8 +246,8 @@ export function HospitalsPage() {
       />
       <input
         className="work-input work-search"
-        placeholder="병원명 검색"
-        aria-label="병원 검색"
+        placeholder="병원명 · 장비 · 주소 검색"
+        aria-label="병원명 · 장비 · 주소 검색"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -260,22 +261,23 @@ export function HospitalsPage() {
       ) : (
         <div className="work-hospital-grid">
           {(sites.data || [])
-            .filter((s) => (s.name || s.siteDb).includes(search))
+            .filter((s) => `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase()))
             .map((s) => (
               <Link
                 className="work-hospital"
                 key={s.siteDb}
                 href={`/sites/${Number(s.siteDb) || s.siteDb}`}
               >
-                <span className="work-hospital-icon">＋</span>
                 <div>
                   <strong>{s.name || s.siteDb}</strong>
-                  <p>장비 · 모니터링 · 서비스 이력</p>
+                  <p className="hospital-directory-equipment">{s.equipment.join(" / ") || "장비 정보 미등록"}</p>
+                  <p className="hospital-directory-address">{s.address || "주소 미등록"}</p>
                 </div>
                 <span className="work-chevron">›</span>
               </Link>
             ))}
           {!sites.data?.length && <Empty>접근 가능한 병원이 없습니다.</Empty>}
+          {!!sites.data?.length && !sites.data.some((s) => `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase())) && <Empty>검색 결과가 없습니다.</Empty>}
         </div>
       )}
     </main>

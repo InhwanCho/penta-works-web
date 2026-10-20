@@ -44,6 +44,46 @@ public class WorkspaceController {
         FROM workspace_record w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.work_date DESC,w.id DESC LIMIT 500
         """;
+    @GetMapping("/hospitals")
+    public List<Map<String,Object>> hospitals(Authentication auth) {
+        var u=users.require(auth);var allowed=users.allowedSiteIds(u);
+        var equipment=new java.util.HashMap<String,List<String>>();
+        for(var asset:db.queryForList("SELECT site_id,model,name,metadata_json FROM workspace_asset WHERE company_id=? AND asset_type='MRI' AND status='ACTIVE' ORDER BY id",u.companyId())) {
+            String sid=asset.get("site_id").toString();if(!allowed.contains(sid))continue;
+            var labels=new java.util.ArrayList<String>();
+            String model=java.util.Objects.toString(asset.get("model"),"").trim();
+            if(!model.isEmpty())labels.add(model);else labels.add(asset.get("name").toString());
+            try {
+                var meta=mapper.readTree(java.util.Objects.toString(asset.get("metadata_json"),"{}"));
+                String vendor=meta.path("manufacturer").asText("").trim();
+                if(!vendor.isEmpty()&&!model.toLowerCase(java.util.Locale.ROOT).contains(vendor.toLowerCase(java.util.Locale.ROOT)))labels.add(0,vendor);
+                String tesla=meta.path("magneticFieldTesla").asText("").trim();
+                if(!tesla.isEmpty()&&!model.toLowerCase(java.util.Locale.ROOT).contains(tesla.toLowerCase(java.util.Locale.ROOT)+"t"))labels.add(tesla+"T");
+            }catch(JsonProcessingException ignored) { /* Existing model/serial fields remain available. */ }
+            equipment.computeIfAbsent(sid,k->new java.util.ArrayList<>()).add(String.join(" · ",labels));
+        }
+        var snapshots=new java.util.HashMap<String,Map<String,Object>>();
+        for(var row:db.queryForList("SELECT site_id,JSON_UNQUOTE(JSON_EXTRACT(response_json,'$.site.address')) address,JSON_EXTRACT(response_json,'$.equipment') equipment FROM workspace_office_snapshot WHERE company_id=?",u.companyId())) {
+            String sid=row.get("site_id").toString();if(allowed.contains(sid))snapshots.put(sid,row);
+        }
+        var result=new java.util.ArrayList<Map<String,Object>>();
+        for(var site:db.queryForList("SELECT s.site siteId,s.name,p.address FROM site s LEFT JOIN site_profile p ON p.site_id=s.site ORDER BY s.name,s.site")) {
+            String sid=site.get("siteId").toString();if(!allowed.contains(sid))continue;
+            var snapshot=snapshots.get(sid);
+            String address=java.util.Objects.toString(site.get("address"),"").trim();
+            if(address.isEmpty()&&snapshot!=null)address=java.util.Objects.toString(snapshot.get("address"),"").trim();
+            if("null".equals(address))address="";
+            List<String> models=equipment.get(sid);
+            if(models==null&&snapshot!=null) {
+                models=new java.util.ArrayList<>();
+                try { for(var item:mapper.readTree(java.util.Objects.toString(snapshot.get("equipment"),"[]"))) {
+                    String model=item.path("model").asText("");if(!model.isBlank())models.add(model);
+                }}catch(JsonProcessingException ignored) { /* Unmigrated metadata can be absent. */ }
+            }
+            var row=new java.util.LinkedHashMap<String,Object>();row.put("siteDb",sid);row.put("name",site.get("name"));row.put("address",address);row.put("equipment",models==null?List.of():models);result.add(row);
+        }
+        return result;
+    }
     @GetMapping("/records")
     public List<Map<String,Object>> records(Authentication auth) {
         var u=users.require(auth);var allowed=users.allowedSiteIds(u);

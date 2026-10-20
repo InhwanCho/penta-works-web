@@ -2269,3 +2269,10 @@ h4,
 @media(hover:none) {
  .work-picker-dialog li:not(.active) button:hover { background: transparent; color: var(--work-ink); }
 }
+
+.work-hospital-grid .work-hospital { align-items: center; padding: 18px; gap: 14px; }
+.work-hospital-grid .work-hospital > div { flex: 1; }
+.work-hospital-grid .work-hospital strong { display: block; font-size: 17px; font-weight: 700; }
+.work-hospital-grid .hospital-directory-equipment { margin-top: 8px; color: var(--work-ink); font-size: 13px; font-weight: 550; line-height: 1.6; }
+.work-hospital-grid .hospital-directory-address { margin-top: 4px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
+.work-hospital-grid .work-chevron { flex-shrink: 0; font-size: 24px; }
