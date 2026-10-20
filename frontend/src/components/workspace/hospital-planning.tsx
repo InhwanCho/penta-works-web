@@ -17,7 +17,7 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
       className="work-panel hospital-planning hospital-detail-card"
       id="inspection-plan"
     >
-      <div className="work-section planning-heading">
+      <div className="work-section planning-heading hospital-card-heading">
         <div className="flex items-center gap-1">
           <h2>점검 주기·지정일</h2>
           <HelpButton

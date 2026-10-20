@@ -21,7 +21,7 @@ export default function HospitalEquipmentPanel({
   const [managing, setManaging] = useState(false);
   return (
     <section className="hospital-detail-card">
-      <div className="flex items-center justify-between gap-3">
+      <div className="hospital-card-heading flex items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold">장비·부품</h2>
         {session && (
           <ActionMenu label="장비·부품 메뉴" items={[{label: "장비·부품 관리", onSelect: () => setManaging(true)}]} />

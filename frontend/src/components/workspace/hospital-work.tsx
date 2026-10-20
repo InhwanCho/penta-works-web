@@ -33,7 +33,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
   ].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <section className="work-panel hospital-assets hospital-detail-card">
-      <div className="work-section">
+      <div className="work-section hospital-card-heading hospital-history-heading">
         <div>
           <h2>병원 정비이력</h2>
           <p className="work-hint">
@@ -41,10 +41,11 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           </p>
         </div>
         <Link
-          className="work-primary"
+          className="work-secondary hospital-record-create"
           href={`/work/new?site=${encodeURIComponent(siteId)}`}
         >
-          ＋ 업무기록
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z" /><path d="m14 5 5 5" /></svg>
+          업무기록 작성
         </Link>
       </div>
       {records.error && (

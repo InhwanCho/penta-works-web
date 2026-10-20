@@ -2220,3 +2220,15 @@ h4,
  .hospital-section-content[data-open="false"] { display: none; }
  .site-detail-page .hospital-section-content > .hospital-detail-card { margin: 0; border: 0; border-radius: 0 0 14px 14px; border-top: 1px solid var(--work-line); }
 }
+
+.hospital-section-chevron { flex-shrink: 0; color: var(--work-muted); transition: transform 140ms ease; }
+.hospital-section-toggle[aria-expanded="true"] .hospital-section-chevron { transform: rotate(180deg); }
+.hospital-record-create { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 650; }
+@media(max-width:1023px) {
+ .hospital-section-content > .hospital-detail-card > .hospital-card-heading h2 { display: none; }
+ .site-detail-page .hospital-section-content > .hospital-detail-card > .hospital-card-heading { display: flex; flex-direction: row; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+ .site-detail-page .hospital-section-content .hospital-history-heading > div { display: none; }
+ .site-detail-page .hospital-section-content > .hospital-detail-card > .hospital-history-heading { justify-content: flex-end; }
+ .hospital-section-content > .hospital-detail-card > .hospital-card-heading > .action-menu { margin-left: auto; }
+ .site-detail-page .hospital-record-create { min-height: 36px; padding: 6px 10px; font-size: 12px; }
+}
