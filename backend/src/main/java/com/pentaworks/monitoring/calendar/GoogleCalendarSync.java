@@ -111,7 +111,7 @@ public class GoogleCalendarSync {
  private void patch(String calendar,String event,String access,Map<String,Object> payload){http.patch().uri("https://www.googleapis.com/calendar/v3/calendars/{c}/events/{e}?sendUpdates=none",calendar,event).header("Authorization","Bearer "+access).body(payload).retrieve().toBodilessEntity();}
  static Map<String,Object> event(Map<String,Object> s,String base){
   String label=s.get("site_id")==null?switch(Objects.toString(s.get("personal_kind"),"")){case "office"->"사무실";case "edu"->"교육·세미나";case "leave"->"휴가";case "annual"->"연차";default->"일정";}:switch(Objects.toString(s.get("service_type"),"")){case "PM"->"PM";case "REPAIR"->"고장수리";case "CALL"->"콜";case "ACR"->"ACR";case "COLDHEAD"->"콜드헤드";case "INSTALL"->"설치";default->"방문";};
-  String title=Objects.toString(s.get("title"),"");String hospital=Objects.toString(s.get("hospital_name"),"");
+  String title=Objects.toString(s.get("title"),"");String hospital=s.get("site_id")==null?"":Objects.toString(s.get("hospital_name"),"");
   String summary="["+label+"] "+(hospital.isBlank()?title:hospital+(title.isBlank()||title.equals(s.get("service_type"))||title.equals(hospital)?"":" · "+title));
   LocalDateTime start=((java.sql.Timestamp)s.get("start_at")).toLocalDateTime(),end=((java.sql.Timestamp)s.get("end_at")).toLocalDateTime();
   var event=new LinkedHashMap<String,Object>();event.put("summary",summary);
