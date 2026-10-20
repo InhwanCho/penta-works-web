@@ -11,10 +11,16 @@ import org.springframework.web.client.RestClientException;
 
 @Service
 public class OfficeAssetsService {
+    private final DevelopmentOfficeSnapshot snapshot;
     private final RestClient client;
     private final AppProperties.OfficeIntegration config;
 
-    public OfficeAssetsService(RestClient.Builder builder, AppProperties properties) {
+    public OfficeAssetsService(RestClient.Builder builder, AppProperties properties) {this(builder,properties,null);}
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public OfficeAssetsService(RestClient.Builder builder, AppProperties properties,
+                              org.springframework.beans.factory.ObjectProvider<DevelopmentOfficeSnapshot> snapshots) {
+        this.snapshot=snapshots==null?null:snapshots.getIfAvailable();
         this.config = properties.officeIntegration();
         String baseUrl = config == null || config.baseUrl() == null ? "" : config.baseUrl().replaceAll("/+$", "");
         var requestFactory = new SimpleClientHttpRequestFactory();
@@ -25,8 +31,9 @@ public class OfficeAssetsService {
     }
 
     public OfficeAssetsResponse bySite(String rawSiteId) {
-        requireEnabled();
         String siteId = normalizeSiteId(rawSiteId);
+        if(snapshot!=null) {var imported=snapshot.bySite(siteId);if(imported!=null)return imported;}
+        requireEnabled();
         try {
             OfficeAssetsResponse response = client.get()
                 .uri("/api/v1/integrations/mreyes/sites/{siteId}", siteId)
@@ -47,8 +54,12 @@ public class OfficeAssetsService {
     }
 
     public OfficePhoto photo(String rawSiteId, long maintenanceId, long photoId) {
-        requireEnabled();
         String siteId = normalizeSiteId(rawSiteId);
+        if(snapshot!=null && snapshot.bySite(siteId)!=null) {
+            var imported=snapshot.photo(siteId,maintenanceId,photoId);
+            if(imported!=null)return imported;
+        }
+        requireEnabled();
         try {
             var response = client.get()
                 .uri("/api/v1/integrations/mreyes/sites/{siteId}/maintenance/{maintenanceId}/photos/{photoId}",
