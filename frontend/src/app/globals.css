@@ -2312,3 +2312,9 @@ h4,
 .planning-guide > summary::after, .planning-guide[open] > summary::after { content: none; }
 .planning-guide > summary > svg { display: block; flex-shrink: 0; align-self: center; }
 .planning-guide[open] > summary > svg { transform: rotate(180deg); }
+
+.calendar-connection-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.calendar-connection-actions button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--work-line); border-radius: 10px; font-weight: 600; background: var(--work-paper); color: var(--work-ink); }
+.calendar-connection-actions button:disabled { opacity: .55; cursor: not-allowed; }
+
+@media (hover: hover) { .calendar-connection-actions button:not(:disabled):hover { background: var(--work-soft); border-color: var(--color-brand-primary); } }

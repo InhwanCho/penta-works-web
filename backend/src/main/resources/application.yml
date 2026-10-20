@@ -82,3 +82,10 @@ app:
     max-batches-per-run: ${MRTB_SYNC_MAX_BATCHES_PER_RUN:100}
   workspace:
     enabled: ${WORKSPACE_ENABLED:false}
+
+google:
+  calendar:
+    client-id: ${GOOGLE_CALENDAR_CLIENT_ID:}
+    client-secret: ${GOOGLE_CALENDAR_CLIENT_SECRET:}
+    redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
+    encryption-key: ${GOOGLE_CALENDAR_ENCRYPTION_KEY:}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
+import CalendarConnection from "./calendar-connection";
 import LogoutControls from "./logout-controls";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -114,6 +115,7 @@ export default function SettingsClient() {
           )}
         </section>
       )}
+      <CalendarConnection userId={session.id} />
       <LogoutControls />
     </main>
   );
