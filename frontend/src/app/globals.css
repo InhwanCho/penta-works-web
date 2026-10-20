@@ -2164,7 +2164,43 @@ h4,
 @media(max-width:1023px) {
  .schedule-page .work-date-picker { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; width: 100%; min-width: 0; max-width: 100%; margin: 16px 0; }
  .schedule-page .work-date-picker input { display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; margin: 0; min-height: 44px; }
- .schedule-page .work-date-picker input::-webkit-date-and-time-value { text-align: left; min-width: 0; }
- .schedule-page .work-date-picker input::-webkit-datetime-edit { min-width: 0; padding: 0; }
- .schedule-page .work-date-picker input::-webkit-calendar-picker-indicator { flex-shrink: 0; }
+}
+
+/* Native date controls have an intrinsic content width in mobile WebKit.
+   Bound both their host and internal editor, including flex/grid label parents.
+   Keep month navigation compact and leave native date/time pickers functional. */
+@media(max-width:1023px) {
+ input:is([type="date"], [type="datetime-local"], [type="time"]) {
+   -webkit-appearance: none;
+   appearance: none;
+   display: block;
+   box-sizing: border-box;
+   width: 100%;
+   min-width: 0;
+   max-width: 100%;
+   min-inline-size: 0;
+   max-inline-size: 100%;
+   min-height: 44px;
+   font-size: max(16px, 1rem);
+   text-align: left;
+ }
+ input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"])::-webkit-date-and-time-value {
+   min-width: 0;
+   width: 100%;
+   margin: 0;
+   text-align: left;
+ }
+ input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"])::-webkit-datetime-edit {
+   display: inline-flex;
+   flex: 1 1 0%;
+   min-width: 0;
+   padding: 0;
+   text-align: left;
+ }
+ input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"])::-webkit-datetime-edit-fields-wrapper { min-width: 0; padding: 0; }
+ input:is([type="date"], [type="datetime-local"], [type="time"], [type="month"])::-webkit-calendar-picker-indicator { flex: 0 0 auto; margin-inline-start: auto; }
+ label:has(> input:is([type="date"], [type="datetime-local"], [type="time"])) { min-width: 0; max-width: 100%; }
+ .work-form, .work-form fieldset { min-width: 0; }
+ .work-calendar-toolbar > div:has(input[type="month"]) { min-width: 0; }
+ .work-calendar-toolbar input[type="month"] { min-width: 0; box-sizing: border-box; }
 }
