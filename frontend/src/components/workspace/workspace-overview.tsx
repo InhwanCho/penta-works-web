@@ -367,6 +367,7 @@ export default function OverviewPage() {
               <div className="day-entry-list">
                 {dayRecords.map((r) => (
                   <DayEntry key={r.key} href={r.href}
+                    date={r.date} completed={r.status === "COMPLETED"}
                     type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "일반 업무"}
                     title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
                     meta={statusLabels[r.status] || r.status} />
@@ -545,17 +546,19 @@ export default function OverviewPage() {
   );
 }
 
-function DayEntry({ href, type, title, description, meta }: {
-  href: string; type: string; title: string; description?: string; meta: string;
+function DayEntry({ href, type, title, description, meta, date, completed }: {
+  href: string; type: string; title: string; description?: string; meta: string; date?: string; completed?: boolean;
 }) {
   return <Link href={href} className="day-entry">
-    <span className="day-type">{type}</span>
     <div className="day-entry-content">
       <strong>{title}</strong>
       {description && <p>{description}</p>}
-      <small>{meta}</small>
+      <span className="day-type">{type}</span>
     </div>
-    <span className="day-entry-arrow" aria-hidden="true">›</span>
+    <div className="day-entry-aside">
+      {date && <time dateTime={date}>{date.replaceAll("-", ". ")}</time>}
+      <span className={`day-entry-status${completed ? " is-completed" : ""}`}>{meta}</span>
+    </div>
   </Link>;
 }
 

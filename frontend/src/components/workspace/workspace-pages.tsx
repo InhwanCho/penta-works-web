@@ -257,7 +257,7 @@ export function HospitalsPage() {
       ) : sites.isPending ? (
         <p>병원을 불러오는 중…</p>
       ) : (
-        <div className="work-hospitals">
+        <div className="work-hospital-grid">
           {(sites.data || [])
             .filter((s) => (s.name || s.siteDb).includes(search))
             .map((s) => (
@@ -649,7 +649,7 @@ export function SchedulePage() {
                 {s.siteName && (
                   <div>
                     <dt>병원</dt>
-                    <dd>{s.siteName}</dd>
+                    <dd>{s.siteId ? <Link className="work-back" href={`/sites/${Number(s.siteId) || s.siteId}`}>{s.siteName} →</Link> : s.siteName}</dd>
                   </div>
                 )}
                 <div>
