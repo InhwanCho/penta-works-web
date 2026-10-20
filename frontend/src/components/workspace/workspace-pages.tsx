@@ -480,14 +480,14 @@ export function SchedulePage() {
                 options={Object.entries(serviceLabels)}
                 onChange={(serviceType) => setForm({ ...form, serviceType })}
               />
-              <label>
+              <div className="work-picker-field">
                 병원 *
                 <HospitalPicker
                   sites={sites.data || []}
                   value={form.siteId}
                   onChange={(siteId) => setForm({ ...form, siteId })}
                 />
-              </label>
+              </div>
             </>
           )}
           <div className="work-form-row">

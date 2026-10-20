@@ -2260,3 +2260,12 @@ h4,
  .workspace-bottom > a.selected:hover { background: var(--work-soft); }
  .workspace-bottom > a:active { background: var(--work-soft); }
 }
+
+.work-picker-field { min-width: 0; font-size: 13px; font-weight: 600; }
+.work-picker-dialog { border-color: var(--work-line); }
+.work-picker-dialog:focus { outline: none; }
+.work-picker-dialog .picker-heading > button { background: transparent; color: var(--work-muted); }
+@media(hover:hover) { .work-picker-dialog .picker-heading > button:hover { background: var(--work-hover); } }
+@media(hover:none) {
+ .work-picker-dialog li:not(.active) button:hover { background: transparent; color: var(--work-ink); }
+}

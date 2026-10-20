@@ -14,17 +14,25 @@ export default function HospitalPicker({
 }) {
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(""),
-    [active, setActive] = useState(0);
+    [active, setActive] = useState(-1);
   const id = useId(),
     input = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    if (!open) { dialog.current?.close(); return; }
+    const node = dialog.current;
+    if (!open) { node?.close(); return; }
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    dialog.current?.showModal();
-    return () => { dialog.current?.close(); document.body.style.overflow = previous; };
+    node?.showModal();
+    node?.focus({ preventScroll: true });
+    return () => { node?.close(); document.body.style.overflow = previous; };
   }, [open]);
+  function close() {
+    dialog.current?.close();
+    setOpen(false);
+    setQuery("");
+    setActive(-1);
+  }
   const filtered = sites.filter((s) =>
     (s.name || s.siteDb).toLowerCase().includes(query.toLowerCase()),
   );
@@ -32,10 +40,8 @@ export default function HospitalPicker({
     ? [{ siteDb: "", name: "병원과 관계없는 업무·일정" }, ...filtered]
     : filtered;
   function choose(v: string) {
+    close();
     onChange(v);
-    setOpen(false);
-    setQuery("");
-    setActive(0);
   }
   return (
     <div
@@ -48,23 +54,24 @@ export default function HospitalPicker({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={`${id}-dialog`}
-        onClick={() => {
+        onClick={(e) => {
+          e.preventDefault();
           setOpen(!open);
           setQuery("");
-          setActive(0);
+          setActive(-1);
         }}
       >
         {sites.find((s) => s.siteDb === value)?.name ||
           (optional ? "병원과 관계없는 업무·일정" : "병원을 선택해주세요")}
         <span aria-hidden="true">⌄</span>
       </button>
-      <dialog id={`${id}-dialog`} ref={dialog} className="work-picker-panel work-picker-dialog" aria-label="병원 선택" data-ptr-ignore
-        onCancel={(e) => { e.preventDefault(); setOpen(false); }}
-        onClick={(e) => { if(e.target !== e.currentTarget) return; const b=e.currentTarget.getBoundingClientRect(); if(e.clientX<b.left || e.clientX>b.right || e.clientY<b.top || e.clientY>b.bottom) setOpen(false); }}>
+      <dialog id={`${id}-dialog`} ref={dialog} tabIndex={-1} className="work-picker-panel work-picker-dialog" aria-label="병원 선택" data-ptr-ignore
+        onCancel={(e) => { e.preventDefault(); close(); }}
+        onClose={() => setOpen(false)}
+        onClick={(e) => { if(e.target !== e.currentTarget) return; const b=e.currentTarget.getBoundingClientRect(); if(e.clientX<b.left || e.clientX>b.right || e.clientY<b.top || e.clientY>b.bottom) close(); }}>
         {open && <>
-          <div className="work-section picker-heading"><h2>병원 선택</h2><button type="button" aria-label="병원 선택 닫기" onClick={() => setOpen(false)}>×</button></div>
+          <div className="work-section picker-heading"><h2>병원 선택</h2><button type="button" aria-label="병원 선택 닫기" onClick={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}>×</button></div>
           <input
-            autoFocus
             ref={input}
             className="work-input"
             placeholder="병원명 검색"
@@ -78,12 +85,12 @@ export default function HospitalPicker({
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setActive(0);
+              setActive(-1);
             }}
             onKeyDown={(e) => {
               if (e.key === "Escape") {
                 e.preventDefault();
-                setOpen(false);
+                close();
               }
               if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                 e.preventDefault();
@@ -118,7 +125,7 @@ export default function HospitalPicker({
               >
                 <button
                   type="button"
-                  onClick={() => choose(s.siteDb)}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); choose(s.siteDb); }}
                 >
                   {s.name || s.siteDb}
                   {s.siteDb === value ? " ✓" : ""}

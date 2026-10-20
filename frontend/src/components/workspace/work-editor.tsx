@@ -281,7 +281,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                 }
                 options={Object.entries(serviceLabels)}
               />
-              <label>
+              <div className="work-picker-field">
                 병원 <span aria-hidden="true">*</span>
                 <HospitalPicker
                   sites={sites.data || []}
@@ -294,7 +294,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                 {sites.error && (
                   <span role="alert">병원 목록을 불러오지 못했습니다.</span>
                 )}
-              </label>
+              </div>
             </>
           ) : (
             <ChoiceGroup
