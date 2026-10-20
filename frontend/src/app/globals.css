@@ -2160,3 +2160,11 @@ h4,
 @media(max-width:1023px) {
  .work-day-dialog .day-section-action { min-width: 64px; min-height: 36px; padding: 6px 10px; font-size: 12px; }
 }
+
+@media(max-width:1023px) {
+ .schedule-page .work-date-picker { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; width: 100%; min-width: 0; max-width: 100%; margin: 16px 0; }
+ .schedule-page .work-date-picker input { display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; margin: 0; min-height: 44px; }
+ .schedule-page .work-date-picker input::-webkit-date-and-time-value { text-align: left; min-width: 0; }
+ .schedule-page .work-date-picker input::-webkit-datetime-edit { min-width: 0; padding: 0; }
+ .schedule-page .work-date-picker input::-webkit-calendar-picker-indicator { flex-shrink: 0; }
+}

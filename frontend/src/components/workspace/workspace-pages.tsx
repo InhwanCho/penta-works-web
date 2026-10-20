@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -350,6 +350,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   );
 }
 export function SchedulePage() {
+  const router = useRouter();
   const search = useSearchParams();
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(search.get("date") || "")
     ? search.get("date")!
@@ -358,7 +359,6 @@ export function SchedulePage() {
   const { sites, schedules, records } = useWorkspace();
   const qc = useQueryClient();
   const [selected, setSelected] = useState(initialDate),
-    [scope, setScope] = useState("TEAM"),
     [open, setOpen] = useState(search.get("new") === "1"),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
@@ -376,8 +376,7 @@ export function SchedulePage() {
     .filter(
       (s) =>
         s.startAt.slice(0, 10) <= selected &&
-        s.endAt.slice(0, 10) >= selected &&
-        (scope === "TEAM" || s.authorId === session?.id),
+        s.endAt.slice(0, 10) >= selected,
     )
     .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id - b.id);
   async function save(e: FormEvent) {
@@ -421,42 +420,7 @@ export function SchedulePage() {
       >
         ← 업무현황 달력
       </Link>
-      <PageHeading
-        title="일정"
-        description="방문·점검과 팀의 일정을 함께 확인하세요."
-        action={
-          <button
-            className="work-primary"
-            onClick={() => {
-              setOpen(!open);
-              setError("");
-              setForm({
-                ...form,
-                startAt: selected + "T09:00",
-                endAt: selected + "T10:00",
-              });
-            }}
-          >
-            ＋ 일정
-          </button>
-        }
-      />
-      <div className="work-pills">
-        <button
-          aria-pressed={scope === "TEAM"}
-          className={scope === "TEAM" ? "selected" : ""}
-          onClick={() => setScope("TEAM")}
-        >
-          전체 일정
-        </button>
-        <button
-          aria-pressed={scope === "ME"}
-          className={scope === "ME" ? "selected" : ""}
-          onClick={() => setScope("ME")}
-        >
-          내가 등록한 일정
-        </button>
-      </div>
+      <PageHeading title="일정" description="방문·점검과 팀의 일정을 함께 확인하세요." />
       <label className="work-date-picker">
         조회 날짜
         <input
@@ -602,17 +566,12 @@ export function SchedulePage() {
                   </span>
                   <h3>{s.title}</h3>
                 </div>
-                {(s.authorId === session?.id || isAdmin) && (
-                  <ActionMenu label={`${s.title} 일정 메뉴`} items={[{label: "삭제", danger: true, onSelect: () => void remove(s.id)}]} />
-                )}
+                <ActionMenu label={`${s.title} 일정 메뉴`} items={[
+                  { label: "업무기록 작성", onSelect: () => router.push(`/work/new?schedule=${s.id}`) },
+                  ...((s.authorId === session?.id || isAdmin) ? [{label: "삭제", danger: true, onSelect: () => void remove(s.id)}] : []),
+                ]} />
               </div>
               <div className="work-section">
-                <Link
-                  className="work-back"
-                  href={`/work/new?schedule=${s.id}`}
-                >
-                  ＋ 이 일정의 업무기록 작성
-                </Link>
                 {(records.data || [])
                   .filter((r) => r.scheduleId === s.id)
                   .map((r) => (
