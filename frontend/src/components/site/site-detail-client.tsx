@@ -15,7 +15,7 @@ import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricD
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { companyMetrics } from "@/lib/company-metrics";
 
 const TimeSeriesLines = dynamic(
@@ -91,6 +91,14 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     from,
     to,
   );
+  const openedSite = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (isLoading || !data || openedSite.current === slug) return;
+    openedSite.current = slug;
+    // Next can preserve scroll while the loading placeholder is replaced by the page.
+    // Reset only on entering a hospital, not on chart filters, refetches or anchor links.
+    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [slug, isLoading, data]);
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
   const [mode, setMode] = useState<ViewMode>("grid");
