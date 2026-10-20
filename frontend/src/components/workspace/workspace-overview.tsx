@@ -325,7 +325,7 @@ export default function OverviewPage() {
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
         >
-          <section className="day-agenda-section">
+          <section className={`day-agenda-section${!dayRecords.length ? " day-section-empty" : ""}`}>
             <h3>작성된 업무기록 ({dayRecords.length})</h3>
             {dayRecords.length ? <div className="day-entry-list">
               {dayRecords.map((r) => <DayEntry key={r.key} href={r.href} date={r.date}
@@ -333,10 +333,10 @@ export default function OverviewPage() {
                 type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "기타"}
                 title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
                 meta={statusLabels[r.status] || r.status} />)}
-            </div> : <p className="day-empty">작성된 업무기록가 없습니다.</p>}
-            <Link className="day-write" href={`/work/new?date=${selected}`}>＋ 이 날짜로 업무기록 작성</Link>
+            </div> : <p className="day-empty">작성된 업무기록이 없습니다.</p>}
+            <Link className="day-write" href={`/work/new?date=${selected}`}>작성</Link>
           </section>
-          <section className="day-agenda-section">
+          <section className={`day-agenda-section${!daySchedules.length ? " day-section-empty" : ""}`}>
             <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
             {daySchedules.length ? <div className="day-entry-list">
               {daySchedules.map((s) => <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
@@ -520,8 +520,8 @@ export default function OverviewPage() {
                 {!recentRecords.length && (
                   <Empty>
                     {records.isPending
-                      ? "업무기록를 불러오는 중…"
-                      : "아직 작성된 업무기록가 없습니다."}
+                      ? "업무기록을 불러오는 중…"
+                      : "아직 작성된 업무기록이 없습니다."}
                   </Empty>
                 )}
               </div>

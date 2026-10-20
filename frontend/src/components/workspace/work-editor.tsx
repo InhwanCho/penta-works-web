@@ -171,7 +171,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     }
   }
   async function remove() {
-    if (!window.confirm("이 업무기록를 삭제할까요?")) return;
+    if (!window.confirm("이 업무기록을 삭제할까요?")) return;
     setSaving(true);
     try {
       await apiFetch(`/workspace/records/${id}`, { method: "DELETE" });
@@ -193,7 +193,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       </main>
     );
   if (id && records.isPending)
-    return <main className="work-page">업무기록를 불러오는 중…</main>;
+    return <main className="work-page">업무기록을 불러오는 중…</main>;
   if (id && !record)
     return (
       <main className="work-page">

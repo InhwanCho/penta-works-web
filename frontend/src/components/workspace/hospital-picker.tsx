@@ -1,5 +1,5 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { Hospital } from "./workspace-data";
 export default function HospitalPicker({
   sites,
@@ -17,6 +17,14 @@ export default function HospitalPicker({
     [active, setActive] = useState(0);
   const id = useId(),
     input = useRef<HTMLInputElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    if (!open) { dialog.current?.close(); return; }
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    dialog.current?.showModal();
+    return () => { dialog.current?.close(); document.body.style.overflow = previous; };
+  }, [open]);
   const filtered = sites.filter((s) =>
     (s.name || s.siteDb).toLowerCase().includes(query.toLowerCase()),
   );
@@ -32,17 +40,14 @@ export default function HospitalPicker({
   return (
     <div
       className="work-hospital-picker"
-      onBlur={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false);
-      }}
     >
       <button
         type="button"
         className="work-input work-picker-trigger"
         aria-label="병원 선택"
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         aria-expanded={open}
-        aria-controls={id}
+        aria-controls={`${id}-dialog`}
         onClick={() => {
           setOpen(!open);
           setQuery("");
@@ -53,8 +58,11 @@ export default function HospitalPicker({
           (optional ? "병원과 관계없는 업무·일정" : "병원을 선택해주세요")}
         <span aria-hidden="true">⌄</span>
       </button>
-      {open && (
-        <div className="work-picker-panel">
+      <dialog id={`${id}-dialog`} ref={dialog} className="work-picker-panel work-picker-dialog" aria-label="병원 선택" data-ptr-ignore
+        onCancel={(e) => { e.preventDefault(); setOpen(false); }}
+        onClick={(e) => { if(e.target !== e.currentTarget) return; const b=e.currentTarget.getBoundingClientRect(); if(e.clientX<b.left || e.clientX>b.right || e.clientY<b.top || e.clientY>b.bottom) setOpen(false); }}>
+        {open && <>
+          <div className="work-section picker-heading"><h2>병원 선택</h2><button type="button" aria-label="병원 선택 닫기" onClick={() => setOpen(false)}>×</button></div>
           <input
             autoFocus
             ref={input}
@@ -121,8 +129,8 @@ export default function HospitalPicker({
               <li className="work-hint">검색 결과가 없습니다.</li>
             )}
           </ul>
-        </div>
-      )}
+        </>}
+      </dialog>
     </div>
   );
 }

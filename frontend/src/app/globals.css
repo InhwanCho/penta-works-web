@@ -2127,3 +2127,17 @@ h4,
  .work-day-dialog .day-close:active { background: var(--work-hover); }
 }
 .work-day-dialog:focus { outline: none; }
+
+/* Native top-layer picker stays above navigation and is not clipped by the form. */
+.work-picker-dialog { position: fixed; inset: 0; margin: auto; width: min(480px, calc(100% - 24px)); max-height: calc(100dvh - 32px); padding: 16px; color: var(--work-ink); background: var(--work-paper); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 16px 60px #0003; }
+.work-picker-dialog::backdrop { background: #16203466; }
+.work-picker-dialog .picker-heading { margin: 0 0 12px; }
+.work-picker-dialog .picker-heading > button { width: 44px; height: 44px; border-radius: 8px; font-size: 22px; }
+.work-picker-dialog ul { max-height: min(360px, 45dvh); }
+@media(max-width:1023px) {
+ .work-day-dialog .day-section-empty { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 4px; align-items: center; padding: 12px; }
+ .work-day-dialog .day-section-empty h3 { grid-column: 1; margin: 0; }
+ .work-day-dialog .day-section-empty .day-empty { grid-column: 1; padding: 0; font-size: 12px; text-align: left; }
+ .work-day-dialog .day-section-empty .day-write,
+ .work-day-dialog .day-section-empty .day-add-schedule { grid-column: 2; grid-row: 1 / 3; margin: 0; min-height: 40px; padding: 10px 12px; font-size: 13px; }
+}
