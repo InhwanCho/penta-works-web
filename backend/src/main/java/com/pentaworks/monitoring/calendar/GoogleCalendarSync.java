@@ -96,8 +96,8 @@ public class GoogleCalendarSync {
    if(mapping==null){
     var insert=new LinkedHashMap<>(payload);insert.put("id",eventId);
     try{http.post().uri("https://www.googleapis.com/calendar/v3/calendars/{c}/events?sendUpdates=none",calendar).header("Authorization","Bearer "+access).body(insert).retrieve().toBodilessEntity();}
-    catch(HttpClientErrorException e){if(e.getStatusCode().value()!=409)throw e;patch(calendar,eventId,access,payload);}
-   }else patch(calendar,eventId,access,payload);
+    catch(HttpClientErrorException e){if(e.getStatusCode().value()!=409)throw e;update(calendar,eventId,access,payload);}
+   }else update(calendar,eventId,access,payload);
    db.update("INSERT INTO calendar_event_mapping(connection_id,schedule_id,google_event_id,sync_status,payload_hash) VALUES(?,?,?,'SYNCED',?) ON DUPLICATE KEY UPDATE google_event_id=VALUES(google_event_id),sync_status='SYNCED',payload_hash=VALUES(payload_hash)",id,sid,eventId,hash);
   }
   for(var entry:mappings.entrySet())if(!desired.contains(entry.getKey())){
@@ -108,7 +108,7 @@ public class GoogleCalendarSync {
   db.update("UPDATE user_calendar_connection SET last_synced_at=NOW(6),synced_event_count=?,sync_error_code=NULL WHERE id=?",desired.size(),id);
   return true;
  }
- private void patch(String calendar,String event,String access,Map<String,Object> payload){http.patch().uri("https://www.googleapis.com/calendar/v3/calendars/{c}/events/{e}?sendUpdates=none",calendar,event).header("Authorization","Bearer "+access).body(payload).retrieve().toBodilessEntity();}
+ private void update(String calendar,String event,String access,Map<String,Object> payload){http.put().uri("https://www.googleapis.com/calendar/v3/calendars/{c}/events/{e}?sendUpdates=none",calendar,event).header("Authorization","Bearer "+access).body(payload).retrieve().toBodilessEntity();}
  static Map<String,Object> event(Map<String,Object> s,String base){
   String label=s.get("site_id")==null?switch(Objects.toString(s.get("personal_kind"),"")){case "office"->"사무실";case "edu"->"교육·세미나";case "leave"->"휴가";case "annual"->"연차";default->"일정";}:switch(Objects.toString(s.get("service_type"),"")){case "PM"->"PM";case "REPAIR"->"고장수리";case "CALL"->"콜";case "ACR"->"ACR";case "COLDHEAD"->"콜드헤드";case "INSTALL"->"설치";default->"방문";};
   String title=Objects.toString(s.get("title"),"");String hospital=s.get("site_id")==null?"":Objects.toString(s.get("hospital_name"),"");
