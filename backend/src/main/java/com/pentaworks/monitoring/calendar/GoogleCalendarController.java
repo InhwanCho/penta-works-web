@@ -100,7 +100,8 @@ public class GoogleCalendarController {
    }
   }
   cookie(response,"",0);response.setHeader("Cache-Control","no-store");response.setHeader("Referrer-Policy","no-referrer");
-  response.sendRedirect("/settings?googleCalendar="+outcome);
+  // Keep the redirect relative so reverse proxies cannot expose the backend origin/port.
+  response.setStatus(302);response.setHeader("Location","/settings?googleCalendar="+outcome);
  }
  @DeleteMapping
  @Transactional
