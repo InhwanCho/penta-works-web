@@ -2276,3 +2276,39 @@ h4,
 .work-hospital-grid .hospital-directory-equipment { margin-top: 8px; color: var(--work-ink); font-size: 13px; font-weight: 550; line-height: 1.6; }
 .work-hospital-grid .hospital-directory-address { margin-top: 4px; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .work-hospital-grid .work-chevron { flex-shrink: 0; font-size: 24px; }
+
+/* Hospital registration and service-only profile management. */
+.hospital-directory-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+.hospital-directory-heading > .work-heading { margin: 0; }
+.hospital-register { flex-shrink: 0; min-height: 40px; padding: 8px 12px; font-size: 13px; }
+.hospital-list-connection { display: inline-block; margin-top: 6px; padding: 3px 7px; border-radius: 5px; background: var(--work-soft); color: var(--work-focus); font-size: 11px; font-weight: 600; }
+.hospital-profile-summary { margin-top: 16px; border-top: 1px solid var(--work-line); padding-top: 12px; }
+.hospital-profile-summary dl { display: grid; gap: 8px; }
+.hospital-profile-summary dl > div { display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 12px; font-size: 14px; line-height: 1.6; }
+.hospital-profile-summary dt { color: var(--work-muted); }
+.hospital-profile-summary dd { overflow-wrap: anywhere; }
+.hospital-profile-summary .hospital-panel-actions { align-items: center; justify-content: space-between; }
+.hospital-connection-state { color: var(--work-muted); font-size: 12px; }
+.hospital-management-dialog { position: fixed; inset: 0; margin: auto; width: min(600px,calc(100% - 24px)); max-height: 80dvh; padding: 0; border: 1px solid var(--work-line); border-radius: 16px; background: var(--work-paper); color: var(--work-ink); overflow-y: auto; overscroll-behavior: contain; box-shadow: 0 16px 60px #0003; }
+.hospital-management-dialog:focus { outline: none; }
+.hospital-management-dialog::backdrop { background: #16203466; }
+.hospital-management-dialog > header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--work-line); background: var(--work-paper); }
+.hospital-management-dialog > header h2 { font-size: 18px; font-weight: 700; }
+.hospital-management-dialog > header button { width: 44px; height: 44px; font-size: 24px; border-radius: 8px; }
+.hospital-management-body { padding: 18px; }
+.hospital-management-fields { display: grid; gap: 16px; min-width: 0; }
+.hospital-access-members { display: grid; gap: 8px; min-width: 0; padding-top: 12px; border-top: 1px solid var(--work-line); }
+.hospital-access-members .work-check { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+.hospital-access-members small { display: block; font-size: 12px; color: var(--work-muted); }
+.planning-guide > summary { align-items: center; line-height: 20px; }
+.planning-guide > summary::after { display: block; align-self: center; line-height: 1; }
+@media(max-width:1023px) {
+ .work-hospitals .hospital-directory-heading { justify-content: flex-end; margin-bottom: 12px; }
+ .work-hospitals .hospital-directory-heading > .work-heading { display: none; }
+ .hospital-profile-summary dl > div { grid-template-columns: 80px minmax(0,1fr); }
+ .hospital-profile-summary .hospital-panel-actions { flex-wrap: wrap; gap: 10px; }
+}
+
+.planning-guide > summary::after, .planning-guide[open] > summary::after { content: none; }
+.planning-guide > summary > svg { display: block; flex-shrink: 0; align-self: center; }
+.planning-guide[open] > summary > svg { transform: rotate(180deg); }

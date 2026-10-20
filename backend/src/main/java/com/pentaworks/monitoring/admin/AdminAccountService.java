@@ -38,6 +38,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class AdminAccountService {
+    @org.springframework.beans.factory.annotation.Value("${app.workspace.enabled:false}")
+    private boolean workspaceEnabled;
     private static final Set<String> MANAGED_ROLES = Set.of("SUPER_ADMIN", "ADMIN", "USER");
     private static final Set<String> STATUSES = Set.of("ACTIVE", "SUSPENDED");
 
@@ -134,6 +136,7 @@ public class AdminAccountService {
         SiteFields fields = validateSiteFields(request.name(), request.address(), request.contactName(),
             request.contactPhone(), request.timezone());
         jdbcTemplate.update("UPDATE site SET name=? WHERE site=?", fields.name(), siteId);
+        if(workspaceEnabled)jdbcTemplate.update("UPDATE workspace_hospital SET name=?,revision=revision+1 WHERE company_id=? AND (site_id=? OR monitoring_site_id=?)",fields.name(),actor.companyId(),siteId,siteId);
         jdbcTemplate.update("""
             INSERT INTO site_profile
                 (site_id,display_name,address,contact_name,contact_phone,timezone,created_at,updated_at)

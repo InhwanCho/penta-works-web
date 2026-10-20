@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
 import ActionMenu from "@/components/common/action-menu";
 import { ChoiceGroup } from "./choice-group";
@@ -236,14 +237,17 @@ export function TodayPage() {
 }
 export function HospitalsPage() {
   const { session } = useAuth();
-  const sites = useQuery({queryKey: ["workspace-hospital-directory", session?.id], queryFn: () => apiFetch<{siteDb: string; name: string | null; address: string; equipment: string[]}[]>("/workspace/hospitals"), enabled: !!session});
+  const sites = useQuery({queryKey: ["workspace-hospital-directory", session?.id], queryFn: () => apiFetch<{siteDb: string; name: string | null; address: string; equipment: string[]; monitoringConnected: boolean; hospitalId: number | null}[]>("/workspace/hospitals"), enabled: !!session});
   const [search, setSearch] = useState("");
   return (
     <main className="work-page work-hospitals">
+      <div className="hospital-directory-heading">
       <PageHeading
         title="병원 · 장비"
         description="병원별 모니터링, 장비와 서비스 이력을 확인하세요."
       />
+      <HospitalRegistration />
+      </div>
       <input
         className="work-input work-search"
         placeholder="병원명 · 장비 · 주소 검색"
@@ -270,6 +274,7 @@ export function HospitalsPage() {
               >
                 <div>
                   <strong>{s.name || s.siteDb}</strong>
+                  <span className="hospital-list-connection">{s.monitoringConnected ? "모니터링 연결" : "서비스 관리"}</span>
                   <p className="hospital-directory-equipment">{s.equipment.join(" / ") || "장비 정보 미등록"}</p>
                   <p className="hospital-directory-address">{s.address || "주소 미등록"}</p>
                 </div>

@@ -12,6 +12,9 @@ export type SiteDetailRow = Partial<Record<MetricKey, number | null>> & {
 
 export type SiteDetailResponse = {
   metricConfig?: CompanyMetric[];
+  hospitalId?: number | null;
+  monitoringSiteId?: string | null;
+  monitoringConnected?: boolean;
   slug: string;
   site: { siteDb: string; name: string | null };
   take: number;

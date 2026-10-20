@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class CurrentUserService {
     private final JdbcTemplate jdbcTemplate;
+    @org.springframework.beans.factory.annotation.Value("${app.workspace.enabled:false}")
+    private boolean workspaceEnabled;
 
     public CurrentUserService(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -44,7 +46,13 @@ public class CurrentUserService {
             sql = "SELECT site_id FROM user_site WHERE user_id=? ORDER BY site_id";
             args = new Object[] {user.id()};
         }
-        return new LinkedHashSet<>(jdbcTemplate.query(sql, (rs, row) -> rs.getString(1), args));
+        var ids=new LinkedHashSet<>(jdbcTemplate.query(sql, (rs, row) -> rs.getString(1), args));
+        if(workspaceEnabled&&!user.isAdmin()) {
+            // A sensor assignment also grants its canonical hospital; both stay in the same company.
+            var aliases=jdbcTemplate.queryForList("SELECT h.site_id,h.monitoring_site_id FROM workspace_hospital h WHERE h.company_id=? AND h.monitoring_site_id IS NOT NULL",user.companyId());
+            for(var alias:aliases)if(ids.contains(alias.get("monitoring_site_id")))ids.add(alias.get("site_id").toString());
+        }
+        return ids;
     }
 
     public Set<String> visibleSiteIds(CurrentUser user) {

@@ -36,12 +36,12 @@ public class WorkspaceController {
     }
     public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt,String targetKind,String personalKind,String serviceType) {}
     private static final String RECORDS="""
-        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,
+        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,
                w.engineer_name engineerName,w.counts_as_pm countsAsPm,w.acr_kind acrKind,w.schedule_id scheduleId,w.source_id sourceId,
                (SELECT DATE_FORMAT(sc.start_at,'%Y-%m-%d') FROM workspace_schedule sc WHERE sc.id=w.schedule_id AND sc.company_id=w.company_id) scheduleDate,
                w.kind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.work_date,'%Y-%m-%d') workDate,w.status,w.details_json detailsJson,w.updated_at updatedAt,
                EXISTS(SELECT 1 FROM workspace_asset_history h WHERE h.record_id=w.id AND h.change_kind IN ('REGISTER','UPDATE')) assetChange
-        FROM workspace_record w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
+        FROM workspace_record w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id LEFT JOIN workspace_hospital h ON h.company_id=w.company_id AND h.site_id=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.work_date DESC,w.id DESC LIMIT 500
         """;
     @GetMapping("/hospitals")
@@ -67,7 +67,7 @@ public class WorkspaceController {
             String sid=row.get("site_id").toString();if(allowed.contains(sid))snapshots.put(sid,row);
         }
         var result=new java.util.ArrayList<Map<String,Object>>();
-        for(var site:db.queryForList("SELECT s.site siteId,s.name,p.address FROM site s LEFT JOIN site_profile p ON p.site_id=s.site ORDER BY s.name,s.site")) {
+        for(var site:db.queryForList("SELECT s.site siteId,COALESCE(h.name,s.name) name,p.address,h.id hospitalId,COALESCE(h.monitoring_site_id,IF(h.id IS NULL,s.site,NULL)) monitoringSiteId FROM site s JOIN company_site cs ON cs.site_id=s.site LEFT JOIN site_profile p ON p.site_id=s.site LEFT JOIN workspace_hospital h ON h.company_id=cs.company_id AND h.site_id=s.site WHERE cs.company_id=? AND NOT EXISTS(SELECT 1 FROM workspace_hospital connected WHERE connected.company_id=cs.company_id AND connected.monitoring_site_id=s.site AND connected.site_id<>s.site) ORDER BY s.name,s.site",u.companyId())) {
             String sid=site.get("siteId").toString();if(!allowed.contains(sid))continue;
             var snapshot=snapshots.get(sid);
             String address=java.util.Objects.toString(site.get("address"),"").trim();
@@ -80,7 +80,7 @@ public class WorkspaceController {
                     String model=item.path("model").asText("");if(!model.isBlank())models.add(model);
                 }}catch(JsonProcessingException ignored) { /* Unmigrated metadata can be absent. */ }
             }
-            var row=new java.util.LinkedHashMap<String,Object>();row.put("siteDb",sid);row.put("name",site.get("name"));row.put("address",address);row.put("equipment",models==null?List.of():models);result.add(row);
+            var row=new java.util.LinkedHashMap<String,Object>();row.put("siteDb",sid);row.put("name",site.get("name"));row.put("address",address);row.put("hospitalId",site.get("hospitalId"));row.put("monitoringConnected",site.get("monitoringSiteId")!=null);row.put("equipment",models==null?List.of():models);result.add(row);
         }
         return result;
     }
@@ -168,8 +168,8 @@ public class WorkspaceController {
     public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());return Map.of("deleted",true);}
     @GetMapping("/schedules")
     public List<Map<String,Object>> schedules(Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);return db.queryForList("""
-        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,s.name siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
-        FROM workspace_schedule w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id
+        SELECT w.id,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
+        FROM workspace_schedule w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id LEFT JOIN workspace_hospital h ON h.company_id=w.company_id AND h.site_id=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.start_at,w.id LIMIT 1000
         """,u.companyId()).stream().filter(r->visible(r,allowed)).toList();}
     @PostMapping("/schedules") @Transactional

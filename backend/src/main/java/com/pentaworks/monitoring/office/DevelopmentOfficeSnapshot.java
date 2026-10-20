@@ -18,7 +18,10 @@ public class DevelopmentOfficeSnapshot {
     public OfficeAssetsResponse bySite(String siteId) {return bySite(siteId,null);}
     public OfficeAssetsResponse bySite(String siteId,Long companyId) {
         String json=db.query("SELECT response_json FROM workspace_office_snapshot WHERE site_id=?",rs->{return rs.next()?rs.getString(1):null;},siteId);
-        if(json==null)return null;
+        if(json==null) {
+            if(companyId==null)return null;
+            return db.query("SELECT h.id,h.name,p.address,h.notes FROM workspace_hospital h JOIN site s ON s.site=h.site_id LEFT JOIN site_profile p ON p.site_id=h.site_id WHERE h.company_id=? AND h.site_id=?",rs->rs.next()?new OfficeAssetsResponse(new OfficeAssetsResponse.Site(rs.getLong(1),siteId,rs.getString(2),null,rs.getString(3),rs.getString(4)),java.util.List.of(),java.util.List.of(),java.util.List.of(),java.time.Instant.now().toString()):null,companyId,siteId);
+        }
         try {
             var response=mapper.readValue(json,OfficeAssetsResponse.class);
             if(companyId==null)return response;

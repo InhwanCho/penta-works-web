@@ -1,4 +1,5 @@
 "use client";
+import { HospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
@@ -201,6 +202,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     );
   }
 
+  const monitoringConnected = data.monitoringConnected ?? true;
+  const monitoringSiteId = data.monitoringSiteId || data.site.siteDb;
   const rowsDesc = data.rows; // desc
   const totalCount = data.totalCount ?? data.rows.length;
   const chartPeriodLabel = periodActive ? `${fmtDate(from).slice(0,16)} ~ ${fmtDate(to).slice(0,16)} · ${rowsDesc.length}건` : undefined;
@@ -225,9 +228,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       <div className="hospital-dashboard-back mb-2 sm:mb-3">
         <Link
           className="text-text-secondary hover:bg-background-tertiary hover:text-text-major dark:text-text-dark-primary/70 dark:hover:bg-background-dark-secondary dark:hover:text-text-dark-primary inline-flex min-h-10 items-center justify-center gap-x-1.5 rounded-lg px-2 text-sm font-bold transition-colors"
-          href={`/?scrollTo=${encodeURIComponent(slug)}`}
+          href={monitoringConnected ? `/?scrollTo=${encodeURIComponent(slug)}` : "/hospitals"}
         >
-          <ArrowBackIconMini className="h-4 w-4" /> 대시보드
+          <ArrowBackIconMini className="h-4 w-4" /> {monitoringConnected ? "대시보드" : "병원 목록"}
         </Link>
       </div>
 
@@ -237,7 +240,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             {data.site.name || "-"}
           </h1>
         </div>
-        <div className="text-text-secondary dark:text-text-dark-primary/60 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+        {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span>
             최신 수집
             <span className="text-text-major dark:text-text-dark-primary/80 ml-1 font-medium tabular-nums">
@@ -245,14 +248,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             </span>
           </span>
           <div className="ml-auto shrink-0">
-            <SiteAlertSettingsButton siteId={data.site.siteDb} />
+            <SiteAlertSettingsButton siteId={monitoringSiteId} />
           </div>
-        </div>
+        </div>}
+        <HospitalProfile siteId={data.site.siteDb} />
       </div>
 
-      <HospitalSection title="내 알림 기준" anchor="hospital-alert-summary" allScreens>
-        <SiteAlertSummary siteId={data.site.siteDb} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
-      </HospitalSection>
+      {monitoringConnected && <HospitalSection title="내 알림 기준" anchor="hospital-alert-summary" allScreens>
+        <SiteAlertSummary siteId={monitoringSiteId} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
+      </HospitalSection>}
 
       <HospitalSection title="장비·부품" anchor="hospital-equipment">
         <HospitalEquipmentPanel siteId={data.site.siteDb} returnPath={`/sites/${encodeURIComponent(slug)}`} />
@@ -264,6 +268,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         <HospitalWork siteId={data.site.siteDb} />
       </HospitalSection>
 
+      {monitoringConnected && <>
       <fieldset className="hospital-detail-card">
         <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
           표시 건수 · 기간 조회
@@ -536,6 +541,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             </div>
           ))}
       </div>
+      </>}
     </main>
   );
 }

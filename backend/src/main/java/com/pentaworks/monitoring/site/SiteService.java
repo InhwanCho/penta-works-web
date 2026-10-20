@@ -31,21 +31,25 @@ public class SiteService {
     }
 
     public SiteResponse detail(String slug, int rawTake, Instant from, Instant to, int rawPage) {
+        return detail(slug,rawTake,from,to,rawPage,normalizeSiteId(slug));
+    }
+    public SiteResponse detail(String slug,int rawTake,Instant from,Instant to,int rawPage,String monitoringSiteId) {
         validatePeriod(from, to);
         int take = Math.min(Math.max(rawTake, 10), 1000);
         String siteId = normalizeSiteId(slug);
         SiteResponse.SiteSummary site = jdbcTemplate.query("SELECT site, name FROM site WHERE site = ?", rs ->
             rs.next() ? new SiteResponse.SiteSummary(rs.getString("site"), rs.getString("name")) : null, siteId);
         if (site == null) throw new NotFoundException("사이트를 찾을 수 없습니다.");
+        if(monitoringSiteId==null)return new SiteResponse(slug,site,take,null,List.of());
         long totalCount = 0;
         int page = 1;
         if (from != null) {
             Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM mrtb WHERE siteid=? AND date>=? AND date<=?",
-                Long.class, site.siteDb(), Timestamp.from(from), Timestamp.from(to));
+                Long.class, monitoringSiteId, Timestamp.from(from), Timestamp.from(to));
             totalCount = count == null ? 0 : count;
         }
         List<Object> arguments = new ArrayList<>();
-        arguments.add(site.siteDb());
+        arguments.add(monitoringSiteId);
         if (from != null) {arguments.add(Timestamp.from(from)); arguments.add(Timestamp.from(to));}
         arguments.add(take);
         if (from != null) { arguments.add(take); arguments.add(take); arguments.add(take); }
@@ -83,7 +87,7 @@ public class SiteService {
                 DashboardService.parseMeasurement(rs.getString("ccflow"))), arguments.toArray());
         String lastAt = rows.isEmpty() ? null : rows.get(0).date();
         if (from != null) lastAt = jdbcTemplate.query("SELECT date FROM mrtb WHERE siteid=? AND date IS NOT NULL ORDER BY date DESC LIMIT 1",
-            rs -> rs.next() ? rs.getTimestamp(1).toInstant().toString() : null, site.siteDb());
+            rs -> rs.next() ? rs.getTimestamp(1).toInstant().toString() : null, monitoringSiteId);
         return new SiteResponse(slug, site, take, lastAt, rows, List.of(), page, from == null ? rows.size() : totalCount);
     }
 

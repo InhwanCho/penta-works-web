@@ -24,6 +24,9 @@ public class SiteController {
         this.metrics = metrics;
     }
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.beans.factory.ObjectProvider<com.pentaworks.monitoring.workspace.WorkspaceHospitals> hospitals;
+
     @GetMapping
     public List<SiteResponse.SiteSummary> list(Authentication authentication) {
         var user = currentUsers.require(authentication);
@@ -39,6 +42,13 @@ public class SiteController {
         var user = currentUsers.require(authentication);
         // Dashboard visibility controls the monitoring list; assigned hospitals still have service detail pages.
         currentUsers.requireSiteAccess(user, SiteService.normalizeSiteId(siteid));
+        var registry=hospitals==null?null:hospitals.getIfAvailable();
+        if(registry!=null) {
+            String canonical=registry.canonicalSite(user.companyId(),SiteService.normalizeSiteId(siteid));
+            currentUsers.requireSiteAccess(user,canonical);
+            var binding=registry.binding(user.companyId(),canonical);
+            return siteService.detail(canonical,take,from,to,page,binding.monitoringSiteId()).withMetrics(metrics.metrics(user.companyId())).withHospital(binding.hospitalId(),binding.monitoringSiteId(),binding.name());
+        }
         return siteService.detail(siteid, take, from, to, page).withMetrics(metrics.metrics(user.companyId()));
     }
 }

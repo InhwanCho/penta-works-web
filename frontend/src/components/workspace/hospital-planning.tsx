@@ -54,7 +54,7 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
           </dl>
           <div className="hospital-panel-actions planning-actions">
             <details className="planning-guide">
-              <summary>점검 기준 안내</summary>
+              <summary><span>점검 기준 안내</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary>
               <p>완료 이력과 점검 주기로 기한을 계산합니다. 지정일은 마지막 점검일보다 이후일 때 우선 적용됩니다. 방문 일정은 달력에서 별도로 등록하며, 이 기준은 회사 내 담당자에게 공통 적용됩니다.</p>
             </details>
             {isAdmin && <button type="button" className="work-secondary hospital-section-action" onClick={() => setEditing(true)}>설정 변경</button>}
