@@ -2488,3 +2488,15 @@ body:has(.legal-document-surface) .site-footer strong { color: #111; }
   .legal-page.legal-document header > p, .legal-page.legal-document section p, .legal-page.legal-document h2 { font-size: 14px; line-height: 1.65; }
   .legal-page.legal-document section { margin-bottom: 22px; }
 }
+
+.policy-links a[aria-current="page"],
+.legal-page.legal-document .policy-links a[aria-current="page"] {
+  font-weight: 750;
+  color: #111;
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 7px;
+}
+.dark .policy-links a[aria-current="page"] { color: #f1f5f9; }
+body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: #111; }
+.policy-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
