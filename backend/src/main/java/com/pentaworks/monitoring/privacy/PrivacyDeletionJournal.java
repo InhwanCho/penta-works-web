@@ -29,7 +29,11 @@ public class PrivacyDeletionJournal {
         var entry=new LinkedHashMap<String,Object>();entry.put("id",id);entry.put("company",company);entry.put("user",user);entry.put("created",created.toLocalDateTime().toString());
         append(entry,"PREPARE");
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization(){
-            @Override public void afterCompletion(int status){append(entry,status==STATUS_COMMITTED?"COMMIT":"ABORT");}
+            @Override public void afterCompletion(int status){
+                if(status==STATUS_COMMITTED)append(entry,"COMMIT");
+                else if(status==STATUS_ROLLED_BACK)append(entry,"ABORT");
+                // Unknown transaction outcomes deliberately remain PREPARE and block restores.
+            }
         });
         db.update("INSERT INTO privacy_deletion_marker(id,company_id,user_id,user_created_at) VALUES(?,?,?,?)",id,company,user,created);
     }
