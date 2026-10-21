@@ -184,12 +184,27 @@ export default function OverviewPage() {
       s.startAt.slice(0, 10) <= selected && s.endAt.slice(0, 10) >= selected,
   );
   const dayDue = due.filter((d) => d.date === selected);
-  const loading =
+  const recordsLoading =
     sites.isPending || records.isPending || old.some((q) => q.isPending);
-  const partial = old.some(
-    (q) =>
-      q.isError && !(q.error instanceof ApiError && q.error.status === 404),
-  );
+  const recordsFailed =
+    !!(sites.error || records.error) ||
+    old.some(
+      (q) =>
+        q.isError && !(q.error instanceof ApiError && q.error.status === 404),
+    );
+  const planningLoading = recordsLoading || planning.isPending;
+  const planningFailed = recordsFailed || !!planning.error;
+  function retryRecords() {
+    void sites.refetch();
+    void records.refetch();
+    old.forEach((q) => {
+      if (q.isError) void q.refetch();
+    });
+  }
+  function retryPlanning() {
+    retryRecords();
+    void planning.refetch();
+  }
   async function check(id: number, done: boolean) {
     setError("");
     try {
@@ -208,21 +223,6 @@ export default function OverviewPage() {
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
       />
-      {(records.error || sites.error) && (
-        <ErrorState
-          error={records.error || sites.error}
-          retry={() => {
-            void records.refetch();
-            void sites.refetch();
-          }}
-        />
-      )}
-      {partial && (
-        <p className="work-hint">
-          일부 병원의 이전 서비스 이력을 불러오지 못했습니다. 표시된 기록을
-          기준으로 집계합니다.
-        </p>
-      )}
       <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>
         <div className="overview-shortcuts">
@@ -270,6 +270,26 @@ export default function OverviewPage() {
             오늘
           </button>
         </div>
+        <CalendarLoadState
+          label="업무기록"
+          failed={recordsFailed}
+          pending={recordsLoading}
+          retry={retryRecords}
+        />
+        <CalendarLoadState
+          label="일정"
+          failed={!!schedules.error}
+          pending={schedules.isPending}
+          retry={() => {
+            void schedules.refetch();
+          }}
+        />
+        <CalendarLoadState
+          label="점검 기한"
+          failed={planningFailed}
+          pending={planningLoading}
+          retry={retryPlanning}
+        />
         <div className="work-calendar-grid weekdays">
           {["일", "월", "화", "수", "목", "금", "토"].map((w) => (
             <span key={w}>{w}</span>
@@ -361,7 +381,12 @@ export default function OverviewPage() {
             className={`day-agenda-section${!dayRecords.length ? "day-section-empty" : ""}`}
           >
             <div className="day-section-toolbar">
-              <h3>작성된 업무기록 ({dayRecords.length})</h3>
+              <h3>
+                작성된 업무기록
+                {!recordsLoading && !recordsFailed
+                  ? ` (${dayRecords.length})`
+                  : ""}
+              </h3>
               <Link
                 className="day-section-action"
                 href={`/work/new?date=${selected}`}
@@ -369,6 +394,12 @@ export default function OverviewPage() {
                 작성
               </Link>
             </div>
+            <CalendarLoadState
+              label="업무기록"
+              failed={recordsFailed}
+              pending={recordsLoading}
+              retry={retryRecords}
+            />
             {dayRecords.length ? (
               <div className="day-entry-list">
                 {dayRecords.map((r) => (
@@ -387,9 +418,9 @@ export default function OverviewPage() {
                   />
                 ))}
               </div>
-            ) : (
+            ) : !recordsLoading && !recordsFailed ? (
               <p className="day-empty">작성된 업무기록이 없습니다.</p>
-            )}
+            ) : null}
           </section>
           <section
             className={`day-agenda-section${!daySchedules.length ? "day-section-empty" : ""}`}
@@ -397,7 +428,9 @@ export default function OverviewPage() {
             <div className="day-section-toolbar">
               <h3>
                 등록한 일정{" "}
-                {daySchedules.length ? `(${daySchedules.length})` : ""}
+                {!schedules.isPending && !schedules.error && daySchedules.length
+                  ? `(${daySchedules.length})`
+                  : ""}
               </h3>
               <Link
                 className="day-section-action"
@@ -406,6 +439,14 @@ export default function OverviewPage() {
                 일정 등록
               </Link>
             </div>
+            <CalendarLoadState
+              label="일정"
+              failed={!!schedules.error}
+              pending={schedules.isPending}
+              retry={() => {
+                void schedules.refetch();
+              }}
+            />
             {daySchedules.length ? (
               <div className="day-entry-list">
                 {daySchedules.map((s) => (
@@ -422,10 +463,16 @@ export default function OverviewPage() {
                   />
                 ))}
               </div>
-            ) : (
+            ) : !schedules.isPending && !schedules.error ? (
               <p className="day-empty">등록된 일정이 없습니다.</p>
-            )}
+            ) : null}
           </section>
+          <CalendarLoadState
+            label="점검 기한"
+            failed={planningFailed}
+            pending={planningLoading}
+            retry={retryPlanning}
+          />
           {!!dayDue.length && (
             <section className="day-agenda-section day-due-section">
               <div className="day-section-heading">
@@ -462,7 +509,12 @@ export default function OverviewPage() {
         >
           <summary>
             <span>다가오는 점검</span>
-            <small>45일 이내 · {upcomingDue.length}건</small>
+            <small>
+              45일 이내
+              {!planningLoading && !planningFailed
+                ? ` · ${upcomingDue.length}건`
+                : ""}
+            </small>
           </summary>
           <div className="overview-fold-body">
             <p className="work-hint">
@@ -470,6 +522,12 @@ export default function OverviewPage() {
               기록과 병원별 지정일로 계산합니다.
             </p>
             <div className="work-panel">
+              <CalendarLoadState
+                label="점검 기한"
+                failed={planningFailed}
+                pending={planningLoading}
+                retry={retryPlanning}
+              />
               {upcomingDue.map((d) => (
                 <Link
                   className="work-due-row"
@@ -487,12 +545,8 @@ export default function OverviewPage() {
                   </span>
                 </Link>
               ))}
-              {!upcomingDue.length && (
-                <Empty>
-                  {loading
-                    ? "예정일을 계산하는 중…"
-                    : "45일 이내 예정된 점검이 없습니다."}
-                </Empty>
+              {!upcomingDue.length && !planningLoading && !planningFailed && (
+                <Empty>45일 이내 예정된 점검이 없습니다.</Empty>
               )}
             </div>
           </div>
@@ -729,4 +783,42 @@ function DayDialog({
       <div className="work-day-body">{children}</div>
     </dialog>
   );
+}
+
+function CalendarLoadState({
+  label,
+  failed,
+  pending,
+  retry,
+}: {
+  label: string;
+  failed: boolean;
+  pending: boolean;
+  retry: () => void;
+}) {
+  if (failed)
+    return (
+      <div
+        className="work-error calendar-load-state"
+        role="alert"
+      >
+        {label} 조회에 실패했습니다. 일부 항목이 표시되지 않을 수 있습니다.{" "}
+        <button
+          type="button"
+          onClick={retry}
+        >
+          다시 시도
+        </button>
+      </div>
+    );
+  if (pending)
+    return (
+      <p
+        className="work-hint calendar-load-state"
+        role="status"
+      >
+        {label} 불러오는 중…
+      </p>
+    );
+  return null;
 }

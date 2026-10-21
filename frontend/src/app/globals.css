@@ -2538,3 +2538,7 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .received-alert.is-compact .received-alert-actions, .received-alert.is-compact.is-expanded .received-alert-actions { grid-column: 5; grid-row: 1; }
  .received-alert.is-compact.is-expanded .received-alert-reading span { display: none; }
 }
+
+.work-calendar > .calendar-load-state { margin: 8px 12px; }
+.calendar-load-state { font-size: 14px; line-height: 1.5; }
+.calendar-load-state button { min-height: 40px; padding: 6px 10px; text-decoration: underline; }

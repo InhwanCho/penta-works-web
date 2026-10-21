@@ -1,0 +1,20 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+const exports = {};
+const input = fs.readFileSync(new URL('../src/components/workspace/workspace-overview.tsx', import.meta.url), 'utf8') + '\nexport { CalendarLoadState };';
+const source = ts.transpileModule(input, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
+vm.runInNewContext(source, { exports, require: (name) => name === 'react/jsx-runtime' ? { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) } : {} });
+test('calendar distinguishes successful empty results, loading and failure and supports retry', () => {
+  const render = exports.CalendarLoadState;
+  let calls = 0;
+  const props = { label: '일정', failed: false, pending: false, retry: () => calls++ };
+  assert.equal(render(props), null);
+  assert.equal(render({ ...props, pending: true }).props.role, 'status');
+  const failed = render({ ...props, failed: true, pending: true });
+  assert.equal(failed.props.role, 'alert');
+  const button = failed.props.children.find((child) => child?.type === 'button');
+  button.props.onClick(); assert.equal(calls, 1);
+});

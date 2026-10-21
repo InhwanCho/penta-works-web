@@ -41,19 +41,19 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     [openModals, open, close],
   );
 
-  // ESC 키 처리: 마지막 열린 모달만 닫기
+  const hasOpenModal = openModals.length > 0;
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && openModals.length) {
-        const lastId = openModals[openModals.length - 1];
-        if (lastId !== undefined) {
-          close(lastId);
-        }
-      }
+    if (!hasOpenModal) return;
+    const content = document.getElementById("app-content");
+    const previousInert = content?.inert ?? false;
+    const previousOverflow = document.body.style.overflow;
+    if (content) content.inert = true;
+    document.body.style.overflow = "hidden";
+    return () => {
+      if (content) content.inert = previousInert;
+      document.body.style.overflow = previousOverflow;
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [openModals, close]);
+  }, [hasOpenModal]);
 
   return (
     <ModalContext.Provider value={value}>
@@ -98,6 +98,7 @@ export function useModal(id: string) {
 
   return {
     isOpen,
+    isTopModal: isOpen && index === openModals.length - 1,
     open: () => open(id),
     close: () => close(id),
     zIndex,

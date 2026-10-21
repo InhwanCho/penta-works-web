@@ -28,7 +28,7 @@ export default function CustomModal({
   closeOnEsc = true,
   onCloseByX,
 }: CustomModalProps) {
-  const { isOpen, close, zIndex } = useModal(id);
+  const { isOpen, isTopModal, close, zIndex } = useModal(id);
 
   const handleClose = useCallback(() => {
     close();
@@ -37,38 +37,30 @@ export default function CustomModal({
 
   // ESC 키 처리
   useEffect(() => {
-    if (!(isOpen && closeOnEsc)) return;
+    if (!(isTopModal && closeOnEsc)) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (
+        e.key === "Escape" &&
+        !e.repeat &&
+        !e.defaultPrevented &&
+        !document.querySelector("dialog[open]")
+      ) {
         e.preventDefault();
         handleClose();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [handleClose, closeOnEsc, isOpen]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const content = document.getElementById("app-content");
-    const previousInert = content?.inert ?? false;
-    const previousOverflow = document.body.style.overflow;
-    if (content) content.inert = true;
-    document.body.style.overflow = "hidden";
-    return () => {
-      if (content) content.inert = previousInert;
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [isOpen]);
+  }, [handleClose, closeOnEsc, isTopModal]);
 
   if (!isOpen) return null;
 
   return createPortal(
     <div
-      className="fixed inset-0 bg-slate-900/25 backdrop-blur-sm flex items-end justify-center p-0 sm:items-start sm:p-6 sm:pt-[10vh]"
+      className="fixed inset-0 flex items-end justify-center bg-slate-900/25 p-0 backdrop-blur-sm sm:items-start sm:p-6 sm:pt-[10vh]"
       style={{ zIndex }}
-      onClick={closeOnOverlay ? handleClose : undefined}
+      onClick={isTopModal && closeOnOverlay ? handleClose : undefined}
       role="presentation"
     >
       <div
@@ -77,9 +69,9 @@ export default function CustomModal({
         className={[
           "dark:bg-background-dark-card relative w-full bg-white",
           "shadow-[0_7px_26px_-10px_rgba(22,23,24,0.18),_0_6px_14px_-12px_rgba(22,23,24,0.1)]",
-          "border border-border/80 dark:border-background-dark-secondary/80",
+          "border-border/80 dark:border-background-dark-secondary/80 border",
           // 모바일: 바텀 시트
-          "max-h-[80dvh] lg:max-h-[92vh] overflow-hidden rounded-t-xl",
+          "max-h-[80dvh] overflow-hidden rounded-t-xl lg:max-h-[92vh]",
           // 데스크탑: 중앙 카드
           "sm:max-w-[560px] sm:rounded-lg",
         ].join(" ")}
@@ -91,9 +83,7 @@ export default function CustomModal({
             onClick={() => (onCloseByX ? onCloseByX() : handleClose())}
             aria-label="닫기"
           >
-            <XIcon
-              className={`size-4 ${closeBtnStyle ?? ""}`}
-            />
+            <XIcon className={`size-4 ${closeBtnStyle ?? ""}`} />
           </button>
         )}
 
