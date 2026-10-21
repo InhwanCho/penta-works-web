@@ -23,6 +23,7 @@ services:
     build: ./backend
     restart: unless-stopped
     environment:
+      WORKSPACE_PHOTOS_DIRECTORY: /app/data/workspace-photos
       PRIVACY_JOURNAL_DIRECTORY: /app/privacy-journal
       DB_URL: ${DEV_DB_URL:?DEV_DB_URL must point to the isolated development database}
       DB_USERNAME: ${DEV_DB_USERNAME:?DEV_DB_USERNAME is required}
@@ -69,6 +70,7 @@ services:
     volumes:
       - /home/inhwan/privacy-journal/dev:/app/privacy-journal
       - company_documents:/app/data/company-documents
+      - workspace_photos:/app/data/workspace-photos
     depends_on:
       database:
         condition: service_healthy
@@ -91,6 +93,7 @@ services:
       - backend
 
 volumes:
+  workspace_photos:
   company_documents:
   pentaworks_mariadb_data:
     external: true

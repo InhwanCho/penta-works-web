@@ -7,6 +7,8 @@ import {
   type Ref,
 } from "react";
 import Image from "next/image";
+import CustomModal from "@/components/common/custom-modal";
+import { useModal } from "@/components/provider/modal-provider";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { errorText } from "./workspace-data";
@@ -25,6 +27,96 @@ function Photo({
   photo: PhotoMeta;
   onRemove?: () => void;
 }) {
+  const frame = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  const modalId = `workspace-photo-${photo.id}`,
+    modal = useModal(modalId);
+  useEffect(() => {
+    if (!frame.current) return;
+    if (!("IntersectionObserver" in window)) {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "200px" },
+    );
+    observer.observe(frame.current);
+    return () => observer.disconnect();
+  }, []);
+  const [url, setUrl] = useState(""),
+    [error, setError] = useState("");
+  useEffect(() => {
+    if (!visible) return;
+    let disposed = false,
+      objectUrl = "";
+    apiFetchBlob(`/workspace/photos/${photo.id}?preview=true`)
+      .then((blob) => {
+        objectUrl = URL.createObjectURL(blob);
+        if (!disposed) setUrl(objectUrl);
+      })
+      .catch((e) => {
+        if (!disposed) setError(errorText(e));
+      });
+    return () => {
+      disposed = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [photo.id, visible]);
+  return (
+    <div
+      className="work-photo"
+      ref={frame}
+      style={{ minHeight: 170 }}
+    >
+      {url ? (
+        <a
+          href="#photo"
+          onClick={(e) => {
+            e.preventDefault();
+            modal.open();
+          }}
+          aria-label={`${photo.name} 크게 보기`}
+        >
+          <Image
+            src={url}
+            alt={photo.name}
+            width={photo.width}
+            height={photo.height}
+            unoptimized
+          />
+        </a>
+      ) : (
+        <span role={error ? "alert" : undefined}>
+          {error || "불러오는 중…"}
+        </span>
+      )}
+      {modal.isOpen && (
+        <CustomModal id={modalId}>
+          <FullPhoto photo={photo} />
+        </CustomModal>
+      )}
+      <div>
+        <span>{photo.name}</span>
+        {onRemove && (
+          <button
+            type="button"
+            aria-label={`${photo.name} 제거`}
+            onClick={onRemove}
+          >
+            ×
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+function FullPhoto({ photo }: { photo: PhotoMeta }) {
   const [url, setUrl] = useState(""),
     [error, setError] = useState("");
   useEffect(() => {
@@ -44,40 +136,40 @@ function Photo({
     };
   }, [photo.id]);
   return (
-    <div className="work-photo">
-      {url ? (
-        <a
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={`${photo.name} 크게 보기`}
+    <section className="p-4 pt-12">
+      <h2 className="mb-3 truncate text-sm font-semibold">{photo.name}</h2>
+      {error ? (
+        <p
+          role="alert"
+          className="text-sm"
         >
-          <Image
-            src={url}
-            alt={photo.name}
-            width={photo.width}
-            height={photo.height}
-            unoptimized
-          />
-        </a>
-      ) : (
-        <span role={error ? "alert" : undefined}>
-          {error || "불러오는 중…"}
-        </span>
-      )}
-      <div>
-        <span>{photo.name}</span>
-        {onRemove && (
-          <button
-            type="button"
-            aria-label={`${photo.name} 제거`}
-            onClick={onRemove}
+          {error}
+        </p>
+      ) : url ? (
+        <>
+          <div className="max-h-[60dvh] overflow-auto">
+            <Image
+              src={url}
+              alt={photo.name}
+              width={photo.width}
+              height={photo.height}
+              unoptimized
+              className="h-auto w-full object-contain"
+            />
+          </div>
+          <a
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-sky-700 dark:text-sky-300"
           >
-            ×
-          </button>
-        )}
-      </div>
-    </div>
+            사진 크게 열기 ↗
+          </a>
+        </>
+      ) : (
+        <p className="py-8 text-sm">큰 사진을 불러오는 중…</p>
+      )}
+    </section>
   );
 }
 async function prepare(file: File): Promise<File> {

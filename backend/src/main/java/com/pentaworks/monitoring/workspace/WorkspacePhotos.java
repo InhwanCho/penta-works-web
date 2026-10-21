@@ -26,7 +26,10 @@ public class WorkspacePhotos {
     static final int MAX_COUNT=40;
     private final JdbcTemplate db;
     private final CurrentUserService users;
-    public WorkspacePhotos(JdbcTemplate db,CurrentUserService users){this.db=db;this.users=users;}
+    private final WorkspacePhotoStorage storage;
+    public WorkspacePhotos(JdbcTemplate db,CurrentUserService users){this(db,users,null);}
+    @org.springframework.beans.factory.annotation.Autowired
+    public WorkspacePhotos(JdbcTemplate db,CurrentUserService users,WorkspacePhotoStorage storage){this.db=db;this.users=users;this.storage=storage;}
     @GetMapping("/limits")
     public Map<String,Object> limits(){return Map.of("maxFileBytes",MAX_BYTES,"maxTotalBytes",MAX_TOTAL,"maxCount",MAX_COUNT,"formats",List.of("JPEG","PNG","GIF"));}
     record ImageData(byte[] bytes,String mime,int width,int height) {}
@@ -59,11 +62,12 @@ public class WorkspacePhotos {
         Long staged=db.queryForObject("SELECT COALESCE(SUM(byte_size),0) FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL",Long.class,u.companyId(),u.id());
         if(staged+file.getSize()>MAX_TOTAL)throw new BadRequestException("작성 중인 사진 합계는 200MB 이하여야 합니다. 사용하지 않는 사진을 제거해주세요.");
         var image=validateImage(file.getBytes());String name=Objects.toString(file.getOriginalFilename(),"photo").replaceAll("[\\\\/\\p{Cntrl}]","_");if(name.length()>255)name=name.substring(name.length()-255);
-        db.update("INSERT INTO workspace_photo(company_id,author_id,original_name,mime_type,image_data,byte_size,width_px,height_px) VALUES(?,?,?,?,?,?,?,?)",u.companyId(),u.id(),name,image.mime(),image.bytes(),image.bytes().length,image.width(),image.height());
+        var files=storage.store(u.companyId(),image.bytes(),image.mime());
+        db.update("INSERT INTO workspace_photo(company_id,author_id,original_name,mime_type,byte_size,width_px,height_px,storage_key,thumbnail_key,content_sha256,thumbnail_sha256,thumbnail_bytes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",u.companyId(),u.id(),name,image.mime(),image.bytes().length,image.width(),image.height(),files.key(),files.thumbnailKey(),files.checksum(),files.thumbnailChecksum(),files.thumbnailBytes());
         long id=db.queryForObject("SELECT LAST_INSERT_ID()",Long.class);return Map.of("id",id,"name",name,"byteSize",image.bytes().length,"width",image.width(),"height",image.height());
     }
     private Map<String,Object> photo(CurrentUser u,long id){
-        var rows=db.queryForList("SELECT p.id,p.author_id authorId,p.record_id recordId,p.mime_type mimeType,r.site_id siteId,r.deleted_at recordDeleted FROM workspace_photo p LEFT JOIN workspace_record r ON r.id=p.record_id WHERE p.id=? AND p.company_id=?",id,u.companyId());
+        var rows=db.queryForList("SELECT p.id,p.author_id authorId,p.record_id recordId,p.mime_type mimeType,p.storage_key storageKey,p.thumbnail_key thumbnailKey,r.site_id siteId,r.deleted_at recordDeleted FROM workspace_photo p LEFT JOIN workspace_record r ON r.id=p.record_id WHERE p.id=? AND p.company_id=?",id,u.companyId());
         if(rows.isEmpty())throw new NotFoundException("사진을 찾을 수 없습니다.");var r=rows.get(0);
         if(r.get("recordId")==null){if(((Number)r.get("authorId")).longValue()!=u.id())throw new NotFoundException("사진을 찾을 수 없습니다.");}
         else {if(r.get("recordDeleted")!=null)throw new NotFoundException("사진을 찾을 수 없습니다.");if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());}
@@ -73,8 +77,17 @@ public class WorkspacePhotos {
     public List<Map<String,Object>> list(@RequestParam long recordId,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT site_id FROM workspace_record WHERE id=? AND company_id=? AND deleted_at IS NULL",recordId,u.companyId());if(rows.isEmpty())throw new NotFoundException("기록을 찾을 수 없습니다.");if(rows.get(0).get("site_id")!=null)users.requireSiteAccess(u,rows.get(0).get("site_id").toString());return db.queryForList("SELECT id,original_name name,byte_size byteSize,width_px width,height_px height FROM workspace_photo WHERE record_id=? AND company_id=? ORDER BY id",recordId,u.companyId());}
     @GetMapping("/{id}/metadata")
     public Map<String,Object> metadata(@PathVariable long id,Authentication auth){var u=users.require(auth);photo(u,id);return db.queryForMap("SELECT id,original_name name,byte_size byteSize,width_px width,height_px height FROM workspace_photo WHERE id=? AND company_id=?",id,u.companyId());}
+    public ResponseEntity<byte[]> image(long id,Authentication auth){return image(id,false,auth);}
     @GetMapping("/{id}")
-    public ResponseEntity<byte[]> image(@PathVariable long id,Authentication auth){var u=users.require(auth);var r=photo(u,id);byte[] bytes=db.queryForObject("SELECT image_data FROM workspace_photo WHERE id=?",byte[].class,id);return ResponseEntity.ok().contentType(MediaType.parseMediaType(r.get("mimeType").toString())).header("X-Content-Type-Options","nosniff").cacheControl(CacheControl.noStore()).body(bytes);}
+    public ResponseEntity<byte[]> image(@PathVariable long id,@RequestParam(defaultValue="false") boolean preview,Authentication auth){
+        var u=users.require(auth);var r=photo(u,id);
+        try {
+            Object key=r.get(preview?"thumbnailKey":"storageKey");byte[] bytes;
+            if(key!=null)bytes=storage.read(key.toString());
+            else {bytes=db.queryForObject("SELECT image_data FROM workspace_photo WHERE id=? AND company_id=?",byte[].class,id,u.companyId());if(bytes==null)throw new IOException("Photo storage unavailable");if(preview)bytes=WorkspacePhotoStorage.thumbnail(bytes);}
+            return ResponseEntity.ok().contentType(preview?MediaType.IMAGE_JPEG:MediaType.parseMediaType(r.get("mimeType").toString())).header("X-Content-Type-Options","nosniff").cacheControl(CacheControl.noStore()).body(bytes);
+        }catch(IOException error){throw new org.springframework.web.server.ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"사진을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");}
+    }
     @DeleteMapping("/{id}")
     public Map<String,Boolean> remove(@PathVariable long id,Authentication auth){var u=users.require(auth);var r=photo(u,id);if(r.get("recordId")!=null)throw new BadRequestException("저장된 사진은 작업일지 수정 화면에서 제거해주세요.");db.update("DELETE FROM workspace_photo WHERE id=? AND company_id=? AND author_id=? AND record_id IS NULL",id,u.companyId(),u.id());return Map.of("deleted",true);}
     void attach(CurrentUser u,long recordId,List<Long> requested){

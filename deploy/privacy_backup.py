@@ -60,6 +60,22 @@ def openssl(source,target,decrypt=False):
     if decrypt:args.append('-d')
     run(args,stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
 
+def photo_checks(sql_gzip):
+    key=r"c[1-9][0-9]*/[a-f0-9-]{36}/(?:full\.(?:jpg|png|gif)|preview.jpg)"
+    refs={}; pattern=re.compile(r"'("+key+r")'\s*,\s*'("+key+r")'\s*,\s*'([a-f0-9]{64})'\s*,\s*'([a-f0-9]{64})'")
+    with gzip.open(sql_gzip,'rt',encoding='utf-8') as data:
+        for line in data:
+            if not line.startswith('INSERT INTO `workspace_photo`'):continue
+            allkeys=set(re.findall(r"'("+key+r")'",line))
+            for full,thumb,fullhash,thumbhash in pattern.findall(line):refs[full]=fullhash;refs[thumb]=thumbhash
+            if not allkeys.issubset(refs):raise ValueError('Photo snapshot has references without checksums')
+    return refs
+
+def verify_photos(directory,refs):
+    for key,expected in refs.items():
+        path=directory/key
+        if not path.is_file() or path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest()!=expected:raise ValueError('Photo file missing or checksum mismatch; backup/restore refused')
+
 def backup(mode):
     database,container=MODES[mode];base=ROOT/mode;base.mkdir(mode=0o700,parents=True,exist_ok=True)
     if not KEY.is_file():raise ValueError('Backup encryption key is missing. Initialize first.')
@@ -82,13 +98,18 @@ def backup(mode):
                 run(['docker','cp',container+':/app/data/company-documents/.',str(files)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
             elif db(database,'SELECT COUNT(*) FROM company WHERE business_registration_storage_key IS NOT NULL').strip()!='0':
                 raise ValueError('Company document storage is missing but database references files')
+            photos=tmp/'workspace-photos';photos.mkdir()
+            exists=subprocess.run(['docker','exec',container,'test','-d','/app/data/workspace-photos'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode
+            if exists==0:run(['docker','cp',container+':/app/data/workspace-photos/.',str(photos)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            for temporary in photos.rglob('.writing-*.tmp'):temporary.unlink()
+            photo_refs=photo_checks(tmp/'database.sql.gz');verify_photos(photos,photo_refs)
             sync_markers(database,journal)
             if not journal.exists():journal.touch(mode=0o600)
             shutil.copyfile(journal,tmp/'deletions-at-backup.jsonl')
-            (tmp/'manifest.json').write_text(json.dumps({'format':1,'mode':mode,'database':database,'createdUtc':stamp,'scope':['database','company-documents'],'retentionDays':30}))
+            (tmp/'manifest.json').write_text(json.dumps({'format':2,'mode':mode,'database':database,'createdUtc':stamp,'scope':['database','company-documents','workspace-photos'],'retentionDays':30,'photoChecksums':photo_refs}))
             archive=tmp/'archive.tar.gz'
             with tarfile.open(archive,'w:gz') as tar:
-                for name in ['database.sql.gz','company-documents','deletions-at-backup.jsonl','manifest.json']:tar.add(tmp/name,arcname=name)
+                for name in ['database.sql.gz','company-documents','workspace-photos','deletions-at-backup.jsonl','manifest.json']:tar.add(tmp/name,arcname=name)
             encrypted=tmp/'backup.enc';openssl(archive,encrypted)
             mac=digest(encrypted,key)
             os.replace(encrypted,final);os.chmod(final,0o600)
@@ -140,6 +161,13 @@ def restore(args):
             tar.extractall(tmp/'content',filter='data')
         content=tmp/'content';manifest=json.loads((content/'manifest.json').read_text())
         if manifest['mode']!=args.mode:raise ValueError('Backup environment mismatch')
+        photos_output=getattr(args,'photos_output',None)
+        if 'workspace-photos' in manifest['scope']:
+            if not photos_output or pathlib.Path(photos_output).exists():raise ValueError('A new --photos-output path is required for photo storage')
+            if pathlib.Path(photos_output).resolve()==pathlib.Path(args.documents_output).resolve():raise ValueError('Separate photo and document outputs required')
+            refs=photo_checks(content/'database.sql.gz')
+            if refs!=manifest.get('photoChecksums',{}):raise ValueError('Photo snapshot manifest mismatch')
+            verify_photos(content/'workspace-photos',refs)
         db('mysql',f'CREATE DATABASE IF NOT EXISTS `{args.target}` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;')
         # Restores can only target an EMPTY schema. Never overwrite a live database silently.
         if db('information_schema',f"SELECT COUNT(*) FROM tables WHERE table_schema='{args.target}'").strip()!='0':raise ValueError('Target database must be empty')
@@ -158,13 +186,15 @@ def restore(args):
         if output.exists():raise ValueError('Documents output already exists')
         output.parent.mkdir(mode=0o700,parents=True,exist_ok=True)
         shutil.copytree(content/'company-documents',output)
+        if 'workspace-photos' in manifest['scope']:
+            output_photos=pathlib.Path(photos_output);output_photos.parent.mkdir(mode=0o700,parents=True,exist_ok=True);shutil.copytree(content/'workspace-photos',output_photos);print('Photos exported to:',output_photos)
         print('Restore and deletion replay complete:',args.target)
         print('Documents exported to:',output)
         print('Applications remain stopped. Review mail/alert providers and permissions before starting.')
 
 def main():
     os.umask(0o077)
-    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['init','backup','restore','check-journal']);parser.add_argument('--mode',choices=MODES,default='prod');parser.add_argument('--target');parser.add_argument('--archive');parser.add_argument('--documents-output');parser.add_argument('--allow-production',action='store_true')
+    parser=argparse.ArgumentParser();parser.add_argument('command',choices=['init','backup','restore','check-journal']);parser.add_argument('--mode',choices=MODES,default='prod');parser.add_argument('--target');parser.add_argument('--archive');parser.add_argument('--documents-output');parser.add_argument('--allow-production',action='store_true');parser.add_argument('--photos-output')
     args=parser.parse_args()
     if args.command=='init':
         KEY.parent.mkdir(mode=0o700,parents=True,exist_ok=True)

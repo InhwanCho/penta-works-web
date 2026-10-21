@@ -24,4 +24,18 @@ class JournalTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as d:
    p=pathlib.Path(d)/'journal';p.write_text('{"bad":true}\n')
    with self.assertRaises(KeyError):backup.read_journal(p)
+class PhotoBackupTests(unittest.TestCase):
+ def test_snapshot_photo_checks_reject_missing_or_changed_files(self):
+  import gzip,hashlib
+  with tempfile.TemporaryDirectory() as d:
+   root=pathlib.Path(d);key='c1/11111111-1111-1111-1111-111111111111/full.jpg';thumb=key.replace('full.jpg','preview.jpg');digest=hashlib.sha256(b'photo').hexdigest()
+   sql=root/'db.sql.gz'
+   with gzip.open(sql,'wt') as out:out.write("INSERT INTO `workspace_photo` VALUES (1,'"+key+"','"+thumb+"','"+digest+"','"+digest+"',5);\n")
+   refs=backup.photo_checks(sql);self.assertEqual({key:digest,thumb:digest},refs)
+   with self.assertRaises(ValueError):backup.verify_photos(root,refs)
+   for filename in refs:
+    p=root/filename;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(b'photo')
+   backup.verify_photos(root,refs);(root/key).write_bytes(b'bad')
+   with self.assertRaises(ValueError):backup.verify_photos(root,refs)
+
 if __name__=='__main__':unittest.main()

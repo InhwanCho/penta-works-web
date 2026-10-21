@@ -83,6 +83,7 @@ app:
     batch-size: ${MRTB_SYNC_BATCH_SIZE:1000}
     max-batches-per-run: ${MRTB_SYNC_MAX_BATCHES_PER_RUN:100}
   workspace:
+    photos-directory: ${WORKSPACE_PHOTOS_DIRECTORY:./data/workspace-photos}
     enabled: ${WORKSPACE_ENABLED:false}
 
 google:
