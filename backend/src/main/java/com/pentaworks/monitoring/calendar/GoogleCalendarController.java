@@ -61,10 +61,12 @@ public class GoogleCalendarController {
  }
  @PostMapping("/sync")
  public Map<String,Object> sync(Authentication auth){return sync.syncUser(users.require(auth));}
+ public record ConnectNotice(boolean understood,String noticeVersion) {}
  @PostMapping("/connect")
  @Transactional
- public Map<String,String> connect(Authentication auth,HttpServletResponse response){
-  var u=users.require(auth);if(!configured())throw new BadRequestException("구글캘린더 연결을 준비 중입니다.");
+ public Map<String,String> connect(Authentication auth,HttpServletResponse response,@RequestBody(required=false) ConnectNotice notice){
+  var u=users.require(auth);if(notice==null||!notice.understood()||!"2026-10-21-v1".equals(notice.noticeVersion()))throw new BadRequestException("전송 범위와 해제 방법을 먼저 확인해주세요.");if(!configured())throw new BadRequestException("구글캘린더 연결을 준비 중입니다.");
+  db.update("INSERT INTO calendar_connection_notice(company_id,user_id,notice_version) VALUES(?,?,?)",u.companyId(),u.id(),notice.noticeVersion());
   db.update("INSERT INTO user_calendar_connection(company_id,user_id) VALUES(?,?) ON DUPLICATE KEY UPDATE company_id=VALUES(company_id)",u.companyId(),u.id());
   Long id=db.queryForObject("SELECT id FROM user_calendar_connection WHERE user_id=? AND company_id=? FOR UPDATE",Long.class,u.id(),u.companyId());
   db.update("DELETE FROM calendar_oauth_state WHERE connection_id=? OR expires_at<NOW()",id);

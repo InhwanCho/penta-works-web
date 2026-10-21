@@ -25,6 +25,11 @@ import org.springframework.http.MediaType;
 class GoogleCalendarControllerTest {
  JdbcTemplate db; CurrentUserService users; GoogleCalendarController controller;
  final byte[] key=new byte[32];
+ @Test void connectionRequiresCurrentNoticeBeforeOAuthStarts(){
+  assertThrows(BadRequestException.class,()->controller.connect(null,new MockHttpServletResponse(),null));
+  assertThrows(BadRequestException.class,()->controller.connect(null,new MockHttpServletResponse(),new GoogleCalendarController.ConnectNotice(false,"2026-10-21-v1")));
+  verifyNoInteractions(db);
+ }
  @BeforeEach void setup(){
   db=mock(JdbcTemplate.class);users=mock(CurrentUserService.class);controller=new GoogleCalendarController(db,users,mock(org.springframework.context.ApplicationEventPublisher.class));
   when(users.require(null)).thenReturn(new CurrentUserService.CurrentUser(12,1,"test@example.com","Test","USER","ACTIVE"));
@@ -35,12 +40,12 @@ class GoogleCalendarControllerTest {
  @Test void missingConfigurationDoesNotStartAuthorization(){
   ReflectionTestUtils.setField(controller,"clientSecret","");
   assertEquals(false,controller.status(null).get("configured"));
-  assertThrows(BadRequestException.class,()->controller.connect(null,new MockHttpServletResponse()));
+  assertThrows(BadRequestException.class,()->controller.connect(null,new MockHttpServletResponse(),new GoogleCalendarController.ConnectNotice(true,"2026-10-21-v1")));
   verify(db,never()).update(anyString(),any(Object[].class));
  }
  @Test void authorizationUsesExpiringHashedStateAndSecureBrowserCookie(){
   when(db.queryForObject(anyString(),eq(Long.class),eq(12L),eq(1L))).thenReturn(5L);
-  var response=new MockHttpServletResponse();String url=controller.connect(null,response).get("url");
+  var response=new MockHttpServletResponse();String url=controller.connect(null,response,new GoogleCalendarController.ConnectNotice(true,"2026-10-21-v1")).get("url");
   var params=UriComponentsBuilder.fromUri(URI.create(url)).build().getQueryParams();
   assertEquals("https://accounts.google.com",URI.create(url).getScheme()+"://"+URI.create(url).getHost());
   assertNotNull(params.getFirst("state"));assertEquals("offline",params.getFirst("access_type"));

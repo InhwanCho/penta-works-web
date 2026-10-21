@@ -1691,6 +1691,8 @@ function actionLabel(value: string) {
         INVITATION_ACCEPTED: "가입 완료",
         ACCOUNT_UPDATED: "계정 변경",
         ACCOUNT_DELETED: "계정 삭제",
+        PRIVACY_REQUEST_CREATED: "개인정보 요청 접수",
+        PRIVACY_REQUEST_REVIEWED: "개인정보 요청 처리",
         PASSWORD_CHANGED: "비밀번호 변경",
         ACCOUNT_PROFILE_UPDATED: "내 정보 변경",
         PASSWORD_RESET_CREATED: "초기화 링크 생성",

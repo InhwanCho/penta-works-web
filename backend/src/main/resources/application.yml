@@ -47,6 +47,8 @@ management:
         include: health,info
 
 app:
+  privacy:
+    journal-directory: ${PRIVACY_JOURNAL_DIRECTORY:./data/privacy-journal}
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:}

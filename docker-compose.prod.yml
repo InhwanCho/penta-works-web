@@ -47,6 +47,7 @@ services:
       MRTB_SYNC_INTERVAL_MS: ${MRTB_SYNC_INTERVAL_MS:-10000}
       MRTB_SYNC_BATCH_SIZE: ${MRTB_SYNC_BATCH_SIZE:-1000}
       MRTB_SYNC_MAX_BATCHES_PER_RUN: ${MRTB_SYNC_MAX_BATCHES_PER_RUN:-100}
+      PRIVACY_JOURNAL_DIRECTORY: /app/privacy-journal
       COMPANY_DOCUMENTS_DIRECTORY: /app/data/company-documents
       TZ: Asia/Seoul
     ports:
@@ -57,6 +58,7 @@ services:
       - integration
     volumes:
       - company_documents:/app/data/company-documents
+      - /home/inhwan/privacy-journal/prod:/app/privacy-journal
 
   frontend:
     build:

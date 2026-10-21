@@ -43,6 +43,8 @@ public class AdminAccountService {
     private static final Set<String> MANAGED_ROLES = Set.of("SUPER_ADMIN", "ADMIN", "USER");
     private static final Set<String> STATUSES = Set.of("ACTIVE", "SUSPENDED");
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.pentaworks.monitoring.privacy.PrivacyDeletionJournal deletionJournal;
     private final JdbcTemplate jdbcTemplate;
     private final SecureTokens secureTokens;
     private final AuditService audit;
@@ -342,6 +344,10 @@ public class AdminAccountService {
         } else if ("ADMIN".equals(target.role()) && !actor.isSuperAdmin()) {
             throw new ForbiddenException("관리자 계정은 최고관리자만 삭제할 수 있습니다.");
         }
+        deletionJournal.prepare(actor.companyId(),userId);
+        jdbcTemplate.update("DELETE o FROM calendar_oauth_state o JOIN user_calendar_connection c ON c.id=o.connection_id WHERE c.user_id=?",userId);
+        jdbcTemplate.update("UPDATE user_calendar_connection SET refresh_token_encrypted=NULL,status='DISCONNECTED' WHERE user_id=?",userId);
+        jdbcTemplate.update("UPDATE alert_rule SET is_enabled=FALSE WHERE user_id=?",userId);
         audit.record(actor, "ACCOUNT_DELETED", "APP_USER", Long.toString(userId),
             Map.of("email", target.email(), "name", target.name(), "role", target.role()));
         jdbcTemplate.update("DELETE FROM user_site WHERE user_id=?", userId);

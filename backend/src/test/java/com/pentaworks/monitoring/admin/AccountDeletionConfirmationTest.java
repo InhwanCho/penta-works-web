@@ -35,7 +35,9 @@ class AccountDeletionConfirmationTest {
             when(rs.getString("status")).thenReturn("ACTIVE");
             return ((ResultSetExtractor<?>)invocation.getArgument(1)).extractData(rs);
         });
-        return new AdminAccountService(jdbc,mock(SecureTokens.class),audit,mock(DashboardService.class),mock(AccountMailService.class),sessions,mock(AlertEventService.class));
+        var service=new AdminAccountService(jdbc,mock(SecureTokens.class),audit,mock(DashboardService.class),mock(AccountMailService.class),sessions,mock(AlertEventService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"deletionJournal",mock(com.pentaworks.monitoring.privacy.PrivacyDeletionJournal.class));
+        return service;
     }
 
     @ParameterizedTest @NullSource @ValueSource(strings={"","wrong@example.com","admin@example.com"})

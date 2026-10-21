@@ -111,7 +111,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const active = (href: string) =>
     path === href ||
     (href === "/settings" &&
-      ["/account", "/admin", "/companies"].some((p) => path.startsWith(p))) ||
+      ["/account", "/admin", "/companies", "/privacy-requests"].some((p) => path.startsWith(p))) ||
     (href === "/overview" &&
       (path.startsWith("/work") || path.startsWith("/schedule"))) ||
     (href === "/hospitals" && path.startsWith("/sites/")) ||

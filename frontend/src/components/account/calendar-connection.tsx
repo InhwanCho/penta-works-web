@@ -1,11 +1,14 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
 export default function CalendarConnection({ userId }: { userId: number }) {
   const cache = useQueryClient();
   const section = useRef<HTMLElement>(null);
+  const [showNotice, setShowNotice] = useState(false);
+  const [understood, setUnderstood] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const key = ["google-calendar-connection", userId];
@@ -27,7 +30,7 @@ export default function CalendarConnection({ userId }: { userId: number }) {
     clearCallbackResult();
     setBusy(true); setMessage("");
     try {
-      const result = await apiFetch<{ url: string }>("/integrations/google-calendar/connect", { method: "POST" });
+      const result = await apiFetch<{ url: string }>("/integrations/google-calendar/connect", { method: "POST", body: JSON.stringify({ understood, noticeVersion: "2026-10-21-v1" }) });
       window.location.assign(result.url);
     } catch (e) { setMessage(e instanceof Error ? e.message : "연결하지 못했습니다."); setBusy(false); }
   }
@@ -58,12 +61,19 @@ export default function CalendarConnection({ userId }: { userId: number }) {
         {query.isError ? <button type="button" onClick={() => query.refetch()}>다시 확인</button> : query.data && (
           query.data.connected
             ? <><button type="button" disabled={busy} onClick={syncNow}>{busy ? "처리 중…" : "지금 반영"}</button><button type="button" disabled={busy} onClick={disconnect}>해제</button></>
-            : <button type="button" disabled={busy || !query.data.configured} onClick={connect}>{busy ? "처리 중…" : query.data.status === "RECONNECT_REQUIRED" ? "다시 연동" : "연동하기"}</button>
+            : <button type="button" disabled={busy || !query.data.configured} onClick={() => { setUnderstood(false); setShowNotice(true); }}>{busy ? "처리 중…" : query.data.status === "RECONNECT_REQUIRED" ? "다시 연동" : "연동하기"}</button>
         )}
       </div>
     </div>
     <p className="calendar-settings-note">{query.data && !query.data.configured ? "연동 기능을 준비 중입니다." : query.data?.connected ? query.data.syncError ? "일정 전송에 실패했습니다. 다시 반영하거나 재연동해주세요." : query.data.lastSyncedAt ? `${query.data.syncedEventCount}개 일정 반영 · ${query.data.lastSyncedAt.slice(0, 16)} · 변경 시 자동 반영 · 10분마다 재확인` : "첫 일정을 전송하는 중입니다. 잠시 후 확인해주세요." : "업무기록·일정·점검 예정을 내 구글캘린더에 자동 반영합니다."}</p>
-
+    {showNotice && <div className="mt-4 rounded-xl border border-slate-300 p-4 dark:border-slate-600">
+      <h3 className="font-bold">Google로 보낼 정보를 확인해주세요</h3>
+      <p className="mt-2 text-sm leading-6">접근 가능한 업무기록·일정·점검 기한의 제목, 날짜, 내용, 병원명과 관련 링크가 전용 캘린더에 반영됩니다. 내용에 적힌 다른 직원의 이름도 포함될 수 있으므로 회사에서 공유할 수 있는 정보인지 확인해주세요.</p>
+      <p className="mt-2 text-sm leading-6">Google LLC가 해외 서버에서 처리할 수 있으며 계정별 저장 국가는 지정되지 않습니다. 연결하지 않아도 다른 기능은 이용할 수 있습니다. 해제하면 추가 전송은 중단되지만 이미 보낸 일정은 Google Calendar에서 직접 삭제해야 합니다.</p>
+      <Link href="/privacy" className="mt-2 inline-flex min-h-11 items-center text-sm font-bold underline">개인정보 처리방침 보기</Link>
+      <label className="mt-2 flex min-h-11 items-start gap-2 text-sm leading-6"><input type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} className="mt-1 h-4 w-4 shrink-0" />전송 범위와 연결 해제 방법을 확인했습니다.</label>
+      <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={!understood || busy} onClick={connect} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">Google에서 연결 계속</button><button type="button" disabled={busy} onClick={() => setShowNotice(false)} className="min-h-11 rounded-lg border px-4 text-sm">취소</button></div>
+    </div>}
   </section>;
 }
 

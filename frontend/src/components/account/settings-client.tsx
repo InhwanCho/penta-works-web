@@ -120,6 +120,7 @@ export default function SettingsClient() {
         <SettingsLink href="/about" title="MReyes 소개" description="모니터링과 현장 서비스 관리" />
         <SettingsLink href="/terms" title="이용약관" description="서비스 이용 안내" />
         <SettingsLink href="/privacy" title="개인정보 처리방침" description="개인정보 처리 및 권리 안내" />
+        <SettingsLink href="/privacy-requests" title="개인정보 요청" description="열람·정정·삭제 요청과 처리 결과" />
       </section>
       <CalendarConnection userId={session.id} />
       <LogoutControls />
