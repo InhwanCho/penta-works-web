@@ -162,7 +162,7 @@ public class GoogleCalendarSync {
  }
  // Google Calendar's fixed event palette; independent of the calendar's default color.
  static String eventColor(String label){return switch(label){
-  case "PM"->"9";
+  case "PM"->"11";
   case "ACR","ACR 정밀","ACR 서류"->"3";
   case "휴가","연차"->"10";
   case "고장수리","콜드헤드","설치"->"6";

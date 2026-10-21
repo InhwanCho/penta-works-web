@@ -2347,8 +2347,8 @@ h4,
 .calendar-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Shared type palette with Google Calendar eventColor. */
-.work-calendar .gcal-pm { --gcal-accent: #3f51b5; --gcal-bg: #e8eaf6; --gcal-ink: #283593; }
-.dark .work-calendar .gcal-pm { --gcal-accent: #aab4f2; --gcal-bg: #252d51; --gcal-ink: #aab4f2; }
+.work-calendar .gcal-pm { --gcal-accent: #d50000; --gcal-bg: #fce4e4; --gcal-ink: #a71919; }
+.dark .work-calendar .gcal-pm { --gcal-accent: #ff9999; --gcal-bg: #522929; --gcal-ink: #ffc1c1; }
 .work-calendar .gcal-acr { --gcal-accent: #8e24aa; --gcal-bg: #f3e5f5; --gcal-ink: #6a1b9a; }
 .dark .work-calendar .gcal-acr { --gcal-accent: #e0a8ef; --gcal-bg: #43254b; --gcal-ink: #e0a8ef; }
 .work-calendar .gcal-leave { --gcal-accent: #0b8043; --gcal-bg: #e1f1e8; --gcal-ink: #086137; }

@@ -40,7 +40,7 @@ class GoogleCalendarSyncTest {
   var pm=GoogleCalendarSync.dayEvent("[PM] 새길병원",date,"","/sites/11","due:11:pm","https://app.example.com");
   var record=GoogleCalendarSync.dayEvent("[PM · 완료] 새길병원",date,"","/work/1","record:1","https://app.example.com");
   var leave=schedule("2026-10-21 00:00:00","2026-10-21 23:59:59");leave.remove("site_id");leave.put("personal_kind","leave");
-  assertEquals("9",pm.get("colorId"));assertEquals(pm.get("colorId"),record.get("colorId"));
+  assertEquals("11",pm.get("colorId"));assertEquals(pm.get("colorId"),record.get("colorId"));
   assertEquals("10",GoogleCalendarSync.event(leave,"https://app.example.com").get("colorId"));
   assertEquals("[PM] 새길병원",pm.get("summary"));
  }
