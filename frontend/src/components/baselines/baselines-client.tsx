@@ -497,13 +497,14 @@ function AlertEventRow({
           onClick={() => setShowDelivery(!showDelivery)}
           className="received-alert-more"
         >
-          {showDelivery ? "접기 ↑" : compact ? "자세히 보기 ›" : "자세히 · 관리 ›"}
+          {showDelivery ? "접기 ↑" : compact ? "상세 ›" : "자세히 보기 ›"}
         </button>
       </div>
       {showDelivery && (
         <div className="received-alert-manage">
+          <div className="received-alert-facts"><span>발송 <strong>{deliveryLabel(event.deliveryStatus)}</strong></span>{event.recoveredAt && <span>복구 <strong>{new Date(event.recoveredAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>}</div>
           <div className="flex items-center justify-between">
-            <strong className="text-base">알림 관리</strong>
+            <strong className="text-sm">알림 받기 설정</strong>
             <HelpButton
               title="확인과 잠시 중지"
               message="확인했어요를 누르면 같은 병원·항목·유형의 알림을 24시간 중지합니다. 중지 시간을 바꾸거나 알림 받기를 재개할 수 있습니다. 시간이 지나면 기존 수신 설정에 따라 다시 받습니다."
@@ -514,18 +515,10 @@ function AlertEventRow({
             type="button"
             disabled={!settingsAvailable}
             onClick={onOpenSettings}
-            className="mt-3 min-h-12 w-full rounded-xl border border-slate-300 px-3 text-base font-bold text-sky-800 disabled:opacity-40 dark:border-slate-600 dark:text-sky-200"
+            className="mt-3 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-bold text-sky-800 disabled:opacity-40 dark:border-slate-600 dark:text-sky-200"
           >
             이 알림 기준 바꾸기
           </button>
-          {event.recoveredAt && (
-            <p className="mt-3 text-sm">
-              복구 {new Date(event.recoveredAt).toLocaleString("ko-KR")}
-            </p>
-          )}
-          <p className="mt-3 text-sm">
-            발송 상태: {deliveryLabel(event.deliveryStatus)}
-          </p>
           {isAdmin &&
             !recovered &&
             ["FAILED", "PARTIAL", "SKIPPED"].includes(event.deliveryStatus) && (
@@ -546,13 +539,9 @@ function AlertEventRow({
         </div>
       )}
       {showDelivery && (
-        <div className="mt-2 space-y-2 rounded-lg bg-slate-50 p-3 text-sm dark:bg-white/5">
-          <p className="mb-3 text-base leading-7">{event.message}</p>
-          {event.deliveryError && (
-            <p className="text-amber-700 lg:hidden dark:text-amber-300">
-              {event.deliveryError}
-            </p>
-          )}
+        <details className="received-alert-deliveries">
+          <summary>발송 내역 · 수신처별 결과</summary>
+          <details className="my-2"><summary className="cursor-pointer text-sm text-text-secondary">발송된 알림 원문</summary><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{event.message}</p></details>
           {results.isLoading ? (
             <p>불러오는 중…</p>
           ) : results.isError ? (
@@ -571,7 +560,7 @@ function AlertEventRow({
             results.data.map((result) => (
               <div
                 key={result.id}
-                className="space-y-1"
+                className="space-y-1 border-t border-slate-200 py-3 dark:border-white/10"
               >
                 <p className="font-semibold">
                   {result.recipientLabel} · {deliveryLabel(result.status)} ·
@@ -636,7 +625,7 @@ function AlertEventRow({
             ))
           )}
           {deliveryMessage && <p role="alert">{deliveryMessage}</p>}
-        </div>
+        </details>
       )}
     </article>
   );

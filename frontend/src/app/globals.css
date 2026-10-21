@@ -2502,3 +2502,39 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 .policy-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
 
 .legal-page.legal-document header > .legal-effective-date { margin-top: 10px; color: #555; font-size: 13px; line-height: 1.6; }
+
+/* Dense history keeps identity, value and time together; details stay below the row. */
+.received-alert-history { gap: 0; border: 1px solid #dce4ed; border-radius: 12px; overflow: hidden; }
+.received-alert-history .received-alert.is-compact { display: grid; grid-template-columns: minmax(0,1fr) auto; column-gap: 12px; row-gap: 3px; padding: 10px 12px; border: 0; border-left: 3px solid #e09a34; border-bottom: 1px solid #dce4ed; border-radius: 0; }
+.received-alert-history .received-alert.is-compact:last-child { border-bottom: 0; }
+.received-alert-history .received-alert.is-recovered { border-left-color: #269875; }
+.received-alert.is-compact .received-alert-top { grid-column: 1; gap: 6px; flex-wrap: wrap; }
+.received-alert.is-compact .received-alert-top h3 { flex: 0 1 auto; font-size: 15px; line-height: 1.4; }
+.received-alert.is-compact .received-alert-state { font-size: 11px; padding: 2px 5px; }
+.received-alert.is-compact .received-alert-issue { grid-column: 1; margin: 0; font-size: 13px; line-height: 1.4; }
+.received-alert.is-compact .received-alert-reading { grid-column: 2; grid-row: 1 / 3; align-items: flex-end; justify-content: center; margin: 0; gap: 2px; max-width: 12rem; }
+.received-alert.is-compact .received-alert-reading strong { font-size: 15px; }
+.received-alert.is-compact .received-alert-time { grid-column: 1; align-self: center; justify-content: flex-start; margin: 0; gap: 8px; font-size: 12px; }
+.received-alert.is-compact .received-alert-actions { grid-column: 2; grid-row: 3; margin: 0; }
+.received-alert.is-compact .received-alert-actions button { min-height: 32px; padding: 3px 6px; }
+.received-alert.is-compact.is-expanded .received-alert-actions { grid-column: 1 / -1; grid-row: auto; }
+.received-alert.is-compact .received-alert-manage, .received-alert.is-compact .received-alert-deliveries { grid-column: 1 / -1; }
+.received-alert-manage { margin-top: 12px; padding-top: 12px; }
+.received-alert-facts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-bottom: 14px; padding: 9px 12px; border-radius: 8px; background: #f4f7fa; color: #526477; font-size: 13px; }
+.received-alert-facts strong { margin-left: 5px; color: #203c4d; }
+.received-alert-deliveries { margin-top: 12px; padding-top: 10px; border-top: 1px solid #dce4ed; font-size: 13px; overflow-wrap: anywhere; }
+.received-alert-deliveries > summary { display: list-item; cursor: pointer; padding: 5px 0; font-weight: 700; }
+.dark .received-alert-history, .dark .received-alert-history .received-alert.is-compact, .dark .received-alert-deliveries { border-color: #395064; }
+.dark .received-alert-history .received-alert.is-active { border-left-color: #df9c48; }
+.dark .received-alert-history .received-alert.is-recovered { border-left-color: #5dbf99; }
+.dark .received-alert-facts { background: #223848; color: #b3c6d6; }
+.dark .received-alert-facts strong { color: #e0ecf5; }
+@media (min-width: 1024px) {
+ .received-alert-history .received-alert.is-compact { grid-template-columns: minmax(180px,1fr) minmax(220px,1.4fr) minmax(100px,.6fr) auto auto; align-items: center; padding: 8px 14px; gap: 12px; }
+ .received-alert.is-compact .received-alert-top { grid-column: 1; grid-row: 1; }
+ .received-alert.is-compact .received-alert-issue { grid-column: 2; grid-row: 1; }
+ .received-alert.is-compact .received-alert-reading { grid-column: 3; grid-row: 1; align-items: flex-start; }
+ .received-alert.is-compact .received-alert-time { grid-column: 4; grid-row: 1; flex-direction: column; align-items: flex-start; gap: 2px; }
+ .received-alert.is-compact .received-alert-actions, .received-alert.is-compact.is-expanded .received-alert-actions { grid-column: 5; grid-row: 1; }
+ .received-alert.is-compact.is-expanded .received-alert-reading span { display: none; }
+}
