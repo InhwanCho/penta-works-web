@@ -3,7 +3,8 @@ import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import ActionMenu from "@/components/common/action-menu";
-import { useQueryClient } from "@tanstack/react-query";
+import { useWorkDraft } from "./use-work-draft";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
@@ -43,7 +44,12 @@ export default function WorkEditor({ id }: { id?: string }) {
     search = useSearchParams(),
     qc = useQueryClient();
   const { session, isAdmin } = useAuth();
-  const { sites, records, schedules } = useWorkspace();
+  const { sites, schedules } = useWorkspace({ records: false });
+  const records = useQuery({
+    queryKey: ["workspace-records", "detail", session?.id, id],
+    queryFn: () => apiFetch<WorkRecord>(`/workspace/records/${id}`),
+    enabled: !!session && !!id,
+  });
   const [form, setForm] = useState({
     kind: "FIELD",
     siteId: search.get("site") || "",
@@ -66,7 +72,39 @@ export default function WorkEditor({ id }: { id?: string }) {
     [editing, setEditing] = useState(!id),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
-  const record = records.data?.find((r) => String(r.id) === id);
+  const record = records.data;
+  const [revision, setRevision] = useState<number | null>(null);
+  const [restoredPhotos, setRestoredPhotos] = useState<number[] | undefined>();
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const history = useQuery({
+    queryKey: ["workspace-record-history", session?.id, id],
+    queryFn: () =>
+      apiFetch<
+        {
+          id: number;
+          revision: number;
+          action: string;
+          actorName: string;
+          createdAt: string;
+          snapshotJson: string;
+        }[]
+      >(`/workspace/records/${id}/history`),
+    enabled: !!session && !!id && historyOpen,
+  });
+  const draft = useWorkDraft({
+    storageKey: `mreyes-work-draft:${session?.id}:${id || "new"}`,
+    value: { form, details, photoIds, revision },
+    enabled:
+      !!session && editing && (!id || (loadedId === id && photoIds !== null)),
+    onRestore: (d) => {
+      setForm(d.form);
+      setDetails(d.details);
+      setPhotoIds(d.photoIds);
+      setRestoredPhotos(d.photoIds ?? undefined);
+      setRevision(d.revision);
+      linkedFromQuery.current = true;
+    },
+  });
   useEffect(() => {
     if (record && loadedId !== id) {
       setForm({
@@ -85,6 +123,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           record.engineerName ?? parseDetails(record.detailsJson).engineer,
       });
       setPhotoIds(null);
+      setRevision(record.revision);
       setLoadedId(id);
     }
   }, [record, loadedId, id]);
@@ -115,7 +154,10 @@ export default function WorkEditor({ id }: { id?: string }) {
     setDetails((d) => ({
       ...d,
       scheduleId: schedule.id,
-      personalKind: schedule.personalKind === "edu" ? "education" : schedule.personalKind || d.personalKind,
+      personalKind:
+        schedule.personalKind === "edu"
+          ? "education"
+          : schedule.personalKind || d.personalKind,
     }));
   }, [id, search, schedules.data]);
   async function save(e: FormEvent) {
@@ -143,7 +185,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         (["PM", "ACR"].includes(form.serviceType) && form.kind === "FIELD"
           ? `${title} 점검표`
           : form.body);
-      const result = await apiFetch<{ id?: number }>(
+      const result = await apiFetch<{ id?: number; revision?: number }>(
         id ? `/workspace/records/${id}` : "/workspace/records",
         {
           method: id ? "PUT" : "POST",
@@ -153,10 +195,14 @@ export default function WorkEditor({ id }: { id?: string }) {
             body,
             details: computed,
             photoIds,
+            revision,
           }),
         },
       );
+      draft.clear();
+      if (result.revision) setRevision(result.revision);
       await Promise.all([
+        qc.invalidateQueries({ queryKey: ["workspace-record-history"] }),
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
         qc.invalidateQueries({ queryKey: ["workspace-planning"] }),
         qc.invalidateQueries({ queryKey: ["workspace-photos"] }),
@@ -221,19 +267,125 @@ export default function WorkEditor({ id }: { id?: string }) {
         }
         action={
           !editing && canEdit ? (
-            <ActionMenu label="업무기록 메뉴" items={[
-              { label: "수정", onSelect: () => setEditing(true), disabled: saving },
-              ...(!record?.assetChange ? [{ label: "삭제", danger: true, onSelect: () => void remove(), disabled: saving }] : []),
-            ]} />
+            <ActionMenu
+              label="업무기록 메뉴"
+              items={[
+                {
+                  label: "수정",
+                  onSelect: () => {
+                    draft.resume();
+                    setEditing(true);
+                  },
+                  disabled: saving,
+                },
+                ...(!record?.assetChange
+                  ? [
+                      {
+                        label: "삭제",
+                        danger: true,
+                        onSelect: () => void remove(),
+                        disabled: saving,
+                      },
+                    ]
+                  : []),
+              ]}
+            />
           ) : undefined
         }
       />
+      {editing && draft.pending && (
+        <div
+          className="work-panel"
+          role="status"
+        >
+          <p>
+            저장하지 않은 업무기록이 있습니다. (
+            {new Date(draft.pending.at).toLocaleString("ko-KR")})
+          </p>
+          <div className="work-form-actions">
+            <button
+              type="button"
+              onClick={draft.discard}
+            >
+              버리기
+            </button>
+            <button
+              type="button"
+              className="work-primary"
+              onClick={draft.restore}
+            >
+              복구
+            </button>
+          </div>
+        </div>
+      )}
+      {editing && draft.notice && (
+        <p
+          className="text-text-secondary my-2 text-sm"
+          role="status"
+        >
+          {draft.notice}
+        </p>
+      )}
+      {!editing && id && (
+        <details
+          className="mb-4 rounded-xl border border-slate-200 p-3 dark:border-white/15"
+          onToggle={(e) => setHistoryOpen(e.currentTarget.open)}
+        >
+          <summary className="cursor-pointer text-sm font-semibold">
+            변경 이력
+          </summary>
+          {history.isPending ? (
+            <p className="py-2 text-sm">불러오는 중…</p>
+          ) : history.error ? (
+            <button
+              type="button"
+              onClick={() => void history.refetch()}
+            >
+              다시 불러오기
+            </button>
+          ) : !history.data?.length ? (
+            <p className="text-text-secondary py-2 text-sm">
+              변경 이력 도입 이후의 수정 내역이 표시됩니다.
+            </p>
+          ) : (
+            history.data.map((h) => (
+              <details
+                key={h.id}
+                className="border-t border-slate-200 py-2 text-sm dark:border-white/10"
+              >
+                <summary className="cursor-pointer">
+                  {h.actorName || "삭제된 사용자"} ·{" "}
+                  {h.action === "BEFORE"
+                    ? "수정 전"
+                    : h.action === "CREATE"
+                      ? "등록"
+                      : "수정"}{" "}
+                  · 버전 {h.revision} ·{" "}
+                  {new Date(h.createdAt).toLocaleString("ko-KR")}
+                </summary>
+                <HistorySnapshot json={h.snapshotJson} />
+              </details>
+            ))
+          )}
+        </details>
+      )}
       {error && (
         <p
           className="work-error"
           role="alert"
         >
           {error}
+          {id && (
+            <a
+              className="ml-2 underline"
+              href={`/work/${id}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              최신 내용 새 창에서 보기
+            </a>
+          )}
         </p>
       )}
       {editing ? (
@@ -352,45 +504,55 @@ export default function WorkEditor({ id }: { id?: string }) {
               onChange={(assetIds) => setDetails({ ...details, assetIds })}
             />
           )}
-          <details className="work-schedule-link" key={details.scheduleId ? "linked" : "unlinked"} open={details.scheduleId ? true : undefined}>
-            <summary>{details.scheduleId ? "연결된 일정" : "예정된 일정과 연결 (선택)"}</summary>
-            <p className="work-hint">일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 업무기록을 작성할 수 있습니다.</p>
-          <label>
-            연결할 일정
-            <select
-              className="work-input"
-              value={details.scheduleId || ""}
-              onChange={(e) =>
-                setDetails({
-                  ...details,
-                  scheduleId: e.target.value ? Number(e.target.value) : null,
-                })
-              }
-            >
-              <option value="">일정 없이 작성</option>
-              {(schedules.data || [])
-                .filter(
-                  (s) =>
-                    s.siteId === (form.kind === "FIELD" ? form.siteId : null) ||
-                    s.id === details.scheduleId,
-                )
-                .map((s) => (
-                  <option
-                    key={s.id}
-                    value={s.id}
-                  >
-                    {s.startAt.slice(0, 10)} · {s.siteName || s.title} ·{" "}
-                    {s.title}
-                  </option>
-                ))}
-              {details.scheduleId &&
-                !schedules.data?.some((s) => s.id === details.scheduleId) && (
-                  <option value={details.scheduleId}>
-                    기존 연결 일정 (삭제되었거나 조회 불가)
-                  </option>
-                )}
-            </select>
-          </label>
+          <details
+            className="work-schedule-link"
+            key={details.scheduleId ? "linked" : "unlinked"}
+            open={details.scheduleId ? true : undefined}
+          >
+            <summary>
+              {details.scheduleId ? "연결된 일정" : "예정된 일정과 연결 (선택)"}
+            </summary>
+            <p className="work-hint">
+              일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 업무기록을
+              작성할 수 있습니다.
+            </p>
+            <label>
+              연결할 일정
+              <select
+                className="work-input"
+                value={details.scheduleId || ""}
+                onChange={(e) =>
+                  setDetails({
+                    ...details,
+                    scheduleId: e.target.value ? Number(e.target.value) : null,
+                  })
+                }
+              >
+                <option value="">일정 없이 작성</option>
+                {(schedules.data || [])
+                  .filter(
+                    (s) =>
+                      s.siteId ===
+                        (form.kind === "FIELD" ? form.siteId : null) ||
+                      s.id === details.scheduleId,
+                  )
+                  .map((s) => (
+                    <option
+                      key={s.id}
+                      value={s.id}
+                    >
+                      {s.startAt.slice(0, 10)} · {s.siteName || s.title} ·{" "}
+                      {s.title}
+                    </option>
+                  ))}
+                {details.scheduleId &&
+                  !schedules.data?.some((s) => s.id === details.scheduleId) && (
+                    <option value={details.scheduleId}>
+                      기존 연결 일정 (삭제되었거나 조회 불가)
+                    </option>
+                  )}
+              </select>
+            </label>
           </details>
           <label>
             제목
@@ -471,6 +633,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             </label>
           )}
           <PhotoAttachments
+            restoredIds={restoredPhotos}
             attachmentApi={attachmentApi}
             key={id || "new"}
             recordId={id ? Number(id) : undefined}
@@ -502,7 +665,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             </Link>
             <button
               className="work-primary"
-              disabled={saving || photoBusy}
+              disabled={saving || photoBusy || !!draft.pending}
             >
               {saving
                 ? "저장 중…"
@@ -523,7 +686,11 @@ export default function WorkEditor({ id }: { id?: string }) {
 function ReadRecord({ record: r }: { record: WorkRecord }) {
   const d = parseDetails(r.detailsJson);
   const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
-  const showBody = !!r.body.trim() && ![d.symptom, d.parts, d.followUp].some((text) => !!text.trim() && normalize(text) === normalize(r.body));
+  const showBody =
+    !!r.body.trim() &&
+    ![d.symptom, d.parts, d.followUp].some(
+      (text) => !!text.trim() && normalize(text) === normalize(r.body),
+    );
   return (
     <article className="work-panel work-form">
       <div>
@@ -644,4 +811,69 @@ function ReadRecord({ record: r }: { record: WorkRecord }) {
       <PhotoGallery recordId={r.id} />
     </article>
   );
+}
+
+function HistorySnapshot({ json }: { json: string }) {
+  try {
+    const s = JSON.parse(json),
+      d = parseDetails(s.details_json);
+    return (
+      <div className="mt-2 space-y-3">
+        <dl className="space-y-2">
+          {[
+            ["title", "제목"],
+            ["work_date", "작업일"],
+            ["status", "상태"],
+            ["body", "내용"],
+            ["engineer_name", "담당자"],
+            ["service_type", "업무 유형"],
+          ]
+            .filter(([key]) => s[key])
+            .map(([key, label]) => (
+              <div key={key}>
+                <dt className="text-text-secondary">{label}</dt>
+                <dd className="break-words whitespace-pre-wrap">
+                  {key === "status"
+                    ? statusLabels[s[key]] || s[key]
+                    : key === "service_type"
+                      ? serviceLabels[s[key]] || s[key]
+                      : s[key]}
+                </dd>
+              </div>
+            ))}
+        </dl>
+        <dl className="space-y-2">
+          {(
+            [
+              [d.symptom, "증상 / 요청"],
+              [d.parts, "교체 부품"],
+              [d.followUp, "후속 작업"],
+              [d.prepItems, "방문 전 확인사항"],
+            ] as const
+          )
+            .filter(([value]) => !!value)
+            .map(([value, label]) => (
+              <div key={label}>
+                <dt className="text-text-secondary">{label}</dt>
+                <dd className="whitespace-pre-wrap">{value}</dd>
+              </div>
+            ))}
+        </dl>
+        {s.details_json && ["PM", "ACR"].includes(s.service_type) && (
+          <fieldset
+            disabled
+            className="work-readonly"
+          >
+            <ServiceFields
+              type={s.service_type}
+              details={d}
+              onChange={() => {}}
+            />
+          </fieldset>
+        )}
+      </div>
+    );
+  } catch {
+    return <p>이력 내용을 표시할 수 없습니다.</p>;
+  }
 }

@@ -16,6 +16,7 @@ export type WorkRecord = {
   workDate: string;
   status: string;
   updatedAt: string;
+  revision: number;
   detailsJson?: string | null;
   assetChange?: boolean | number;
   sourceId?: string | null;
@@ -26,6 +27,7 @@ export type WorkRecord = {
   scheduleDate?: string | null;
 };
 export type WorkSchedule = {
+  revision: number;
   targetKind?: "HOSPITAL" | "GENERAL" | null;
   personalKind?: string | null;
   serviceType?: string | null;
@@ -53,7 +55,13 @@ export const statusLabels: Record<string, string> = {
   IN_PROGRESS: "진행 중",
   REVISIT: "재방문",
 };
-export function useWorkspace() {
+export function useWorkspace(
+  options: {
+    records?: boolean;
+    scheduleFrom?: string;
+    scheduleTo?: string;
+  } = {},
+) {
   const { session } = useAuth();
   const enabled = !!session;
   const scope = session?.id;
@@ -65,11 +73,21 @@ export function useWorkspace() {
   const records = useQuery({
     queryKey: ["workspace-records", scope],
     queryFn: () => apiFetch<WorkRecord[]>("/workspace/records"),
-    enabled,
+    enabled: enabled && options.records !== false,
   });
   const schedules = useQuery({
-    queryKey: ["workspace-schedules", scope],
-    queryFn: () => apiFetch<WorkSchedule[]>("/workspace/schedules"),
+    queryKey: [
+      "workspace-schedules",
+      scope,
+      options.scheduleFrom,
+      options.scheduleTo,
+    ],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (options.scheduleFrom) p.set("from", options.scheduleFrom);
+      if (options.scheduleTo) p.set("to", options.scheduleTo);
+      return apiFetch<WorkSchedule[]>(`/workspace/schedules?${p}`);
+    },
     enabled,
   });
   return { sites, records, schedules };

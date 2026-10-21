@@ -122,11 +122,13 @@ async function prepare(file: File): Promise<File> {
 }
 export function PhotoAttachments({
   recordId,
+  restoredIds,
   onChange,
   onBusy,
   attachmentApi,
 }: {
   recordId?: number;
+  restoredIds?: number[];
   attachmentApi?: Ref<PhotoAttachmentApi>;
   onChange: (ids: number[]) => void;
   onBusy: (busy: boolean) => void;
@@ -142,15 +144,40 @@ export function PhotoAttachments({
     queryKey: ["workspace-photos", recordId],
     queryFn: () =>
       apiFetch<PhotoMeta[]>(`/workspace/photos?recordId=${recordId}`),
-    enabled: !!recordId,
+    enabled: !!recordId && restoredIds === undefined,
   });
   useEffect(() => {
-    if (initial.data && !loaded) {
+    if (initial.data && !loaded && restoredIds === undefined) {
       setPhotos(initial.data);
       setLoaded(true);
       onChange(initial.data.map((p) => p.id));
     }
-  }, [initial.data, loaded, onChange]);
+  }, [initial.data, loaded, onChange, restoredIds]);
+  useEffect(() => {
+    if (restoredIds === undefined) return;
+    let cancelled = false;
+    setLoaded(false);
+    Promise.allSettled(
+      restoredIds.map((id) =>
+        apiFetch<PhotoMeta>(`/workspace/photos/${id}/metadata`),
+      ),
+    ).then((results) => {
+      if (cancelled) return;
+      const available = results.flatMap((r) =>
+        r.status === "fulfilled" ? [r.value] : [],
+      );
+      setPhotos(available);
+      onChange(available.map((p) => p.id));
+      setLoaded(true);
+      if (available.length !== restoredIds.length)
+        setError(
+          "보관 기간이 지났거나 접근할 수 없는 사진이 있습니다. 사진을 확인하고 다시 첨부해주세요.",
+        );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [restoredIds, onChange]);
   useEffect(() => onBusy(busy || !loaded), [busy, loaded, onBusy]);
   useImperativeHandle(attachmentApi, () => ({
     addFiles: (files) => {

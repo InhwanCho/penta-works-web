@@ -82,7 +82,7 @@ public class GoogleCalendarSync {
    SELECT w.*,COALESCE(h.name,s.name) hospital_name FROM workspace_record w
    LEFT JOIN workspace_hospital h ON h.company_id=w.company_id AND h.site_id=w.site_id
    LEFT JOIN site s ON s.site=w.site_id
-   WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.work_date DESC,w.id DESC LIMIT 500
+   WHERE w.company_id=? AND w.deleted_at IS NULL ORDER BY w.work_date DESC,w.id DESC
    """,company).stream().filter(r->r.get("site_id")==null||allowed.contains(r.get("site_id").toString())).toList();
   for(var r:records){
    String rid=r.get("id").toString();String type=Objects.toString(r.get("service_type"),"GENERAL");
@@ -91,6 +91,15 @@ public class GoogleCalendarSync {
    String state=switch(Objects.toString(r.get("status"),"")){case "COMPLETED"->"완료";case "REVISIT"->"재방문";default->"진행 중";};
    entries.put("record:"+rid,dayEvent("["+label+" · "+state+"] "+title,date(r.get("work_date")),Objects.toString(r.get("body"),""),"/work/"+rid,"record:"+rid,publicBase));
   }
+  // Inspection completion dates must cover ALL records, independently of calendar display/export windows.
+  var completed=new HashMap<String,Map<String,Object>>();
+  for(var latest:db.queryForList("""
+   SELECT site_id,
+    MAX(CASE WHEN service_type='PM' OR counts_as_pm=TRUE THEN work_date END) pm,
+    MAX(CASE WHEN service_type='ACR' AND acr_kind='full' THEN work_date END) acr_full,
+    MAX(CASE WHEN service_type='ACR' AND acr_kind IN ('full','doc') THEN work_date END) acr_doc
+   FROM workspace_record WHERE company_id=? AND deleted_at IS NULL AND status='COMPLETED' AND site_id IS NOT NULL GROUP BY site_id
+   """,company))completed.put(latest.get("site_id").toString(),latest);
   for(var plan:db.queryForList("""
    SELECT p.*,h.site_id,h.name hospital_name FROM workspace_hospital h
    LEFT JOIN workspace_hospital_plan p ON p.company_id=h.company_id AND p.site_id=h.site_id WHERE h.company_id=?
@@ -98,12 +107,8 @@ public class GoogleCalendarSync {
    String site=Objects.toString(plan.get("site_id"),"");if(!allowed.contains(site))continue;
    for(String kind:List.of("pm","acr_full","acr_doc")){
     LocalDate last=date(plan.get("last_"+kind+"_date"));
-    for(var r:records){
-     if(!site.equals(r.get("site_id"))||!"COMPLETED".equals(r.get("status")))continue;
-     String type=Objects.toString(r.get("service_type"),""),acr=Objects.toString(r.get("acr_kind"),"");
-     boolean matches=kind.equals("pm")?(type.equals("PM")||Boolean.TRUE.equals(r.get("counts_as_pm"))||"1".equals(Objects.toString(r.get("counts_as_pm"),""))):type.equals("ACR")&&(acr.equals("full")||(kind.equals("acr_doc")&&acr.equals("doc")));
-     LocalDate d=date(r.get("work_date"));if(matches&&d!=null&&(last==null||d.isAfter(last)))last=d;
-    }
+    LocalDate latest=date(completed.getOrDefault(site,Map.of()).get(kind));
+    if(latest!=null&&(last==null||latest.isAfter(last)))last=latest;
     int months=kind.equals("pm")?(plan.get("pm_interval_months") instanceof Number n?n.intValue():2):kind.equals("acr_full")?36:12;
     LocalDate due=nextDue(last,date(plan.get(kind+"_override")),months);if(due==null)continue;
     String label=kind.equals("pm")?"PM":kind.equals("acr_full")?"ACR 정밀":"ACR 서류";

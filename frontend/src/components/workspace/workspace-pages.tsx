@@ -237,16 +237,30 @@ export function TodayPage() {
 }
 export function HospitalsPage() {
   const { session } = useAuth();
-  const sites = useQuery({queryKey: ["workspace-hospital-directory", session?.id], queryFn: () => apiFetch<{siteDb: string; name: string | null; address: string; equipment: string[]; monitoringConnected: boolean; hospitalId: number | null}[]>("/workspace/hospitals"), enabled: !!session});
+  const sites = useQuery({
+    queryKey: ["workspace-hospital-directory", session?.id],
+    queryFn: () =>
+      apiFetch<
+        {
+          siteDb: string;
+          name: string | null;
+          address: string;
+          equipment: string[];
+          monitoringConnected: boolean;
+          hospitalId: number | null;
+        }[]
+      >("/workspace/hospitals"),
+    enabled: !!session,
+  });
   const [search, setSearch] = useState("");
   return (
     <main className="work-page work-hospitals">
       <div className="hospital-directory-heading">
-      <PageHeading
-        title="병원 · 장비"
-        description="병원별 모니터링, 장비와 서비스 이력을 확인하세요."
-      />
-      <HospitalRegistration />
+        <PageHeading
+          title="병원 · 장비"
+          description="병원별 모니터링, 장비와 서비스 이력을 확인하세요."
+        />
+        <HospitalRegistration />
       </div>
       <input
         className="work-input work-search"
@@ -265,7 +279,11 @@ export function HospitalsPage() {
       ) : (
         <div className="work-hospital-grid">
           {(sites.data || [])
-            .filter((s) => `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase()))
+            .filter((s) =>
+              `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`
+                .toLowerCase()
+                .includes(search.trim().toLowerCase()),
+            )
             .map((s) => (
               <Link
                 className="work-hospital"
@@ -274,31 +292,59 @@ export function HospitalsPage() {
               >
                 <div>
                   <strong>{s.name || s.siteDb}</strong>
-                  <span className="hospital-list-connection">{s.monitoringConnected ? "모니터링 연결" : "서비스 관리"}</span>
-                  <p className="hospital-directory-equipment">{s.equipment.join(" / ") || "장비 정보 미등록"}</p>
-                  <p className="hospital-directory-address">{s.address || "주소 미등록"}</p>
+                  <span className="hospital-list-connection">
+                    {s.monitoringConnected ? "모니터링 연결" : "서비스 관리"}
+                  </span>
+                  <p className="hospital-directory-equipment">
+                    {s.equipment.join(" / ") || "장비 정보 미등록"}
+                  </p>
+                  <p className="hospital-directory-address">
+                    {s.address || "주소 미등록"}
+                  </p>
                 </div>
                 <span className="work-chevron">›</span>
               </Link>
             ))}
           {!sites.data?.length && <Empty>접근 가능한 병원이 없습니다.</Empty>}
-          {!!sites.data?.length && !sites.data.some((s) => `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase())) && <Empty>검색 결과가 없습니다.</Empty>}
+          {!!sites.data?.length &&
+            !sites.data.some((s) =>
+              `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`
+                .toLowerCase()
+                .includes(search.trim().toLowerCase()),
+            ) && <Empty>검색 결과가 없습니다.</Empty>}
         </div>
       )}
     </main>
   );
 }
 export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
-  const { records } = useWorkspace();
+  const { session } = useAuth();
   const [kind, setKind] = useState("ALL"),
     [search, setSearch] = useState("");
-  const [openOnly, setOpenOnly] = useState(onlyOpen);
-  const rows = (records.data || []).filter(
-    (r) =>
-      (!openOnly || r.status !== "COMPLETED") &&
-      (kind === "ALL" || r.kind === kind) &&
-      `${r.title} ${r.siteName || ""} ${r.body}`.includes(search),
-  );
+  const [openOnly, setOpenOnly] = useState(onlyOpen),
+    [page, setPage] = useState(1);
+  const [query, setQuery] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(search), 250);
+    return () => clearTimeout(t);
+  }, [search]);
+  useEffect(() => setPage(1), [query, kind, openOnly]);
+  const params = new URLSearchParams({
+    page: String(page),
+    size: "20",
+    query,
+    kind,
+    openOnly: String(openOnly),
+  });
+  const records = useQuery({
+    queryKey: ["workspace-records", "search", session?.id, params.toString()],
+    queryFn: () =>
+      apiFetch<{ records: WorkRecord[]; total: number }>(
+        `/workspace/records/search?${params}`,
+      ),
+    enabled: !!session,
+  });
+  const rows = records.data?.records || [];
   return (
     <main className="work-page">
       <PageHeading
@@ -351,7 +397,29 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
       ) : records.isPending ? (
         <p>업무를 불러오는 중…</p>
       ) : (
-        <RecordList rows={rows} />
+        <>
+          <RecordList rows={rows} />
+          <div className="work-form-actions mt-4">
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              이전
+            </button>
+            <span className="text-sm">
+              {page} / {Math.max(1, Math.ceil((records.data?.total || 0) / 20))}{" "}
+              · {records.data?.total || 0}건
+            </span>
+            <button
+              type="button"
+              disabled={page * 20 >= (records.data?.total || 0)}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              다음
+            </button>
+          </div>
+        </>
       )}
     </main>
   );
@@ -363,12 +431,18 @@ export function SchedulePage() {
     ? search.get("date")!
     : dayString();
   const { session, isAdmin } = useAuth();
-  const { sites, schedules, records } = useWorkspace();
   const qc = useQueryClient();
   const [selected, setSelected] = useState(initialDate),
     [open, setOpen] = useState(search.get("new") === "1"),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
+  const { sites, schedules, records } = useWorkspace({
+    scheduleFrom: selected,
+    scheduleTo: selected,
+  });
+  const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(
+    null,
+  );
   const [form, setForm] = useState({
     targetKind: "GENERAL",
     personalKind: "etc",
@@ -382,31 +456,44 @@ export function SchedulePage() {
   const rows = (schedules.data || [])
     .filter(
       (s) =>
-        s.startAt.slice(0, 10) <= selected &&
-        s.endAt.slice(0, 10) >= selected,
+        s.startAt.slice(0, 10) <= selected && s.endAt.slice(0, 10) >= selected,
     )
     .sort((a, b) => a.startAt.localeCompare(b.startAt) || a.id - b.id);
   useEffect(() => {
     const hash = window.location.hash;
-    if (/^#schedule-\d+$/.test(hash)) document.getElementById(hash.slice(1))?.scrollIntoView({ block: "center" });
+    if (/^#schedule-\d+$/.test(hash))
+      document
+        .getElementById(hash.slice(1))
+        ?.scrollIntoView({ block: "center" });
   }, [schedules.data]);
   async function save(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError("");
     try {
-      await apiFetch("/workspace/schedules", {
-        method: "POST",
-        body: JSON.stringify({
-          ...form,
-          personalKind:
-            form.targetKind === "GENERAL" ? form.personalKind : null,
-          serviceType: form.targetKind === "HOSPITAL" ? form.serviceType : null,
-        }),
-      });
-      await qc.invalidateQueries({ queryKey: ["workspace-schedules"] });
+      await apiFetch(
+        editingSchedule
+          ? `/workspace/schedules/${editingSchedule.id}`
+          : "/workspace/schedules",
+        {
+          method: editingSchedule ? "PUT" : "POST",
+          body: JSON.stringify({
+            ...form,
+            revision: editingSchedule?.revision,
+            personalKind:
+              form.targetKind === "GENERAL" ? form.personalKind : null,
+            serviceType:
+              form.targetKind === "HOSPITAL" ? form.serviceType : null,
+          }),
+        },
+      );
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["workspace-schedules"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-records"] }),
+      ]);
       setSelected(form.startAt.slice(0, 10));
       setOpen(false);
+      setEditingSchedule(null);
       setForm({ ...form, title: "", body: "" });
     } catch (e) {
       setError(errorText(e));
@@ -431,7 +518,10 @@ export function SchedulePage() {
       >
         ← 업무현황 달력
       </Link>
-      <PageHeading title="일정" description="방문·점검과 팀의 일정을 함께 확인하세요." />
+      <PageHeading
+        title="일정"
+        description="방문·점검과 팀의 일정을 함께 확인하세요."
+      />
       <label className="work-date-picker">
         조회 날짜
         <input
@@ -454,7 +544,7 @@ export function SchedulePage() {
           className="work-form work-panel"
           onSubmit={save}
         >
-          <h2>일정 작성</h2>
+          <h2>{editingSchedule ? "일정 수정" : "일정 작성"}</h2>
           <label>
             제목
             <input
@@ -578,10 +668,44 @@ export function SchedulePage() {
                   </span>
                   <h3>{s.title}</h3>
                 </div>
-                <ActionMenu label={`${s.title} 일정 메뉴`} items={[
-                  { label: "업무기록 작성", onSelect: () => router.push(`/work/new?schedule=${s.id}`) },
-                  ...((s.authorId === session?.id || isAdmin) ? [{label: "삭제", danger: true, onSelect: () => void remove(s.id)}] : []),
-                ]} />
+                <ActionMenu
+                  label={`${s.title} 일정 메뉴`}
+                  items={[
+                    {
+                      label: "업무기록 작성",
+                      onSelect: () => router.push(`/work/new?schedule=${s.id}`),
+                    },
+                    ...(s.authorId === session?.id || isAdmin
+                      ? [
+                          {
+                            label: "수정",
+                            onSelect: () => {
+                              setEditingSchedule(s);
+                              setForm({
+                                targetKind:
+                                  s.targetKind ||
+                                  (s.siteId ? "HOSPITAL" : "GENERAL"),
+                                personalKind: s.personalKind || "etc",
+                                serviceType: s.serviceType || "ETC",
+                                title: s.title,
+                                siteId: s.siteId || "",
+                                body: s.body || "",
+                                startAt: s.startAt.slice(0, 16),
+                                endAt: s.endAt.slice(0, 16),
+                              });
+                              setOpen(true);
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            },
+                          },
+                          {
+                            label: "삭제",
+                            danger: true,
+                            onSelect: () => void remove(s.id),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
               </div>
               <div className="work-section">
                 {(records.data || [])
@@ -610,7 +734,18 @@ export function SchedulePage() {
                 {s.siteName && (
                   <div>
                     <dt>병원</dt>
-                    <dd>{s.siteId ? <Link className="work-back" href={`/sites/${Number(s.siteId) || s.siteId}`}>{s.siteName} →</Link> : s.siteName}</dd>
+                    <dd>
+                      {s.siteId ? (
+                        <Link
+                          className="work-back"
+                          href={`/sites/${Number(s.siteId) || s.siteId}`}
+                        >
+                          {s.siteName} →
+                        </Link>
+                      ) : (
+                        s.siteName
+                      )}
+                    </dd>
                   </div>
                 )}
                 <div>

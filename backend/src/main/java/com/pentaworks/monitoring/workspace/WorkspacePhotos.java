@@ -71,6 +71,8 @@ public class WorkspacePhotos {
     }
     @GetMapping
     public List<Map<String,Object>> list(@RequestParam long recordId,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT site_id FROM workspace_record WHERE id=? AND company_id=? AND deleted_at IS NULL",recordId,u.companyId());if(rows.isEmpty())throw new NotFoundException("기록을 찾을 수 없습니다.");if(rows.get(0).get("site_id")!=null)users.requireSiteAccess(u,rows.get(0).get("site_id").toString());return db.queryForList("SELECT id,original_name name,byte_size byteSize,width_px width,height_px height FROM workspace_photo WHERE record_id=? AND company_id=? ORDER BY id",recordId,u.companyId());}
+    @GetMapping("/{id}/metadata")
+    public Map<String,Object> metadata(@PathVariable long id,Authentication auth){var u=users.require(auth);photo(u,id);return db.queryForMap("SELECT id,original_name name,byte_size byteSize,width_px width,height_px height FROM workspace_photo WHERE id=? AND company_id=?",id,u.companyId());}
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> image(@PathVariable long id,Authentication auth){var u=users.require(auth);var r=photo(u,id);byte[] bytes=db.queryForObject("SELECT image_data FROM workspace_photo WHERE id=?",byte[].class,id);return ResponseEntity.ok().contentType(MediaType.parseMediaType(r.get("mimeType").toString())).header("X-Content-Type-Options","nosniff").cacheControl(CacheControl.noStore()).body(bytes);}
     @DeleteMapping("/{id}")
