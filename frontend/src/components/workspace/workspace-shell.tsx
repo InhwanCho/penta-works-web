@@ -145,6 +145,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
+            scroll={false}
             onNavigate={() => {
               if (path === i.href) scrollPageToTop();
             }}
@@ -174,6 +175,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
+            scroll={false}
             onNavigate={() => {
               if (path === i.href) scrollPageToTop();
             }}
