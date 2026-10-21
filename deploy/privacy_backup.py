@@ -77,7 +77,11 @@ def backup(mode):
                 shutil.copyfileobj(proc.stdout,out);err=proc.stderr.read();code=proc.wait()
                 if code:raise RuntimeError('Database dump failed')
             files=tmp/'company-documents';files.mkdir()
-            run(['docker','cp',container+':/app/data/company-documents/.',str(files)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            exists=subprocess.run(['docker','exec',container,'test','-d','/app/data/company-documents'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL).returncode
+            if exists==0:
+                run(['docker','cp',container+':/app/data/company-documents/.',str(files)],stdout=subprocess.DEVNULL,stderr=subprocess.PIPE)
+            elif db(database,'SELECT COUNT(*) FROM company WHERE business_registration_storage_key IS NOT NULL').strip()!='0':
+                raise ValueError('Company document storage is missing but database references files')
             sync_markers(database,journal)
             if not journal.exists():journal.touch(mode=0o600)
             shutil.copyfile(journal,tmp/'deletions-at-backup.jsonl')
