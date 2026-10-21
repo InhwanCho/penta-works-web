@@ -289,7 +289,6 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="hidden lg:block"><h2 className="text-2xl font-bold">확인할 알림</h2><p className="text-text-secondary mt-1 text-sm">병원과 문제 내용을 확인하세요. ‘확인했어요’를 누르면 나에게 오는 동일 알림을 24시간 중지합니다.</p></div>
         <div className="flex w-full max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 lg:w-auto dark:bg-white/5">{(["unacknowledged", "open", "all"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`min-h-11 flex-1 shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체 기록" : value === "open" ? "문제 지속" : value === "unacknowledged" ? "확인할 알림" : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "미발송"}</button>)}</div>
       </div>
       <details className="mb-3 rounded-xl border border-slate-200 bg-white px-3 dark:border-white/15 dark:bg-background-dark-card">
@@ -300,7 +299,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
         <details className="lg:col-span-2"><summary className="min-h-12 cursor-pointer py-3 text-base font-semibold text-sky-800 dark:text-sky-300">기간 · 병원 · 발송 상태로 찾기</summary><div className="mt-2 grid gap-3 lg:grid-cols-2"><label className="text-base font-bold">병원<select value={siteId} onChange={event => setSiteId(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card"><option value="">모든 병원</option>{sites.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select></label><label className="text-base font-bold">발송 상태<select value={filter} onChange={event => setFilter(event.target.value as AlertEventFilter)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card"><option value="unacknowledged">확인할 알림</option><option value="open">문제 지속</option><option value="all">전체 기록</option><option value="failed">발송 확인 필요</option><option value="skipped">발송 안 됨</option></select></label><label className="text-base font-bold">시작일<input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card" /></label><label className="text-base font-bold">종료일<input type="date" value={toDate} onChange={event => setToDate(event.target.value)} className="mt-2 min-h-12 w-full rounded-xl border bg-white px-3 dark:border-white/20 dark:bg-background-dark-card" /></label></div></details>
         </div>
       </details>
-      <div className="mb-3 flex min-h-11 flex-wrap items-center gap-2">
+      {total > 0 && <div className="mb-3 flex min-h-11 flex-wrap items-center gap-2">
         <span className="text-sm font-bold">{total}건</span>
         <HelpButton title="알림 확인" message="확인했어요를 누르면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다. 종료되거나 확인한 알림은 전체 기록에서 볼 수 있습니다."/>
         <button type="button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setSelected([]); }} className="ml-auto min-h-11 px-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{selecting ? "선택 취소" : "여러 개 확인"}</button>
@@ -308,11 +307,22 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every(id => selected.includes(id))} onChange={event => setSelected(event.target.checked ? selectableIds : [])} className="h-5 w-5 accent-sky-700"/>이 페이지 선택</label>
           <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{selectedIds.length}건 확인</button>
         </div>}
-      </div>
+      </div>}
       {history.isFetching && <p role="status" className="mb-3 text-sm">알림 이력을 불러오는 중…</p>}
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
-      {!history.isPending && filtered.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-12 text-center dark:border-white/20 dark:bg-background-dark-card"><p className="text-xl font-bold">{failed ? "알림을 불러오지 못했습니다" : filter === "unacknowledged" && !query && kind === "all" ? "확인할 알림이 없습니다" : "조건에 맞는 알림이 없습니다"}</p><p className="mt-3 text-base text-text-secondary">{failed ? "잠시 후 다시 시도해주세요." : "위의 ‘알림 설정’에서 병원별 기준이나 알림 받는 시간을 바꿀 수 있습니다."}</p></div> : <div className="space-y-4">{filtered.map((event) => <AlertEventRow key={event.id} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}</div>}
+      {!history.isPending && !failed && filtered.length === 0 && (
+        <p role="status" className="px-1 py-3 text-sm text-text-secondary">
+          {query || siteId || fromDate || toDate || kind !== "all"
+            ? "조건에 맞는 알림이 없어요."
+            : filter === "unacknowledged" ? "확인할 알림이 없어요."
+              : filter === "open" ? "지속 중인 문제가 없어요."
+                : "알림 기록이 없어요."}
+        </p>
+      )}
+      <div className={filter === "all" ? "received-alert-history" : "space-y-4"}>
+        {filtered.map((event) => <AlertEventRow key={event.id} compact={filter === "all"} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} acknowledging={busy} retrying={busy} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}
+      </div>
       {(total > 20 || currentPage > 1) && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.max(1, Math.ceil(total / 20))}</span><button type="button" disabled={history.isFetching || currentPage * 20 >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
     </section>
   );
@@ -320,6 +330,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
 function AlertEventRow({
   event,
+  compact = false,
   selecting,
   selected,
   onSelect,
@@ -331,6 +342,7 @@ function AlertEventRow({
   settingsAvailable,
 }: {
   event: AlertEventSummary;
+  compact?: boolean;
   selecting: boolean;
   selected: boolean;
   onSelect: (checked: boolean) => void;
@@ -432,7 +444,7 @@ function AlertEventRow({
         : `설정 범위 ${formatValue(event.min, metric?.unit)} ~ ${formatValue(event.max, metric?.unit)}`;
   return (
     <article
-      className={`received-alert ${recovered ? "is-recovered" : "is-active"}`}
+      className={`received-alert ${recovered ? "is-recovered" : "is-active"} ${compact ? "is-compact" : ""} ${showDelivery ? "is-expanded" : ""}`}
     >
       <div className="received-alert-top">
         {selecting && (
@@ -469,7 +481,7 @@ function AlertEventRow({
         {event.acknowledgedAt && <span>✓ 확인한 알림</span>}
       </div>
       <div className="received-alert-actions">
-        {!event.acknowledgedAt && (
+        {!event.acknowledgedAt && !recovered && (!compact || showDelivery) && (
           <button
             type="button"
             disabled={acknowledging}
@@ -485,7 +497,7 @@ function AlertEventRow({
           onClick={() => setShowDelivery(!showDelivery)}
           className="received-alert-more"
         >
-          {showDelivery ? "접기 ↑" : "자세히 · 관리 ›"}
+          {showDelivery ? "접기 ↑" : compact ? "자세히 보기 ›" : "자세히 · 관리 ›"}
         </button>
       </div>
       {showDelivery && (

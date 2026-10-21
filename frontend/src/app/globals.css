@@ -2374,3 +2374,18 @@ h4,
 .alert-pause-input::-webkit-datetime-edit-fields-wrapper { padding: 0; }
 .alert-pause label:has(input[type="radio"]:focus-visible) { outline: 2px solid #0284c7; outline-offset: 2px; }
 .dark .alert-pause .alert-pause-input { border-color: #475569; background: #0f172a; color: #f1f5f9; color-scheme: dark; }
+
+/* History favors compact summaries; management controls remain available on expand. */
+.received-alert-history { display: grid; gap: 8px; }
+.received-alert.is-compact { padding: 12px 14px; border-left-width: 3px; border-radius: 12px; box-shadow: none; }
+.received-alert.is-compact .received-alert-top { align-items: center; }
+.received-alert.is-compact .received-alert-top h3 { font-size: 16px; }
+.received-alert.is-compact .received-alert-state { padding: 3px 6px; }
+.received-alert.is-compact .received-alert-issue { margin-top: 4px; font-size: 14px; line-height: 1.5; }
+.received-alert.is-compact .received-alert-reading { margin-top: 4px; padding: 0; background: transparent; }
+.received-alert.is-compact .received-alert-reading strong { font-size: 16px; line-height: 1.5; }
+.received-alert.is-compact:not(.is-expanded) .received-alert-reading span { display: none; }
+.received-alert.is-compact .received-alert-time { margin-top: 5px; }
+.received-alert.is-compact .received-alert-actions { justify-content: flex-end; margin-top: 4px; gap: 8px; }
+.received-alert.is-compact .received-alert-actions button { flex: 0 1 auto; min-height: 40px; padding: 6px 10px; font-size: 13px; }
+.received-alert.is-compact:not(.is-expanded) .received-alert-more { border-color: transparent; }
