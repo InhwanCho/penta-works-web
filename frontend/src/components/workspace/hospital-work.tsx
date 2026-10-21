@@ -8,7 +8,7 @@ import { useWorkspace } from "./workspace-data";
 import { RecordList, ErrorState } from "./workspace-pages";
 export default function HospitalWork({ siteId }: { siteId: string }) {
   const { session } = useAuth();
-  const { records } = useWorkspace();
+  const { records } = useWorkspace({ recordSiteId: siteId });
   const old = useOfficeAssetsQuery(siteId, !!session);
   const [count, setCount] = useState(10);
   if (!session) return null;
@@ -44,7 +44,20 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           className="work-secondary hospital-record-create"
           href={`/work/new?site=${encodeURIComponent(siteId)}`}
         >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6Z" /><path d="m14 5 5 5" /></svg>
+          <svg
+            viewBox="0 0 24 24"
+            width="16"
+            height="16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="m16 3 5 5-12 12-6 1 1-6Z" />
+            <path d="m14 5 5 5" />
+          </svg>
           업무기록 작성
         </Link>
       </div>

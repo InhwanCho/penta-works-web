@@ -58,6 +58,9 @@ export const statusLabels: Record<string, string> = {
 export function useWorkspace(
   options: {
     records?: boolean;
+    recordFrom?: string;
+    recordTo?: string;
+    recordSiteId?: string;
     scheduleFrom?: string;
     scheduleTo?: string;
   } = {},
@@ -71,8 +74,20 @@ export function useWorkspace(
     enabled,
   });
   const records = useQuery({
-    queryKey: ["workspace-records", scope],
-    queryFn: () => apiFetch<WorkRecord[]>("/workspace/records"),
+    queryKey: [
+      "workspace-records",
+      scope,
+      options.recordFrom,
+      options.recordTo,
+      options.recordSiteId,
+    ],
+    queryFn: () => {
+      const p = new URLSearchParams();
+      if (options.recordFrom) p.set("from", options.recordFrom);
+      if (options.recordTo) p.set("to", options.recordTo);
+      if (options.recordSiteId) p.set("siteId", options.recordSiteId);
+      return apiFetch<WorkRecord[]>(`/workspace/records?${p}`);
+    },
     enabled: enabled && options.records !== false,
   });
   const schedules = useQuery({

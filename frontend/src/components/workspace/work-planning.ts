@@ -34,3 +34,14 @@ export function nextDue(
       ? addCalendarMonths(last, months)
       : null;
 }
+
+/** A moving year anchored to the viewed month, including both past and future. */
+export function calendarWindow(month: string) {
+  const first = month + "-01";
+  const end = new Date(addCalendarMonths(first, 6) + "T00:00:00Z");
+  end.setUTCDate(end.getUTCDate() - 1);
+  return {
+    from: addCalendarMonths(first, -6),
+    to: end.toISOString().slice(0, 10),
+  };
+}

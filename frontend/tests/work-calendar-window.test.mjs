@@ -1,0 +1,10 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+import ts from 'typescript';
+const exports={};
+const source=ts.transpileModule(fs.readFileSync(new URL('../src/components/workspace/work-planning.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+vm.runInNewContext(source,{exports,Date,Math});
+test('future month has a complete moving year, independent of current date',()=>{const r=exports.calendarWindow('2029-10');assert.equal(r.from,'2029-04-01');assert.equal(r.to,'2030-03-31');for(const date of exports.calendarDays('2029-10'))assert.ok(date>=r.from&&date<=r.to);});
+test('past navigation and year/leap boundaries retain all displayed dates',()=>{for(const month of ['2020-01','2024-02','2032-12']){const r=exports.calendarWindow(month);for(const date of exports.calendarDays(month))assert.ok(date>=r.from&&date<=r.to);assert.ok(r.from<month+'-01');assert.ok(r.to>month+'-28');}assert.equal(exports.calendarWindow('2024-09').from,'2024-03-01');assert.equal(exports.calendarWindow('2024-09').to,'2025-02-28');});

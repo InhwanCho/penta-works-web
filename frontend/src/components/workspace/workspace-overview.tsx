@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
-import { useQueries, useQueryClient } from "@tanstack/react-query";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/components/provider/auth-provider";
+import type { WorkRecord } from "./workspace-data";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { OfficeAssetsResponse } from "@/hooks/use-office-assets-query";
 import {
@@ -18,6 +20,7 @@ import {
 import { parseDetails } from "./service-form-model";
 import {
   calendarDays,
+  calendarWindow,
   addCalendarMonths,
   daysBetween,
   nextDue,
@@ -53,14 +56,29 @@ function calendarColor(type: string) {
   return "gcal-other";
 }
 export default function OverviewPage() {
-  const { sites, records, schedules } = useWorkspace(),
-    planning = usePlanning(),
-    qc = useQueryClient();
   const today = dayString();
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
     [error, setError] = useState("");
+  const { session } = useAuth();
+  const recent = useQuery({
+    queryKey: ["workspace-records", "recent", session?.id],
+    queryFn: () =>
+      apiFetch<{ records: WorkRecord[] }>(
+        "/workspace/records/search?page=1&size=8",
+      ),
+    enabled: !!session,
+  });
+  const range = calendarWindow(month);
+  const { sites, records, schedules } = useWorkspace({
+    recordFrom: range.from,
+    recordTo: range.to,
+    scheduleFrom: range.from,
+    scheduleTo: range.to,
+  });
+  const planning = usePlanning(),
+    qc = useQueryClient();
   const old = useQueries({
     queries: (sites.data || []).map((site) => ({
       queryKey: ["officeAssets", site.siteDb],
@@ -158,9 +176,7 @@ export default function OverviewPage() {
   due.sort((a, b) => a.date.localeCompare(b.date));
   const upcomingDue = due.filter((d) => d.days <= 45);
   const preparations = planning.data?.preparations || [];
-  const recentRecords = [...(records.data || [])]
-    .sort((a, b) => b.workDate.localeCompare(a.workDate) || b.id - a.id)
-    .slice(0, 8);
+  const recentRecords = recent.data?.records || [];
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
   const daySchedules = (schedules.data || []).filter(
@@ -270,7 +286,9 @@ export default function OverviewPage() {
             const tags = [
               ...events.map((s) => ({
                 title: `${s.serviceType === "PM" ? "PM" : scheduleCategory(s)} · ${s.siteName || s.title}`,
-                type: calendarColor(s.siteId ? s.serviceType || "ETC" : s.personalKind || "etc"),
+                type: calendarColor(
+                  s.siteId ? s.serviceType || "ETC" : s.personalKind || "etc",
+                ),
               })),
               ...logs.map((r) => ({
                 title: `${r.siteName} · ${r.type === "PM" ? "PM" : serviceLabels[r.type] || r.title}`,
@@ -339,46 +357,98 @@ export default function OverviewPage() {
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
         >
-          <section className={`day-agenda-section${!dayRecords.length ? " day-section-empty" : ""}`}>
+          <section
+            className={`day-agenda-section${!dayRecords.length ? "day-section-empty" : ""}`}
+          >
             <div className="day-section-toolbar">
               <h3>작성된 업무기록 ({dayRecords.length})</h3>
-              <Link className="day-section-action" href={`/work/new?date=${selected}`}>작성</Link>
+              <Link
+                className="day-section-action"
+                href={`/work/new?date=${selected}`}
+              >
+                작성
+              </Link>
             </div>
-            {dayRecords.length ? <div className="day-entry-list">
-              {dayRecords.map((r) => <DayEntry key={r.key} href={r.href} date={r.date}
-                category={r.type} completed={r.status === "COMPLETED"}
-                type={r.type === "PM" ? "PM" : serviceLabels[r.type] || "기타"}
-                title={r.siteName} description={r.title !== r.siteName ? r.title : undefined}
-                meta={statusLabels[r.status] || r.status} />)}
-            </div> : <p className="day-empty">작성된 업무기록이 없습니다.</p>}
+            {dayRecords.length ? (
+              <div className="day-entry-list">
+                {dayRecords.map((r) => (
+                  <DayEntry
+                    key={r.key}
+                    href={r.href}
+                    date={r.date}
+                    category={r.type}
+                    completed={r.status === "COMPLETED"}
+                    type={
+                      r.type === "PM" ? "PM" : serviceLabels[r.type] || "기타"
+                    }
+                    title={r.siteName}
+                    description={r.title !== r.siteName ? r.title : undefined}
+                    meta={statusLabels[r.status] || r.status}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="day-empty">작성된 업무기록이 없습니다.</p>
+            )}
           </section>
-          <section className={`day-agenda-section${!daySchedules.length ? " day-section-empty" : ""}`}>
+          <section
+            className={`day-agenda-section${!daySchedules.length ? "day-section-empty" : ""}`}
+          >
             <div className="day-section-toolbar">
-              <h3>등록한 일정 {daySchedules.length ? `(${daySchedules.length})` : ""}</h3>
-              <Link className="day-section-action" href={`/schedule?date=${selected}&new=1`}>일정 등록</Link>
+              <h3>
+                등록한 일정{" "}
+                {daySchedules.length ? `(${daySchedules.length})` : ""}
+              </h3>
+              <Link
+                className="day-section-action"
+                href={`/schedule?date=${selected}&new=1`}
+              >
+                일정 등록
+              </Link>
             </div>
-            {daySchedules.length ? <div className="day-entry-list">
-              {daySchedules.map((s) => <DayEntry key={"s" + s.id} href={`/schedule?date=${selected}`}
-                category={s.serviceType || "GENERAL"}
-                type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
-                title={s.siteName || s.title}
-                description={s.siteName && s.title !== s.siteName ? s.title : undefined}
-                meta={scheduleTimeLabel(s.startAt, s.endAt)} />)}
-            </div> : <p className="day-empty">등록된 일정이 없습니다.</p>}
+            {daySchedules.length ? (
+              <div className="day-entry-list">
+                {daySchedules.map((s) => (
+                  <DayEntry
+                    key={"s" + s.id}
+                    href={`/schedule?date=${selected}`}
+                    category={s.serviceType || "GENERAL"}
+                    type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
+                    title={s.siteName || s.title}
+                    description={
+                      s.siteName && s.title !== s.siteName ? s.title : undefined
+                    }
+                    meta={scheduleTimeLabel(s.startAt, s.endAt)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p className="day-empty">등록된 일정이 없습니다.</p>
+            )}
           </section>
           {!!dayDue.length && (
             <section className="day-agenda-section day-due-section">
               <div className="day-section-heading">
-                <h3>점검 기한 <span>{dayDue.length}</span></h3>
+                <h3>
+                  점검 기한 <span>{dayDue.length}</span>
+                </h3>
                 <details className="day-due-help">
                   <summary aria-label="점검 기한 안내">?</summary>
-                  <p>점검 주기와 완료 이력으로 계산한 날짜입니다. 방문 확정 일정은 아니며, 병원 상세에서 기준을 변경할 수 있습니다.</p>
+                  <p>
+                    점검 주기와 완료 이력으로 계산한 날짜입니다. 방문 확정
+                    일정은 아니며, 병원 상세에서 기준을 변경할 수 있습니다.
+                  </p>
                 </details>
               </div>
               <div className="day-entry-list">
                 {dayDue.map((d, i) => (
-                  <DayEntry key={"d" + i} href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
-                    type={d.type} title={d.siteName} meta="점검 기준 확인" />
+                  <DayEntry
+                    key={"d" + i}
+                    href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
+                    type={d.type}
+                    title={d.siteName}
+                    meta="점검 기준 확인"
+                  />
                 ))}
               </div>
             </section>
@@ -480,9 +550,9 @@ export default function OverviewPage() {
           <summary>
             <span>최근 업무기록</span>
             <small>
-              {records.isPending
+              {recent.isPending
                 ? "불러오는 중…"
-                : records.isError
+                : recent.isError
                   ? "조회 실패"
                   : `${recentRecords.length}건`}
             </small>
@@ -494,10 +564,10 @@ export default function OverviewPage() {
             >
               업무기록 전체 보기 →
             </Link>
-            {records.isError ? (
+            {recent.isError ? (
               <ErrorState
-                error={records.error}
-                retry={() => void records.refetch()}
+                error={recent.error}
+                retry={() => void recent.refetch()}
               />
             ) : (
               <div className="work-panel">
@@ -537,7 +607,7 @@ export default function OverviewPage() {
                 ))}
                 {!recentRecords.length && (
                   <Empty>
-                    {records.isPending
+                    {recent.isPending
                       ? "업무기록을 불러오는 중…"
                       : "아직 작성된 업무기록이 없습니다."}
                   </Empty>
@@ -551,20 +621,53 @@ export default function OverviewPage() {
   );
 }
 
-function DayEntry({ href, type, title, description, meta, date, completed, category = "PM" }: {
-  href: string; type: string; title: string; description?: string; meta: string; date?: string; completed?: boolean; category?: string;
+function DayEntry({
+  href,
+  type,
+  title,
+  description,
+  meta,
+  date,
+  completed,
+  category = "PM",
+}: {
+  href: string;
+  type: string;
+  title: string;
+  description?: string;
+  meta: string;
+  date?: string;
+  completed?: boolean;
+  category?: string;
 }) {
-  return <Link href={href} className={`day-entry day-category-${category.toLowerCase()}`}>
-    <div className="day-entry-content">
-      <strong>{title}</strong>
-      {description && <p>{description}</p>}
-      <span className="day-type">{type}</span>
-    </div>
-    <div className="day-entry-aside">
-      {date && <time dateTime={date}>{new Date(date + "T12:00:00+09:00").toLocaleDateString("ko-KR", { year: "numeric", month: "numeric", day: "numeric", weekday: "short", timeZone: "Asia/Seoul" })}</time>}
-      <span className={`day-entry-status${completed ? " is-completed" : ""}`}>{meta}</span>
-    </div>
-  </Link>;
+  return (
+    <Link
+      href={href}
+      className={`day-entry day-category-${category.toLowerCase()}`}
+    >
+      <div className="day-entry-content">
+        <strong>{title}</strong>
+        {description && <p>{description}</p>}
+        <span className="day-type">{type}</span>
+      </div>
+      <div className="day-entry-aside">
+        {date && (
+          <time dateTime={date}>
+            {new Date(date + "T12:00:00+09:00").toLocaleDateString("ko-KR", {
+              year: "numeric",
+              month: "numeric",
+              day: "numeric",
+              weekday: "short",
+              timeZone: "Asia/Seoul",
+            })}
+          </time>
+        )}
+        <span className={`day-entry-status${completed ? "is-completed" : ""}`}>
+          {meta}
+        </span>
+      </div>
+    </Link>
+  );
 }
 
 function DayDialog({

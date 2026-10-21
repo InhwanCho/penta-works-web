@@ -87,10 +87,20 @@ public class WorkspaceController {
         }
         return result;
     }
+    public List<Map<String,Object>> records(Authentication auth){return records(null,null,null,auth);}
     @GetMapping("/records")
-    public List<Map<String,Object>> records(Authentication auth) {
+    public List<Map<String,Object>> records(
+        @RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,
+        @RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,
+        @RequestParam(required=false) String siteId,Authentication auth) {
         var u=users.require(auth);var allowed=users.allowedSiteIds(u);
-        return db.queryForList(RECORDS,u.companyId()).stream().filter(r->visible(r,allowed)).toList();
+        if(from!=null&&to!=null&&from.isAfter(to))throw new BadRequestException("조회 시작일과 종료일을 확인해주세요.");
+        var args=new java.util.ArrayList<Object>();args.add(u.companyId());String extra="";
+        if(from!=null){extra+=" AND w.work_date>=?";args.add(from);}
+        if(to!=null){extra+=" AND w.work_date<=?";args.add(to);}
+        if(siteId!=null&&!siteId.isBlank()){String sid=site(u,siteId);extra+=" AND w.site_id=?";args.add(sid);}
+        String sql=RECORDS.replace("ORDER BY w.work_date",extra+" ORDER BY w.work_date");
+        return db.queryForList(sql,args.toArray()).stream().filter(r->visible(r,allowed)).toList();
     }
     @GetMapping("/records/{id}")
     public Map<String,Object> record(@PathVariable long id,Authentication auth) {
