@@ -11,7 +11,7 @@ export default function LegalPage({ title, description, draft = false, document 
       <h1>{title}</h1>
       <p>{description}</p>
     </header>
-    {draft && <aside className="legal-draft" role="note"><p>※ 검토용 초안입니다. 보관·파기 절차와 외부 처리업체 정보 등을 확정한 뒤 시행합니다.</p></aside>}
+    {draft && <aside className="legal-draft" role="note"><p>※ 최종 시행 전 검토용 초안입니다.</p></aside>}
     <article>{children}</article>
     <div className="legal-page-end"><PolicyLinks /></div>
   </main></div>;
