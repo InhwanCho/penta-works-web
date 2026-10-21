@@ -2560,3 +2560,23 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
     line-height: 1.4;
   }
 }
+
+/* Keep the description full-width in narrow day sheets; the date is already in the heading. */
+@media (max-width: 479px) {
+  .work-day-dialog .day-entry { column-gap: 8px; row-gap: 6px; padding: 12px; }
+  .work-day-dialog .day-entry-content { display: contents; }
+  .work-day-dialog .day-entry-content > strong,
+  .work-day-dialog .day-entry-content > p { grid-column: 1 / -1; }
+  .work-day-dialog .day-entry-content > p { margin-top: 0; }
+  .work-day-dialog .day-entry-content > .day-type { grid-column: 1; justify-self: start; margin-top: 0; }
+  .work-day-dialog .day-entry-aside { grid-column: 2; min-width: 0; white-space: normal; text-align: right; }
+  .work-day-dialog .day-entry-aside > time { display: none; }
+}
+
+/* Expanded history uses a full-width detail flow, rather than squeezing text beside the reference range. */
+@media (max-width: 1023px) {
+  .received-alert-history .received-alert.is-compact.is-expanded { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .received-alert.is-compact.is-expanded > :is(.received-alert-top, .received-alert-issue, .received-alert-reading, .received-alert-time, .received-alert-actions) { grid-column: 1; grid-row: auto; min-width: 0; }
+  .received-alert.is-compact.is-expanded .received-alert-reading { max-width: 100%; align-items: flex-start; }
+  .received-alert.is-compact.is-expanded .received-alert-reading span { white-space: normal; overflow-wrap: anywhere; }
+}
