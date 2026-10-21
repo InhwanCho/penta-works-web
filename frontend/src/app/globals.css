@@ -2500,3 +2500,5 @@ body:has(.legal-document-surface) .site-footer strong { color: #111; }
 .dark .policy-links a[aria-current="page"] { color: #f1f5f9; }
 body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: #111; }
 .policy-links a:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; border-radius: 2px; }
+
+.legal-page.legal-document header > .legal-effective-date { margin-top: 10px; color: #555; font-size: 13px; line-height: 1.6; }
