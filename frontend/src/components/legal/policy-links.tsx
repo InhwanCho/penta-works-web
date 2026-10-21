@@ -11,7 +11,6 @@ export default function PolicyLinks({ className = "" }: { className?: string }) 
   const pathname = usePathname();
   return <nav aria-label="서비스 안내 및 정책" className={`policy-links ${className}`}>
     {links.map(({ href, label }) => <Link key={href} href={href}
-      aria-current={pathname === href ? "page" : undefined}
-      className={href === "/privacy" ? "font-bold" : undefined}>{label}</Link>)}
+      aria-current={pathname === href ? "page" : undefined}>{label}</Link>)}
   </nav>;
 }
