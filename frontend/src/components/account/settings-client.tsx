@@ -115,6 +115,12 @@ export default function SettingsClient() {
           )}
         </section>
       )}
+      <section className="work-panel settings-section">
+        <h2>서비스 안내</h2>
+        <SettingsLink href="/about" title="MReyes 소개" description="모니터링과 현장 서비스 관리" />
+        <SettingsLink href="/terms" title="이용약관" description="서비스 이용 안내" />
+        <SettingsLink href="/privacy" title="개인정보 처리방침" description="개인정보 처리 및 권리 안내" />
+      </section>
       <CalendarConnection userId={session.id} />
       <LogoutControls />
     </main>

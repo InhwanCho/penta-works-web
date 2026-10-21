@@ -11,6 +11,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { session, isLoading, connectionError, retrySession } = useAuth();
   const publicPage =
+    ["/privacy", "/terms", "/about"].includes(pathname) ||
     pathname === "/login" ||
     pathname === "/accept-invite" ||
     pathname === "/reset-password" ||

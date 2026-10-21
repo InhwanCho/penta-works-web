@@ -1,4 +1,5 @@
 "use client";
+import PolicyLinks from "@/components/legal/policy-links";
 
 import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -220,6 +221,7 @@ export default function LoginForm() {
                 <Link href="/forgot-password" className="mt-4 block text-center text-sm font-semibold text-sky-700 dark:text-sky-300">비밀번호를 잊으셨나요?</Link>
               </form>
             )}
+            <PolicyLinks className="login-policy-links" />
           </div>
         </div>
       </div>

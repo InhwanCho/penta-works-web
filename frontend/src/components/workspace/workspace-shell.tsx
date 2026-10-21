@@ -1,4 +1,5 @@
 "use client";
+import SiteFooter from "@/components/legal/site-footer";
 import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -106,7 +107,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     measure();
     return () => { observer.disconnect(); document.documentElement.style.removeProperty("--workspace-bottom-height"); };
   }, [session]);
-  if (!session) return children;
+  if (!session || ["/about", "/privacy", "/terms"].includes(path)) return <>{children}<SiteFooter /></>;
   const active = (href: string) =>
     path === href ||
     (href === "/settings" &&
@@ -139,7 +140,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </aside>
-      <div className="workspace-content">{children}</div>
+      <div className="workspace-content">{children}<SiteFooter /></div>
       <nav
         ref={bottomNav}
         className="workspace-bottom"
