@@ -95,7 +95,8 @@ else
     "${compose[@]}" up -d --remove-orphans
 fi
 
-for attempt_no in $(seq 1 30); do
+# Allow startup migrations to rebuild retained measurement averages.
+for attempt_no in $(seq 1 90); do
     if curl --fail --silent "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null \
         && curl --fail --silent "http://127.0.0.1:${FRONTEND_PORT}" >/dev/null; then
         docker run --rm \
