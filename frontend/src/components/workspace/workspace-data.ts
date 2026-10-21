@@ -27,6 +27,7 @@ export type WorkRecord = {
   scheduleDate?: string | null;
 };
 export type WorkSchedule = {
+  linkedRecords?: Pick<WorkRecord, "id" | "title" | "workDate">[];
   revision: number;
   targetKind?: "HOSPITAL" | "GENERAL" | null;
   personalKind?: string | null;

@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { useWorkDraft } from "./use-work-draft";
 import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
 import ActionMenu from "@/components/common/action-menu";
@@ -436,7 +437,8 @@ export function SchedulePage() {
     [open, setOpen] = useState(search.get("new") === "1"),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
-  const { sites, schedules, records } = useWorkspace({
+  const { sites, schedules } = useWorkspace({
+    records: false,
     scheduleFrom: selected,
     scheduleTo: selected,
   });
@@ -452,6 +454,17 @@ export function SchedulePage() {
     body: "",
     startAt: initialDate + "T09:00",
     endAt: initialDate + "T10:00",
+  });
+  const draft = useWorkDraft({
+    storageKey: `mreyes-schedule-draft:${session?.id}`,
+    value: { form, editingSchedule },
+    enabled: !!session && open,
+    onRestore: (d) => {
+      setForm(d.form);
+      setEditingSchedule(d.editingSchedule);
+      setOpen(true);
+    },
+    restoreNotice: "일정 내용을 이 기기의 임시저장에서 복구했습니다.",
   });
   const rows = (schedules.data || [])
     .filter(
@@ -491,6 +504,7 @@ export function SchedulePage() {
         qc.invalidateQueries({ queryKey: ["workspace-schedules"] }),
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
       ]);
+      draft.clear();
       setSelected(form.startAt.slice(0, 10));
       setOpen(false);
       setEditingSchedule(null);
@@ -537,6 +551,37 @@ export function SchedulePage() {
           className="work-error"
         >
           {error}
+        </p>
+      )}
+      {draft.pending && (
+        <div
+          className="work-panel"
+          role="status"
+        >
+          <p>이 기기에 저장하지 않은 일정이 있습니다.</p>
+          <div className="work-form-actions">
+            <button
+              type="button"
+              onClick={draft.discard}
+            >
+              버리기
+            </button>
+            <button
+              type="button"
+              className="work-primary"
+              onClick={draft.restore}
+            >
+              복구
+            </button>
+          </div>
+        </div>
+      )}
+      {open && draft.notice && (
+        <p
+          className="work-hint"
+          role="status"
+        >
+          {draft.notice}
         </p>
       )}
       {open && (
@@ -626,12 +671,17 @@ export function SchedulePage() {
           <div className="work-form-actions">
             <button
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={() => {
+                if (draft.confirmLeave()) {
+                  draft.pause();
+                  setOpen(false);
+                }
+              }}
             >
               취소
             </button>
             <button
-              disabled={saving}
+              disabled={saving || !!draft.pending}
               className="work-primary"
             >
               {saving ? "저장 중…" : "일정 저장"}
@@ -680,6 +730,9 @@ export function SchedulePage() {
                           {
                             label: "수정",
                             onSelect: () => {
+                              if (draft.pending || !draft.confirmLeave())
+                                return;
+                              draft.resume();
                               setEditingSchedule(s);
                               setForm({
                                 targetKind:
@@ -708,17 +761,15 @@ export function SchedulePage() {
                 />
               </div>
               <div className="work-section">
-                {(records.data || [])
-                  .filter((r) => r.scheduleId === s.id)
-                  .map((r) => (
-                    <Link
-                      className="work-back"
-                      key={r.id}
-                      href={`/work/${r.id}`}
-                    >
-                      {r.workDate} · {r.title} →
-                    </Link>
-                  ))}
+                {(s.linkedRecords || []).map((r) => (
+                  <Link
+                    className="work-back"
+                    key={r.id}
+                    href={`/work/${r.id}`}
+                  >
+                    {r.workDate} · {r.title} →
+                  </Link>
+                ))}
               </div>
               <dl className="schedule-card-meta">
                 <div>

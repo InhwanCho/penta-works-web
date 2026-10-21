@@ -1,11 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
-import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
-import { ApiError, apiFetch } from "@/lib/api";
-import type { OfficeAssetsResponse } from "@/hooks/use-office-assets-query";
+import { apiFetch } from "@/lib/api";
+import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
 import {
   useWorkspace,
   usePlanning,
@@ -79,16 +79,21 @@ export default function OverviewPage() {
   });
   const planning = usePlanning(),
     qc = useQueryClient();
-  const old = useQueries({
-    queries: (sites.data || []).map((site) => ({
-      queryKey: ["officeAssets", site.siteDb],
-      queryFn: () =>
-        apiFetch<OfficeAssetsResponse>(
-          `/sites/${encodeURIComponent(site.siteDb)}/office-assets`,
-        ),
-      staleTime: 300000,
-      retry: false,
-    })),
+  const legacy = useQuery({
+    queryKey: ["workspace-legacy-history", session?.id, range.from, range.to],
+    queryFn: () =>
+      apiFetch<{
+        items: {
+          key: string;
+          siteId: string;
+          siteName: string;
+          date: string;
+          maintenance: OfficeMaintenance;
+        }[];
+        failedSites: string[];
+      }>(`/workspace/legacy-history?from=${range.from}&to=${range.to}`),
+    enabled: !!session,
+    staleTime: 300000,
   });
   const summaries: Summary[] = useMemo(
     () =>
@@ -109,22 +114,19 @@ export default function OverviewPage() {
               r.countsAsPm === undefined ? d.countsAsPm : !!r.countsAsPm,
           };
         }),
-        ...old.flatMap((q, i) =>
-          (q.data?.maintenanceHistory || [])
-            .filter((r) => r.workDate)
-            .map((r) => ({
-              key: `old-${i}-${r.id}`,
-              siteId: sites.data![i].siteDb,
-              siteName: sites.data![i].name || sites.data![i].siteDb,
-              title: r.serviceTitle || r.equipmentName,
-              date: r.workDate!,
-              type: r.serviceType || "ETC",
-              status: r.status,
-              href: `/sites/${Number(sites.data![i].siteDb) || sites.data![i].siteDb}`,
-            })),
-        ),
+        ...(legacy.data?.items || []).map((item) => ({
+          key: item.key,
+          siteId: item.siteId,
+          siteName: item.siteName,
+          title:
+            item.maintenance.serviceTitle || item.maintenance.equipmentName,
+          date: item.date,
+          type: item.maintenance.serviceType || "ETC",
+          status: item.maintenance.status,
+          href: `/sites/${Number(item.siteId) || item.siteId}`,
+        })),
       ].sort((a, b) => b.date.localeCompare(a.date)),
-    [records.data, old, sites.data],
+    [records.data, legacy.data],
   );
   const due: Due[] = [];
   for (const site of sites.data || []) {
@@ -185,21 +187,16 @@ export default function OverviewPage() {
   );
   const dayDue = due.filter((d) => d.date === selected);
   const recordsLoading =
-    sites.isPending || records.isPending || old.some((q) => q.isPending);
+    sites.isPending || records.isPending || legacy.isPending;
   const recordsFailed =
-    !!(sites.error || records.error) ||
-    old.some(
-      (q) =>
-        q.isError && !(q.error instanceof ApiError && q.error.status === 404),
-    );
+    !!(sites.error || records.error || legacy.error) ||
+    !!legacy.data?.failedSites.length;
   const planningLoading = recordsLoading || planning.isPending;
   const planningFailed = recordsFailed || !!planning.error;
   function retryRecords() {
     void sites.refetch();
     void records.refetch();
-    old.forEach((q) => {
-      if (q.isError) void q.refetch();
-    });
+    void legacy.refetch();
   }
   function retryPlanning() {
     retryRecords();

@@ -18,7 +18,8 @@ class WorkspaceDatabaseTest {
  JdbcTemplate db; TransactionTemplate tx; WorkspaceController controller; Authentication auth; CurrentUserService users;
  @BeforeEach void setup(){
   var ds=new DriverManagerDataSource(System.getenv("WORKSPACE_TEST_DB_URL"),"root","");db=new JdbcTemplate(ds);tx=new TransactionTemplate(new DataSourceTransactionManager(ds));
-  for(String t:List.of("workspace_hospital_plan","workspace_change_history","workspace_asset_history","workspace_preparation","workspace_photo","workspace_record","workspace_schedule","workspace_hospital","app_user","site"))db.execute("DROP TABLE IF EXISTS "+t);
+  for(String t:List.of("workspace_office_snapshot","workspace_hospital_plan","workspace_change_history","workspace_asset_history","workspace_preparation","workspace_photo","workspace_record","workspace_schedule","workspace_hospital","app_user","site"))db.execute("DROP TABLE IF EXISTS "+t);
+  db.execute("CREATE TABLE workspace_office_snapshot(site_id VARCHAR(32),company_id BIGINT,response_json LONGTEXT)");
   db.execute("CREATE TABLE app_user(id BIGINT PRIMARY KEY,name VARCHAR(100))");db.execute("INSERT INTO app_user VALUES(1,'QA')");
   db.execute("CREATE TABLE site(site VARCHAR(32) PRIMARY KEY,name VARCHAR(100))");db.execute("INSERT INTO site VALUES('001','허용병원'),('002','비허용병원')");
   db.execute("CREATE TABLE workspace_hospital(company_id BIGINT,site_id VARCHAR(32),name VARCHAR(100))");
@@ -64,4 +65,31 @@ class WorkspaceDatabaseTest {
   var other=new WorkspaceController.ScheduleInput(null,"변경","내용",i.startAt(),i.endAt(),"GENERAL","etc",null,2L);assertThrows(BadRequestException.class,()->tx.executeWithoutResult(s->controller.updateSchedule(1,other,auth)));assertEquals("001",db.queryForObject("SELECT site_id FROM workspace_schedule WHERE id=1",String.class));
   assertEquals(1,controller.schedules(LocalDate.of(2026,10,22),LocalDate.of(2026,10,22),auth).size());assertTrue(controller.schedules(LocalDate.of(2026,10,21),LocalDate.of(2026,10,21),auth).isEmpty());
  }
+ @Test void combinedHistoryPagesDoNotLoseSameDayRecordsAndLegacyCalendarExcludesMigratedItems() throws Exception {
+  var office=mock(com.pentaworks.monitoring.office.OfficeAssetsService.class);
+  var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
+  var history=new WorkspaceHistoryController(db,users,office,mapper);
+  var maintenance=new com.pentaworks.monitoring.office.OfficeAssetsResponse.Maintenance(99,"MRI",null,"CALL","이전콜",null,null,null,null,"2026-10-20",null,null,null,null,null,null,"COMPLETED",null,null,List.of());
+  var snapshot=new com.pentaworks.monitoring.office.OfficeAssetsResponse(new com.pentaworks.monitoring.office.OfficeAssetsResponse.Site(1,"001","병원",null,null,null),List.of(),List.of(),List.of(maintenance),"now");
+  db.update("INSERT INTO workspace_office_snapshot VALUES('001',1,?)",mapper.writeValueAsString(snapshot));
+  db.update("INSERT INTO workspace_office_snapshot VALUES('002',2,?)",mapper.writeValueAsString(snapshot));
+  for(int id=1;id<=25;id++)record(id,"001");
+  var seen=new HashSet<Object>();
+  for(int page=1;page<=3;page++) {
+   var result=history.hospital("1",page,10,auth);assertEquals(26L,result.get("total"));
+   for(Object item:(List<?>)result.get("items"))assertTrue(seen.add(((Map<?,?>)item).get("key")));
+  }
+  assertEquals(26,seen.size());verifyNoInteractions(office);
+  var calendar=history.calendar(LocalDate.of(2026,10,1),LocalDate.of(2026,10,31),auth);assertEquals(1,((List<?>)calendar.get("items")).size());
+  assertTrue(((List<?>)history.calendar(LocalDate.of(2027,1,1),LocalDate.of(2027,12,31),auth).get("items")).isEmpty());
+  db.update("UPDATE workspace_record SET source_id='office:001:maintenance:99' WHERE id=1");assertTrue(((List<?>)history.calendar(LocalDate.of(2026,10,1),LocalDate.of(2026,10,31),auth).get("items")).isEmpty());
+ }
+ @Test void scheduleReturnsOnlyVisibleLinkedRecordsFromSameCompany() {
+  db.update("INSERT INTO workspace_schedule(id,company_id,author_id,title,body,start_at,end_at) VALUES(1,1,1,'일정','','2026-10-21','2026-10-22')");
+  record(1,"001");record(2,"002");record(3,"001");
+  db.update("UPDATE workspace_record SET schedule_id=1");db.update("UPDATE workspace_record SET company_id=2 WHERE id=3");
+  var rows=controller.schedules(LocalDate.of(2026,10,21),LocalDate.of(2026,10,21),auth);
+  var linked=(List<?>)rows.get(0).get("linkedRecords");assertEquals(1,linked.size());assertEquals(1L,((Number)((Map<?,?>)linked.get(0)).get("id")).longValue());
+ }
+
 }

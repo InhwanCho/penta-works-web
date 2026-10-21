@@ -38,7 +38,7 @@ public class WorkspaceController {
         catch(JsonProcessingException e){throw new BadRequestException("작업 상세를 확인해주세요.");}
     }
     public record ScheduleInput(String siteId,String title,String body,LocalDateTime startAt,LocalDateTime endAt,String targetKind,String personalKind,String serviceType,Long revision) {}
-    private static final String RECORDS="""
+    static final String RECORDS="""
         SELECT w.id,w.revision,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,
                w.engineer_name engineerName,w.counts_as_pm countsAsPm,w.acr_kind acrKind,w.schedule_id scheduleId,w.source_id sourceId,
                (SELECT DATE_FORMAT(sc.start_at,'%Y-%m-%d') FROM workspace_schedule sc WHERE sc.id=w.schedule_id AND sc.company_id=w.company_id) scheduleDate,
@@ -213,11 +213,18 @@ public class WorkspaceController {
     @DeleteMapping("/records/{id}") @Transactional
     public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");snapshot(u,"RECORD",id,"DELETE");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());changed(u.companyId());return Map.of("deleted",true);}
     @GetMapping("/schedules")
-    public List<Map<String,Object>> schedules(@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);return db.queryForList("""
+    public List<Map<String,Object>> schedules(@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);var rows=db.queryForList("""
         SELECT w.id,w.revision,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
         FROM workspace_schedule w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id LEFT JOIN workspace_hospital h ON h.company_id=w.company_id AND h.site_id=w.site_id
         WHERE w.company_id=? AND w.deleted_at IS NULL AND (? IS NULL OR w.end_at>=?) AND (? IS NULL OR w.start_at<?) ORDER BY w.start_at,w.id
-        """,u.companyId(),from,from==null?null:from.atStartOfDay(),to,to==null?null:to.plusDays(1).atStartOfDay()).stream().filter(r->visible(r,allowed)).toList();}
+        """,u.companyId(),from,from==null?null:from.atStartOfDay(),to,to==null?null:to.plusDays(1).atStartOfDay()).stream().filter(r->visible(r,allowed)).toList();
+        if(!rows.isEmpty()) {
+            var ids=rows.stream().map(r->r.get("id")).toList();
+            var args=new java.util.ArrayList<Object>();args.add(u.companyId());args.addAll(ids);
+            var linked=db.queryForList("SELECT id,schedule_id scheduleId,title,DATE_FORMAT(work_date,'%Y-%m-%d') workDate,site_id siteId FROM workspace_record WHERE company_id=? AND deleted_at IS NULL AND schedule_id IN ("+String.join(",",java.util.Collections.nCopies(ids.size(),"?"))+") ORDER BY work_date DESC,id DESC",args.toArray()).stream().filter(r->visible(r,allowed)).collect(java.util.stream.Collectors.groupingBy(r->((Number)r.get("scheduleId")).longValue()));
+            rows.forEach(r->r.put("linkedRecords",linked.getOrDefault(((Number)r.get("id")).longValue(),List.of())));
+        }
+        return rows;}
     @PostMapping("/schedules") @Transactional
     public Map<String,Object> schedule(@RequestBody ScheduleInput input,Authentication auth){
         var u=users.require(auth);text(input.title(),200,"제목");if(input.body()!=null&&input.body().length()>10000)throw new BadRequestException("내용이 너무 깁니다.");

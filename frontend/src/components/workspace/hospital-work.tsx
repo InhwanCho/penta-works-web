@@ -1,36 +1,38 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
 import { useAuth } from "@/components/provider/auth-provider";
-import { useOfficeAssetsQuery } from "@/hooks/use-office-assets-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api";
+import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
+import type { WorkRecord } from "./workspace-data";
 import { MaintenanceRow } from "@/components/site/office-assets-panel";
-import { useWorkspace } from "./workspace-data";
 import { RecordList, ErrorState } from "./workspace-pages";
 export default function HospitalWork({ siteId }: { siteId: string }) {
   const { session } = useAuth();
-  const { records } = useWorkspace({ recordSiteId: siteId });
-  const old = useOfficeAssetsQuery(siteId, !!session);
-  const [count, setCount] = useState(10);
-  if (!session) return null;
-  const rows = [
-    ...(records.data || [])
-      .filter((r) => r.siteId === siteId)
-      .map((r) => ({
-        key: `new-${r.id}`,
-        date: r.workDate,
-        view: <RecordList rows={[r]} />,
-      })),
-    ...(old.data?.maintenanceHistory || []).map((r) => ({
-      key: `old-${r.id}`,
-      date: r.workDate || "",
-      view: (
-        <MaintenanceRow
-          item={r}
-          siteId={siteId}
-        />
+  const history = useInfiniteQuery({
+    queryKey: ["workspace-records", "hospital-history", session?.id, siteId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      apiFetch<{
+        items: {
+          key: string;
+          record?: WorkRecord;
+          maintenance?: OfficeMaintenance;
+        }[];
+        total: number;
+        failedSites: string[];
+      }>(
+        `/workspace/hospital-history/${encodeURIComponent(siteId)}?page=${pageParam}&size=10`,
       ),
-    })),
-  ].sort((a, b) => b.date.localeCompare(a.date));
+    getNextPageParam: (last, pages) =>
+      pages.reduce((n, p) => n + p.items.length, 0) < last.total
+        ? pages.length + 1
+        : undefined,
+    enabled: !!session,
+  });
+  if (!session) return null;
+  const rows = history.data?.pages.flatMap((p) => p.items) || [];
+  const partial = history.data?.pages.some((p) => p.failedSites.length);
   return (
     <section className="work-panel hospital-assets hospital-detail-card">
       <div className="work-section hospital-card-heading hospital-history-heading">
@@ -61,32 +63,61 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           업무기록 작성
         </Link>
       </div>
-      {records.error && (
+      {history.error && (
         <ErrorState
-          error={records.error}
-          retry={() => void records.refetch()}
+          error={history.error}
+          retry={() => {
+            void history.refetch();
+          }}
         />
       )}
-      {old.error && (
-        <p className="work-hint">
+      {partial && (
+        <p className="work-error">
           이전 정비이력을 불러오지 못했습니다.{" "}
-          <button onClick={() => void old.refetch()}>다시 시도</button>
+          <button
+            type="button"
+            onClick={() => {
+              void history.refetch();
+            }}
+          >
+            다시 시도
+          </button>
+        </p>
+      )}
+      {history.isPending && (
+        <p
+          className="work-hint"
+          role="status"
+        >
+          정비이력 불러오는 중…
         </p>
       )}
       <div className="hospital-timeline">
-        {rows.slice(0, count).map((r) => (
-          <div key={r.key}>{r.view}</div>
+        {rows.map((r) => (
+          <div key={r.key}>
+            {r.record ? (
+              <RecordList rows={[r.record]} />
+            ) : r.maintenance ? (
+              <MaintenanceRow
+                item={r.maintenance}
+                siteId={siteId}
+              />
+            ) : null}
+          </div>
         ))}
       </div>
-      {!rows.length && !records.isPending && !old.isPending && (
+      {!rows.length && !history.isPending && !history.error && !partial && (
         <p className="work-empty">아직 등록된 정비이력이 없습니다.</p>
       )}
-      {rows.length > count && (
+      {history.hasNextPage && (
         <button
           className="work-secondary"
-          onClick={() => setCount(count + 20)}
+          disabled={history.isFetchingNextPage}
+          onClick={() => {
+            void history.fetchNextPage();
+          }}
         >
-          이전 이력 더 보기 ({rows.length - count}건)
+          {history.isFetchingNextPage ? "불러오는 중…" : "이전 이력 더 보기"}
         </button>
       )}
     </section>

@@ -204,6 +204,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["workspace-record-history"] }),
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-schedules"] }),
         qc.invalidateQueries({ queryKey: ["workspace-planning"] }),
         qc.invalidateQueries({ queryKey: ["workspace-photos"] }),
         qc.invalidateQueries({ queryKey: ["workspace-assets"] }),
@@ -221,7 +222,10 @@ export default function WorkEditor({ id }: { id?: string }) {
     setSaving(true);
     try {
       await apiFetch(`/workspace/records/${id}`, { method: "DELETE" });
-      await qc.invalidateQueries({ queryKey: ["workspace-records"] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["workspace-records"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-schedules"] }),
+      ]);
       router.replace("/work");
     } catch (e) {
       setError(errorText(e));
