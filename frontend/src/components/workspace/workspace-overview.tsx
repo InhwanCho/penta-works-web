@@ -42,6 +42,16 @@ type Due = {
   date: string;
   days: number;
 };
+function calendarColor(type: string) {
+  if (type === "PM") return "gcal-pm";
+  if (type.startsWith("ACR")) return "gcal-acr";
+  if (["leave", "annual"].includes(type)) return "gcal-leave";
+  if (["REPAIR", "COLDHEAD", "INSTALL"].includes(type)) return "gcal-repair";
+  if (type === "CALL") return "gcal-call";
+  if (type === "office") return "gcal-office";
+  if (type === "edu") return "gcal-edu";
+  return "gcal-other";
+}
 export default function OverviewPage() {
   const { sites, records, schedules } = useWorkspace(),
     planning = usePlanning(),
@@ -260,15 +270,15 @@ export default function OverviewPage() {
             const tags = [
               ...events.map((s) => ({
                 title: `${s.serviceType === "PM" ? "PM" : scheduleCategory(s)} · ${s.siteName || s.title}`,
-                type: "schedule",
+                type: calendarColor(s.siteId ? s.serviceType || "ETC" : s.personalKind || "etc"),
               })),
               ...logs.map((r) => ({
                 title: `${r.siteName} · ${r.type === "PM" ? "PM" : serviceLabels[r.type] || r.title}`,
-                type: r.status === "COMPLETED" ? "record" : "open",
+                type: calendarColor(r.type),
               })),
               ...dueItems.map((d) => ({
                 title: `${d.type} · ${d.siteName}`,
-                type: "due",
+                type: calendarColor(d.type),
               })),
             ];
             return (
@@ -314,10 +324,14 @@ export default function OverviewPage() {
           })}
         </div>
         <div className="work-calendar-legend">
-          <span className="record">● 완료</span>
-          <span className="open">● 진행 중·재방문</span>
-          <span className="due">● 점검 예정</span>
-          <span className="schedule">● 일정</span>
+          <span className="gcal-pm">● PM</span>
+          <span className="gcal-acr">● ACR</span>
+          <span className="gcal-leave">● 휴가·연차</span>
+          <span className="gcal-repair">● 고장수리·부품교체·설치</span>
+          <span className="gcal-call">● 콜</span>
+          <span className="gcal-office">● 사무실</span>
+          <span className="gcal-edu">● 교육·세미나</span>
+          <span className="gcal-other">● 기타</span>
         </div>
       </section>
       {dayOpen && (

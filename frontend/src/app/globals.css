@@ -2345,3 +2345,24 @@ h4,
 @media (hover: hover) { .calendar-settings-actions button:not(:disabled):hover { background: var(--work-soft); } }
 
 .calendar-settings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Shared type palette with Google Calendar eventColor. */
+.work-calendar .gcal-pm { --gcal-accent: #3f51b5; --gcal-bg: #e8eaf6; --gcal-ink: #283593; }
+.dark .work-calendar .gcal-pm { --gcal-accent: #aab4f2; --gcal-bg: #252d51; --gcal-ink: #aab4f2; }
+.work-calendar .gcal-acr { --gcal-accent: #8e24aa; --gcal-bg: #f3e5f5; --gcal-ink: #6a1b9a; }
+.dark .work-calendar .gcal-acr { --gcal-accent: #e0a8ef; --gcal-bg: #43254b; --gcal-ink: #e0a8ef; }
+.work-calendar .gcal-leave { --gcal-accent: #0b8043; --gcal-bg: #e1f1e8; --gcal-ink: #086137; }
+.dark .work-calendar .gcal-leave { --gcal-accent: #8dd9ae; --gcal-bg: #1d4030; --gcal-ink: #8dd9ae; }
+.work-calendar .gcal-repair { --gcal-accent: #f4511e; --gcal-bg: #fce8df; --gcal-ink: #a33411; }
+.dark .work-calendar .gcal-repair { --gcal-accent: #ffb397; --gcal-bg: #4c2d23; --gcal-ink: #ffb397; }
+.work-calendar .gcal-call { --gcal-accent: #d5a000; --gcal-bg: #fff4cd; --gcal-ink: #795b00; }
+.dark .work-calendar .gcal-call { --gcal-accent: #f5d875; --gcal-bg: #443c21; --gcal-ink: #f5d875; }
+.work-calendar .gcal-office { --gcal-accent: #039be5; --gcal-bg: #def3fc; --gcal-ink: #006494; }
+.dark .work-calendar .gcal-office { --gcal-accent: #8ed7f6; --gcal-bg: #1e3c4b; --gcal-ink: #8ed7f6; }
+.work-calendar .gcal-edu { --gcal-accent: #7986cb; --gcal-bg: #eceefa; --gcal-ink: #49579c; }
+.dark .work-calendar .gcal-edu { --gcal-accent: #bfc7f4; --gcal-bg: #30364c; --gcal-ink: #bfc7f4; }
+.work-calendar .gcal-other { --gcal-accent: #616161; --gcal-bg: #eeeeee; --gcal-ink: #424242; }
+.dark .work-calendar .gcal-other { --gcal-accent: #d0d0d0; --gcal-bg: #363a40; --gcal-ink: #d0d0d0; }
+.work-calendar .work-calendar-tags > span[class*="gcal-"] { background: var(--gcal-bg); color: var(--gcal-ink); border-color: var(--gcal-accent); }
+.work-calendar .work-calendar-dots i[class*="gcal-"] { background: var(--gcal-accent); }
+.work-calendar .work-calendar-legend > span[class*="gcal-"] { color: var(--gcal-ink); }
