@@ -116,7 +116,7 @@ public class GoogleCalendarSync {
     LocalDate due=nextDue(last,date(plan.get(kind+"_override")),months);if(due==null)continue;
     String label=kind.equals("pm")?"PM":kind.equals("acr_full")?"ACR 정밀":"ACR 서류";
     String key="due:"+site+":"+kind;
-    entries.put(key,dayEvent("["+label+" 점검 예정] "+plan.get("hospital_name"),due,"점검 기준에 따라 계산된 기한입니다. 방문 일정과는 별도입니다.","/sites/"+site+"#inspection-plan",key,publicBase));
+    entries.put(key,dayEvent("["+label+"] "+plan.get("hospital_name"),due,"점검 기준에 따라 계산된 기한입니다. 방문 일정과는 별도입니다.","/sites/"+site+"#inspection-plan",key,publicBase));
    }
   }
   var desired=entries.keySet();
@@ -149,7 +149,7 @@ public class GoogleCalendarSync {
   String title=Objects.toString(s.get("title"),"");String hospital=s.get("site_id")==null?"":Objects.toString(s.get("hospital_name"),"");
   String summary="["+label+"] "+(hospital.isBlank()?title:hospital+(title.isBlank()||title.equals(s.get("service_type"))||title.equals(hospital)?"":" · "+title));
   LocalDateTime start=((java.sql.Timestamp)s.get("start_at")).toLocalDateTime(),end=((java.sql.Timestamp)s.get("end_at")).toLocalDateTime();
-  var event=new LinkedHashMap<String,Object>();event.put("summary",summary);
+  var event=new LinkedHashMap<String,Object>();event.put("summary",summary);event.put("colorId",eventColor(label));
   boolean allDay=start.toLocalTime().equals(LocalTime.MIDNIGHT)&&end.toLocalTime().compareTo(LocalTime.of(23,59))>=0;
   if(allDay){event.put("start",Map.of("date",start.toLocalDate().toString()));event.put("end",Map.of("date",end.toLocalDate().plusDays(1).toString()));}
   else{event.put("start",Map.of("dateTime",start.atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().toString(),"timeZone","Asia/Seoul"));event.put("end",Map.of("dateTime",(end.isAfter(start)?end:start.plusMinutes(1)).atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().toString(),"timeZone","Asia/Seoul"));}
@@ -160,10 +160,23 @@ public class GoogleCalendarSync {
   // No attendees or invitations. Existing MReyes alert delivery is unaffected.
   event.put("reminders",Map.of("useDefault",false));return event;
  }
+ // Google Calendar's fixed event palette; independent of the calendar's default color.
+ static String eventColor(String label){return switch(label){
+  case "PM"->"9";
+  case "ACR","ACR 정밀","ACR 서류"->"3";
+  case "휴가","연차"->"10";
+  case "고장수리","콜드헤드","설치"->"6";
+  case "콜"->"5";
+  case "사무실"->"7";
+  case "교육·세미나"->"1";
+  default->"8";
+ };}
  static LocalDate nextDue(LocalDate last,LocalDate override,int months){return override!=null&&(last==null||override.isAfter(last))?override:last==null?null:last.plusMonths(months);}
  private static LocalDate date(Object value){return value==null?null:LocalDate.parse(value.toString().substring(0,10));}
  static Map<String,Object> dayEvent(String title,LocalDate date,String body,String path,String key,String base){
   var result=new LinkedHashMap<String,Object>();result.put("summary",title);
+  String label=title.startsWith("[")?title.substring(1,title.indexOf("]")).split(" · ")[0]:"";
+  result.put("colorId",eventColor(label));
   result.put("start",Map.of("date",date.toString()));result.put("end",Map.of("date",date.plusDays(1).toString()));
   result.put("description",escape(body)+"\n\nMReyes에서 보기: "+base.replaceAll("/$","")+path);
   result.put("extendedProperties",Map.of("private",Map.of("mreyesSource",key)));
