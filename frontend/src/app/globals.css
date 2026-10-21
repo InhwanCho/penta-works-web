@@ -2461,3 +2461,30 @@ body:has(.legal-document-surface) .site-footer strong { color: #111; }
   .legal-page.legal-document { max-width: none; padding: 0; }
   .legal-document h2 { break-after: avoid; }
 }
+
+/* Compact corporate document typography, matching conventional policy pages. */
+.legal-page.legal-document { max-width: 1440px; padding: 28px 32px 36px; }
+.legal-page.legal-document h1 { margin-bottom: 26px; font-size: 18px; line-height: 1.5; }
+.legal-page.legal-document header > p,
+.legal-page.legal-document section p,
+.legal-page.legal-document h2 { font-size: 14px; line-height: 1.65; }
+.legal-page.legal-document h2 { margin-bottom: 2px; font-weight: 700; }
+.legal-page.legal-document section p { margin-bottom: 3px; }
+.legal-page.legal-document article { margin-top: 28px; }
+.legal-page.legal-document section { margin-bottom: 24px; }
+.legal-page.legal-document .legal-clauses { margin: 4px 0 8px; }
+.legal-page.legal-document section .legal-pending { font-size: 13px; line-height: 1.65; }
+.legal-page.legal-document .legal-draft { margin-top: 14px; }
+.legal-page.legal-document .legal-draft p { font-size: 12px; line-height: 1.6; }
+.site-footer-company { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 0; font-style: normal; line-height: 1.8; }
+.site-footer-company a:hover { text-decoration: underline; }
+@media (min-width: 1024px) {
+  .site-footer { flex-direction: column; align-items: stretch; gap: 8px; padding: 18px 4px; }
+  .site-footer > .site-footer-heading { display: flex; justify-content: space-between; align-items: center; }
+}
+@media (max-width: 639px) {
+  .legal-page.legal-document { padding: 24px 18px 32px; }
+  .legal-page.legal-document h1 { margin-bottom: 22px; font-size: 17px; }
+  .legal-page.legal-document header > p, .legal-page.legal-document section p, .legal-page.legal-document h2 { font-size: 14px; line-height: 1.65; }
+  .legal-page.legal-document section { margin-bottom: 22px; }
+}

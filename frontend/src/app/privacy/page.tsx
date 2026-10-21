@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import LegalPage from "@/components/legal/legal-page";
 export const metadata: Metadata = { title: "개인정보 처리방침", alternates: { canonical: "/privacy" } };
 export default function PrivacyPage() {
-  return <LegalPage title="개인정보 처리방침" description="MReyes(엠알아이즈)는 이용자의 개인정보를 보호하고 관련 문의를 원활하게 처리하기 위해 다음과 같이 개인정보 처리방침을 안내합니다." draft document>
-    <section><h2>1. 적용 범위와 처리 주체</h2><p>이 문서는 MReyes 웹 서비스와 휴대폰에서 사용하는 서비스에 적용됩니다. MReyes(엠알아이즈)와 고객 회사는 서비스 운영 및 회사 업무 관리 과정에서 각각의 역할에 따라 개인정보를 처리합니다.</p><p className="legal-pending">서비스 운영 명칭: MReyes(엠알아이즈). 추가 확인 사항: 법인·사업자 정보와 소재지, 고객 회사와의 개인정보 처리 위탁 관계 및 책임 범위.</p></section>
+  return <LegalPage title="MReyes(엠알아이즈) 개인정보 처리방침" description="MReyes(엠알아이즈)는 이용자의 개인정보를 보호하고 관련 문의를 원활하게 처리하기 위해 다음과 같이 개인정보 처리방침을 안내합니다." draft document>
+    <section><h2>1. 적용 범위와 처리 주체</h2><p>이 문서는 MReyes 웹 서비스와 휴대폰에서 사용하는 서비스에 적용됩니다. MReyes(엠알아이즈)와 고객 회사는 서비스 운영 및 회사 업무 관리 과정에서 각각의 역할에 따라 개인정보를 처리합니다.</p><p className="legal-pending">서비스명: MReyes(엠알아이즈). 운영사: 주식회사 펜타웍스. 사업자등록번호: 675-87-00483. 주소: 인천광역시 남동구 호구포로74번길 78 (고잔동). 고객 회사와의 개인정보 처리 위탁 관계 및 책임 범위는 추가 확인합니다.</p></section>
     <section><h2>2. 처리하는 정보와 목적</h2><div className="legal-clauses">
       <p><strong>– 계정·회사:</strong> 이름, 이메일, 전화번호, 소속 회사, 역할 및 접근 권한을 가입·로그인, 사용자 식별, 회사별 업무 접근 및 알림 수신에 사용합니다. 비밀번호는 해시 형태로 저장합니다.</p>
       <p><strong>– 회사 등록:</strong> 회사를 등록하는 관리자가 입력한 회사 정보, 사업자등록번호 및 사업자등록증 파일을 회사 등록과 확인에 사용합니다. 파일에 포함된 개인정보도 처리 대상이 될 수 있습니다.</p>

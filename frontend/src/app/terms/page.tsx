@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPage from "@/components/legal/legal-page";
 export const metadata: Metadata = { title: "이용약관", alternates: { canonical: "/terms" } };
 export default function TermsPage() {
-  return <LegalPage title="이용약관" description="MReyes 이용에 관한 기본 사항입니다." draft document>
+  return <LegalPage title="MReyes(엠알아이즈) 이용약관" description="MReyes 이용에 관한 기본 사항입니다." draft document>
     <section><h2>1. 서비스 이용</h2><p>MReyes는 병원 장비 모니터링, 알림, 업무기록 및 일정 관리를 제공합니다. 이용자는 소속 회사의 초대와 부여된 권한에 따라 서비스를 이용합니다.</p></section>
     <section><h2>2. 계정과 권한 관리</h2><p>이용자는 자신의 계정을 안전하게 관리하고 다른 사람과 공유하지 않아야 합니다. 회사 관리자는 소속 직원의 가입·역할·병원 접근 권한을 관리합니다.</p></section>
     <section><h2>3. 업무 정보의 입력과 이용</h2><p>이용자는 업무 수행에 필요한 정보만 입력하고, 타인의 권리를 침해하거나 권한 없이 개인정보를 등록하지 않아야 합니다. 회사 관리자는 업무 정보와 첨부 파일의 접근 범위를 적절히 관리해야 합니다.</p></section>
