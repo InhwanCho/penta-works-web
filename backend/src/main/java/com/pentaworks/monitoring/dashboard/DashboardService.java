@@ -264,11 +264,17 @@ public class DashboardService {
         double[] range = inherited.get(metric);
         return range == null ? null : range[side];
     }
+    // Accept a complete numeric token with an optional known unit. Never join broken digits.
+    private static final java.util.regex.Pattern NUMBER_WITH_UNIT = java.util.regex.Pattern.compile(
+        "^([+-]?([0-9]+[.][0-9]*|[.][0-9]+|0|[1-9][0-9]*))[ ]*(psi|kPa|bar|K|C|°C|°F|%|L/min|l/min|LPM|lpm|Hz|V|A)?$");
     public static Double parseNumber(String value) {
-        if (value == null || value.isBlank()) return null;
-        String cleaned = value.trim().replaceAll("[^\\d.+-]", "");
-        if (cleaned.isBlank()) return null;
-        try { return Double.valueOf(cleaned); } catch (NumberFormatException error) { return null; }
+        if (value == null || value.chars().anyMatch(Character::isISOControl)) return null;
+        var match = NUMBER_WITH_UNIT.matcher(value.strip());
+        if (!match.matches()) return null;
+        try {
+            double number = Double.parseDouble(match.group(1));
+            return Double.isFinite(number) ? number : null;
+        } catch (NumberFormatException error) { return null; }
     }
     public static Double parseMeasurement(String value) {
         Double parsed = parseNumber(value);

@@ -16,4 +16,15 @@ class DashboardMeasurementTest {
         assertEquals(304.57, DashboardService.parseMeasurement("304.570 K"));
         assertEquals(0.0, DashboardService.parseNumber("0"));
     }
+    @Test
+    void rejectsBrokenNumbersWithoutGuessingDecimalPositions() {
+        for (String invalid : new String[] {"2" + (char) 14 + "385", "0930", "2 385", "2abc385", "1,234", "NaN", "Infinity", "1e3", "1.2.3", "2.3\t", "2385junk"}) {
+            assertNull(DashboardService.parseNumber(invalid), invalid);
+        }
+        assertEquals(2.285, DashboardService.parseMeasurement("2.285"));
+        assertEquals(0.930, DashboardService.parseMeasurement("0.930"));
+        assertEquals(2385.0, DashboardService.parseMeasurement("2385")); // Do not hide a valid high reading.
+        assertEquals(2.3, DashboardService.parseMeasurement(" 2.3 psi "));
+        assertEquals(0.93, DashboardService.parseMeasurement(".930"));
+    }
 }
