@@ -21,7 +21,8 @@ public class WorkspaceHospitals {
     private final CurrentUserService users;
     private final AuditService audit;
     private final DashboardService dashboard;
-    public WorkspaceHospitals(JdbcTemplate db,CurrentUserService users,AuditService audit,DashboardService dashboard) {this.db=db;this.users=users;this.audit=audit;this.dashboard=dashboard;}
+    private final org.springframework.context.ApplicationEventPublisher changes;
+    public WorkspaceHospitals(JdbcTemplate db,CurrentUserService users,AuditService audit,DashboardService dashboard,org.springframework.context.ApplicationEventPublisher changes) {this.db=db;this.users=users;this.audit=audit;this.dashboard=dashboard;this.changes=changes;}
     public record Input(String name,String address,String contactName,String contactPhone,String notes,String model,String serialNumber,String monitoringSiteId,List<Long> userIds,Integer revision) {}
     private String text(String value,int max,String field) {
         String s=value==null?"":value.trim();if(s.length()>max)throw new BadRequestException(field+" 입력 길이를 확인해주세요.");return s;
@@ -131,6 +132,7 @@ public class WorkspaceHospitals {
             db.update("DELETE us FROM user_site us JOIN app_user u ON u.id=us.user_id WHERE us.site_id=? AND u.company_id=? AND u.role='USER' AND u.status='ACTIVE'",monitoring,u.companyId());
         }
         for(long id:i.userIds()) {db.update("INSERT IGNORE INTO user_site(user_id,site_id) VALUES(?,?)",id,sid);if(monitoring!=null&&!monitoring.equals(sid))db.update("INSERT IGNORE INTO user_site(user_id,site_id) VALUES(?,?)",id,monitoring);}
+        changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));
         dashboard.invalidateCache();
     }
 }

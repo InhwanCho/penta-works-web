@@ -90,3 +90,4 @@ google:
     redirect-uri: ${GOOGLE_CALENDAR_REDIRECT_URI:}
     encryption-key: ${GOOGLE_CALENDAR_ENCRYPTION_KEY:}
     sync-enabled: ${GOOGLE_CALENDAR_SYNC_ENABLED:false}
+    sync-interval-ms: ${GOOGLE_CALENDAR_SYNC_INTERVAL_MS:600000}

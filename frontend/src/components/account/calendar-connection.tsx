@@ -62,7 +62,7 @@ export default function CalendarConnection({ userId }: { userId: number }) {
         )}
       </div>
     </div>
-    <p className="calendar-settings-note">{query.data && !query.data.configured ? "연동 기능을 준비 중입니다." : query.data?.connected ? query.data.syncError ? "일정 전송에 실패했습니다. 다시 반영하거나 재연동해주세요." : query.data.lastSyncedAt ? `${query.data.syncedEventCount}개 일정 반영 · ${query.data.lastSyncedAt.slice(0, 16)} · 1분마다 갱신` : "첫 일정 전송을 기다리는 중입니다. 1분 안에 반영됩니다." : "업무기록·일정·점검 예정을 내 구글캘린더에 자동 반영합니다."}</p>
+    <p className="calendar-settings-note">{query.data && !query.data.configured ? "연동 기능을 준비 중입니다." : query.data?.connected ? query.data.syncError ? "일정 전송에 실패했습니다. 다시 반영하거나 재연동해주세요." : query.data.lastSyncedAt ? `${query.data.syncedEventCount}개 일정 반영 · ${query.data.lastSyncedAt.slice(0, 16)} · 변경 시 자동 반영 · 10분마다 재확인` : "첫 일정을 전송하는 중입니다. 잠시 후 확인해주세요." : "업무기록·일정·점검 예정을 내 구글캘린더에 자동 반영합니다."}</p>
 
   </section>;
 }

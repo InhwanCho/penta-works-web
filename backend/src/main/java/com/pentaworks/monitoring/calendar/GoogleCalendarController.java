@@ -36,7 +36,9 @@ public class GoogleCalendarController {
  @Value("${google.calendar.client-secret:}") private String clientSecret;
  @Value("${google.calendar.encryption-key:}") private String encryptionKey;
  @Value("${google.calendar.redirect-uri:}") private String redirectUri;
- public GoogleCalendarController(JdbcTemplate db,CurrentUserService users) {
+ private final org.springframework.context.ApplicationEventPublisher changes;
+ public GoogleCalendarController(JdbcTemplate db,CurrentUserService users,org.springframework.context.ApplicationEventPublisher changes) {
+  this.changes=changes;
   this.db=db;this.users=users;
   var factory=new SimpleClientHttpRequestFactory();factory.setConnectTimeout(10000);factory.setReadTimeout(15000);
   http=RestClient.builder().requestFactory(factory).build();
@@ -103,6 +105,7 @@ public class GoogleCalendarController {
      }
      if(!Objects.equals(calendarId,row.get("calendar_id")))db.update("DELETE FROM calendar_event_mapping WHERE connection_id=?",id);
      db.update("UPDATE user_calendar_connection SET calendar_id=?,refresh_token_encrypted=?,status='CONNECTED',last_error_code=NULL WHERE id=?",calendarId,encrypt(refresh),id);
+     changes.publishEvent(new CalendarChanged(((Number)row.get("company_id")).longValue()));
      outcome="connected";
     }catch(Exception e){
      outcome="failed";reason=stage+"_failed";

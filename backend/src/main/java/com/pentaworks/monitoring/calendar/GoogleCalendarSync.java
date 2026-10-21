@@ -13,7 +13,6 @@ import javax.crypto.spec.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -34,13 +33,6 @@ public class GoogleCalendarSync {
   this.db=db;this.users=users;this.tx=new TransactionTemplate(manager);this.json=json;
   var factory=new SimpleClientHttpRequestFactory();factory.setConnectTimeout(10000);factory.setReadTimeout(15000);
   this.http=RestClient.builder().requestFactory(factory).build();
- }
- @Scheduled(fixedDelayString="${google.calendar.sync-interval-ms:60000}",initialDelay=15000)
- public void scheduled(){
-  if(!enabled)return;
-  for(Long id:db.queryForList("SELECT id FROM user_calendar_connection WHERE status='CONNECTED' AND provider='GOOGLE'",Long.class)){
-   try{sync(id);}catch(Exception ignored){/* Persist safe error codes below; never log credentials or response bodies. */}
-  }
  }
  public Map<String,Object> syncUser(CurrentUser u){
   if(!enabled)throw new BadRequestException("일정 동기화를 준비 중입니다.");

@@ -26,7 +26,7 @@ class GoogleCalendarControllerTest {
  JdbcTemplate db; CurrentUserService users; GoogleCalendarController controller;
  final byte[] key=new byte[32];
  @BeforeEach void setup(){
-  db=mock(JdbcTemplate.class);users=mock(CurrentUserService.class);controller=new GoogleCalendarController(db,users);
+  db=mock(JdbcTemplate.class);users=mock(CurrentUserService.class);controller=new GoogleCalendarController(db,users,mock(org.springframework.context.ApplicationEventPublisher.class));
   when(users.require(null)).thenReturn(new CurrentUserService.CurrentUser(12,1,"test@example.com","Test","USER","ACTIVE"));
   ReflectionTestUtils.setField(controller,"clientId","test-client");ReflectionTestUtils.setField(controller,"clientSecret","test-secret");
   ReflectionTestUtils.setField(controller,"encryptionKey",Base64.getEncoder().encodeToString(key));
