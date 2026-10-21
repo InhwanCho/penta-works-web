@@ -1,3 +1,4 @@
+import RouteScrollReset from "@/components/common/route-scroll-reset";
 import { ContextHelpHost } from "@/components/common/context-help";
 import WorkspaceShell from "@/components/workspace/workspace-shell";
 import Navbar from "@/components/common/navbar";
@@ -102,10 +103,15 @@ export default function RootLayout({
           <ThemeProvider>
             <AuthProvider>
               <ModalProvider>
+                <RouteScrollReset />
                 <Navbar />
                 <ToastViewport />
                 <ContextHelpHost />
-                <div id="app-content"><AuthGate><WorkspaceShell>{children}</WorkspaceShell></AuthGate></div>
+                <div id="app-content">
+                  <AuthGate>
+                    <WorkspaceShell>{children}</WorkspaceShell>
+                  </AuthGate>
+                </div>
               </ModalProvider>
             </AuthProvider>
           </ThemeProvider>

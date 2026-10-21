@@ -1,4 +1,5 @@
 "use client";
+import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import SiteFooter from "@/components/legal/site-footer";
 import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "next/link";
@@ -101,17 +102,34 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     const nav = bottomNav.current;
     if (!nav) return;
-    const measure = () => document.documentElement.style.setProperty("--workspace-bottom-height", `${nav.getBoundingClientRect().height}px`);
+    const measure = () =>
+      document.documentElement.style.setProperty(
+        "--workspace-bottom-height",
+        `${nav.getBoundingClientRect().height}px`,
+      );
     const observer = new ResizeObserver(measure);
     observer.observe(nav);
     measure();
-    return () => { observer.disconnect(); document.documentElement.style.removeProperty("--workspace-bottom-height"); };
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty(
+        "--workspace-bottom-height",
+      );
+    };
   }, [session]);
-  if (!session || ["/about", "/privacy", "/terms"].includes(path)) return <>{children}<SiteFooter /></>;
+  if (!session || ["/about", "/privacy", "/terms"].includes(path))
+    return (
+      <>
+        {children}
+        <SiteFooter />
+      </>
+    );
   const active = (href: string) =>
     path === href ||
     (href === "/settings" &&
-      ["/account", "/admin", "/companies", "/privacy-requests"].some((p) => path.startsWith(p))) ||
+      ["/account", "/admin", "/companies", "/privacy-requests"].some((p) =>
+        path.startsWith(p),
+      )) ||
     (href === "/overview" &&
       (path.startsWith("/work") || path.startsWith("/schedule"))) ||
     (href === "/hospitals" && path.startsWith("/sites/")) ||
@@ -127,6 +145,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
+            onNavigate={() => {
+              if (path === i.href) scrollPageToTop();
+            }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
           >
@@ -140,7 +161,10 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           </Link>
         ))}
       </aside>
-      <div className="workspace-content">{children}<SiteFooter /></div>
+      <div className="workspace-content">
+        {children}
+        <SiteFooter />
+      </div>
       <nav
         ref={bottomNav}
         className="workspace-bottom"
@@ -150,6 +174,9 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
           <Link
             key={i.href}
             href={i.href}
+            onNavigate={() => {
+              if (path === i.href) scrollPageToTop();
+            }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
           >
