@@ -248,7 +248,7 @@ public class PersonalAlertService {
         jdbc.query("""
             SELECT e.id,e.site_id,r.metric_key,e.event_type,e.message,e.occurred_at,a.acknowledged_at
             FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
-            LEFT JOIN alert_event_acknowledgement a ON a.event_id=e.id AND a.user_id=?
+            LEFT JOIN alert_event_acknowledgement a ON a.event_id=e.id AND a.user_id=? AND a.repeat_until>CURRENT_TIMESTAMP(6)
             WHERE r.user_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA','METRIC_MISSING')
             ORDER BY e.occurred_at DESC,e.id DESC
             """,(org.springframework.jdbc.core.RowCallbackHandler) rs->bySite.computeIfAbsent(rs.getString(2),ignored->new ArrayList<>()).add(new com.pentaworks.monitoring.dashboard.DashboardResponse.AlertIssue(rs.getLong(1),rs.getString(3),rs.getString(4),rs.getString(5),rs.getTimestamp(6).toInstant().toString(),rs.getTimestamp(7)!=null)),actor.id(),actor.id());

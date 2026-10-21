@@ -261,7 +261,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
   const busy = bulkSaving || acknowledging !== null || retrying !== null;
 
   async function acknowledge(eventId: number) {
-    if (!window.confirm("이 알림을 확인했나요? 확인하면 나에게 오는 반복 알림이 멈춥니다. 문제가 해결됐다는 뜻은 아닙니다.")) return;
+    if (!window.confirm("이 알림을 확인했나요? 확인하면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다.")) return;
     setAcknowledging(eventId); setError(null);
     try { await onAcknowledge(eventId); await history.refetch(); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 확인 처리하지 못했습니다."); }
@@ -270,7 +270,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
   async function acknowledgeSelected(ids: number[]) {
     if (ids.length === 0) return;
-    if (!window.confirm(`${ids.length}건을 확인했나요? 확인하면 나에게 오는 반복 알림이 멈춥니다. 문제가 해결됐다는 뜻은 아닙니다.`)) return;
+    if (!window.confirm(`${ids.length}건을 확인했나요? 확인하면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다.`)) return;
     setBulkSaving(true); setError(null);
     try { await onAcknowledgeMany(ids); await history.refetch(); setSelected((current) => current.filter((id) => !ids.includes(id))); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 일괄 확인 처리하지 못했습니다."); }
@@ -289,7 +289,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
   return (
     <section>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="hidden lg:block"><h2 className="text-2xl font-bold">확인할 알림</h2><p className="text-text-secondary mt-1 text-sm">병원과 문제 내용을 확인하세요. ‘확인했어요’를 누르면 나에게 오는 반복 알림이 멈춥니다.</p></div>
+        <div className="hidden lg:block"><h2 className="text-2xl font-bold">확인할 알림</h2><p className="text-text-secondary mt-1 text-sm">병원과 문제 내용을 확인하세요. ‘확인했어요’를 누르면 나에게 오는 동일 알림을 24시간 중지합니다.</p></div>
         <div className="flex w-full max-w-full overflow-x-auto rounded-xl bg-slate-100 p-1 lg:w-auto dark:bg-white/5">{(["unacknowledged", "open", "all"] as const).map((value) => <button key={value} type="button" onClick={() => setFilter(value)} aria-pressed={filter === value} className={`min-h-11 flex-1 shrink-0 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-bold transition ${filter === value ? "bg-white text-sky-700 shadow-sm dark:bg-sky-800 dark:text-white" : "text-slate-500 dark:text-white/55"}`}>{value === "all" ? "전체 기록" : value === "open" ? "문제 지속" : value === "unacknowledged" ? "확인할 알림" : value === "failed" ? "전송 확인 필요" : value === "skipped" ? "미발송" : "미발송"}</button>)}</div>
       </div>
       <details className="mb-3 rounded-xl border border-slate-200 bg-white px-3 dark:border-white/15 dark:bg-background-dark-card">
@@ -302,7 +302,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       </details>
       <div className="mb-3 flex min-h-11 flex-wrap items-center gap-2">
         <span className="text-sm font-bold">{total}건</span>
-        <HelpButton title="알림 확인" message="확인했어요를 누르면 나에게 오는 반복 알림이 멈춥니다. 문제가 해결됐다는 뜻은 아닙니다. 종료되거나 확인한 알림은 전체 기록에서 볼 수 있습니다."/>
+        <HelpButton title="알림 확인" message="확인했어요를 누르면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다. 종료되거나 확인한 알림은 전체 기록에서 볼 수 있습니다."/>
         <button type="button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setSelected([]); }} className="ml-auto min-h-11 px-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{selecting ? "선택 취소" : "여러 개 확인"}</button>
         {selecting && <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 dark:bg-white/5">
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every(id => selected.includes(id))} onChange={event => setSelected(event.target.checked ? selectableIds : [])} className="h-5 w-5 accent-sky-700"/>이 페이지 선택</label>
@@ -494,7 +494,7 @@ function AlertEventRow({
             <strong className="text-base">알림 관리</strong>
             <HelpButton
               title="확인과 잠시 중지"
-              message="확인했어요는 현재 문제의 반복 알림을 끝냅니다. 정상 복구 후 다시 발생하면 새 알림을 받습니다. 시간 지정 중지는 그 시간까지 같은 병원·항목·유형의 알림을 받지 않는 기능입니다."
+              message="확인했어요를 누르면 같은 병원·항목·유형의 알림을 24시간 중지합니다. 중지 시간을 바꾸거나 알림 받기를 재개할 수 있습니다. 시간이 지나면 기존 수신 설정에 따라 다시 받습니다."
             />
           </div>
           {!recovered && <AlertSnooze event={event} />}

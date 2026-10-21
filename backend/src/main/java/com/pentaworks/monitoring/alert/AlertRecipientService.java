@@ -127,7 +127,7 @@ public class AlertRecipientService {
         List<String> candidates = activePhones(siteId, now);
         List<String> suppressed = jdbcTemplate.query("""
             SELECT r.destination FROM site_alert_recipient r
-              JOIN alert_event_acknowledgement a ON a.user_id=r.user_id AND a.event_id=?
+              JOIN alert_event_acknowledgement a ON a.user_id=r.user_id AND a.event_id=? AND a.repeat_until>CURRENT_TIMESTAMP(6)
              WHERE r.site_id=? AND r.channel=\'KAKAO_ALIMTALK\'
             """, (rs, row) -> rs.getString(1), eventId, siteId);
         return candidates.stream().filter(phone -> !suppressed.contains(phone)).toList();
@@ -163,7 +163,7 @@ public class AlertRecipientService {
             WHERE cs.site_id=? AND u.id=? AND u.status='ACTIVE'
               AND (u.role IN ('PLATFORM_ADMIN','SUPER_ADMIN','ADMIN') OR EXISTS(SELECT 1 FROM user_site us WHERE us.user_id=u.id AND us.site_id=cs.site_id))
               AND NOT EXISTS(SELECT 1 FROM user_dashboard_hidden_site h WHERE h.user_id=u.id AND h.site_id=cs.site_id)
-              AND NOT EXISTS(SELECT 1 FROM alert_event_acknowledgement a WHERE a.user_id=u.id AND a.event_id=?)
+              AND NOT EXISTS(SELECT 1 FROM alert_event_acknowledgement a WHERE a.user_id=u.id AND a.event_id=? AND a.repeat_until>CURRENT_TIMESTAMP(6))
             """,(rs,n)->rs.getString(1),siteId,userId,eventId==null?-1:eventId).stream()
             .filter(java.util.Objects::nonNull)
             .map(phone -> phone.replaceAll("[-\\s]", ""))

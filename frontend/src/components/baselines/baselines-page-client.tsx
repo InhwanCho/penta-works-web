@@ -70,6 +70,7 @@ export default function BaselinesPageClient() {
         current.map((entry) => entry.siteid === saved.siteid ? saved : entry));
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["alert-events"] });
+      queryClient.invalidateQueries({ queryKey: ["alert-snoozes"] });
     },
   });
   const updateCompanyThresholds = useMutation({
@@ -96,6 +97,7 @@ export default function BaselinesPageClient() {
     mutationFn: (eventId: number) => apiFetch<AlertEventSummary>(`/alerts/events/${eventId}/acknowledge`, { method: "PATCH" }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alert-events"] });
+      queryClient.invalidateQueries({ queryKey: ["alert-snoozes"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
@@ -106,6 +108,7 @@ export default function BaselinesPageClient() {
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["alert-events"] });
+      queryClient.invalidateQueries({ queryKey: ["alert-snoozes"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });

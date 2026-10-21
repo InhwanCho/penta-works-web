@@ -24,7 +24,7 @@ export function mutationSuccessMessage(path: string, options: RequestInit, resul
   if (path.startsWith("/alerts/thresholds/") || path.startsWith("/alerts/psi-thresholds/")) return "알림 설정을 저장했습니다.";
   if (path === "/alerts/company-thresholds") return "회사 알림 기준을 저장했습니다.";
   if (path.startsWith("/alerts/recipients")) return method === "DELETE" ? "수신처를 삭제했습니다." : method === "POST" ? "수신처를 등록했습니다." : "수신처를 변경했습니다.";
-  if (path.endsWith("/acknowledge")) return "알림을 확인완료 처리했습니다.";
+  if (path.endsWith("/acknowledge")) return "동일 알림을 24시간 중지했습니다.";
   if (path.endsWith("/retry")) return "알림 재전송 요청을 처리했습니다.";
   if (/\/deliveries\/[^/]+$/.test(path)) return body.received ? "수신 확인을 저장했습니다." : "미수신 확인을 저장했습니다.";
   if (path === "/company/metrics") return "측정항목 표시 설정을 저장했습니다.";

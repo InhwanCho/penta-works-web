@@ -80,7 +80,7 @@ public class DashboardService {
     public DashboardResponse getDashboard(Set<String> allowedSiteIds, long userId) {
         DashboardResponse scoped = getDashboard(allowedSiteIds);
         Set<Long> acknowledged = new java.util.HashSet<>(jdbcTemplate.query(
-            "SELECT event_id FROM alert_event_acknowledgement WHERE user_id=?",
+            "SELECT event_id FROM alert_event_acknowledgement WHERE user_id=? AND repeat_until>CURRENT_TIMESTAMP(6)",
             (rs, row) -> rs.getLong(1), userId));
         List<DashboardRow> rows = scoped.rows().stream().map(row -> {
             List<AlertIssue> issues = row.alertIssues().stream().map(issue -> new AlertIssue(

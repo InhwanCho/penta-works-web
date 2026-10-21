@@ -65,6 +65,12 @@ public class AlertEventService {
                 ON DUPLICATE KEY UPDATE until_at=VALUES(until_at)
                 """,Timestamp.from(until),eventId);
         }
+        jdbcTemplate.update("""
+            UPDATE alert_event_acknowledgement a
+            JOIN alert_event e ON e.id=a.event_id
+            JOIN alert_event chosen ON chosen.rule_id=e.rule_id AND chosen.event_type=e.event_type
+            SET a.repeat_until=? WHERE chosen.id=? AND a.user_id=?
+            """, Timestamp.from(until == null ? Instant.now() : until), eventId, actor.id());
         audit.record(actor,"ALERT_SNOOZE_UPDATED","ALERT_EVENT",Long.toString(eventId),Map.of("until",until==null?"RESUMED":until.toString()));
     }
 
@@ -145,7 +151,7 @@ public class AlertEventService {
               FROM alert_event e
               JOIN alert_rule r ON r.id=e.rule_id
               LEFT JOIN site s ON s.site=e.site_id
-              LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
+              LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=? AND (e.recovered_at IS NOT NULL OR ack.repeat_until>CURRENT_TIMESTAMP(6))
              WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND r.user_id=?
                %s
              ORDER BY e.occurred_at DESC,e.id DESC LIMIT ? OFFSET ?
@@ -197,7 +203,7 @@ public class AlertEventService {
         Long total = jdbcTemplate.queryForObject("""
             SELECT COUNT(*) FROM alert_event e JOIN alert_rule r ON r.id=e.rule_id
             LEFT JOIN site s ON s.site=e.site_id
-            LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=?
+            LEFT JOIN alert_event_acknowledgement ack ON ack.event_id=e.id AND ack.user_id=? AND (e.recovered_at IS NOT NULL OR ack.repeat_until>CURRENT_TIMESTAMP(6))
             WHERE e.event_type<>'RECOVERY' AND e.site_id IN (%s) AND r.user_id=? %s
             """.formatted(placeholders, where), Long.class, args.toArray());
         return new EventPage(queryEvents(allowedSiteIds, size, actorId, null, where.toString(), filters, (page-1)*size), total == null ? 0 : total, page, size);
@@ -410,8 +416,10 @@ public class AlertEventService {
         if (siteId == null) throw new NotFoundException("알림 이력을 찾을 수 없습니다.");
         currentUsers.requireSiteAccess(actor, siteId);
         jdbcTemplate.update("""
-            INSERT IGNORE INTO alert_event_acknowledgement (user_id,event_id) VALUES (?,?)
+            INSERT INTO alert_event_acknowledgement (user_id,event_id,repeat_until) VALUES (?,?,DATE_ADD(CURRENT_TIMESTAMP(6), INTERVAL 24 HOUR))
+            ON DUPLICATE KEY UPDATE acknowledged_at=CURRENT_TIMESTAMP(6),repeat_until=VALUES(repeat_until)
             """, actor.id(), eventId);
+        snooze(actor, eventId, Instant.now().plus(Duration.ofHours(24)));
         audit.record(actor, "ALERT_ACKNOWLEDGED", "ALERT_EVENT", Long.toString(eventId),
             java.util.Map.of("siteId", siteId));
         return events(Set.of(siteId), 1, actor.id(), eventId).stream()
