@@ -13,3 +13,5 @@ Pre-deployment full database backups (gzip verified):
 - /home/inhwan/backups/mreyes-dev/before-strict-parsing-20261021.sql.gz
 
 Local diagnostic scripts and outputs are under output/average-investigation-20261021 (untracked).
+
+Production verification: V52/V53 succeeded on 2026-10-21; backend health UP. Both exact corrected readings and their numeric columns match 2.285 / 0.930. All 115225 retained snapshots rebuilt. At 09:00, pressure averages are site 013 = 2.2623986013986013 and site 010 = 1.0077972027972022 (143 samples each). Initial Jenkins health polling timed out while migrations continued successfully (130-second production startup); c817a82 extends polling to 180 seconds.
