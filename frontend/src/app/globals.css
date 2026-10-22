@@ -2617,3 +2617,31 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 @media(hover:hover) { .workspace-frame .hospital-register:hover { background: var(--work-soft); color: var(--work-focus); } }
 @media(hover:none) { .workspace-frame .hospital-register:hover { background: var(--work-paper); } }
 .workspace-frame .hospital-register:active { background: var(--work-soft); }
+
+/* Mobile taps should not leave keyboard-style halos, including in portal dialogs. */
+@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
+  :is(button, a, summary, label, input, select, textarea, [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [tabindex]) {
+    -webkit-tap-highlight-color: transparent;
+  }
+  :is(button, a, summary, [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [tabindex]:not(input, textarea, select), input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"])):is(:focus, :focus-visible) {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: var(--tw-shadow, none) !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+  }
+  label:has(input:is([type="checkbox"], [type="radio"]):is(:focus, :focus-visible)) {
+    outline: none !important;
+    box-shadow: none !important;
+  }
+  :is(input:not([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]), textarea, select):is(:focus, :focus-visible) {
+    outline: none !important;
+    outline-offset: 0 !important;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--work-focus, #1967d2) 18%, transparent) !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+  }
+  /* This is the selected date, rather than a transient focus decoration. */
+  .work-calendar .work-calendar-day.selected:is(:focus, :focus-visible) { box-shadow: inset 0 0 0 3px #3979c6 !important; }
+  .dark .work-calendar .work-calendar-day.selected:is(:focus, :focus-visible) { box-shadow: inset 0 0 0 3px #88b6ec !important; }
+}
