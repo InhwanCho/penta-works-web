@@ -272,9 +272,6 @@ export function HospitalsPage() {
           title="병원 · 장비"
           description="병원별 모니터링, 장비와 서비스 이력을 확인하세요."
         />
-        <HospitalRegistration />
-      </div>
-      <div className="hospital-directory-tools">
       <input
         className="work-input work-search"
         placeholder="병원명 · 장비 · 주소 검색"
@@ -282,6 +279,9 @@ export function HospitalsPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+        <HospitalRegistration />
+      </div>
+      <div className="hospital-directory-tools">
       <div className="hospital-directory-meta"><span>병원 {rows.length}곳</span><span>모니터링 우선 · 이름순</span></div>
       </div>
       {sites.error ? (
@@ -293,7 +293,7 @@ export function HospitalsPage() {
         <p>병원을 불러오는 중…</p>
       ) : (
         <div className="work-hospital-grid">
-          {rows            .map((s) => (
+          {rows.map((s) => (
               <Link
                 className="work-hospital"
                 key={s.siteDb}

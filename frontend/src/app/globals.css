@@ -2600,3 +2600,15 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 }
 @media(hover:none) { .work-hospitals .work-hospital:hover { background: var(--work-paper); } }
 .work-hospitals .work-hospital:active { background: var(--work-soft); }
+
+.work-hospitals .hospital-directory-heading { align-items: center; margin-bottom: 10px; }
+.work-hospitals .hospital-directory-heading > .work-heading { flex: 1; }
+.work-hospitals .hospital-directory-heading > .work-search { flex: 1; min-width: 0; max-width: 420px; width: 100%; margin: 0; min-height: 40px; padding: 9px 12px; font-size: .8125rem; }
+.work-hospitals .hospital-directory-tools { padding: 0; border: 0; border-radius: 0; background: transparent; margin-bottom: 12px; }
+.work-hospitals .hospital-directory-meta { margin-top: 0; }
+@media(max-width:1023px) {
+ .work-hospitals .hospital-directory-heading { gap: 8px; margin-bottom: 8px; }
+ .work-hospitals .hospital-directory-heading > .work-search { max-width: none; }
+ .work-hospitals .hospital-register { min-height: 40px; padding: 9px 12px; white-space: nowrap; }
+ .work-hospitals .hospital-directory-tools { padding: 0; margin-bottom: 10px; }
+}
