@@ -40,7 +40,7 @@ export default function ForgotPasswordForm() {
           className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 dark:border-white/10 dark:bg-white/5" />
         {error && <p role="alert" className="text-sm text-rose-600">{error}</p>}
         <button disabled={saving} className="bg-button-primary flex min-h-12 w-full cursor-pointer items-center justify-center gap-2 rounded-xl px-4 font-bold text-white disabled:cursor-wait disabled:opacity-60">
-          {saving ? <CircleLoader size="xs" /> : "재설정 링크 받기"}
+          {saving ? <CircleLoader size="xs" inline /> : "재설정 링크 받기"}
         </button>
       </form>}
       <Link href="/login" className="mt-6 block text-center text-sm font-semibold text-sky-700 dark:text-sky-300">로그인으로 돌아가기</Link>

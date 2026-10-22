@@ -57,7 +57,7 @@ export default function DeleteAccountDialog({ email, name, onClose, onConfirm }:
       {error && <p role="alert" className="mt-3 text-sm text-rose-600 dark:text-rose-300">{error}</p>}
       <div className="mt-6 grid grid-cols-2 gap-3">
         <button type="button" disabled={saving} onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/15">취소</button>
-        <button type="submit" disabled={!matches || saving} className="min-h-12 rounded-xl bg-rose-600 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{saving ? <CircleLoader size="xs" /> : "계정 삭제"}</button>
+        <button type="submit" disabled={!matches || saving} className="min-h-12 rounded-xl bg-rose-600 font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">{saving ? <CircleLoader size="xs" inline /> : "계정 삭제"}</button>
       </div>
     </form>
   </dialog>, document.body);

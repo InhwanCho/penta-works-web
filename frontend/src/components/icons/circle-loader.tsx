@@ -11,12 +11,14 @@ const SIZE_CLASS: Record<LoaderSize, string> = {
 export default function CircleLoader({
   className = "",
   size = "s",
+  inline = false,
 }: {
   className?: string;
   size?: LoaderSize;
+  inline?: boolean;
 }) {
   return (
-    <span role="status" aria-label="불러오는 중" className={`loading-spinner inline-flex shrink-0 items-center justify-center align-middle ${className}`}>
+    <span role="status" aria-label="불러오는 중" className={`loading-spinner ${inline ? "inline-flex shrink-0 align-middle" : "flex min-h-24 w-full"} items-center justify-center ${className}`}>
       <span
         aria-hidden="true"
         className={`${SIZE_CLASS[size]} animate-spin rounded-full border-current/20 border-t-current motion-reduce:animate-none`}

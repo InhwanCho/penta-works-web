@@ -303,7 +303,7 @@ function SiteAssignmentRow({
             onClick={assign}
             className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
           >
-            {busy ? <CircleLoader size="xs" /> : moving ? "이동" : "배정"}
+            {busy ? <CircleLoader size="xs" inline /> : moving ? "이동" : "배정"}
           </button>
         </div>
       </div>
@@ -457,7 +457,7 @@ function CreateCompany() {
         disabled={saving}
         className="bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
       >
-        {saving ? <CircleLoader size="xs" /> : "회사 등록"}
+        {saving ? <CircleLoader size="xs" inline /> : "회사 등록"}
       </button>
     </form>
   );

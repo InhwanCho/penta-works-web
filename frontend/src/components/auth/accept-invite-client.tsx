@@ -54,7 +54,7 @@ export default function AcceptInviteClient() {
           <fieldset disabled={saving} className="space-y-4"><PasswordFields form={form} /></fieldset>
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
           <button type="submit" disabled={saving} className="bg-button-primary flex min-h-12 w-full items-center justify-center gap-2 rounded-xl font-bold text-white disabled:opacity-50">
-            {saving ? <CircleLoader size="xs" /> : "가입하기"}
+            {saving ? <CircleLoader size="xs" inline /> : "가입하기"}
           </button>
         </div>
       </form>

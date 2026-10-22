@@ -148,6 +148,9 @@ export function TodayPage() {
   const next = rows.find(
     (s) => new Date(dateTime(s.endAt) + "+09:00").getTime() >= Date.now(),
   );
+  if (records.isPending || schedules.isPending) {
+    return <main className="work-page flex min-h-[50dvh] items-center justify-center" aria-busy="true"><CircleLoader size="m" /></main>;
+  }
   return (
     <main className="work-page">
       <div className="work-date">{dateLabel(today)}</div>
@@ -695,7 +698,7 @@ export function SchedulePage() {
               disabled={saving || !!draft.pending}
               className="work-primary"
             >
-              {saving ? <CircleLoader size="xs" /> : "일정 저장"}
+              {saving ? <CircleLoader size="xs" inline /> : "일정 저장"}
             </button>
           </div>
         </form>

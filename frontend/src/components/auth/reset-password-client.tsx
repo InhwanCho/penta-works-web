@@ -39,7 +39,7 @@ export default function ResetPasswordClient() {
       <h1 className="text-xl font-bold">비밀번호 재설정</h1><p className="text-text-secondary mt-2 text-sm">{info.data?.name} · {info.data?.email}</p>
       <fieldset disabled={saving} className="mt-5 space-y-4"><PasswordFields form={form} /></fieldset>
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      <button disabled={saving} className="bg-button-primary mt-5 w-full rounded-md py-2.5 font-semibold text-white disabled:opacity-50">{saving ? <CircleLoader size="xs" /> : "비밀번호 재설정"}</button>
+      <button disabled={saving} className="bg-button-primary mt-5 w-full rounded-md py-2.5 font-semibold text-white disabled:opacity-50">{saving ? <CircleLoader size="xs" inline /> : "비밀번호 재설정"}</button>
     </form></main>
   );
 }

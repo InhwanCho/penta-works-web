@@ -290,7 +290,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
               className="work-primary"
               disabled={busy}
             >
-              {busy ? <CircleLoader size="xs" /> : "정보와 이력 저장"}
+              {busy ? <CircleLoader size="xs" inline /> : "정보와 이력 저장"}
             </button>
           </div>
         </form>

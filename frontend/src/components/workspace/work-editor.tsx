@@ -675,9 +675,9 @@ export default function WorkEditor({ id }: { id?: string }) {
               disabled={saving || photoBusy || !!draft.pending}
             >
               {saving
-                ? <CircleLoader size="xs" />
+                ? <CircleLoader size="xs" inline />
                 : photoBusy
-                  ? <CircleLoader size="xs" />
+                  ? <CircleLoader size="xs" inline />
                   : id
                     ? "변경 저장"
                     : "업무기록 저장"}

@@ -170,7 +170,7 @@ function PlanEditor({
             className="work-primary"
             disabled={busy}
           >
-            {busy ? <CircleLoader size="xs" /> : "점검 기준 저장"}
+            {busy ? <CircleLoader size="xs" inline /> : "점검 기준 저장"}
           </button>
         </div>
       </fieldset>

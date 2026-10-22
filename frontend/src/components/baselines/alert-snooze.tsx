@@ -169,7 +169,7 @@ export default function AlertSnooze({
               disabled={busy}
               className="min-h-12 rounded-xl bg-sky-700 px-4 font-bold text-white disabled:opacity-50"
             >
-              {busy ? <CircleLoader size="xs" /> : "알림 중지 적용"}
+              {busy ? <CircleLoader size="xs" inline /> : "알림 중지 적용"}
             </button>
             <button
               type="button"

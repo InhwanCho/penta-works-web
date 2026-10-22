@@ -239,7 +239,7 @@ export default function DashboardClient() {
             {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? <CircleLoader size="xs" /> : "새로고침"}</button>
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
         </header>
         <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border border-slate-300 bg-white p-3 text-slate-800 shadow-sm lg:block dark:border-slate-600 dark:bg-background-dark-card dark:text-text-dark-primary"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
 

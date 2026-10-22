@@ -58,13 +58,13 @@ export default function CalendarConnection({ userId }: { userId: number }) {
     <div className="settings-link calendar-settings-row">
       <span>
         <strong>구글캘린더</strong>
-        <small role="status">{query.isPending ? <CircleLoader size="xs" /> : query.isError ? "상태 확인 실패" : query.data.connected ? "연동완료" : query.data.status === "RECONNECT_REQUIRED" ? "재연동 필요" : "연동 안 됨"}</small>
+        <small role="status">{query.isPending ? <CircleLoader size="xs" inline /> : query.isError ? "상태 확인 실패" : query.data.connected ? "연동완료" : query.data.status === "RECONNECT_REQUIRED" ? "재연동 필요" : "연동 안 됨"}</small>
       </span>
       <div className="calendar-settings-actions">
         {query.isError ? <button type="button" onClick={() => query.refetch()}>다시 확인</button> : query.data && (
           query.data.connected
-            ? <><button type="button" disabled={busy} onClick={syncNow}>{busy ? <CircleLoader size="xs" /> : "지금 반영"}</button><button type="button" disabled={busy} onClick={disconnect}>해제</button></>
-            : <button type="button" disabled={busy || !query.data.configured} onClick={() => { setUnderstood(false); setShowNotice(true); }}>{busy ? <CircleLoader size="xs" /> : query.data.status === "RECONNECT_REQUIRED" ? "다시 연동" : "연동하기"}</button>
+            ? <><button type="button" disabled={busy} onClick={syncNow}>{busy ? <CircleLoader size="xs" inline /> : "지금 반영"}</button><button type="button" disabled={busy} onClick={disconnect}>해제</button></>
+            : <button type="button" disabled={busy || !query.data.configured} onClick={() => { setUnderstood(false); setShowNotice(true); }}>{busy ? <CircleLoader size="xs" inline /> : query.data.status === "RECONNECT_REQUIRED" ? "다시 연동" : "연동하기"}</button>
         )}
       </div>
     </div>

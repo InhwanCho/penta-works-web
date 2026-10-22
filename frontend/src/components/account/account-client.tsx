@@ -236,7 +236,7 @@ export default function AccountClient() {
                   disabled={saving}
                   className="bg-button-primary min-h-12 rounded-xl font-bold text-white disabled:opacity-50"
                 >
-                  {saving ? <CircleLoader size="xs" /> : "변경 저장"}
+                  {saving ? <CircleLoader size="xs" inline /> : "변경 저장"}
                 </button>
               </div>
             </form>

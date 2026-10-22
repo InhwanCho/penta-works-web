@@ -217,6 +217,11 @@ export default function OverviewPage() {
       setError(errorText(e));
     }
   }
+  // The overview's queries populate one screen; wait in one place instead of
+  // showing a spinner for each calendar source and summary card.
+  if (recordsLoading || schedules.isPending || planning.isPending || recent.isPending) {
+    return <main className="work-page flex min-h-[70dvh] items-center justify-center" aria-busy="true"><CircleLoader size="m" /></main>;
+  }
   return (
     <main className="work-page work-overview">
       <PageHeading
@@ -605,7 +610,7 @@ export default function OverviewPage() {
             <span>최근 업무기록</span>
             <small>
               {recent.isPending
-                ? <CircleLoader size="xs" />
+                ? <CircleLoader size="xs" inline />
                 : recent.isError
                   ? "조회 실패"
                   : `${recentRecords.length}건`}

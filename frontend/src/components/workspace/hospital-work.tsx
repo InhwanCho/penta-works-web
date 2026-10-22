@@ -10,9 +10,9 @@ import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
 import type { WorkRecord } from "./workspace-data";
 import { MaintenanceRow } from "@/components/site/office-assets-panel";
 import { RecordList, ErrorState } from "./workspace-pages";
-export default function HospitalWork({ siteId }: { siteId: string }) {
+export function useHospitalHistory(siteId: string) {
   const { session } = useAuth();
-  const history = useInfiniteQuery({
+  return useInfiniteQuery({
     queryKey: ["workspace-records", "hospital-history", session?.id, siteId],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
@@ -31,8 +31,12 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
       pages.reduce((n, p) => n + p.items.length, 0) < last.total
         ? pages.length + 1
         : undefined,
-    enabled: !!session,
+    enabled: !!session && !!siteId,
   });
+}
+export default function HospitalWork({ siteId }: { siteId: string }) {
+  const { session } = useAuth();
+  const history = useHospitalHistory(siteId);
   if (!session) return null;
   const rows = history.data?.pages.flatMap((p) => p.items) || [];
   const partial = history.data?.pages.some((p) => p.failedSites.length);
@@ -118,7 +122,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
             void history.fetchNextPage();
           }}
         >
-          {history.isFetchingNextPage ? <CircleLoader size="xs" /> : "이전 이력 더 보기"}
+          {history.isFetchingNextPage ? <CircleLoader size="xs" inline /> : "이전 이력 더 보기"}
         </button>
       )}
     </section>

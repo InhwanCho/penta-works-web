@@ -216,7 +216,7 @@ export default function LoginForm() {
                   disabled={!canSubmit}
                   className="bg-button-primary hover:bg-button-primary-hover disabled:hover:bg-button-primary mt-6 inline-flex h-12 w-full cursor-pointer items-center justify-center rounded-xl text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-45"
                 >
-                  {submitting ? <CircleLoader size="xs" /> : "로그인"}
+                  {submitting ? <CircleLoader size="xs" inline /> : "로그인"}
                 </button>
                 <Link href="/forgot-password" className="mt-4 block text-center text-sm font-semibold text-sky-700 dark:text-sky-300">비밀번호를 잊으셨나요?</Link>
               </form>

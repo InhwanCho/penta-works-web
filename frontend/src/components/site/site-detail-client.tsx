@@ -1,10 +1,16 @@
 "use client";
-import { HospitalProfile } from "@/components/workspace/hospital-profile";
+import { HospitalProfile, useHospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
-import HospitalWork from "@/components/workspace/hospital-work";
+import HospitalWork, { useHospitalHistory } from "@/components/workspace/hospital-work";
 
+import { useHospitalAssets } from "@/components/workspace/hospital-assets";
+import { usePlanning } from "@/components/workspace/workspace-data";
+import { useOfficeAssetsQuery } from "@/hooks/use-office-assets-query";
+import { useAuth } from "@/components/provider/auth-provider";
+import { useQuery } from "@tanstack/react-query";
+import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -92,6 +98,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     from,
     to,
   );
+  const { session } = useAuth();
+  const detailSiteId = data?.site.siteDb ?? "";
+  const profile = useHospitalProfile(detailSiteId);
+  const assets = useHospitalAssets(detailSiteId);
+  const officeAssets = useOfficeAssetsQuery(detailSiteId, !!session);
+  const planning = usePlanning();
+  const history = useHospitalHistory(detailSiteId);
+  const alertSettings = useQuery({queryKey:["alert-thresholds"], queryFn:()=>apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), staleTime:60_000, enabled: !!session && !!data && data.monitoringConnected !== false});
+  const detailLoading = !!data && (profile.isPending || assets.isPending || officeAssets.isPending || planning.isPending || history.isPending || (data.monitoringConnected !== false && alertSettings.isPending));
   const openedSite = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (isLoading || !data || openedSite.current === slug) return;
@@ -175,7 +190,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
 
 
-  if (isLoading) {
+  if (isLoading || detailLoading) {
     return (
       <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
         <CircleLoader size="xl" />
@@ -332,7 +347,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         }}>
           <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
           <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
-          <button type="submit" disabled={isFetching} className="min-h-11 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? <CircleLoader size="xs" /> : "기간 조회"}</button>
+          <button type="submit" disabled={isFetching} className="min-h-11 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "기간 조회"}</button>
         </form>
         {periodError && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{periodError}</p>}
         {periodActive && <div className="mt-3 space-y-2 text-xs">
