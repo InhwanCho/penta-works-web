@@ -54,7 +54,7 @@ function quickPeriodStart(end: Date, months: number) {
 
 type ViewMode = "single" | "grid" | "list";
 const MODES: { key: ViewMode; label: string }[] = [
-  { key: "single", label: "집중 보기" },
+  { key: "single", label: "하나씩" },
   { key: "grid", label: "모아 보기" },
   { key: "list", label: "세로 보기" },
 ];
@@ -117,7 +117,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   }, [slug, isLoading, data]);
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
-  const [mode, setMode] = useState<ViewMode>("grid");
+  const [mode, setMode] = useState<ViewMode>("single");
   const [focused, setFocused] = useState<MetricKey>("hepres");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [preferencesReady, setPreferencesReady] = useState(false);
@@ -283,14 +283,17 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         <HospitalWork siteId={data.site.siteDb} />
       </HospitalSection>
 
-      {monitoringConnected && <>
-      <fieldset className="hospital-detail-card">
-        <legend className="text-text-major dark:text-text-dark-primary px-1 text-sm font-extrabold">
-          표시 건수 · 기간 조회
-        </legend>
-        <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-xs">
-          표시할 측정값의 건수를 선택하세요.
-        </p>
+      {monitoringConnected && <section className="hospital-detail-card site-chart-workspace" aria-label="측정값 그래프">
+      <header className="site-chart-heading">
+        <h2>측정값 그래프</h2>
+        <p>{periodActive ? `${fmtDate(from).slice(0,16)} ~ ${fmtDate(to).slice(0,16)}` : "최근 측정 기록"} · {rowsDesc.length.toLocaleString()}개 측정값 표시</p>
+        {rowsDesc.length > 0 && !periodActive && <small>{fmtDate(rowsDesc[rowsDesc.length - 1].date)} ~ {fmtDate(rowsDesc[0].date)}</small>}
+      </header>
+      <details className="site-chart-query">
+        <summary><span>조회 조건 변경</span><span>{periodActive ? "기간 지정" : "최신 기록"} · {take}개</span></summary>
+      <fieldset className="site-chart-query-body">
+        <legend className="sr-only">그래프 조회 조건</legend>
+        <p className="site-chart-field-label">그래프에 표시할 측정값 개수</p>
         <div className="site-query-grid grid min-h-11 w-full grid-cols-4 gap-2">
           <TakeLink
             slug={slug}
@@ -321,6 +324,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             active={take === 100}
           />
         </div>
+        <p className="site-chart-field-label mt-4">조회 기간</p>
         <div role="group" aria-label="빠른 기간 조회" className="site-query-grid mt-3 grid grid-cols-4 gap-2">
           {QUICK_PERIODS.map(period=><button key={period.label} type="button" aria-pressed={activePeriod === period.label} disabled={isFetching} onClick={()=>{
             const end = new Date();
@@ -343,7 +347,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           setPeriodError("");
           const nextFrom = start.toISOString(), nextTo = end.toISOString();
           if (from === nextFrom && to === nextTo) void refetch();
-          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo, take:String(take)})}`);
+          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo, take:String(take)})}`, {scroll:false});
         }}>
           <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
           <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
@@ -355,16 +359,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           <p>{data.rows.length ? `현재 차트: ${fmtDate(data.rows[data.rows.length-1].date)} ~ ${fmtDate(data.rows[0].date)} · ${data.rows.length.toLocaleString()}건` : "해당 기간에 수집된 기록이 없습니다."}</p>
           <Link href={`/sites/${encodeURIComponent(slug)}?take=${take}`} scroll={false} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">기간 해제 · 최신 {take}건</Link>
         </div>}
-        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준 · 기간과 표시 건수를 함께 적용합니다. 기간 전체의 처음과 마지막을 포함해 고르게 추린 실제 측정값을 보여줍니다.</p>
+        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준입니다. 기간을 지정하면 해당 기간에서 선택한 개수만큼 고르게 추려 모든 그래프에 동일하게 적용합니다.</p>
       </fieldset>
+      </details>
 
-      <section
-        className="hospital-detail-card"
-        aria-label="차트 표시 설정"
-      >
+      <div className="site-chart-toolbar" aria-label="그래프 보기 설정">
+        <p className="site-chart-field-label">그래프 배치</p>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div
-            className="flex flex-wrap gap-1"
+            className="site-chart-modes"
             role="group"
             aria-label="보기 모드"
           >
@@ -374,8 +377,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                 type="button"
                 aria-pressed={mode === item.key}
                 onClick={() => setMode(item.key)}
-                className={`min-h-10 rounded-lg px-3 text-sm font-bold ${mode === item.key ? "bg-brand-primary text-white" : "bg-background-primary dark:bg-background-dark-secondary"}`}
+                className={mode === item.key ? "is-active" : ""}
               >
+                <span className={`chart-layout-icon chart-layout-${item.key}`} aria-hidden="true"><i /><i /><i /><i /></span>
                 {item.label}
               </button>
             ))}
@@ -388,7 +392,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             className="border-border dark:border-background-dark-secondary dark:bg-background-dark-secondary bg-background-primary inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-bold shadow-sm"
           >
             <span>
-              항목 선택{" "}
+              측정항목{" "}
               <span className="text-brand-primary dark:text-brand-dark-primary">
                 {selection.length}/4
               </span>
@@ -465,10 +469,11 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             </button>
           </div>
         )}
-        <div
-          className="mt-3 flex flex-wrap gap-2"
+        <p className="site-chart-mode-hint">{mode === "single" ? "아래에서 선택한 항목 하나를 큰 그래프로 봅니다." : mode === "grid" ? "선택한 항목을 작은 그래프로 나란히 봅니다." : "선택한 항목을 큰 그래프로 위에서 아래로 봅니다."}</p>
+        {mode === "single" && <div
+          className="site-chart-focus-items"
           role="group"
-          aria-label="집중해서 볼 항목"
+          aria-label="크게 볼 측정항목"
         >
           {selection.map((key) => {
             const metric = metrics.find((item) => item.key === key)!;
@@ -487,15 +492,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               </button>
             );
           })}
-        </div>
-        <p className="text-text-secondary dark:text-text-dark-primary/70 mt-2 text-xs">
-          {mode === "single"
-            ? "항목 이름을 누르면 해당 차트에 집중할 수 있습니다."
-            : mode === "grid"
-              ? "선택한 항목을 작은 차트로 나란히 봅니다. 각 차트의 단위와 눈금은 독립적입니다."
-              : "선택한 항목을 큰 차트로 위에서 아래로 봅니다."}
-        </p>
-      </section>
+        </div>}
+      </div>
 
       <div
         className={
@@ -516,31 +514,10 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               key={metric.key}
               className="min-w-0 touch-pan-y"
             >
-              <div className="text-text-secondary dark:text-text-dark-primary/70 mb-1 flex flex-wrap items-baseline justify-between gap-1 px-1 text-xs">
-                <span>
-                  {periodActive ? "조회 기간 마지막 값" : "최신 값"}{" "}
-                  <strong className="text-sm tabular-nums">
-                    {formatMetricMeasurement(rowsDesc[0]?.[metric.key], metric.unit)}
-                  </strong>
-                </span>
-                {mode !== "single" && (
-                  <button
-                    type="button"
-                    className="min-h-11 px-2 underline underline-offset-2"
-                    aria-label={`${metricTitle(metric)} 크게 보기`}
-                    onClick={() => {
-                      setFocused(metric.key);
-                      setMode("single");
-                    }}
-                  >
-                    크게 보기
-                  </button>
-                )}
-              </div>
               {points.some((point) => point[metric.key] != null) ? (
                 <TimeSeriesLines
                   title={metricTitle(metric)}
-                  periodLabel={chartPeriodLabel}
+                  headerExtra={<div className="site-chart-reading"><span>{periodActive ? "기간 마지막 값" : "최신 값"} <strong>{formatMetricMeasurement(rowsDesc[0]?.[metric.key], metric.unit)}</strong></span>{mode !== "single" && <button type="button" aria-label={`${metricTitle(metric)} 크게 보기`} onClick={() => { setFocused(metric.key); setMode("single"); }}>크게 보기</button>}</div>}
                   points={points}
                   series={[{ key: metric.key, name: metricTitle(metric) }]}
                   height={mode === "grid" ? 190 : 280}
@@ -556,7 +533,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             </div>
           ))}
       </div>
-      </>}
+      </section>}
     </main>
   );
 }

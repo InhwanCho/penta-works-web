@@ -111,6 +111,7 @@ export function TimeSeriesLines({
   height = 280,
   interactive = true,
   periodLabel,
+  headerExtra,
 }: {
   title: string;
   points: TimeSeriesPoint[];
@@ -118,6 +119,7 @@ export function TimeSeriesLines({
   height?: number;
   interactive?: boolean;
   periodLabel?: string;
+  headerExtra?: React.ReactNode;
 }) {
   const labels = points.map((p) => p.t);
 
@@ -264,6 +266,7 @@ export function TimeSeriesLines({
             </strong>
             {periodLabel && <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-bold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">기간 조회</span>}
           </div>
+          {headerExtra}
           {interactive && <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
             휠/핀치 확대 · Shift + 드래그 이동
           </span>}
