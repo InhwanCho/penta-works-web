@@ -279,12 +279,10 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
         {(["unacknowledged", "open", "all"] as const).map(value => <button key={value} type="button" aria-pressed={value === (filter === "failed" || filter === "skipped" ? "all" : filter)} onClick={() => { setFilter(value); setSelecting(false); setSelected([]); }}>{value === "unacknowledged" ? "확인 필요" : value === "open" ? "진행 중" : "전체 기록"}</button>)}
       </div>
       <p className="alert-inbox-guide">{filter === "unacknowledged" ? "아직 확인하지 않은 알림입니다. 확인하면 같은 알림을 24시간 쉬어갑니다." : filter === "open" ? "확인 여부와 관계없이 아직 정상으로 복구되지 않은 문제입니다." : "확인한 알림과 정상으로 복구된 기록도 함께 볼 수 있습니다."}</p>
-      <div className="alert-inbox-search">
-        <input type="search" aria-label="알림 검색" value={query} onChange={event => setQuery(event.target.value)} placeholder="병원명 또는 알림 내용 검색" />
-      </div>
       <details className="alert-inbox-filters">
-        <summary>상세 검색{(siteId || fromDate || toDate || kind !== "all" || filter === "failed" || filter === "skipped") ? " · 적용 중" : ""}</summary>
+        <summary>상세 검색{(query || siteId || fromDate || toDate || kind !== "all" || filter === "failed" || filter === "skipped") ? " · 적용 중" : ""}</summary>
         <div className="alert-inbox-filter-fields">
+          <label>알림 내용<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="검색어 입력" /></label>
           <label>병원<select value={siteId} onChange={event => setSiteId(event.target.value)}><option value="">모든 병원</option>{sites.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select></label>
           <label>문제 유형<select value={kind} onChange={event => setKind(event.target.value)}><option value="all">모든 유형</option><option value="range">수치 이상</option><option value="site">데이터 수집 중단</option><option value="missing">측정항목 누락</option><option value="chiller">냉각장치 정지 의심</option></select></label>
           <label>시작일<input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} /></label>
