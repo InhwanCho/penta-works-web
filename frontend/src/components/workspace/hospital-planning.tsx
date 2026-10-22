@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useState, type FormEvent } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -20,7 +23,7 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
         <h2>점검 주기·지정일</h2>
       </div>
       {query.isPending ? (
-        <p role="status">점검 기준을 불러오는 중…</p>
+        <p role="status"><CircleLoader size="xs" /></p>
       ) : query.isError ? (
         <p className="work-error">
           {errorText(query.error)}{" "}
@@ -167,7 +170,7 @@ function PlanEditor({
             className="work-primary"
             disabled={busy}
           >
-            {busy ? "저장 중…" : "점검 기준 저장"}
+            {busy ? <CircleLoader size="xs" /> : "점검 기준 저장"}
           </button>
         </div>
       </fieldset>

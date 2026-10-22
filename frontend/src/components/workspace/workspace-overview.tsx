@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import Link from "@/components/common/app-link";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -602,7 +605,7 @@ export default function OverviewPage() {
             <span>최근 업무기록</span>
             <small>
               {recent.isPending
-                ? "불러오는 중…"
+                ? <CircleLoader size="xs" />
                 : recent.isError
                   ? "조회 실패"
                   : `${recentRecords.length}건`}
@@ -659,7 +662,7 @@ export default function OverviewPage() {
                 {!recentRecords.length && (
                   <Empty>
                     {recent.isPending
-                      ? "업무기록을 불러오는 중…"
+                      ? <CircleLoader size="xs" />
                       : "아직 작성된 업무기록이 없습니다."}
                   </Empty>
                 )}
@@ -813,9 +816,7 @@ function CalendarLoadState({
       <p
         className="work-hint calendar-load-state"
         role="status"
-      >
-        {label} 불러오는 중…
-      </p>
+      ><CircleLoader size="xs" /></p>
     );
   return null;
 }

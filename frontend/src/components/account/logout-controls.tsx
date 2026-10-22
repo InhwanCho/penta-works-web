@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -141,7 +144,7 @@ export default function LogoutControls({
                 onClick={() => void confirm()}
                 className="min-h-12 rounded-xl bg-rose-700 font-bold text-white disabled:opacity-50"
               >
-                {busy ? "로그아웃 중…" : "로그아웃"}
+                {busy ? <CircleLoader size="xs" /> : "로그아웃"}
               </button>
             </div>
           </dialog>,

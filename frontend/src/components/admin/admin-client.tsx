@@ -687,7 +687,7 @@ function UserEditor({
             onClick={save}
             className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
           >
-            {saving ? "저장 중…" : "변경 저장"}
+            {saving ? <CircleLoader size="xs" /> : "변경 저장"}
           </button>
           {canDelete && (
             <button
@@ -1062,10 +1062,8 @@ function InvitationSection({
           disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
         >
-          {saving && !resendingId && (
-            <CircleLoader className="mr-2 align-middle [&>span]:h-4 [&>span]:w-4 [&>span]:border-white/40 [&>span]:border-t-white" />
-          )}
-          {saving && !resendingId ? "초대 발송 중" : "7일 초대 링크 생성"}
+
+          {saving && !resendingId ? <CircleLoader size="xs" /> : "7일 초대 링크 생성"}
         </button>
         {link && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -1117,10 +1115,8 @@ function InvitationSection({
                   onClick={() => resend(invitation.id)}
                   className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30"
                 >
-                  {resendingId === invitation.id && (
-                    <CircleLoader className="mr-1 align-middle [&>span]:h-3 [&>span]:w-3" />
-                  )}
-                  {resendingId === invitation.id ? "발송 중" : "재발송"}
+
+                  {resendingId === invitation.id ? <CircleLoader size="xs" /> : "재발송"}
                 </button>
                 <button
                   type="button"
@@ -1226,7 +1222,7 @@ function SiteSection({
           disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
         >
-          {saving ? "추가 중…" : "병원 추가"}
+          {saving ? <CircleLoader size="xs" /> : "병원 추가"}
         </button>
         {message && (
           <p className="text-text-secondary text-xs sm:col-span-3">{message}</p>
@@ -1393,7 +1389,7 @@ function SiteEditor({ site }: { site: SiteOption }) {
           disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
         >
-          {saving ? "저장 중…" : "정보 저장"}
+          {saving ? <CircleLoader size="xs" /> : "정보 저장"}
         </button>
       </div>
     </form>

@@ -1,5 +1,8 @@
 "use client";
 
+import CircleLoader from "@/components/icons/circle-loader";
+
+
 import Link from "@/components/common/app-link";
 import LogoutControls from "./logout-controls";
 import PhoneInput from "@/components/forms/phone-input";
@@ -233,7 +236,7 @@ export default function AccountClient() {
                   disabled={saving}
                   className="bg-button-primary min-h-12 rounded-xl font-bold text-white disabled:opacity-50"
                 >
-                  {saving ? "저장 중…" : "변경 저장"}
+                  {saving ? <CircleLoader size="xs" /> : "변경 저장"}
                 </button>
               </div>
             </form>

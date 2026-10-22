@@ -1,5 +1,8 @@
 "use client";
 
+import CircleLoader from "@/components/icons/circle-loader";
+
+
 import HelpButton from "@/components/common/context-help";
 import { ALERT_HELP } from "@/lib/alert-help";
 import Link from "@/components/common/app-link";
@@ -24,7 +27,7 @@ export function NotificationPreferencesSummary() {
   const query=usePreferences();
   const path=usePathname();
   return <section aria-label="내 알림 수신 설정" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white p-3 sm:p-4 dark:border-slate-600 dark:bg-background-dark-card">
-    <div className="min-w-0 flex-1"><h2 className="flex items-center gap-1 text-base font-extrabold">알림 받는 시간·반복<HelpButton title="내 알림 수신 설정" message={ALERT_HELP["내 알림 수신 설정"]}/></h2><p className="mt-1 break-words text-sm leading-6 text-text-secondary">{query.isPending?"불러오는 중…":query.isError?"수신 설정을 불러오지 못했습니다.":query.data?.needsSelection?"병원별 기존 설정이 다릅니다. 공통 설정을 선택해주세요.":preferenceSummary(query.data?.preferences??defaults)}</p><p className="mt-1 text-xs leading-5 text-text-secondary">내가 받는 모든 병원의 알림에 적용됩니다.</p></div>
+    <div className="min-w-0 flex-1"><h2 className="flex items-center gap-1 text-base font-extrabold">알림 받는 시간·반복<HelpButton title="내 알림 수신 설정" message={ALERT_HELP["내 알림 수신 설정"]}/></h2><p className="mt-1 break-words text-sm leading-6 text-text-secondary">{query.isPending?<CircleLoader size="xs" />:query.isError?"수신 설정을 불러오지 못했습니다.":query.data?.needsSelection?"병원별 기존 설정이 다릅니다. 공통 설정을 선택해주세요.":preferenceSummary(query.data?.preferences??defaults)}</p><p className="mt-1 text-xs leading-5 text-text-secondary">내가 받는 모든 병원의 알림에 적용됩니다.</p></div>
     <Link href={`/notification-settings?from=${path==="/"?"dashboard":"baselines"}`} className="inline-flex min-h-11 items-center rounded-lg border border-sky-300 px-3 text-sm font-bold text-sky-800 dark:border-sky-700 dark:text-sky-200">받는 시간·반복 바꾸기</Link>
   </section>;
 }
@@ -33,7 +36,7 @@ export default function NotificationPreferencesPage() {
   const [back,setBack]=useState("/baselines?view=settings");
   useEffect(()=>{if(new URLSearchParams(window.location.search).get("from")==="dashboard")setBack("/?view=alerts");},[]);
   return <main className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6"><Link href={back} className="inline-flex min-h-11 items-center text-base font-bold text-sky-800 dark:text-sky-200">← {back==="/baselines?view=settings"?"알림 설정 메뉴":"대시보드 알림값"}</Link><div className="my-3 flex items-center justify-between gap-2"><h1 className="text-xl font-extrabold lg:text-2xl">알림 받는 시간·반복</h1><HelpButton title="내 알림 수신 설정" message="내 계정에 한 번 설정하면 현재와 앞으로 추가되는 모든 병원에 적용됩니다. 다른 담당자의 설정에는 영향을 주지 않습니다. 쉬는 시간에도 앱 안의 이상 표시와 기록은 남고, 카톡·문자 발송만 쉽니다."/></div><p className="mb-4 text-sm text-text-secondary">내가 받는 모든 병원에 적용</p>
-    {query.isPending?<p role="status">불러오는 중…</p>:query.isError?<button className={field} onClick={()=>query.refetch()}>수신 설정 다시 불러오기</button>:query.data&&<PreferenceEditor view={query.data}/>}
+    {query.isPending?<p role="status"><CircleLoader size="xs" /></p>:query.isError?<button className={field} onClick={()=>query.refetch()}>수신 설정 다시 불러오기</button>:query.data&&<PreferenceEditor view={query.data}/>}
   </main>;
 }
 function PreferenceEditor({view}:{view:PreferenceView}) {
@@ -80,6 +83,6 @@ function PreferenceEditor({view}:{view:PreferenceView}) {
     <section className={panel}><h2 className="flex items-center gap-1 text-lg font-bold">미확인 알림 반복<HelpButton title="미확인 알림 반복" message={ALERT_HELP["미확인 알림 반복"]}/></h2><fieldset className="mt-3 space-y-2"><legend className="mb-2 font-bold">같은 알림을 다시 받을까요?</legend>{[{value:false,label:"처음 한 번만 받기"},{value:true,label:"확인할 때까지 반복해서 받기"}].map(option=><label key={String(option.value)} className={`flex min-h-14 cursor-pointer items-center gap-3 rounded-xl border p-3 text-base ${repeat===option.value?"border-sky-600 bg-sky-50 text-sky-900 dark:border-sky-400 dark:bg-sky-950 dark:text-sky-100":"border-slate-300 dark:border-slate-600"}`}><input type="radio" name="notification-repeat" checked={repeat===option.value} onChange={()=>setRepeat(option.value)} className="h-5 w-5 accent-sky-700"/>{option.label}</label>)}</fieldset>{repeat&&<label className="mt-3 block font-bold">반복 간격 (분)<input type="number" min={5} max={10080} step={1} className={field} value={minutes} onChange={e=>setMinutes(Number(e.target.value))} required/></label>}<p className="mt-3 hidden text-sm leading-6 text-text-secondary lg:block">확인하면 동일 알림을 24시간 중지하며, 정상화되면 반복이 끝납니다. 새 문제의 최초 알림은 기존 문제의 반복 간격을 기다리지 않습니다.</p></section>
     <p className="hidden rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm leading-7 lg:block text-sky-900 dark:border-sky-800 dark:bg-background-dark-secondary dark:text-sky-200">쉬는 시간에도 대시보드의 이상 표시와 앱 내 알림 기록은 유지됩니다. 카톡·문자 발송만 쉬고, 다시 받는 시간이 되면 미확인 상태로 계속 발생 중인 문제만 발송 대상이 됩니다.</p>
     {error&&<p role="alert" className="text-base font-bold text-rose-700 dark:text-rose-300">{error}</p>}{notice&&<p role="status" className="text-base font-bold text-emerald-700 dark:text-emerald-300">{notice}</p>}
-    <button type="submit" className="min-h-12 w-full rounded-xl bg-sky-700 px-4 text-base font-bold text-white disabled:opacity-50">{busy?"저장 중…":"설정 저장하기"}</button>
+    <button type="submit" className="min-h-12 w-full rounded-xl bg-sky-700 px-4 text-base font-bold text-white disabled:opacity-50">{busy?<CircleLoader size="xs" />:"설정 저장하기"}</button>
   </fieldset></form>;
 }

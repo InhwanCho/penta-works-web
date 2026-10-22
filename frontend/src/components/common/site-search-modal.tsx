@@ -1,5 +1,8 @@
 "use client";
 
+import CircleLoader from "@/components/icons/circle-loader";
+
+
 import CustomModal from "@/components/common/custom-modal";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 import SearchIcon from "@/components/icons/search-icon";
@@ -139,9 +142,7 @@ export default function SiteSearchModal() {
 
         <div className="max-h-[60vh] overflow-auto p-2">
           {loading && (
-            <div className="text-text-secondary dark:text-text-dark-primary/60 p-6 text-center text-sm">
-              불러오는 중...
-            </div>
+            <div className="text-text-secondary dark:text-text-dark-primary/60 p-6 text-center text-sm"><CircleLoader size="xs" /></div>
           )}
 
           {!loading && errorMsg && (

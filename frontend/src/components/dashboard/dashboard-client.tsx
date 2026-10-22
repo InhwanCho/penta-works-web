@@ -1,5 +1,8 @@
 "use client";
 
+import CircleLoader from "@/components/icons/circle-loader";
+
+
 import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import { useAuth } from "@/components/provider/auth-provider";
 import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
@@ -172,7 +175,7 @@ export default function DashboardClient() {
   };
   const viewOptions = <div className="mt-3 space-y-2 text-sm">
     <DashboardSiteFilter rows={data.rows} hiddenSites={hiddenSites.data ?? []} disabled={hiddenSites.isError || visibilityMutation.isPending} onChange={(siteId, hidden) => visibilityMutation.mutate({siteId, hidden})} onRestore={() => visibilityMutation.mutate(null)} />
-    {visibilityMutation.isPending && <p role="status" className="text-xs">병원 표시 설정 저장 중…</p>}
+    {visibilityMutation.isPending && <p role="status" className="text-xs"><CircleLoader size="xs" /></p>}
     {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
     {hiddenSites.isError && <button type="button" onClick={() => hiddenSites.refetch()} className="min-h-11 text-rose-600 underline">병원 표시 설정 불러오기 실패 · 다시 시도</button>}
 
@@ -236,7 +239,7 @@ export default function DashboardClient() {
             {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? "갱신 중…" : "새로고침"}</button>
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? <CircleLoader size="xs" /> : "새로고침"}</button>
         </header>
         <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border border-slate-300 bg-white p-3 text-slate-800 shadow-sm lg:block dark:border-slate-600 dark:bg-background-dark-card dark:text-text-dark-primary"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
 
@@ -249,7 +252,7 @@ export default function DashboardClient() {
         {statusFilter === "configured" ? (
           <section className="space-y-3">
             <Link href="/baselines" className="hidden min-h-12 py-3 text-base font-bold text-sky-700 lg:inline-block dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
-            {alertSettings.isPending ? <p className="p-4 text-sm">설정 불러오는 중…</p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
+            {alertSettings.isPending ? <p className="p-4 text-sm"><CircleLoader size="xs" /></p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
               <AlertSettingsTable entries={sortedRows.map(row => alertSettings.data?.find(site => site.siteid === row.siteDb)).filter((site): site is SiteAlertSettings => Boolean(site))} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
             )}
           </section>

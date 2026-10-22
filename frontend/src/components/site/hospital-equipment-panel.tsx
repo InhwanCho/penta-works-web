@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import HospitalAssets, {
@@ -40,9 +43,7 @@ export default function HospitalEquipmentPanel({
         <p
           role="status"
           className="py-3 text-sm"
-        >
-          장비 정보 불러오는 중…
-        </p>
+        ><CircleLoader size="xs" /></p>
       )}
       {!!query.data?.assets.length && (
         <div className="mt-3 divide-y divide-slate-200 border-t border-slate-200 dark:divide-white/10 dark:border-white/10">

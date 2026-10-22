@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
@@ -208,7 +211,7 @@ export function TodayPage() {
               retry={() => void schedules.refetch()}
             />
           ) : schedules.isPending ? (
-            <p>일정을 불러오는 중…</p>
+            <p><CircleLoader size="xs" /></p>
           ) : (
             <ScheduleRows rows={rows} />
           )}
@@ -224,7 +227,7 @@ export function TodayPage() {
               retry={() => void records.refetch()}
             />
           ) : records.isPending ? (
-            <p>업무를 불러오는 중…</p>
+            <p><CircleLoader size="xs" /></p>
           ) : (
             <RecordList rows={(records.data || []).slice(0, 3)} />
           )}
@@ -290,7 +293,7 @@ export function HospitalsPage() {
           retry={() => void sites.refetch()}
         />
       ) : sites.isPending ? (
-        <p>병원을 불러오는 중…</p>
+        <p><CircleLoader size="xs" /></p>
       ) : (
         <div className="work-hospital-grid">
           {rows.map((s) => (
@@ -404,7 +407,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
           retry={() => void records.refetch()}
         />
       ) : records.isPending ? (
-        <p>업무를 불러오는 중…</p>
+        <p><CircleLoader size="xs" /></p>
       ) : (
         <>
           <RecordList rows={rows} />
@@ -692,7 +695,7 @@ export function SchedulePage() {
               disabled={saving || !!draft.pending}
               className="work-primary"
             >
-              {saving ? "저장 중…" : "일정 저장"}
+              {saving ? <CircleLoader size="xs" /> : "일정 저장"}
             </button>
           </div>
         </form>
@@ -823,7 +826,7 @@ export function SchedulePage() {
           {!rows.length && (
             <Empty>
               {schedules.isPending
-                ? "일정을 불러오는 중…"
+                ? <CircleLoader size="xs" />
                 : "등록된 일정이 없습니다."}
             </Empty>
           )}

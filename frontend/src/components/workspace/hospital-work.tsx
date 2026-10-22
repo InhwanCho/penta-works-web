@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import Link from "@/components/common/app-link";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useInfiniteQuery } from "@tanstack/react-query";
@@ -88,9 +91,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
         <p
           className="work-hint"
           role="status"
-        >
-          정비이력 불러오는 중…
-        </p>
+        ><CircleLoader size="xs" /></p>
       )}
       <div className="hospital-timeline">
         {rows.map((r) => (
@@ -117,7 +118,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
             void history.fetchNextPage();
           }}
         >
-          {history.isFetchingNextPage ? "불러오는 중…" : "이전 이력 더 보기"}
+          {history.isFetchingNextPage ? <CircleLoader size="xs" /> : "이전 이력 더 보기"}
         </button>
       )}
     </section>

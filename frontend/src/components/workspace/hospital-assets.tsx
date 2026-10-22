@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useState, type FormEvent } from "react";
 import Link from "@/components/common/app-link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -153,7 +156,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
           retry={() => void query.refetch()}
         />
       )}
-      {query.isPending && <p role="status">장비·부품을 불러오는 중…</p>}
+      {query.isPending && <p role="status"><CircleLoader size="xs" /></p>}
       {editing !== undefined && (
         <form
           onSubmit={save}
@@ -287,7 +290,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
               className="work-primary"
               disabled={busy}
             >
-              {busy ? "저장 중…" : "정보와 이력 저장"}
+              {busy ? <CircleLoader size="xs" /> : "정보와 이력 저장"}
             </button>
           </div>
         </form>
@@ -490,7 +493,7 @@ export function AssetSelection({
           retry={() => void query.refetch()}
         />
       ) : query.isPending ? (
-        <p>불러오는 중…</p>
+        <p><CircleLoader size="xs" /></p>
       ) : components.length ? (
         <div className="asset-options">
           {components.map((a) => (

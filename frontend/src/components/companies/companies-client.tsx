@@ -303,7 +303,7 @@ function SiteAssignmentRow({
             onClick={assign}
             className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
           >
-            {busy ? "처리 중…" : moving ? "이동" : "배정"}
+            {busy ? <CircleLoader size="xs" /> : moving ? "이동" : "배정"}
           </button>
         </div>
       </div>
@@ -457,7 +457,7 @@ function CreateCompany() {
         disabled={saving}
         className="bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
       >
-        {saving ? "등록 중…" : "회사 등록"}
+        {saving ? <CircleLoader size="xs" /> : "회사 등록"}
       </button>
     </form>
   );
@@ -933,7 +933,7 @@ function CompanyCard({ company }: { company: Company }) {
       {showHistory && (
         <div className="mt-2 rounded-lg bg-slate-50 p-3 text-xs dark:bg-white/4">
           {history.isLoading ? (
-            "이력을 불러오는 중…"
+            <CircleLoader size="xs" />
           ) : history.isError ? (
             "이력을 불러오지 못했습니다."
           ) : history.data?.length ? (

@@ -1,5 +1,7 @@
 "use client";
 
+import CircleLoader from "@/components/icons/circle-loader";
+
 import {
   type OfficeMaintenance,
   type OfficePhoto,
@@ -36,8 +38,7 @@ export default function OfficeAssetsPanel({
   if (isAuthLoading || (session && query.isLoading)) {
     return (
       <section className="dark:border-background-dark-secondary dark:bg-background-dark-card mb-3 rounded-xl border bg-white p-4 shadow-sm">
-        <div className="h-5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-700" />
-        <div className="mt-3 h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+        <div className="flex justify-center py-4"><CircleLoader /></div>
       </section>
     );
   }
@@ -366,7 +367,7 @@ function OfficePhotoThumbnail({
 
   if (!source) {
     return (
-      <div className="aspect-[4/3] animate-pulse rounded-lg bg-slate-100 dark:bg-slate-800" />
+      <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800"><CircleLoader /></div>
     );
   }
 

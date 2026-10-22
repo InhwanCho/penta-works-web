@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "@/components/common/app-link";
@@ -243,7 +246,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       </main>
     );
   if (id && records.isPending)
-    return <main className="work-page">업무기록을 불러오는 중…</main>;
+    return <main className="flex min-h-[50dvh] items-center justify-center"><CircleLoader size="m" /></main>;
   if (id && !record)
     return (
       <main className="work-page">
@@ -340,7 +343,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             변경 이력
           </summary>
           {history.isPending ? (
-            <p className="py-2 text-sm">불러오는 중…</p>
+            <p className="py-2 text-sm"><CircleLoader size="xs" /></p>
           ) : history.error ? (
             <button
               type="button"
@@ -672,9 +675,9 @@ export default function WorkEditor({ id }: { id?: string }) {
               disabled={saving || photoBusy || !!draft.pending}
             >
               {saving
-                ? "저장 중…"
+                ? <CircleLoader size="xs" />
                 : photoBusy
-                  ? "사진 처리 중…"
+                  ? <CircleLoader size="xs" />
                   : id
                     ? "변경 저장"
                     : "업무기록 저장"}

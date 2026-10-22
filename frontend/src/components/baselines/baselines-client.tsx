@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import AlertSnooze from "./alert-snooze";
 
 import { DEFAULT_ALERT_EVENT_FILTER, needsAcknowledgement, type AlertEventFilter } from "@/lib/alert-event-state";
@@ -205,7 +208,7 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
   if (thresholds.length === 0) return null;
   return <section className="mb-4 rounded-xl border border-sky-200/80 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/15">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">신규 사용자의 초기 기준</h2><p className="text-text-secondary mt-1 text-sm">개인 설정을 처음 만들 때 참고하는 기준입니다. 이미 만들어진 다른 사용자의 설정은 변경되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-sm font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
-    {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? "저장 중…" : "회사 기준 저장"}</button></div>}</>}
+    {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? <CircleLoader size="xs" /> : "회사 기준 저장"}</button></div>}</>}
   </section>;
 }
 
@@ -300,7 +303,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
           <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{selectedIds.length}건 확인 · 24시간 중지</button>
         </div>}
       </div>}
-      {history.isFetching && <p role="status" className="mb-3 text-sm">알림 이력을 불러오는 중…</p>}
+      {history.isFetching && <p role="status" className="mb-3 text-sm"><CircleLoader size="xs" /></p>}
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
       {!history.isPending && !failed && filtered.length === 0 && (
@@ -480,7 +483,7 @@ function AlertEventRow({
             onClick={onAcknowledge}
             className="received-alert-confirm"
           >
-            {acknowledging ? "처리 중…" : "확인 · 24시간 중지"}
+            {acknowledging ? <CircleLoader size="xs" /> : "확인 · 24시간 중지"}
           </button>
         )}
         <button
@@ -520,7 +523,7 @@ function AlertEventRow({
                 onClick={onRetry}
                 className="mt-2 min-h-11 rounded-lg border px-3 font-bold"
               >
-                {retrying ? "재전송 중…" : "전송 재시도"}
+                {retrying ? <CircleLoader size="xs" /> : "전송 재시도"}
               </button>
             )}
           {event.deliveryError && (
@@ -535,7 +538,7 @@ function AlertEventRow({
           <summary>발송 내역 · 수신처별 결과</summary>
           <details className="my-2"><summary className="cursor-pointer text-sm text-text-secondary">발송된 알림 원문</summary><p className="mt-2 whitespace-pre-wrap break-words text-sm leading-6">{event.message}</p></details>
           {results.isLoading ? (
-            <p>불러오는 중…</p>
+            <p><CircleLoader size="xs" /></p>
           ) : results.isError ? (
             <button
               type="button"
@@ -775,12 +778,12 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
         {error && <p role="alert" className="shrink-0 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
         <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:flex sm:justify-end sm:px-6 dark:border-white/7 dark:bg-background-dark-card">
           <button type="button" disabled={saving} onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 px-5 py-3 text-base font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">{canEdit ? "취소" : "닫기"}</button>
-          {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover min-h-12 rounded-xl px-6 py-3 text-base font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? "저장 중…" : onlyMetricKey ? "이 알림 저장" : "설정 저장"}</button>}
+          {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover min-h-12 rounded-xl px-6 py-3 text-base font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? <CircleLoader size="xs" /> : onlyMetricKey ? "이 알림 저장" : "설정 저장"}</button>}
         </footer>
       </form>
     </div>
   );
-  if (!page && smallScreen) return <p role="status" className="p-4">알림 설정 화면으로 이동 중…</p>;
+  if (!page && smallScreen) return <p role="status" className="p-4"><CircleLoader size="xs" /></p>;
   return page ? editor : createPortal(editor, document.body);
 }
 

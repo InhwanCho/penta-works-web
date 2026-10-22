@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -166,7 +169,7 @@ export default function AlertSnooze({
               disabled={busy}
               className="min-h-12 rounded-xl bg-sky-700 px-4 font-bold text-white disabled:opacity-50"
             >
-              {busy ? "저장 중…" : "알림 중지 적용"}
+              {busy ? <CircleLoader size="xs" /> : "알림 중지 적용"}
             </button>
             <button
               type="button"

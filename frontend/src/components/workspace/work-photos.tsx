@@ -1,4 +1,7 @@
 "use client";
+
+import CircleLoader from "@/components/icons/circle-loader";
+
 import {
   useEffect,
   useRef,
@@ -93,7 +96,7 @@ function Photo({
         </a>
       ) : (
         <span role={error ? "alert" : undefined}>
-          {error || "불러오는 중…"}
+          {error || <CircleLoader size="xs" />}
         </span>
       )}
       {modal.isOpen && (
@@ -167,7 +170,7 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
           </a>
         </>
       ) : (
-        <p className="py-8 text-sm">큰 사진을 불러오는 중…</p>
+        <p className="py-8 text-sm"><CircleLoader size="xs" /></p>
       )}
     </section>
   );
@@ -366,7 +369,7 @@ export function PhotoAttachments({
         </button>
         <p>
           {busy
-            ? "사진 업로드 중…"
+            ? <CircleLoader size="xs" />
             : "사진을 여기에 끌어 놓거나 복사한 사진을 붙여넣으세요."}
         </p>
         <input

@@ -27,7 +27,7 @@ const TimeSeriesLines = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-8 text-center text-sm">차트 불러오는 중…</div>
+      <div className="p-8 text-center text-sm"><CircleLoader size="xs" /></div>
     ),
   },
 );
@@ -332,7 +332,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         }}>
           <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
           <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
-          <button type="submit" disabled={isFetching} className="min-h-11 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? "조회 중…" : "기간 조회"}</button>
+          <button type="submit" disabled={isFetching} className="min-h-11 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? <CircleLoader size="xs" /> : "기간 조회"}</button>
         </form>
         {periodError && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{periodError}</p>}
         {periodActive && <div className="mt-3 space-y-2 text-xs">
