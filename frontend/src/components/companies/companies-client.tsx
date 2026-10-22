@@ -4,7 +4,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { type FormEvent, useMemo, useState } from "react";
 
 type Company = {

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import { ChoiceGroup } from "@/components/workspace/choice-group";

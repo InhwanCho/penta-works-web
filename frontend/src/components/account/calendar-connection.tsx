@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { apiFetch } from "@/lib/api";
 
 export default function CalendarConnection({ userId }: { userId: number }) {

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";

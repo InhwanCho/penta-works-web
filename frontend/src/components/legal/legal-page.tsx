@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import PolicyLinks from "./policy-links";
 import type { ReactNode } from "react";
 

@@ -2,7 +2,7 @@
 
 import CircleLoader from "@/components/icons/circle-loader";
 import { apiFetch } from "@/lib/api";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useState, type FormEvent } from "react";
 
 export default function ForgotPasswordForm() {

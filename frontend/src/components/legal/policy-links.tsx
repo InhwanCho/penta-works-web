@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 
 const links = [

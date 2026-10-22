@@ -10,7 +10,7 @@ import { formatPhone, phoneDigits } from "@/lib/phone";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, type Role } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { Controller, useForm, useWatch } from "react-hook-form";
 import {
   type FormEvent,

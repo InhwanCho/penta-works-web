@@ -18,7 +18,7 @@ import {
   type SiteRow,
   useDashboardQuery,
 } from "@/hooks/use-dashboard-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { companyMetrics, dashboardColumns } from "@/lib/company-metrics";
 import type { MetricDef } from "@/lib/metrics";
 import type { ReactNode } from "react";

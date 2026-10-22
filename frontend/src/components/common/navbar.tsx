@@ -9,7 +9,7 @@ import { useModal } from "@/components/provider/modal-provider";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 

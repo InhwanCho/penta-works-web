@@ -4,7 +4,7 @@ import PolicyLinks from "@/components/legal/policy-links";
 import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 

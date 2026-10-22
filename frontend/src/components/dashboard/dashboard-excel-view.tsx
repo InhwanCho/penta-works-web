@@ -3,7 +3,7 @@ import {useOperatingHours,nextMonitoringLabel} from "@/lib/site-operating-hours"
 
 import type { CtrlRange, SiteRow } from "@/hooks/use-dashboard-query";
 import { formatMetricMeasurement, isMetricOutOfRange, isUnmeasuredMetricValue, type MetricDef } from "@/lib/metrics";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import type { CompanyMetric } from "@/lib/company-metrics";
 import CollectionStatus, { collectionMissing } from "./collection-status";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";

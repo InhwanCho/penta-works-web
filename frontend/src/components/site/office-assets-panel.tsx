@@ -8,7 +8,7 @@ import {
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetchBlob } from "@/lib/api";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useEffect, useState } from "react";
 
 const SERVICE_LABELS: Record<string, string> = {

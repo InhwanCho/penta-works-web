@@ -5,7 +5,7 @@ import { loadPublicAuth } from "@/lib/public-auth-query";
 import AuthPageLoading from "@/components/auth/auth-page-loading";
 import CircleLoader from "@/components/icons/circle-loader";
 import { useQuery } from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";

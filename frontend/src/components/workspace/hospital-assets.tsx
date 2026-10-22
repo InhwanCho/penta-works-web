@@ -1,6 +1,6 @@
 "use client";
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";

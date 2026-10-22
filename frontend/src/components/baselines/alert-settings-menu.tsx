@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 
 export default function AlertSettingsMenu({
   canManageHospital,

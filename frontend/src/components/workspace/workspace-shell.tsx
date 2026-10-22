@@ -1,8 +1,7 @@
 "use client";
-import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import SiteFooter from "@/components/legal/site-footer";
 import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useEffect, useRef, type ReactNode } from "react";
@@ -146,9 +145,6 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             key={i.href}
             href={i.href}
             scroll={false}
-            onNavigate={() => {
-              scrollPageToTop();
-            }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
           >
@@ -176,9 +172,6 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             key={i.href}
             href={i.href}
             scroll={false}
-            onNavigate={() => {
-              scrollPageToTop();
-            }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
           >

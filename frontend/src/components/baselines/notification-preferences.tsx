@@ -2,7 +2,7 @@
 
 import HelpButton from "@/components/common/context-help";
 import { ALERT_HELP } from "@/lib/alert-help";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState, type FormEvent } from "react";

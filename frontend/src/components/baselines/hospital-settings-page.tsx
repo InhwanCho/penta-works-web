@@ -2,7 +2,7 @@
 import HelpButton from "@/components/common/context-help";
 import {useEffect,useState} from "react";
 import {useQuery,useQueryClient} from "@tanstack/react-query";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import {apiFetch,type SiteAlertSettings} from "@/lib/api";
 import {useAuth} from "@/components/provider/auth-provider";
 import {WEEKDAYS,useOperatingHours,nextMonitoringLabel,type OperatingHours,type HoursWindow} from "@/lib/site-operating-hours";

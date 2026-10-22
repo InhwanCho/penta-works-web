@@ -14,7 +14,7 @@ import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { companyMetrics } from "@/lib/company-metrics";

@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
 import { useWorkDraft } from "./use-work-draft";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

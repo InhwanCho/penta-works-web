@@ -19,7 +19,7 @@ import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import type { AlertEventSummary, AlertThreshold, SiteAlertSettings } from "@/lib/api";
 import { formatMetricMeasurement, METRICS } from "@/lib/metrics";
 import { alertSettingsPageUrl } from "@/lib/alert-settings-navigation";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";

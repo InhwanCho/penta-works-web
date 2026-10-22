@@ -7,7 +7,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PasswordFields, { type PasswordValues } from "@/components/auth/password-fields";
 import { useQuery } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/common/app-link";
 import LogoutControls from "./logout-controls";
 import PhoneInput from "@/components/forms/phone-input";
 import { formatPhone, phoneDigits } from "@/lib/phone";
