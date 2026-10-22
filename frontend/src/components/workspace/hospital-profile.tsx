@@ -31,7 +31,7 @@ export function HospitalProfile({ siteId }: { siteId: string }) {
 export function HospitalRegistration() {
   const { isAdmin } = useAuth();const [open,setOpen] = useState(false);
   if(!isAdmin)return null;
-  return <><button type="button" className="work-primary hospital-register" onClick={() => setOpen(true)}>병원 등록</button>{open && <HospitalFormDialog onClose={() => setOpen(false)} />}</>;
+  return <><button type="button" className="work-secondary hospital-register" onClick={() => setOpen(true)}>병원 등록</button>{open && <HospitalFormDialog onClose={() => setOpen(false)} />}</>;
 }
 function HospitalFormDialog({siteId,onClose}: {siteId?: string; onClose: () => void}) {
   const ref=useRef<HTMLDialogElement>(null);

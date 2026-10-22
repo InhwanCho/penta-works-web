@@ -2612,3 +2612,8 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .work-hospitals .hospital-register { min-height: 40px; padding: 9px 12px; white-space: nowrap; }
  .work-hospitals .hospital-directory-tools { padding: 0; margin-bottom: 10px; }
 }
+
+.workspace-frame .hospital-register { box-shadow: none; font-weight: 600; border-radius: 10px; }
+@media(hover:hover) { .workspace-frame .hospital-register:hover { background: var(--work-soft); color: var(--work-focus); } }
+@media(hover:none) { .workspace-frame .hospital-register:hover { background: var(--work-paper); } }
+.workspace-frame .hospital-register:active { background: var(--work-soft); }
