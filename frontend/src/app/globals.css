@@ -1808,12 +1808,11 @@ h4,
 .workspace-alert-dot { position: absolute; top: 0; left: calc(50% + 8px); }
 .settings-page { max-width: 720px; }
 .settings-page > h1 { margin-bottom: 22px; font-size: 1.6875rem; font-weight: 750; }
-.settings-account { display: flex; align-items: center; gap: 16px; padding: 24px; border-radius: 20px; background: var(--work-soft); color: var(--work-ink); border: 1px solid var(--work-line); margin-bottom: 24px; }
-.settings-account > div { min-width: 0; }
-.settings-account strong { font-size: 1.3125rem; }
-.settings-account p, .settings-account small { display: block; color: var(--work-muted); margin-top: 5px; overflow-wrap: anywhere; }
-.settings-avatar { display: grid; place-items: center; width: 56px; height: 56px; flex-shrink: 0; border-radius: 18px; background: #1967d2; color: white; font-size: 1.4375rem; font-weight: 750; }
-.settings-account-edit { display: block; color: var(--work-focus); font-size: 0.8125rem; font-weight: 650; margin-top: 12px; }
+.settings-account-section .settings-account { padding: 0; min-height: 64px; }
+.settings-account-details { min-width: 0; }
+.settings-account-details strong { font-size: 0.9375rem; font-weight: 650; }
+.settings-account-details small { overflow-wrap: anywhere; }
+.settings-account-hint { margin-top: 12px; color: var(--work-muted); font-size: 0.75rem; }
 .settings-section { padding: 20px; margin-bottom: 16px; }
 .settings-section h2 { font-size: 0.9375rem; font-weight: 750; margin-bottom: 16px; }
 .settings-section .work-radio-group legend { font-size: 0.75rem; color: var(--work-muted); }
@@ -1824,7 +1823,7 @@ h4,
 .settings-switch > span:last-child { display: flex; align-items: center; width: 44px; height: 26px; padding: 3px; border-radius: 30px; background: #8896a7; flex-shrink: 0; }
 .settings-switch > span.on:last-child { justify-content: flex-end; background: #1967d2; }
 .settings-switch i { width: 20px; height: 20px; border-radius: 50%; background: white; }
-@media (max-width: 640px) { .settings-page { padding: 22px 16px 40px; } .settings-account { padding: 20px; } }
+@media (max-width: 640px) { .settings-page { padding: 22px 16px 40px; } }
 
 /* Overview is a page, not the legacy two-column card container. */
 .work-overview { display: block; }

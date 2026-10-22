@@ -32,28 +32,18 @@ export default function SettingsClient() {
   return (
     <main className="work-page settings-page">
       <h1 className="hidden lg:block">설정</h1>
-      <Link
-        href="/account"
-        className="settings-account"
-      >
-        <span
-          className="settings-avatar"
-          aria-hidden="true"
-        >
-          {session.name?.trim().charAt(0) || "나"}
-        </span>
-        <div>
-          <strong>{session.name}</strong>
-          <p>
-            {company.data?.name ? `${company.data.name} · ` : ""}
-            {role}
-          </p>
-          <small>{session.email}</small>
-          <span className="settings-account-edit">
-            내 정보 · 비밀번호 관리 →
+      <section className="work-panel settings-section settings-account-section">
+        <h2>내 계정</h2>
+        <Link href="/account" className="settings-link settings-account" aria-label={`${session.name} 내 정보 · 비밀번호 관리`}>
+          <span className="settings-account-details">
+            <strong>{session.name}</strong>
+            <small>{session.email}</small>
+            <small>{company.data?.name ? `${company.data.name} · ` : ""}{role}</small>
           </span>
-        </div>
-      </Link>
+          <span aria-hidden="true">›</span>
+        </Link>
+        <p className="settings-account-hint">내 정보 · 비밀번호 관리</p>
+      </section>
       <section className="work-panel settings-section">
         <h2>화면 설정</h2>
         <ChoiceGroup
