@@ -2580,3 +2580,23 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
   .received-alert.is-compact.is-expanded .received-alert-reading { max-width: 100%; align-items: flex-start; }
   .received-alert.is-compact.is-expanded .received-alert-reading span { white-space: normal; overflow-wrap: anywhere; }
 }
+
+/* Align the directory with the flat workspace panels. */
+.work-hospitals .hospital-directory-tools { margin-bottom: 14px; padding: 14px 16px; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
+.work-hospitals .hospital-directory-tools .work-search { margin: 0; }
+.hospital-directory-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; color: var(--work-muted); font-size: .75rem; line-height: 1.5; }
+.work-hospitals .work-hospital-grid { gap: 10px; align-items: stretch; }
+.work-hospitals .work-hospital-grid .work-hospital { padding: 16px; box-shadow: none; border-radius: 14px; }
+.work-hospitals .work-hospital > div { min-width: 0; }
+.hospital-directory-title { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; }
+.work-hospitals .work-hospital-grid .hospital-directory-title strong { display: block; font-size: 1rem; line-height: 1.45; }
+.work-hospitals .hospital-list-connection { margin: 0; padding: 3px 7px; background: var(--work-hover); color: var(--work-muted); font-size: .6875rem; line-height: 1.4; white-space: nowrap; }
+.work-hospitals .hospital-list-connection.is-monitoring { background: var(--work-soft); color: var(--work-focus); }
+.work-hospitals .work-hospital-grid .hospital-directory-equipment { margin-top: 6px; font-size: .8125rem; line-height: 1.5; font-weight: 500; }
+.work-hospitals .work-hospital-grid .hospital-directory-address { margin-top: 3px; font-size: .75rem; line-height: 1.5; }
+@media(max-width:1023px) {
+ .work-hospitals .hospital-directory-tools { padding: 12px; }
+ .work-hospitals .work-hospital-grid .work-hospital { padding: 12px 14px; border-radius: 12px; }
+}
+@media(hover:none) { .work-hospitals .work-hospital:hover { background: var(--work-paper); } }
+.work-hospitals .work-hospital:active { background: var(--work-soft); }

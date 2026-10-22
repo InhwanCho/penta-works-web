@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { useDashboardQuery } from "@/hooks/use-dashboard-query";
+import { visibleDashboardSites } from "@/lib/dashboard-site-visibility";
+import { orderHospitalDirectory } from "@/lib/hospital-directory-order";
 import { useWorkDraft } from "./use-work-draft";
 import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
@@ -253,7 +256,15 @@ export function HospitalsPage() {
       >("/workspace/hospitals"),
     enabled: !!session,
   });
+  const dashboard = useDashboardQuery();
+  const hiddenSites = useQuery({
+    queryKey: ["dashboard-hidden-sites", session?.id],
+    queryFn: () => apiFetch<string[]>("/dashboard/hidden-sites"), enabled: !!session,
+  });
+  const monitoringIds = new Set(visibleDashboardSites(dashboard.data?.rows || [], hiddenSites.data || []).map(s => s.siteDb));
   const [search, setSearch] = useState("");
+  const rows = orderHospitalDirectory(sites.data || [], monitoringIds).filter(s =>
+    `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`.toLowerCase().includes(search.trim().toLowerCase()));
   return (
     <main className="work-page work-hospitals">
       <div className="hospital-directory-heading">
@@ -263,6 +274,7 @@ export function HospitalsPage() {
         />
         <HospitalRegistration />
       </div>
+      <div className="hospital-directory-tools">
       <input
         className="work-input work-search"
         placeholder="병원명 · 장비 · 주소 검색"
@@ -270,6 +282,8 @@ export function HospitalsPage() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
+      <div className="hospital-directory-meta"><span>병원 {rows.length}곳</span><span>모니터링 우선 · 이름순</span></div>
+      </div>
       {sites.error ? (
         <ErrorState
           error={sites.error}
@@ -279,23 +293,17 @@ export function HospitalsPage() {
         <p>병원을 불러오는 중…</p>
       ) : (
         <div className="work-hospital-grid">
-          {(sites.data || [])
-            .filter((s) =>
-              `${s.name || s.siteDb} ${s.address} ${s.equipment.join(" ")}`
-                .toLowerCase()
-                .includes(search.trim().toLowerCase()),
-            )
-            .map((s) => (
+          {rows            .map((s) => (
               <Link
                 className="work-hospital"
                 key={s.siteDb}
                 href={`/sites/${Number(s.siteDb) || s.siteDb}`}
               >
                 <div>
-                  <strong>{s.name || s.siteDb}</strong>
-                  <span className="hospital-list-connection">
-                    {s.monitoringConnected ? "모니터링 연결" : "서비스 관리"}
-                  </span>
+                  <div className="hospital-directory-title"><strong>{s.name || s.siteDb}</strong>
+                  <span className={`hospital-list-connection ${monitoringIds.has(s.siteDb) ? "is-monitoring" : ""}`}>
+                    {monitoringIds.has(s.siteDb) ? "모니터링" : "서비스 관리"}
+                  </span></div>
                   <p className="hospital-directory-equipment">
                     {s.equipment.join(" / ") || "장비 정보 미등록"}
                   </p>
