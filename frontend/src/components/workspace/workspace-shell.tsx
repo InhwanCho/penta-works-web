@@ -147,7 +147,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             href={i.href}
             scroll={false}
             onNavigate={() => {
-              if (path === i.href) scrollPageToTop();
+              scrollPageToTop();
             }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
@@ -177,7 +177,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             href={i.href}
             scroll={false}
             onNavigate={() => {
-              if (path === i.href) scrollPageToTop();
+              scrollPageToTop();
             }}
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
