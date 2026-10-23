@@ -898,28 +898,6 @@ function CompanyCard({
                 {formatBusinessNumber(company.businessRegistrationNumber)}
               </p>
             </div>
-            {company.businessRegistrationUrl && (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={openDocument}
-                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
-                >
-                  등록증 보기
-                </button>
-                {!company.businessRegistrationVerifiedAt && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={verify}
-                    className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
-                  >
-                    확인 완료
-                  </button>
-                )}
-              </div>
-            )}
           </div>
           {editingName && (
             <form
@@ -944,6 +922,28 @@ function CompanyCard({
             </form>
           )}
           <h4 className="management-form-divider font-bold">사업자등록증</h4>
+          {company.businessRegistrationUrl && (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={openDocument}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
+              >
+                등록증 보기
+              </button>
+              {!company.businessRegistrationVerifiedAt && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={verify}
+                  className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                >
+                  등록증 확인 완료
+                </button>
+              )}
+            </div>
+          )}
           <details
             className="management-disclosure mt-3"
             open={!company.businessRegistrationUrl}

@@ -1028,7 +1028,7 @@ function InvitationSection({
         className={`${CARD} space-y-4 p-5 sm:p-6`}
       >
         <div>
-          <h2 className="text-lg font-bold">직원 초대</h2>
+          <h2 className="text-lg font-bold">초대할 직원 정보</h2>
           <p className="text-text-secondary mt-1 text-sm">
             이메일·이름을 입력하고 권한을 선택하세요. 초대받은 직원이 비밀번호를
             정하면 가입이 완료됩니다.
