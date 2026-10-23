@@ -2817,3 +2817,94 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 .management-task-card > .management-task-symbol { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; align-self: flex-start; margin-top: 2px; border-radius: 10px; color: var(--work-focus); background: var(--work-soft); }
 .management-task-symbol svg { width: 22px; height: 22px; }
 .management-task-copy { flex: 1; min-width: 0; }
+
+/* Public introduction, isolated from authenticated workspace and legal documents. */
+body:has(.service-about) { background: #fff; }
+.service-about { background: #fff; color: #182b3c; color-scheme: light; --intro-blue: #225c91; }
+.service-container { width: min(1100px, calc(100% - 48px)); margin-inline: auto; }
+.service-about h1, .service-about h2, .service-about h3 { font-weight: 750; word-break: keep-all; letter-spacing: -.04em; }
+.service-about p { word-break: keep-all; overflow-wrap: anywhere; }
+.service-eyebrow { color: var(--intro-blue); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+.service-hero { padding-block: 96px 64px; text-align: center; }
+.service-hero h1 { margin-top: 20px; font-size: clamp(38px, 5.5vw, 68px); line-height: 1.22; }
+.service-lead { margin-top: 24px; font-size: clamp(15px, 1.8vw, 19px); line-height: 1.85; color: #586a79; }
+.service-button { display: inline-flex; align-items: center; justify-content: center; gap: 20px; min-height: 48px; padding: 12px 24px; border-radius: 8px; background: #225c91; color: #fff; font-size: 14px; font-weight: 650; text-decoration: none; }
+.service-hero > .service-button { margin-top: 30px; }
+.service-button:focus-visible { outline: 2px solid #225c91; outline-offset: 4px; }
+.service-hero-image { margin-top: 60px; overflow: hidden; border: 1px solid #dce4ec; border-radius: 14px; box-shadow: 0 18px 65px #183d6510; background: #f2f6f9; }
+.service-hero-image img { display: block; width: 100%; height: auto; }
+.service-window-bar { display: flex; align-items: center; gap: 6px; height: 34px; padding-inline: 14px; background: #fff; border-bottom: 1px solid #e7edf2; }
+.service-window-bar i { width: 7px; height: 7px; border-radius: 50%; background: #d7e0e8; }
+.service-window-bar span { flex: 1; margin-right: 35px; color: #798795; font-size: 10px; }
+.service-image-note { margin-top: 18px; font-size: 12px; line-height: 1.7; color: #788795; }
+.service-band { background: #f5f8fb; }
+#service-screens { padding-block: 96px; scroll-margin-top: 70px; }
+.service-section-heading { text-align: center; }
+.service-section-heading h2, .service-showcase h2, .service-closing h2 { margin-top: 16px; font-size: clamp(28px, 3.3vw, 42px); line-height: 1.35; }
+.service-section-heading > p:last-child { margin-top: 20px; color: #627484; font-size: 16px; line-height: 1.8; }
+.service-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px 48px; margin-top: 64px; }
+.service-feature-number { font-size: 12px; font-weight: 650; color: #6082a2; }
+.service-feature-grid h3, .service-steps h3 { margin-top: 12px; font-size: 19px; }
+.service-feature-grid article p, .service-steps li p { margin-top: 10px; color: #627484; font-size: 14px; line-height: 1.85; }
+.service-showcase { display: grid; grid-template-columns: 1fr 1.15fr; align-items: center; gap: 72px; padding-block: 100px; }
+.service-showcase-copy > p:not(.service-eyebrow) { margin-top: 24px; color: #627484; line-height: 1.9; font-size: 16px; }
+.service-showcase ul { display: grid; gap: 12px; margin-top: 28px; color: #3a5267; font-size: 14px; }
+.service-showcase li::before { content: '✓'; margin-right: 10px; color: #225c91; }
+.service-calendar-shot { min-width: 0; }
+.service-calendar-shot img { display: block; width: 100%; height: auto; border-radius: 12px; border: 1px solid #dce4ec; box-shadow: 0 12px 40px #183d650c; }
+.service-about figcaption { margin-top: 14px; text-align: center; color: #7a8997; font-size: 12px; }
+.service-showcase-reverse .service-showcase-copy { grid-column: 2; grid-row: 1; }
+.service-phone-shot { grid-column: 1; grid-row: 1; justify-self: center; width: min(100%, 320px); }
+.service-phone-shot img { width: 100%; height: auto; border: 6px solid #213342; border-radius: 28px; box-shadow: 0 18px 48px #183d6512; }
+.service-steps { padding-block: 100px; }
+.service-steps ol { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; margin-top: 54px; list-style: none; }
+.service-steps li { border-top: 1px solid #dce4ec; padding-top: 24px; }
+.service-steps li > span { color: #225c91; font-size: 12px; font-weight: 700; }
+.service-faq { max-width: 800px; padding-block: 24px 100px; }
+.service-faq > div:last-child { margin-top: 40px; }
+.service-faq details { border-bottom: 1px solid #e0e7ee; }
+.service-faq summary { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-block: 23px; cursor: pointer; list-style: none; font-size: 16px; font-weight: 600; }
+.service-faq summary::-webkit-details-marker { display: none; }
+.service-faq summary span { color: #658097; transition: transform .15s; }
+.service-faq details[open] summary span { transform: rotate(180deg); }
+.service-faq details p { padding-bottom: 24px; font-size: 14px; color: #627484; line-height: 1.9; }
+.service-closing { background: #edf4fa; padding-block: 80px; text-align: center; }
+.service-closing .service-button { margin-top: 28px; }
+body:has(.service-about) .site-footer { background: #fff; color: #627484; border-color: #e0e7ee; }
+body:has(.service-about) .site-footer strong { color: #182b3c; }
+body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
+@media (hover: hover) and (pointer: fine) {
+  .service-button:hover { background: #194c7b; }
+  .service-faq summary:hover { color: #225c91; }
+}
+@media (max-width: 767px) {
+  .service-container { width: calc(100% - 36px); }
+  .service-hero { padding-block: 60px 44px; }
+  .service-hero h1 { font-size: clamp(34px, 8vw, 48px); }
+  .service-hero-image { margin-top: 40px; border-radius: 8px; }
+  .service-window-bar { height: 25px; }
+  .service-window-bar i { width: 5px; height: 5px; }
+  .service-image-note { font-size: 11px; }
+  #service-screens { padding-block: 64px; }
+  .service-section-heading h2, .service-showcase h2, .service-closing h2 { font-size: 29px; }
+  .service-section-heading > p:last-child { font-size: 14px; }
+  .service-feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 22px; margin-top: 40px; }
+  .service-feature-grid h3 { font-size: 17px; }
+  .service-feature-grid article p { font-size: 13px; }
+  .service-showcase { grid-template-columns: 1fr; gap: 36px; padding-block: 64px; }
+  .service-showcase-copy > p:not(.service-eyebrow) { margin-top: 18px; font-size: 14px; }
+  .service-showcase-reverse .service-showcase-copy, .service-phone-shot { grid-column: auto; grid-row: auto; }
+  .service-phone-shot { width: min(82%, 320px); }
+  .service-calendar-shot { max-width: 540px; justify-self: center; }
+  .service-steps { padding-block: 64px; }
+  .service-steps ol { grid-template-columns: 1fr; gap: 28px; margin-top: 36px; }
+  .service-steps li { padding-top: 18px; }
+  .service-steps h3 { margin-top: 8px; font-size: 18px; }
+  .service-faq { padding-block: 12px 64px; }
+  .service-faq summary { font-size: 14px; padding-block: 20px; }
+  .service-closing { padding-block: 60px; }
+  .service-desktop-break { display: none; }
+}
+@media (max-width: 767px) {
+  .service-hero-image { max-width: 320px; margin-inline: auto; }
+}
