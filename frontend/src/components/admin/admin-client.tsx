@@ -1,7 +1,7 @@
 "use client";
 
 import { ChoiceGroup } from "@/components/workspace/choice-group";
-import ManagementTabs from "@/components/common/management-tabs";
+import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
 import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
 import DeleteAccountDialog from "@/components/admin/delete-account-dialog";
@@ -80,15 +80,68 @@ type PasswordResetCreated = {
 };
 
 const CARD =
-  "rounded-xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card";
+  "management-panel rounded-xl border border-slate-200/80 bg-white dark:border-white/10 dark:bg-background-dark-card";
 const INPUT =
   "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
 
+const ADMIN_TASKS = [
+  {
+    value: "users",
+    label: "사용자·권한",
+    description: "직원 정보, 사용 권한과 접근할 병원을 변경합니다.",
+    action: "사용자 관리",
+  },
+  {
+    value: "invitations",
+    label: "직원 초대",
+    description: "이메일로 새 직원을 초대하고 가입 여부를 확인합니다.",
+    action: "직원 초대하기",
+  },
+  {
+    value: "sites",
+    label: "병원 정보",
+    description: "병원을 추가하거나 이름·주소·연락처를 수정합니다.",
+    action: "병원 관리",
+  },
+  {
+    value: "metrics",
+    label: "모니터링 표시",
+    description: "회사에서 보는 측정항목의 이름·순서·표시 여부를 설정합니다.",
+    action: "표시 설정",
+  },
+  {
+    value: "audit",
+    label: "변경 기록",
+    description: "누가 언제 사용자와 설정을 변경했는지 확인합니다.",
+    action: "기록 확인",
+  },
+] as const;
+type AdminTask = "home" | (typeof ADMIN_TASKS)[number]["value"];
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
-  const [tab, setTab] = useState<
-    "users" | "invitations" | "sites" | "metrics" | "audit"
-  >("users");
+  const [tab, setTab] = useState<AdminTask>("home");
+  useEffect(() => {
+    const sync = () => {
+      const requested = new URLSearchParams(window.location.search).get(
+        "section",
+      );
+      setTab(
+        ADMIN_TASKS.find((task) => task.value === requested)?.value ?? "home",
+      );
+    };
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+  function selectTask(next: AdminTask) {
+    const url = new URL(window.location.href);
+    if (next === "home") url.searchParams.delete("section");
+    else url.searchParams.set("section", next);
+    window.history.pushState(null, "", url);
+    setTab(next);
+    scrollPageToTop();
+  }
+  const task = ADMIN_TASKS.find((item) => item.value === tab);
   const users = useQuery({
     queryKey: ["admin-users"],
     queryFn: () => apiFetch<UserRow[]>("/admin/accounts/users"),
@@ -121,64 +174,125 @@ export default function AdminClient() {
   if (!session || session.role === "USER") return <AccessDenied />;
 
   return (
-    <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7 lg:px-6">
-      <header className="relative mb-6 overflow-hidden rounded-2xl bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white shadow-[0_10px_28px_rgba(17,65,94,0.14)] sm:px-7 sm:py-7">
-        <div className="absolute -top-16 -right-12 h-48 w-48 rounded-full bg-white/8 blur-sm" />
-        <div className="absolute -right-4 -bottom-20 h-40 w-40 rounded-full bg-sky-300/10" />
-        <div className="relative">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <p className="text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">
-              Workspace
-            </p>
-            {company.data && (
-              <span className="rounded-md border border-white/15 bg-white/10 px-2 py-1 text-[11px] font-bold text-white/85">
-                {company.data.name} · {company.data.code}
-              </span>
-            )}
-          </div>
-          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
-            워크스페이스 관리
-          </h1>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/70">
-            사용자·병원과 대시보드 측정항목을 관리하세요.
-          </p>
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            <SummaryChip
-              value={users.data?.length ?? 0}
-              label="전체 사용자"
-            />
-            <SummaryChip
-              value={
-                (users.data ?? []).filter((user) => user.status === "ACTIVE")
-                  .length
-              }
-              label="활성 계정"
-            />
-            <SummaryChip
-              value={invitations.data?.length ?? 0}
-              label="대기 중 초대"
-            />
-            <SummaryChip
-              value={sites.data?.length ?? 0}
-              label="병원"
-            />
-          </div>
-        </div>
+    <main className="management-page">
+      <header className="management-heading">
+        {tab === "home" ? (
+          <Link
+            href="/settings"
+            className="management-back"
+          >
+            ‹ 설정
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() => selectTask("home")}
+            className="management-back"
+          >
+            ‹ 관리설정
+          </button>
+        )}
+        <h1>{task?.label ?? "관리설정"}</h1>
+        <p>
+          {task?.description ??
+            "직원 계정과 병원 정보, 모니터링 화면을 관리합니다."}
+        </p>
+        {company.data && (
+          <small>
+            {company.data.name} · {company.data.code}
+          </small>
+        )}
       </header>
-
-      <ManagementTabs
-        label="관리 설정"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { value: "users", label: "사용자" },
-          { value: "invitations", label: "초대" },
-          { value: "sites", label: "병원" },
-          { value: "metrics", label: "측정항목" },
-          { value: "audit", label: "활동 기록" },
-        ]}
-      />
-
+      {tab === "home" ? (
+        <>
+          <section className="management-start">
+            <h2>어떤 작업을 하시겠어요?</h2>
+            <p>
+              새 직원은 초대 후 직접 가입합니다. 기존 직원의 정보는
+              사용자·권한에서 변경하세요.
+            </p>
+            <div className="management-counts">
+              <span>
+                사용자 <strong>{users.data?.length ?? "—"}명</strong>
+              </span>
+              <span>
+                가입 대기 <strong>{invitations.data?.length ?? "—"}명</strong>
+              </span>
+              <span>
+                병원 <strong>{sites.data?.length ?? "—"}곳</strong>
+              </span>
+            </div>
+          </section>
+          <div className="management-task-grid">
+            {ADMIN_TASKS.map((item) => (
+              <button
+                type="button"
+                key={item.value}
+                onClick={() => selectTask(item.value)}
+                className="management-task-card"
+              >
+                <div>
+                  <strong>{item.label}</strong>
+                  <p>{item.description}</p>
+                  <span>{item.action}</span>
+                </div>
+                <span aria-hidden="true">›</span>
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="management-task-switch">
+          <label htmlFor="admin-task-switch">다른 작업</label>
+          <select
+            id="admin-task-switch"
+            value={tab}
+            onChange={(event) => selectTask(event.target.value as AdminTask)}
+          >
+            {ADMIN_TASKS.map((item) => (
+              <option
+                key={item.value}
+                value={item.value}
+              >
+                {item.label}
+              </option>
+            ))}
+          </select>
+          {tab === "users" && (
+            <button
+              type="button"
+              className="management-primary"
+              onClick={() => selectTask("invitations")}
+            >
+              직원 초대
+            </button>
+          )}
+        </div>
+      )}
+      {(users.isError ||
+        sites.isError ||
+        company.isError ||
+        invitations.isError ||
+        (tab === "audit" && audits.isError)) && (
+        <p
+          role="alert"
+          className="management-notice"
+        >
+          일부 정보를 불러오지 못했습니다.{" "}
+          <button
+            type="button"
+            onClick={() => {
+              void users.refetch();
+              void sites.refetch();
+              void company.refetch();
+              void invitations.refetch();
+              if (tab === "audit") void audits.refetch();
+            }}
+          >
+            다시 시도
+          </button>
+        </p>
+      )}
       {tab === "users" && (
         <UserSection
           users={users.data ?? []}
@@ -268,37 +382,45 @@ function UserSection({
           onChange={(event) => setQuery(event.target.value)}
           placeholder="이름·이메일·휴대폰번호 검색"
         />
-        <ChoiceGroup
-          legend="권한"
-          value={roleFilter}
-          onChange={(value) => setRoleFilter(value as "ALL" | Role)}
-          options={[
-            ["ALL", "전체"],
-            ["PLATFORM_ADMIN", "플랫폼 관리자"],
-            ["SUPER_ADMIN", "최고관리자"],
-            ["ADMIN", "관리자"],
-            ["USER", "일반 사용자"],
-          ]}
-        />
-        <ChoiceGroup
-          legend="상태"
-          value={statusFilter}
-          onChange={(value) =>
-            setStatusFilter(value as "ALL" | "ACTIVE" | "SUSPENDED")
-          }
-          options={[
-            ["ALL", "전체"],
-            ["ACTIVE", "활성"],
-            ["SUSPENDED", "정지"],
-          ]}
-        />
+        <details className="management-filters">
+          <summary>
+            필터
+            {roleFilter !== "ALL" || statusFilter !== "ALL" ? " · 적용 중" : ""}
+          </summary>
+          <div>
+            <ChoiceGroup
+              legend="권한"
+              value={roleFilter}
+              onChange={(value) => setRoleFilter(value as "ALL" | Role)}
+              options={[
+                ["ALL", "전체"],
+                ["PLATFORM_ADMIN", "플랫폼 관리자"],
+                ["SUPER_ADMIN", "최고관리자"],
+                ["ADMIN", "관리자"],
+                ["USER", "일반 사용자"],
+              ]}
+            />
+            <ChoiceGroup
+              legend="상태"
+              value={statusFilter}
+              onChange={(value) =>
+                setStatusFilter(value as "ALL" | "ACTIVE" | "SUSPENDED")
+              }
+              options={[
+                ["ALL", "전체"],
+                ["ACTIVE", "사용 중"],
+                ["SUSPENDED", "이용 중지"],
+              ]}
+            />
+          </div>
+        </details>
       </div>
       <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 px-1 text-xs">
         각 사용자는 대시보드에 표시하는 병원의 알림을 본인 휴대폰번호로
         받습니다. 숨긴 병원의 알림은 중지됩니다.
       </p>
       <div className={`${CARD} overflow-x-auto`}>
-        <table className="admin-card-table w-full min-w-[900px] text-left text-sm whitespace-nowrap">
+        <table className="admin-card-table admin-user-table w-full min-w-[900px] text-left text-sm whitespace-nowrap">
           <thead className="text-text-secondary dark:text-text-dark-primary/70 border-b border-slate-200 bg-slate-50 text-xs dark:border-white/10 dark:bg-white/5">
             <tr>
               <th
@@ -411,7 +533,7 @@ function UserSection({
                       aria-expanded={editingId === user.id}
                       className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-bold text-sky-700 dark:border-white/10 dark:text-sky-300"
                     >
-                      {editingId === user.id ? "닫기" : "관리"}
+                      {editingId === user.id ? "수정 닫기" : "정보·권한 수정"}
                     </button>
                   </td>
                 </tr>
@@ -574,10 +696,7 @@ function UserEditor({
   }
 
   return (
-    <article
-      className={`${CARD} group relative overflow-hidden p-5 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_24px_rgba(22,58,82,0.075)]`}
-    >
-      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-400 via-cyan-400 to-emerald-400 opacity-0 transition group-hover:opacity-100" />
+    <article className={`${CARD} management-user-editor p-5`}>
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-base font-extrabold text-sky-700 dark:from-sky-950 dark:to-cyan-950 dark:text-sky-200">
@@ -621,8 +740,8 @@ function UserEditor({
             value={status}
             onChange={(v) => setStatus(v as "ACTIVE" | "SUSPENDED")}
             options={[
-              ["ACTIVE", "활성"],
-              ["SUSPENDED", "정지"],
+              ["ACTIVE", "사용 중"],
+              ["SUSPENDED", "이용 중지"],
             ]}
           />
         </fieldset>
@@ -661,6 +780,14 @@ function UserEditor({
           </label>
         </div>
       )}
+      {!immutable && (
+        <p className="management-field-help mt-3">
+          {role === "USER"
+            ? "일반 사용자는 아래에서 선택한 병원에만 접근할 수 있습니다."
+            : "관리자는 회사의 전체 병원에 접근하고 사용자를 관리할 수 있습니다."}{" "}
+          변경한 권한과 정보는 저장 후 적용됩니다.
+        </p>
+      )}
       {role === "USER" && !immutable && (
         <SiteChecks
           sites={sites}
@@ -679,7 +806,7 @@ function UserEditor({
             onClick={createPasswordReset}
             className="dark:text-text-dark-primary/75 cursor-pointer rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
           >
-            비밀번호 초기화 링크
+            비밀번호 재설정 안내
           </button>
           <button
             type="button"
@@ -687,7 +814,14 @@ function UserEditor({
             onClick={save}
             className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
           >
-            {saving ? <CircleLoader size="xs" inline /> : "변경 저장"}
+            {saving ? (
+              <CircleLoader
+                size="xs"
+                inline
+              />
+            ) : (
+              "변경 저장"
+            )}
           </button>
           {canDelete && (
             <button
@@ -894,9 +1028,10 @@ function InvitationSection({
         className={`${CARD} space-y-4 p-5 sm:p-6`}
       >
         <div>
-          <h2 className="text-lg font-bold">새 사용자 초대</h2>
+          <h2 className="text-lg font-bold">직원 초대</h2>
           <p className="text-text-secondary mt-1 text-sm">
-            초대받은 사용자가 직접 비밀번호를 설정합니다.
+            이메일·이름을 입력하고 권한을 선택하세요. 초대받은 직원이 비밀번호를
+            정하면 가입이 완료됩니다.
           </p>
         </div>
         <fieldset
@@ -1062,8 +1197,14 @@ function InvitationSection({
           disabled={saving}
           className="bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
         >
-
-          {saving && !resendingId ? <CircleLoader size="xs" inline /> : "7일 초대 링크 생성"}
+          {saving && !resendingId ? (
+            <CircleLoader
+              size="xs"
+              inline
+            />
+          ) : (
+            "직원 초대하기"
+          )}
         </button>
         {link && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
@@ -1115,8 +1256,14 @@ function InvitationSection({
                   onClick={() => resend(invitation.id)}
                   className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-sky-700 transition hover:bg-sky-50 disabled:opacity-40 dark:text-sky-300 dark:hover:bg-sky-950/30"
                 >
-
-                  {resendingId === invitation.id ? <CircleLoader size="xs" inline /> : "재발송"}
+                  {resendingId === invitation.id ? (
+                    <CircleLoader
+                      size="xs"
+                      inline
+                    />
+                  ) : (
+                    "재발송"
+                  )}
                 </button>
                 <button
                   type="button"
@@ -1180,61 +1327,89 @@ function SiteSection({
     }
   }
 
+  const [siteQuery, setSiteQuery] = useState("");
+  const visibleSites = sites.filter((site) =>
+    `${site.name ?? ""} ${site.id} ${site.address ?? ""}`
+      .toLowerCase()
+      .includes(siteQuery.trim().toLowerCase()),
+  );
   return (
     <section>
-      <form
-        onSubmit={create}
-        className={`${CARD} mb-5 grid gap-3 p-5 sm:grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)_auto] sm:items-end sm:p-6`}
-      >
-        <div className="sm:col-span-3">
-          <h2 className="text-lg font-bold">새 병원 추가</h2>
-          <p className="text-text-secondary mt-1 text-sm">
-            {company ? `${company.name} 회사에 추가됩니다. ` : ""}코드는 생성 후
-            변경할 수 없습니다. 기존 측정 데이터와 같은 코드를 사용하면 자동으로
-            연결됩니다.
-          </p>
-        </div>
-        <label className="text-text-secondary text-xs font-bold">
-          병원 코드
-          <input
-            className={`${INPUT} mt-1.5`}
-            required
-            maxLength={32}
-            pattern="[A-Za-z0-9_-]+"
-            placeholder="예: 031"
-            value={id}
-            onChange={(event) => setId(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-xs font-bold">
-          병원 이름
-          <input
-            className={`${INPUT} mt-1.5`}
-            required
-            maxLength={20}
-            placeholder="병원 이름"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+      <details className="management-disclosure mb-4">
+        <summary>
+          병원 추가 <span>새 모니터링 병원을 등록할 때</span>
+        </summary>
+        <form
+          onSubmit={create}
+          className={`${CARD} mb-5 grid gap-3 p-5 sm:grid-cols-[minmax(0,.7fr)_minmax(0,1.3fr)_auto] sm:items-end sm:p-6`}
         >
-          {saving ? <CircleLoader size="xs" inline /> : "병원 추가"}
-        </button>
-        {message && (
-          <p className="text-text-secondary text-xs sm:col-span-3">{message}</p>
-        )}
-      </form>
+          <div className="sm:col-span-3">
+            <h2 className="text-lg font-bold">새 병원 추가</h2>
+            <p className="text-text-secondary mt-1 text-sm">
+              {company ? `${company.name} 회사에 추가됩니다. ` : ""}코드는 생성
+              후 변경할 수 없습니다. 기존 측정 데이터와 같은 코드를 사용하면
+              자동으로 연결됩니다.
+            </p>
+          </div>
+          <label className="text-text-secondary text-xs font-bold">
+            병원 코드
+            <input
+              className={`${INPUT} mt-1.5`}
+              required
+              maxLength={32}
+              pattern="[A-Za-z0-9_-]+"
+              placeholder="예: 031"
+              value={id}
+              onChange={(event) => setId(event.target.value)}
+            />
+          </label>
+          <label className="text-text-secondary text-xs font-bold">
+            병원 이름
+            <input
+              className={`${INPUT} mt-1.5`}
+              required
+              maxLength={20}
+              placeholder="병원 이름"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {saving ? (
+              <CircleLoader
+                size="xs"
+                inline
+              />
+            ) : (
+              "병원 추가"
+            )}
+          </button>
+          {message && (
+            <p className="text-text-secondary text-xs sm:col-span-3">
+              {message}
+            </p>
+          )}
+        </form>
+      </details>
+      <input
+        type="search"
+        aria-label="관리할 병원 검색"
+        placeholder="병원명·코드·주소 검색"
+        className={`${INPUT} mb-4`}
+        value={siteQuery}
+        onChange={(event) => setSiteQuery(event.target.value)}
+      />
       {loading ? (
         <Loading />
-      ) : sites.length === 0 ? (
+      ) : visibleSites.length === 0 ? (
         <Empty>등록된 병원이 없습니다.</Empty>
       ) : (
         <div className="space-y-5">
-          {groupSites(sites).map((group) => (
+          {groupSites(visibleSites).map((group) => (
             <section
               key={group.companyId}
               aria-labelledby={`company-sites-${group.companyId}`}
@@ -1316,83 +1491,96 @@ function SiteEditor({ site }: { site: SiteOption }) {
   }
 
   return (
-    <form
-      onSubmit={save}
-      className={`${CARD} p-5`}
-    >
-      <div className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-extrabold">{site.name ?? "이름 없는 병원"}</h3>
-          <p className="text-text-secondary mt-0.5 text-xs">
-            병원 코드 {site.id}
-          </p>
+    <details className="management-disclosure">
+      <summary>
+        <strong>{site.name ?? "이름 없는 병원"}</strong>
+        <span>코드 {site.id} · 정보 수정</span>
+      </summary>
+      <form
+        onSubmit={save}
+        className={`${CARD} p-5`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="font-extrabold">{site.name ?? "이름 없는 병원"}</h3>
+            <p className="text-text-secondary mt-0.5 text-xs">
+              병원 코드 {site.id}
+            </p>
+          </div>
+          <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">
+            코드 고정
+          </span>
         </div>
-        <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">
-          코드 고정
-        </span>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        <label className="text-text-secondary text-xs font-bold">
-          병원 이름
-          <input
-            className={`${INPUT} mt-1.5`}
-            required
-            maxLength={20}
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-xs font-bold">
-          시간대
-          <input
-            className={`${INPUT} mt-1.5`}
-            required
-            maxLength={40}
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-xs font-bold sm:col-span-2">
-          주소
-          <input
-            className={`${INPUT} mt-1.5`}
-            maxLength={255}
-            value={address}
-            onChange={(event) => setAddress(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-xs font-bold">
-          담당자
-          <input
-            className={`${INPUT} mt-1.5`}
-            maxLength={80}
-            value={contactName}
-            onChange={(event) => setContactName(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-xs font-bold">
-          담당자 연락처
-          <input
-            className={`${INPUT} mt-1.5`}
-            maxLength={30}
-            value={contactPhone}
-            onChange={(event) => setContactPhone(event.target.value)}
-          />
-        </label>
-      </div>
-      <div className="mt-4 flex items-center justify-end gap-3 border-t border-slate-100 pt-4 dark:border-white/7">
-        {message && (
-          <span className="text-text-secondary text-xs">{message}</span>
-        )}
-        <button
-          type="submit"
-          disabled={saving}
-          className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
-        >
-          {saving ? <CircleLoader size="xs" inline /> : "정보 저장"}
-        </button>
-      </div>
-    </form>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-text-secondary text-xs font-bold">
+            병원 이름
+            <input
+              className={`${INPUT} mt-1.5`}
+              required
+              maxLength={20}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+            />
+          </label>
+          <label className="text-text-secondary text-xs font-bold">
+            시간대
+            <input
+              className={`${INPUT} mt-1.5`}
+              required
+              maxLength={40}
+              value={timezone}
+              onChange={(event) => setTimezone(event.target.value)}
+            />
+          </label>
+          <label className="text-text-secondary text-xs font-bold sm:col-span-2">
+            주소
+            <input
+              className={`${INPUT} mt-1.5`}
+              maxLength={255}
+              value={address}
+              onChange={(event) => setAddress(event.target.value)}
+            />
+          </label>
+          <label className="text-text-secondary text-xs font-bold">
+            담당자
+            <input
+              className={`${INPUT} mt-1.5`}
+              maxLength={80}
+              value={contactName}
+              onChange={(event) => setContactName(event.target.value)}
+            />
+          </label>
+          <label className="text-text-secondary text-xs font-bold">
+            담당자 연락처
+            <input
+              className={`${INPUT} mt-1.5`}
+              maxLength={30}
+              value={contactPhone}
+              onChange={(event) => setContactPhone(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="mt-4 flex items-center justify-end gap-3 border-t border-slate-100 pt-4 dark:border-white/7">
+          {message && (
+            <span className="text-text-secondary text-xs">{message}</span>
+          )}
+          <button
+            type="submit"
+            disabled={saving}
+            className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {saving ? (
+              <CircleLoader
+                size="xs"
+                inline
+              />
+            ) : (
+              "정보 저장"
+            )}
+          </button>
+        </div>
+      </form>
+    </details>
   );
 }
 
@@ -1705,14 +1893,6 @@ function actionLabel(value: string) {
     )[value] ?? value
   );
 }
-function SummaryChip({ value, label }: { value: number; label: string }) {
-  return (
-    <div className="rounded-xl border border-white/10 bg-white/10 px-3.5 py-2 backdrop-blur-sm">
-      <span className="text-base font-extrabold">{value}</span>
-      <span className="ml-1.5 text-xs font-medium text-white/65">{label}</span>
-    </div>
-  );
-}
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) {
   return (
     <span
@@ -1721,7 +1901,7 @@ function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) {
       <span
         className={`h-1.5 w-1.5 rounded-full ${status === "ACTIVE" ? "bg-emerald-500" : "bg-rose-500"}`}
       />
-      {status === "ACTIVE" ? "활성" : "정지"}
+      {status === "ACTIVE" ? "사용 중" : "이용 중지"}
     </span>
   );
 }

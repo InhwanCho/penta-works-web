@@ -2714,3 +2714,95 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 .workspace-bottom { touch-action: manipulation; }
 .workspace-bottom > a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 .workspace-bottom > a > * { pointer-events: none; }
+
+/* Administrative tasks follow the same plain surfaces as hospital details. */
+.management-page { width: 100%; max-width: 1080px; margin: 0 auto; padding: 20px 24px 40px; color: var(--work-ink); }
+.management-heading { margin-bottom: 22px; }
+.management-back { display: inline-flex; align-items: center; min-height: 40px; color: var(--work-focus); font-size: .8125rem; font-weight: 600; }
+.management-heading h1 { margin: 6px 0; font-size: 1.5rem; font-weight: 750; }
+.management-heading > p { max-width: 640px; color: var(--work-muted); font-size: .875rem; line-height: 1.7; }
+.management-heading > small { display: block; margin-top: 8px; color: var(--work-muted); font-size: .75rem; }
+.management-start { border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); padding: 18px; margin-bottom: 18px; }
+.management-start h2, .management-list-heading h2 { font-size: 1rem; font-weight: 700; }
+.management-start > p { margin-top: 8px; color: var(--work-muted); font-size: .8125rem; line-height: 1.7; }
+.management-counts, .management-company-counts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin-top: 14px; color: var(--work-muted); font-size: .75rem; }
+.management-counts strong, .management-company-counts b { color: var(--work-ink); font-weight: 650; }
+.management-task-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.management-task-card { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 14px; padding: 18px; text-align: left; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
+.management-task-card strong { font-size: .9375rem; font-weight: 700; }
+.management-task-card p { margin: 6px 0 12px; color: var(--work-muted); font-size: .8125rem; line-height: 1.6; }
+.management-task-card div > span { color: var(--work-focus); font-size: .75rem; font-weight: 650; }
+.management-task-card > span { color: var(--work-muted); font-size: 1.5rem; }
+.management-task-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 16px; }
+.management-task-switch > label { font-size: .75rem; color: var(--work-muted); }
+.management-task-switch > select { flex: 1; min-width: 0; max-width: 280px; min-height: 42px; border: 1px solid var(--work-line); border-radius: 8px; padding: 8px 10px; background: var(--work-paper); font-size: .875rem; }
+.management-primary, .management-secondary { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; padding: 8px 16px; border-radius: 9px; font-size: .8125rem; font-weight: 650; }
+.management-primary { color: #fff; background: #1967d2; }
+.management-secondary { color: var(--work-focus); border: 1px solid var(--work-line); background: var(--work-paper); }
+.management-filters > summary { min-height: 40px; padding: 10px 2px; cursor: pointer; color: var(--work-focus); font-size: .8125rem; font-weight: 600; }
+.management-filters > div { display: grid; gap: 12px; padding: 10px 0 4px; }
+.management-notice { margin: 12px 0 16px; padding: 12px 14px; border: 1px solid var(--work-line); border-radius: 9px; background: var(--work-soft); font-size: .8125rem; line-height: 1.7; }
+.management-notice button { color: var(--work-focus); text-decoration: underline; min-height: 40px; }
+.management-field-help { display: block; font-size: .75rem; font-weight: 400; color: var(--work-muted); line-height: 1.7; margin-top: 6px; }
+.management-disclosure { border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); min-width: 0; }
+.management-disclosure > summary { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; min-height: 52px; padding: 12px 16px; cursor: pointer; font-size: .875rem; font-weight: 650; list-style: none; }
+.management-disclosure > summary::-webkit-details-marker { display: none; }
+.management-disclosure > summary > span { color: var(--work-muted); font-size: .75rem; font-weight: 400; }
+.management-disclosure > summary::after { content: '⌄'; color: var(--work-focus); }
+.management-disclosure[open] > summary::after { content: '⌃'; }
+.management-disclosure > form.management-panel { border: 0; border-top: 1px solid var(--work-line); border-radius: 0 0 12px 12px; margin-bottom: 0; }
+.management-form-divider { padding-top: 16px; margin-top: 18px; border-top: 1px solid var(--work-line); font-size: .875rem; }
+.management-form-divider h3 { font-weight: 700; }
+.management-form-divider p { margin-top: 6px; font-size: .75rem; color: var(--work-muted); line-height: 1.7; }
+.management-steps { display: flex; flex-wrap: wrap; gap: 10px 20px; margin: 14px 0; }
+.management-steps li { display: flex; align-items: center; gap: 7px; font-size: .8125rem; }
+.management-steps b { display: grid; place-items: center; width: 23px; height: 23px; background: var(--work-soft); border-radius: 50%; color: var(--work-focus); font-size: .75rem; }
+.management-start-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.management-list-heading { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 12px; }
+.management-list-heading > span { color: var(--work-muted); font-size: .75rem; }
+.management-status-filters { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 16px; }
+.management-status-filters > button { padding: 7px 10px; min-height: 38px; border: 1px solid var(--work-line); border-radius: 8px; font-size: .75rem; background: var(--work-paper); }
+.management-status-filters > button[aria-pressed=true] { background: var(--work-soft); color: var(--work-focus); border-color: var(--work-focus); font-weight: 650; }
+.management-status-filters span { font-variant-numeric: tabular-nums; margin-left: 3px; }
+.management-company-card { margin-bottom: 12px; overflow: hidden; }
+.management-company-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 16px 0; }
+.management-company-heading h3 { font-size: 1rem; font-weight: 700; overflow-wrap: anywhere; }
+.management-company-heading small { color: var(--work-muted); font-size: .75rem; }
+.management-company-counts { margin: 12px 16px 16px; }
+.management-next-step { margin: 0 16px 14px; padding: 10px; background: var(--work-soft); border-radius: 8px; font-size: .75rem; line-height: 1.7; }
+.management-next-step strong { display: block; color: var(--work-focus); }
+.management-expand { display: flex; width: 100%; align-items: center; justify-content: space-between; min-height: 44px; padding: 10px 16px; border-top: 1px solid var(--work-line); color: var(--work-focus); font-size: .8125rem; font-weight: 650; }
+.management-company-body { padding: 16px; border-top: 1px solid var(--work-line); }
+.management-page :is(input:not([type=radio]):not([type=checkbox]),select,textarea) { min-height: 42px; max-width: 100%; }
+.management-page button { touch-action: manipulation; }
+.management-page .management-panel { box-shadow: none; }
+.management-savebar { position: sticky; bottom: calc(var(--workspace-bottom-height, 0px) + 8px); z-index: 20; margin-top: 20px; padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); }
+@media(hover:hover) { .management-task-card:hover { background: var(--work-hover); border-color: var(--work-focus); } }
+@media(max-width:639px) {
+ .management-page { padding: 12px 14px 30px; }
+ .management-heading { margin-bottom: 18px; }
+ .management-heading h1 { font-size: 1.25rem; }
+ .management-task-grid { grid-template-columns: minmax(0,1fr); gap: 10px; }
+ .management-task-card { padding: 16px; }
+ .management-task-card p { margin: 5px 0 8px; }
+ .management-start { padding: 16px; }
+ .management-steps { display: grid; gap: 10px; }
+ .management-page .admin-user-table tr:not(.admin-editor-row) { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; margin: 0; padding: 14px; border: 0; border-bottom: 1px solid var(--work-line); border-radius: 0; }
+ .management-page .admin-user-table tbody { padding: 0; }
+ .management-page .admin-user-table td::before { display: none; }
+ .management-page .admin-user-table td[data-label=이름] { grid-column: 1; grid-row: 1; }
+ .management-page .admin-user-table td[data-label=상태] { grid-column: 2; grid-row: 1; justify-self: end; }
+ .management-page .admin-user-table td[data-label=이메일] { grid-column: 1/-1; grid-row: 2; color: var(--work-muted); font-size: .8125rem; }
+ .management-page .admin-user-table td[data-label=권한] { grid-column: 1; grid-row: 3; font-size: .75rem; color: var(--work-muted); }
+ .management-page .admin-user-table td[data-label=병원] { grid-column: 2; grid-row: 3; font-size: .75rem; color: var(--work-muted); }
+ .management-page .admin-user-table td[data-label=병원]::before { display: inline; content: '접근 병원 '; font-weight: 400; }
+ .management-page .admin-user-table td[data-label=휴대폰번호], .management-page .admin-user-table td[data-label="최근 로그인"] { display: none; }
+ .management-page .admin-user-table td[data-label=관리] { grid-column: 1/-1; grid-row: 4; margin-top: 4px; }
+ .management-page .admin-user-table td[data-label=관리] button { width: 100%; min-height: 40px; background: var(--work-paper); border-color: var(--work-line); font-size: .8125rem; }
+ .management-page .admin-user-table .admin-editor-row { display: block; margin: 0; padding: 0; }
+ .management-page .admin-user-table .admin-editor-row > td { display: block; }
+ .management-page .admin-user-table .admin-editor-row article { border: 0; border-radius: 0; background: var(--work-hover); }
+ .management-company-body :is(button:not([role=switch]),select) { min-height: 40px; }
+ .management-company-body > div > div > p { overflow-wrap: anywhere; }
+ .management-task-switch > select { max-width: none; }
+}

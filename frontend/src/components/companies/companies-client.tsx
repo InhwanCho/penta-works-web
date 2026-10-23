@@ -5,7 +5,7 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "@/components/common/app-link";
-import { type FormEvent, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 
 type Company = {
   id: number;
@@ -45,13 +45,18 @@ type CompanyActivity = {
 };
 
 const CARD =
-  "rounded-xl border border-slate-200/80 bg-white shadow-[0_4px_18px_rgba(22,58,82,0.045)] dark:border-white/8 dark:bg-background-dark-card";
+  "management-panel rounded-xl border border-slate-200/80 bg-white dark:border-white/10 dark:bg-background-dark-card";
 const INPUT =
   "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5";
 
 export default function CompaniesClient() {
   const { session, isLoading } = useAuth();
   const [query, setQuery] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [createdId, setCreatedId] = useState<number | null>(null);
+  const [notice, setNotice] = useState("");
   const companies = useQuery({
     queryKey: ["platform-companies"],
     queryFn: () => apiFetch<Company[]>("/platform/companies"),
@@ -60,96 +65,182 @@ export default function CompaniesClient() {
   const rows = useMemo(() => companies.data ?? [], [companies.data]);
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
-    return keyword
-      ? rows.filter((item) =>
+    return rows.filter(
+      (item) =>
+        (statusFilter === "ALL" || item.status === statusFilter) &&
+        (!keyword ||
           `${item.name} ${item.code} ${item.businessRegistrationNumber ?? ""} ${item.pendingAdminEmail ?? ""}`
             .toLowerCase()
-            .includes(keyword),
-        )
-      : rows;
-  }, [rows, query]);
+            .includes(keyword)),
+    );
+  }, [rows, query, statusFilter]);
 
   if (isLoading) return <Loading />;
   if (!session || session.role !== "PLATFORM_ADMIN") return <AccessDenied />;
   return (
-    <main className="mx-auto w-full max-w-7xl px-3 py-5 sm:px-4 sm:py-7 lg:px-6">
-      <header className="mb-6 rounded-2xl bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white shadow-[0_10px_28px_rgba(17,65,94,0.14)] sm:px-7">
-        <p className="text-xs font-bold tracking-[0.16em] text-sky-200 uppercase">
-          Platform
-        </p>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-          회사 관리
+    <main className="management-page">
+      <header className="management-heading">
+        {creating || assigning ? (
+          <button
+            type="button"
+            className="management-back"
+            onClick={() => {
+              setCreating(false);
+              setAssigning(false);
+            }}
+          >
+            ‹ 회사 목록
+          </button>
+        ) : (
+          <Link
+            href="/settings"
+            className="management-back"
+          >
+            ‹ 설정
+          </Link>
+        )}
+        <h1>
+          {creating ? "회사 등록" : assigning ? "병원 소속 관리" : "회사관리"}
         </h1>
-        <p className="mt-2 text-sm text-white/70">
-          고객 회사를 등록하고 최초 최고관리자 가입까지 관리합니다.
+        <p>
+          {creating
+            ? "회사 정보와 첫 관리자 정보를 입력하세요. 등록 후 사업자등록증 확인을 진행합니다."
+            : assigning
+              ? "병원을 이용할 회사를 선택하고 배정합니다."
+              : "등록한 회사의 가입 진행 상황과 이용 상태를 확인합니다."}
         </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Chip
-            label="전체"
-            value={rows.length}
-          />
-          <Chip
-            label="활성"
-            value={rows.filter((item) => item.status === "ACTIVE").length}
-          />
-          <Chip
-            label="가입 대기"
-            value={rows.filter((item) => item.status === "PENDING").length}
-          />
-          <Chip
-            label="중지"
-            value={rows.filter((item) => item.status === "SUSPENDED").length}
-          />
-        </div>
       </header>
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(19rem,.75fr)_minmax(0,1.25fr)]">
-        <CreateCompany />
-        <section className="space-y-3">
-          <div className="flex items-end justify-between px-1">
-            <div>
-              <h2 className="text-lg font-extrabold">등록 회사</h2>
-              <p className="text-text-secondary mt-1 text-sm">
-                회사 데이터는 서로 분리되며 최고관리자는 자기 회사만 관리합니다.
-              </p>
-            </div>
-            <span className="text-text-secondary text-xs">
-              {filtered.length}/{rows.length}개
-            </span>
-          </div>
-          <input
-            type="search"
-            className={INPUT}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="회사명·코드·사업자번호·관리자 이메일 검색"
-          />
-          {companies.isLoading ? (
-            <Loading />
-          ) : (
-            filtered.map((company) => (
-              <CompanyCard
-                key={company.id}
-                company={company}
-              />
-            ))
-          )}
-          {!companies.isLoading && filtered.length === 0 && (
-            <div
-              className={`${CARD} text-text-secondary p-8 text-center text-sm`}
-            >
-              {rows.length === 0
-                ? "등록된 회사가 없습니다."
-                : "검색 결과가 없습니다."}
-            </div>
-          )}
-        </section>
-      </div>
-      <details className="dark:bg-background-dark-card mt-6 rounded-xl border border-slate-200 bg-white dark:border-white/10">
-        <summary className="min-h-12 cursor-pointer px-5 py-4 text-sm font-bold">
-          병원 소속 배정 · 필요할 때 펼치기
-        </summary>
+      {creating ? (
+        <CreateCompany
+          onCreated={(id) => {
+            setCreating(false);
+            setCreatedId(id);
+            setQuery("");
+            setStatusFilter("ALL");
+            setNotice(
+              "회사를 등록했습니다. 해당 회사의 사업자등록증을 확인한 뒤 관리자 초대를 보내세요.",
+            );
+          }}
+        />
+      ) : assigning ? (
         <SiteAssignments companies={rows} />
-      </details>
+      ) : (
+        <>
+          <section className="management-start">
+            <h2>새 회사를 시작하려면</h2>
+            <ol className="management-steps">
+              <li>
+                <b>1</b> 회사 등록
+              </li>
+              <li>
+                <b>2</b> 등록증 확인
+              </li>
+              <li>
+                <b>3</b> 관리자 초대·가입
+              </li>
+            </ol>
+            <div className="management-start-actions">
+              <button
+                type="button"
+                className="management-primary"
+                onClick={() => {
+                  setNotice("");
+                  setCreating(true);
+                }}
+              >
+                회사 등록
+              </button>
+              <button
+                type="button"
+                className="management-secondary"
+                onClick={() => setAssigning(true)}
+              >
+                병원 소속 관리
+              </button>
+            </div>
+          </section>
+          {notice && (
+            <p
+              role="status"
+              className="management-notice"
+            >
+              {notice}
+            </p>
+          )}
+          <section className="management-company-list">
+            <div className="management-list-heading">
+              <h2>등록 회사</h2>
+              <span>{filtered.length}개</span>
+            </div>
+            <input
+              type="search"
+              aria-label="회사 검색"
+              className={INPUT}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="회사명·코드·사업자번호·관리자 이메일 검색"
+            />
+            <div
+              className="management-status-filters"
+              role="group"
+              aria-label="회사 이용 상태"
+            >
+              {[
+                ["ALL", "전체"],
+                ["PENDING", "가입 진행 중"],
+                ["ACTIVE", "사용 중"],
+                ["SUSPENDED", "이용 중지"],
+              ].map(([value, label]) => (
+                <button
+                  type="button"
+                  key={value}
+                  aria-pressed={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}{" "}
+                  <span>
+                    {
+                      rows.filter(
+                        (item) => value === "ALL" || item.status === value,
+                      ).length
+                    }
+                  </span>
+                </button>
+              ))}
+            </div>
+            {companies.isLoading ? (
+              <Loading />
+            ) : companies.isError ? (
+              <p
+                role="alert"
+                className="management-notice"
+              >
+                회사 목록을 불러오지 못했습니다.{" "}
+                <button
+                  type="button"
+                  onClick={() => void companies.refetch()}
+                >
+                  다시 시도
+                </button>
+              </p>
+            ) : filtered.length ? (
+              filtered.map((company) => (
+                <CompanyCard
+                  key={company.id}
+                  company={company}
+                  initiallyOpen={createdId === company.id}
+                />
+              ))
+            ) : (
+              <div className={`${CARD} p-6 text-center text-sm`}>
+                {rows.length
+                  ? "조건에 맞는 회사가 없습니다."
+                  : "등록된 회사가 없습니다. 위의 회사 등록으로 시작하세요."}
+              </div>
+            )}
+          </section>
+        </>
+      )}
     </main>
   );
 }
@@ -169,7 +260,7 @@ function SiteAssignments({ companies }: { companies: Company[] }) {
     <section className={`${CARD} mt-6 p-5 sm:p-6`}>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-extrabold">병원 배정</h2>
+          <h2 className="text-lg font-extrabold">병원별 소속 회사</h2>
           <p className="text-text-secondary mt-1 text-sm">
             회사 간 이동 시 과거 측정 데이터도 새 회사에서 보입니다.
           </p>
@@ -303,7 +394,16 @@ function SiteAssignmentRow({
             onClick={assign}
             className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-40"
           >
-            {busy ? <CircleLoader size="xs" inline /> : moving ? "이동" : "배정"}
+            {busy ? (
+              <CircleLoader
+                size="xs"
+                inline
+              />
+            ) : moving ? (
+              "이동"
+            ) : (
+              "배정"
+            )}
           </button>
         </div>
       </div>
@@ -316,7 +416,7 @@ function SiteAssignmentRow({
   );
 }
 
-function CreateCompany() {
+function CreateCompany({ onCreated }: { onCreated: (id: number) => void }) {
   const queryClient = useQueryClient();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
@@ -343,7 +443,7 @@ function CreateCompany() {
     body.set("adminEmail", adminEmail);
     body.set("businessRegistration", file);
     try {
-      await apiFetch<CompanyCreated>("/platform/companies", {
+      const created = await apiFetch<CompanyCreated>("/platform/companies", {
         method: "POST",
         body,
       });
@@ -361,6 +461,7 @@ function CreateCompany() {
       ) as HTMLInputElement | null;
       if (input) input.value = "";
       await queryClient.invalidateQueries({ queryKey: ["platform-companies"] });
+      onCreated(created.company.id);
     } catch (error) {
       setMessage(
         error instanceof Error ? error.message : "회사를 만들지 못했습니다.",
@@ -376,7 +477,7 @@ function CreateCompany() {
       className={`${CARD} space-y-3 p-5 sm:p-6 lg:sticky lg:top-20`}
     >
       <div>
-        <h2 className="text-lg font-extrabold">새 회사 등록</h2>
+        <h2 className="text-lg font-extrabold">회사 기본 정보</h2>
         <p className="text-text-secondary mt-1 text-sm">
           등록증 확인 후 초대가 발송되고, 최고관리자가 가입하면 활성화됩니다.
         </p>
@@ -401,6 +502,9 @@ function CreateCompany() {
           value={code}
           onChange={(event) => setCode(event.target.value)}
         />
+        <span className="management-field-help">
+          회사 식별용 코드입니다. 영문·숫자·밑줄·하이픈으로 2~64자 입력하세요.
+        </span>
       </label>
       <label className="text-text-secondary block text-xs font-bold">
         사업자등록번호
@@ -413,6 +517,13 @@ function CreateCompany() {
           onChange={(event) => setNumber(event.target.value)}
         />
       </label>
+      <div className="management-form-divider">
+        <h3>첫 관리자</h3>
+        <p>
+          이 회사의 직원·권한을 관리할 담당자입니다. 등록증 확인 후 이 이메일로
+          초대를 보냅니다.
+        </p>
+      </div>
       <label className="text-text-secondary block text-xs font-bold">
         최초 최고관리자 이름
         <input
@@ -433,6 +544,9 @@ function CreateCompany() {
           onChange={(event) => setAdminEmail(event.target.value)}
         />
       </label>
+      <div className="management-form-divider">
+        <h3>사업자 확인</h3>
+      </div>
       <label className="text-text-secondary block text-xs font-bold">
         사업자등록증 파일
         <input
@@ -457,14 +571,31 @@ function CreateCompany() {
         disabled={saving}
         className="bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
       >
-        {saving ? <CircleLoader size="xs" inline /> : "회사 등록"}
+        {saving ? (
+          <CircleLoader
+            size="xs"
+            inline
+          />
+        ) : (
+          "회사 등록"
+        )}
       </button>
     </form>
   );
 }
 
-function CompanyCard({ company }: { company: Company }) {
+function CompanyCard({
+  company,
+  initiallyOpen = false,
+}: {
+  company: Company;
+  initiallyOpen?: boolean;
+}) {
   const queryClient = useQueryClient();
+  const [expanded, setExpanded] = useState(initiallyOpen);
+  useEffect(() => {
+    if (initiallyOpen) setExpanded(true);
+  }, [initiallyOpen]);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [link, setLink] = useState<string | null>(null);
@@ -695,265 +826,318 @@ function CompanyCard({ company }: { company: Company }) {
   }
 
   return (
-    <article className={`${CARD} p-5`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <article className={`${CARD} management-company-card`}>
+      <header className="management-company-heading">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-extrabold">{company.name}</h3>
-            <Status status={company.status} />
-            <button
-              type="button"
-              className="text-text-secondary text-xs font-bold underline"
-              onClick={() => {
-                setCompanyName(company.name);
-                setEditingName(!editingName);
-              }}
-            >
-              이름 수정
-            </button>
-          </div>
-          <p className="text-text-secondary mt-1 text-xs">
-            {company.code} · 사업자번호{" "}
-            {formatBusinessNumber(company.businessRegistrationNumber)}
-          </p>
+          <h3>{company.name}</h3>
+          <small>회사 코드 {company.code}</small>
         </div>
-        {company.businessRegistrationUrl && (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={openDocument}
-              className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
-            >
-              등록증 보기
-            </button>
-            {!company.businessRegistrationVerifiedAt && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={verify}
-                className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
-              >
-                확인 완료
-              </button>
-            )}
-          </div>
-        )}
+        <Status status={company.status} />
+      </header>
+      <div className="management-company-counts">
+        <span>
+          병원 <b>{company.siteCount}곳</b>
+        </span>
+        <span>
+          사용자 <b>{company.userCount}명</b>
+        </span>
+        <span>
+          최고관리자 <b>{company.superAdminCount}명</b>
+        </span>
       </div>
-      {editingName && (
-        <form
-          onSubmit={updateName}
-          className="mt-3 flex gap-2"
-        >
-          <input
-            aria-label="회사명"
-            className={INPUT}
-            required
-            maxLength={120}
-            value={companyName}
-            onChange={(event) => setCompanyName(event.target.value)}
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            className="shrink-0 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white disabled:opacity-50"
-          >
-            저장
-          </button>
-        </form>
-      )}
-      <dl className="mt-4 grid grid-cols-3 gap-2">
-        <Metric
-          label="병원"
-          value={company.siteCount}
-        />
-        <Metric
-          label="사용자"
-          value={company.userCount}
-        />
-        <Metric
-          label="최고관리자"
-          value={company.superAdminCount}
-          danger={company.status !== "PENDING" && company.superAdminCount < 1}
-        />
-      </dl>
-      <form
-        onSubmit={uploadRegistration}
-        className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end dark:bg-white/4"
-      >
-        <label className="text-text-secondary text-[11px] font-bold">
-          사업자등록번호
-          <input
-            className={`${INPUT} mt-1`}
-            required
-            inputMode="numeric"
-            placeholder="000-00-00000"
-            value={registrationNumber}
-            onChange={(event) => setRegistrationNumber(event.target.value)}
-          />
-        </label>
-        <label className="text-text-secondary text-[11px] font-bold">
-          등록증 파일 · 최대 10MB
-          <input
-            id={`registration-file-${company.id}`}
-            className={`${INPUT} mt-1 py-2 file:mr-2 file:border-0 file:bg-transparent file:text-xs file:font-bold`}
-            type="file"
-            required
-            accept="application/pdf,image/jpeg,image/png"
-            onChange={(event) =>
-              setRegistrationFile(event.target.files?.[0] ?? null)
-            }
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={busy}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5"
-        >
-          {company.businessRegistrationUrl ? "등록증 교체" : "등록증 등록"}
-        </button>
-      </form>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-white/7">
-        <div className="text-xs">
-          <p className="font-bold">
-            {!company.businessRegistrationUrl
-              ? "등록증 미등록"
-              : company.businessRegistrationVerifiedAt
-                ? `등록증 확인 · ${formatDate(company.businessRegistrationVerifiedAt)}`
-                : "등록증 확인 대기"}
-          </p>
-          {company.status === "PENDING" && company.pendingAdminEmail && (
-            <p className="text-text-secondary mt-1">
-              최초 관리자: {company.pendingAdminEmail} ·{" "}
-              {invitationExpired
-                ? "초대 기한 만료"
-                : `초대 기한 ${formatDate(company.pendingInvitationExpiresAt)}`}
-            </p>
-          )}
-          {message && (
-            <p className="mt-1 font-semibold text-sky-700 dark:text-sky-300">
-              {message}
-            </p>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {company.status === "PENDING" &&
-            company.businessRegistrationVerifiedAt &&
-            company.pendingInvitationId && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={resend}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold dark:border-white/10"
-              >
-                초대 발송·재발송
-              </button>
-            )}
-          {company.status === "PENDING" && company.pendingInvitationId && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={revoke}
-              className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
-            >
-              초대 취소
-            </button>
-          )}
-          {company.status !== "PENDING" && company.code !== "PENTAWORKS" && (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={status}
-              className={`rounded-lg px-3 py-2 text-xs font-bold ${company.status === "ACTIVE" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"}`}
-            >
-              {company.status === "ACTIVE" ? "회사 중지" : "회사 활성화"}
-            </button>
-          )}
-        </div>
-      </div>
-      {company.status === "PENDING" &&
-        company.businessRegistrationVerifiedAt &&
-        !company.pendingInvitationId && (
-          <form
-            onSubmit={invite}
-            className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end dark:bg-white/4"
-          >
-            <label className="text-text-secondary text-[11px] font-bold">
-              최고관리자 이름
-              <input
-                className={`${INPUT} mt-1`}
-                required
-                maxLength={80}
-                value={inviteName}
-                onChange={(event) => setInviteName(event.target.value)}
-              />
-            </label>
-            <label className="text-text-secondary text-[11px] font-bold">
-              최고관리자 이메일
-              <input
-                className={`${INPUT} mt-1`}
-                required
-                type="email"
-                value={inviteEmail}
-                onChange={(event) => setInviteEmail(event.target.value)}
-              />
-            </label>
-            <button
-              type="submit"
-              disabled={busy}
-              className="rounded-lg bg-sky-700 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50"
-            >
-              새 관리자 초대
-            </button>
-          </form>
-        )}
-      {link && (
-        <div className="mt-3 rounded-lg bg-emerald-50/60 p-3 text-xs dark:bg-emerald-950/20">
-          <textarea
-            className={`${INPUT} min-h-16`}
-            readOnly
-            value={link}
-          />
-          <button
-            type="button"
-            className="mt-1 font-bold underline"
-            onClick={() => navigator.clipboard.writeText(link)}
-          >
-            새 링크 복사
-          </button>
-        </div>
+      {company.status === "PENDING" && (
+        <p className="management-next-step">
+          <strong>다음 할 일</strong>{" "}
+          {!company.businessRegistrationUrl
+            ? "사업자등록증을 등록하세요."
+            : !company.businessRegistrationVerifiedAt
+              ? "등록증을 열어 확인하고 확인 완료를 눌러주세요."
+              : !company.pendingInvitationId
+                ? "첫 관리자를 초대하세요."
+                : invitationExpired
+                  ? "초대 기한이 지났습니다. 초대를 다시 보내세요."
+                  : "초대를 보내고 관리자의 가입을 확인하세요."}
+        </p>
       )}
       <button
         type="button"
-        className="text-text-secondary mt-3 text-xs font-bold underline underline-offset-2"
-        onClick={() => setShowHistory(!showHistory)}
+        className="management-expand"
+        aria-expanded={expanded}
+        aria-controls={`company-detail-${company.id}`}
+        onClick={() => setExpanded(!expanded)}
       >
-        {showHistory ? "변경 이력 접기" : "변경 이력 보기"}
+        {expanded
+          ? "상세 관리 접기"
+          : company.status === "PENDING"
+            ? "가입 절차 진행"
+            : "상세 관리"}
+        <span aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
       </button>
-      {showHistory && (
-        <div className="mt-2 rounded-lg bg-slate-50 p-3 text-xs dark:bg-white/4">
-          {history.isLoading ? (
-            <CircleLoader size="xs" />
-          ) : history.isError ? (
-            "이력을 불러오지 못했습니다."
-          ) : history.data?.length ? (
-            <ul className="space-y-2">
-              {history.data.map((item) => (
-                <li
-                  key={item.id}
-                  className="flex flex-wrap justify-between gap-x-3"
+      {expanded && (
+        <div
+          id={`company-detail-${company.id}`}
+          className="management-company-body"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="font-bold">회사 정보</h4>
+                <button
+                  type="button"
+                  className="text-text-secondary text-xs font-bold underline"
+                  onClick={() => {
+                    setCompanyName(company.name);
+                    setEditingName(!editingName);
+                  }}
                 >
-                  <span className="font-semibold">
-                    {activityLabel(item.action)} · {item.actorName}
-                  </span>
-                  <time className="text-text-secondary">
-                    {formatDate(item.createdAt)}
-                  </time>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            "변경 이력이 없습니다."
+                  이름 수정
+                </button>
+              </div>
+              <p className="text-text-secondary mt-1 text-xs">
+                {company.code} · 사업자번호{" "}
+                {formatBusinessNumber(company.businessRegistrationNumber)}
+              </p>
+            </div>
+            {company.businessRegistrationUrl && (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={openDocument}
+                  className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
+                >
+                  등록증 보기
+                </button>
+                {!company.businessRegistrationVerifiedAt && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={verify}
+                    className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                  >
+                    확인 완료
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {editingName && (
+            <form
+              onSubmit={updateName}
+              className="mt-3 flex gap-2"
+            >
+              <input
+                aria-label="회사명"
+                className={INPUT}
+                required
+                maxLength={120}
+                value={companyName}
+                onChange={(event) => setCompanyName(event.target.value)}
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                className="shrink-0 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white disabled:opacity-50"
+              >
+                저장
+              </button>
+            </form>
+          )}
+          <h4 className="management-form-divider font-bold">사업자등록증</h4>
+          <details
+            className="management-disclosure mt-3"
+            open={!company.businessRegistrationUrl}
+          >
+            <summary>
+              {company.businessRegistrationUrl ? "등록증 교체" : "등록증 등록"}
+            </summary>
+            <form
+              onSubmit={uploadRegistration}
+              className="mt-4 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[10rem_minmax(0,1fr)_auto] sm:items-end dark:bg-white/4"
+            >
+              <label className="text-text-secondary text-[11px] font-bold">
+                사업자등록번호
+                <input
+                  className={`${INPUT} mt-1`}
+                  required
+                  inputMode="numeric"
+                  placeholder="000-00-00000"
+                  value={registrationNumber}
+                  onChange={(event) =>
+                    setRegistrationNumber(event.target.value)
+                  }
+                />
+              </label>
+              <label className="text-text-secondary text-[11px] font-bold">
+                등록증 파일 · 최대 10MB
+                <input
+                  id={`registration-file-${company.id}`}
+                  className={`${INPUT} mt-1 py-2 file:mr-2 file:border-0 file:bg-transparent file:text-xs file:font-bold`}
+                  type="file"
+                  required
+                  accept="application/pdf,image/jpeg,image/png"
+                  onChange={(event) =>
+                    setRegistrationFile(event.target.files?.[0] ?? null)
+                  }
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={busy}
+                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5"
+              >
+                {company.businessRegistrationUrl
+                  ? "등록증 교체"
+                  : "등록증 등록"}
+              </button>
+            </form>
+          </details>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-white/7">
+            <div className="text-xs">
+              <p className="font-bold">
+                {!company.businessRegistrationUrl
+                  ? "등록증 미등록"
+                  : company.businessRegistrationVerifiedAt
+                    ? `등록증 확인 · ${formatDate(company.businessRegistrationVerifiedAt)}`
+                    : "등록증 확인 대기"}
+              </p>
+              {company.status === "PENDING" && company.pendingAdminEmail && (
+                <p className="text-text-secondary mt-1">
+                  최초 관리자: {company.pendingAdminEmail} ·{" "}
+                  {invitationExpired
+                    ? "초대 기한 만료"
+                    : `초대 기한 ${formatDate(company.pendingInvitationExpiresAt)}`}
+                </p>
+              )}
+              {message && (
+                <p className="mt-1 font-semibold text-sky-700 dark:text-sky-300">
+                  {message}
+                </p>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {company.status === "PENDING" &&
+                company.businessRegistrationVerifiedAt &&
+                company.pendingInvitationId && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={resend}
+                    className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold dark:border-white/10"
+                  >
+                    관리자 초대 보내기
+                  </button>
+                )}
+              {company.status === "PENDING" && company.pendingInvitationId && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={revoke}
+                  className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
+                >
+                  초대 취소
+                </button>
+              )}
+              {company.status !== "PENDING" &&
+                company.code !== "PENTAWORKS" && (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={status}
+                    className={`rounded-lg px-3 py-2 text-xs font-bold ${company.status === "ACTIVE" ? "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-300" : "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300"}`}
+                  >
+                    {company.status === "ACTIVE"
+                      ? "회사 이용 중지"
+                      : "회사 이용 재개"}
+                  </button>
+                )}
+            </div>
+          </div>
+          {company.status === "PENDING" &&
+            company.businessRegistrationVerifiedAt &&
+            !company.pendingInvitationId && (
+              <form
+                onSubmit={invite}
+                className="mt-3 grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-[1fr_1.4fr_auto] sm:items-end dark:bg-white/4"
+              >
+                <label className="text-text-secondary text-[11px] font-bold">
+                  최고관리자 이름
+                  <input
+                    className={`${INPUT} mt-1`}
+                    required
+                    maxLength={80}
+                    value={inviteName}
+                    onChange={(event) => setInviteName(event.target.value)}
+                  />
+                </label>
+                <label className="text-text-secondary text-[11px] font-bold">
+                  최고관리자 이메일
+                  <input
+                    className={`${INPUT} mt-1`}
+                    required
+                    type="email"
+                    value={inviteEmail}
+                    onChange={(event) => setInviteEmail(event.target.value)}
+                  />
+                </label>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="rounded-lg bg-sky-700 px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                >
+                  새 관리자 초대
+                </button>
+              </form>
+            )}
+          {link && (
+            <div className="mt-3 rounded-lg bg-emerald-50/60 p-3 text-xs dark:bg-emerald-950/20">
+              <textarea
+                className={`${INPUT} min-h-16`}
+                readOnly
+                value={link}
+              />
+              <button
+                type="button"
+                className="mt-1 font-bold underline"
+                onClick={() => navigator.clipboard.writeText(link)}
+              >
+                새 링크 복사
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            className="text-text-secondary mt-3 text-xs font-bold underline underline-offset-2"
+            onClick={() => setShowHistory(!showHistory)}
+          >
+            {showHistory ? "변경 이력 접기" : "변경 이력 보기"}
+          </button>
+          {showHistory && (
+            <div className="mt-2 rounded-lg bg-slate-50 p-3 text-xs dark:bg-white/4">
+              {history.isLoading ? (
+                <CircleLoader size="xs" />
+              ) : history.isError ? (
+                "이력을 불러오지 못했습니다."
+              ) : history.data?.length ? (
+                <ul className="space-y-2">
+                  {history.data.map((item) => (
+                    <li
+                      key={item.id}
+                      className="flex flex-wrap justify-between gap-x-3"
+                    >
+                      <span className="font-semibold">
+                        {activityLabel(item.action)} · {item.actorName}
+                      </span>
+                      <time className="text-text-secondary">
+                        {formatDate(item.createdAt)}
+                      </time>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                "변경 이력이 없습니다."
+              )}
+            </div>
           )}
         </div>
       )}
@@ -982,7 +1166,11 @@ function activityLabel(action: string) {
 
 function Status({ status }: { status: Company["status"] }) {
   const label =
-    status === "ACTIVE" ? "활성" : status === "PENDING" ? "가입 대기" : "중지";
+    status === "ACTIVE"
+      ? "사용 중"
+      : status === "PENDING"
+        ? "가입 진행 중"
+        : "이용 중지";
   const style =
     status === "ACTIVE"
       ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
@@ -993,34 +1181,6 @@ function Status({ status }: { status: Company["status"] }) {
     <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${style}`}>
       {label}
     </span>
-  );
-}
-function Metric({
-  label,
-  value,
-  danger = false,
-}: {
-  label: string;
-  value: number;
-  danger?: boolean;
-}) {
-  return (
-    <div className="rounded-lg bg-slate-50 p-3 text-center dark:bg-white/4">
-      <dt className="text-text-secondary text-[11px] font-bold">{label}</dt>
-      <dd
-        className={`mt-1 text-lg font-extrabold ${danger ? "text-rose-600" : ""}`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-function Chip({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-xs">
-      <strong className="mr-1.5 text-base">{value}</strong>
-      {label}
-    </div>
   );
 }
 function formatBusinessNumber(value: string | null) {
