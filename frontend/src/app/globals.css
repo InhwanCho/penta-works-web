@@ -2787,6 +2787,16 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .management-task-card p { margin: 5px 0 8px; }
  .management-start { padding: 16px; }
  .management-steps { display: grid; gap: 10px; }
+ .management-company-body :is(button:not([role=switch]),select) { min-height: 40px; }
+ .management-company-body > div > div > p { overflow-wrap: anywhere; }
+ .management-task-switch > select { max-width: none; }
+}
+
+@media(max-width:1023px) {
+ .management-page .admin-user-table { display: block; width: 100%; min-width: 0; white-space: normal; }
+ .management-page .admin-user-table thead { display: none; }
+ .management-page .admin-user-table tbody { display: block; }
+ .management-page .admin-user-table td { display: block; min-width: 0; overflow-wrap: anywhere; white-space: normal; }
  .management-page .admin-user-table tr:not(.admin-editor-row) { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; margin: 0; padding: 14px; border: 0; border-bottom: 1px solid var(--work-line); border-radius: 0; }
  .management-page .admin-user-table tbody { padding: 0; }
  .management-page .admin-user-table td::before { display: none; }
@@ -2802,7 +2812,4 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .management-page .admin-user-table .admin-editor-row { display: block; margin: 0; padding: 0; }
  .management-page .admin-user-table .admin-editor-row > td { display: block; }
  .management-page .admin-user-table .admin-editor-row article { border: 0; border-radius: 0; background: var(--work-hover); }
- .management-company-body :is(button:not([role=switch]),select) { min-height: 40px; }
- .management-company-body > div > div > p { overflow-wrap: anywhere; }
- .management-task-switch > select { max-width: none; }
 }
