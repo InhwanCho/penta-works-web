@@ -1,5 +1,6 @@
 "use client";
 
+import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
@@ -74,6 +75,12 @@ export default function CompaniesClient() {
             .includes(keyword)),
     );
   }, [rows, query, statusFilter]);
+  const displayed =
+    createdId == null
+      ? filtered
+      : [...filtered].sort(
+          (a, b) => Number(b.id === createdId) - Number(a.id === createdId),
+        );
 
   if (isLoading) return <Loading />;
   if (!session || session.role !== "PLATFORM_ADMIN") return <AccessDenied />;
@@ -87,6 +94,7 @@ export default function CompaniesClient() {
             onClick={() => {
               setCreating(false);
               setAssigning(false);
+              scrollPageToTop();
             }}
           >
             ‹ 회사 목록
@@ -115,6 +123,7 @@ export default function CompaniesClient() {
           onCreated={(id) => {
             setCreating(false);
             setCreatedId(id);
+            scrollPageToTop();
             setQuery("");
             setStatusFilter("ALL");
             setNotice(
@@ -146,6 +155,7 @@ export default function CompaniesClient() {
                 onClick={() => {
                   setNotice("");
                   setCreating(true);
+                  scrollPageToTop();
                 }}
               >
                 회사 등록
@@ -153,7 +163,10 @@ export default function CompaniesClient() {
               <button
                 type="button"
                 className="management-secondary"
-                onClick={() => setAssigning(true)}
+                onClick={() => {
+                  setAssigning(true);
+                  scrollPageToTop();
+                }}
               >
                 병원 소속 관리
               </button>
@@ -224,7 +237,7 @@ export default function CompaniesClient() {
                 </button>
               </p>
             ) : filtered.length ? (
-              filtered.map((company) => (
+              displayed.map((company) => (
                 <CompanyCard
                   key={company.id}
                   company={company}
