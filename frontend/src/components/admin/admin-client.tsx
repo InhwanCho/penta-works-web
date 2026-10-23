@@ -1500,17 +1500,9 @@ function SiteEditor({ site }: { site: SiteOption }) {
         onSubmit={save}
         className={`${CARD} p-5`}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-extrabold">{site.name ?? "이름 없는 병원"}</h3>
-            <p className="text-text-secondary mt-0.5 text-xs">
-              병원 코드 {site.id}
-            </p>
-          </div>
-          <span className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-700 dark:bg-sky-950/40 dark:text-sky-200">
-            코드 고정
-          </span>
-        </div>
+        <p className="management-field-help mb-3">
+          병원 코드는 변경할 수 없습니다. 정보 수정 후 저장해주세요.
+        </p>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="text-text-secondary text-xs font-bold">
             병원 이름
