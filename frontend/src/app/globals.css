@@ -2813,3 +2813,7 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .management-page .admin-user-table .admin-editor-row > td { display: block; }
  .management-page .admin-user-table .admin-editor-row article { border: 0; border-radius: 0; background: var(--work-hover); }
 }
+
+.management-task-card > .management-task-symbol { display: grid; place-items: center; width: 36px; height: 36px; flex-shrink: 0; align-self: flex-start; margin-top: 2px; border-radius: 10px; color: var(--work-focus); background: var(--work-soft); }
+.management-task-symbol svg { width: 22px; height: 22px; }
+.management-task-copy { flex: 1; min-width: 0; }

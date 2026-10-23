@@ -117,6 +117,69 @@ const ADMIN_TASKS = [
   },
 ] as const;
 type AdminTask = "home" | (typeof ADMIN_TASKS)[number]["value"];
+function AdminTaskIcon({ task }: { task: AdminTask }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {task === "users" ? (
+        <>
+          <circle
+            cx="9"
+            cy="8"
+            r="3"
+          />
+          <path d="M3 20v-2a6 6 0 0 1 12 0v2M16 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2" />
+        </>
+      ) : task === "invitations" ? (
+        <>
+          <rect
+            x="3"
+            y="5"
+            width="18"
+            height="14"
+            rx="2"
+          />
+          <path d="m3 6 9 7 9-7M17 13v6m-3-3h6" />
+        </>
+      ) : task === "sites" ? (
+        <>
+          <rect
+            x="5"
+            y="3"
+            width="14"
+            height="18"
+            rx="2"
+          />
+          <path d="M12 6v5m-2.5-2.5h5M9 21v-5h6v5M8 13h1m6 0h1" />
+        </>
+      ) : task === "metrics" ? (
+        <>
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="14"
+            rx="2"
+          />
+          <path d="M8 21h8m-4-3v3M7 14V9m5 5v-3m5 3V7" />
+        </>
+      ) : (
+        <>
+          <path d="M4 11a8 8 0 1 1 1 6M4 4v7h7" />
+          <path d="M12 7v5l3 2" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 export default function AdminClient() {
   const { session, isLoading } = useAuth();
   const [tab, setTab] = useState<AdminTask>("home");
@@ -231,7 +294,13 @@ export default function AdminClient() {
                 onClick={() => selectTask(item.value)}
                 className="management-task-card"
               >
-                <div>
+                <span
+                  className="management-task-symbol"
+                  aria-hidden="true"
+                >
+                  <AdminTaskIcon task={item.value} />
+                </span>
+                <div className="management-task-copy">
                   <strong>{item.label}</strong>
                   <p>{item.description}</p>
                   <span>{item.action}</span>
