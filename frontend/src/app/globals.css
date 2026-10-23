@@ -2709,3 +2709,8 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .site-chart-toolbar > div:first-of-type > button { min-height: 38px; padding: 4px 10px; font-size: .75rem; box-shadow: none; }
  .site-chart-reading button { min-height: 36px; }
 }
+
+/* Bottom-menu taps are navigation, never page-pull or double-tap zoom gestures. */
+.workspace-bottom { touch-action: manipulation; }
+.workspace-bottom > a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.workspace-bottom > a > * { pointer-events: none; }

@@ -97,7 +97,7 @@ export default function PullToRefresh({
       }
       // 3) 모달 등 내부 스크롤 컨텐츠 내부에서 시작한 터치는 무시
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-ptr-ignore]")) {
+      if (target?.closest("[data-ptr-ignore], a[href], button, input, select, textarea, summary, [role=button]")) {
         active = false;
         return;
       }
