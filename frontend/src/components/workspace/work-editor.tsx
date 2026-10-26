@@ -691,7 +691,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     </main>
   );
 }
-function ReadRecord({ record: r }: { record: WorkRecord }) {
+export function ReadRecord({ record: r }: { record: WorkRecord }) {
   const d = parseDetails(r.detailsJson);
   const normalize = (text: string) => text.replace(/\s+/g, " ").trim();
   const showBody =

@@ -6,8 +6,10 @@ import PageLoader from "@/components/common/page-loader";
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
 import WorkspaceSearch from "./workspace-search";
+import WorkspaceDrawer from "./workspace-drawer";
+import OverviewDetail from "./overview-detail";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
@@ -51,6 +53,7 @@ type Due = {
   type: string;
   date: string;
   days: number;
+  lastPmDate?: string;
 };
 function calendarColor(type: string) {
   if (type === "PM") return "gcal-pm";
@@ -65,6 +68,7 @@ function calendarColor(type: string) {
 export default function OverviewPage() {
   const today = dayString();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [detailHref, setDetailHref] = useState<string | null>(null);
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
@@ -183,12 +187,23 @@ export default function OverviewPage() {
           type,
           date,
           days: daysBetween(date, today),
+          lastPmDate: pm,
         });
     }
   }
   due.sort((a, b) => a.date.localeCompare(b.date));
   const upcomingDue = due.filter((d) => d.days <= 45);
   const preparations = planning.data?.preparations || [];
+  const preparationGroups = Array.from(
+    preparations.reduce((groups, item) => {
+      const key = item.siteId || "general";
+      const group = groups.get(key) || { siteId: item.siteId, siteName: item.siteName || "일반 업무", items: [] as typeof preparations };
+      group.items.push(item);
+      groups.set(key, group);
+      return groups;
+    }, new Map<string, { siteId: string | null; siteName: string; items: typeof preparations }>()),
+    ([key, group]) => ({ key, ...group }),
+  ).sort((a, b) => a.siteName.localeCompare(b.siteName, "ko"));
   const recentRecords = recent.data?.records || [];
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
@@ -288,16 +303,6 @@ export default function OverviewPage() {
           <button type="button" className="overview-search-trigger" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
           </button>
-          <button
-            type="button"
-            className="work-calendar-today"
-            onClick={() => {
-              setMonth(today.slice(0, 7));
-              setSelected(today);
-            }}
-          >
-            오늘
-          </button>
         </div>
         <CalendarLoadState
           label="업무기록"
@@ -334,7 +339,7 @@ export default function OverviewPage() {
               dueItems = due.filter((d) => d.date === day);
             const tags = [
               ...events.map((s) => ({
-                title: `${s.serviceType === "PM" ? "PM" : scheduleCategory(s)} · ${s.siteName || s.title}`,
+                title: `${s.siteName || s.title} · ${s.serviceType === "PM" ? "PM" : scheduleCategory(s)}`,
                 type: calendarColor(
                   s.siteId ? s.serviceType || "ETC" : s.personalKind || "etc",
                 ),
@@ -344,7 +349,7 @@ export default function OverviewPage() {
                 type: calendarColor(r.type),
               })),
               ...dueItems.map((d) => ({
-                title: `${d.type} · ${d.siteName}`,
+                title: `${d.siteName} · ${d.type}`,
                 type: calendarColor(d.type),
               })),
             ];
@@ -375,18 +380,6 @@ export default function OverviewPage() {
                   ))}
                   {tags.length > 3 && <small>+{tags.length - 3}</small>}
                 </div>
-                <div
-                  className="work-calendar-dots"
-                  aria-hidden="true"
-                >
-                  {[...new Set(tags.map((t) => t.type))].map((t) => (
-                    <i
-                      className={t}
-                      key={t}
-                    />
-                  ))}
-                  {tags.length > 0 && <small>{tags.length}</small>}
-                </div>
               </button>
             );
           })}
@@ -402,11 +395,12 @@ export default function OverviewPage() {
           <span className="gcal-other">● 기타</span>
         </div>
       </section>
-      {searchOpen && <WorkspaceSearch onClose={() => setSearchOpen(false)} />}
+      {searchOpen && <WorkspaceSearch onClose={() => setSearchOpen(false)} onOpenDetail={setDetailHref} />}
       {dayOpen && (
-        <DayDialog
+        <WorkspaceDrawer
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
+          onOpenDetail={setDetailHref}
         >
           <section
             className={`day-agenda-section${!dayRecords.length ? "day-section-empty" : ""}`}
@@ -484,7 +478,7 @@ export default function OverviewPage() {
                 {daySchedules.map((s) => (
                   <div className="day-schedule-row" key={s.id}>
                   <DayEntry
-                    href={`/schedule?date=${selected}`}
+                    href={`/schedule?date=${selected}#schedule-${s.id}`}
                     category={s.serviceType || "GENERAL"}
                     type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
                     title={s.siteName || s.title}
@@ -533,21 +527,22 @@ export default function OverviewPage() {
                 {dayDue.map((d, i) => (
                   <DayEntry
                     key={"d" + i}
-                    href={`/sites/${Number(d.siteId) || d.siteId}#inspection-plan`}
+                    href={`/sites/${d.siteId}#inspection-plan`}
                     type={d.type}
                     title={d.siteName}
-                    meta="점검 기준 확인"
+                    meta={`최근 PM ${d.lastPmDate || "기록 없음"}`}
                   />
                 ))}
               </div>
             </section>
           )}
-        </DayDialog>
+        </WorkspaceDrawer>
       )}
       <div className="overview-folds">
         <details
           id="work-due"
           className="overview-fold"
+          open
         >
           <summary>
             <span>다가오는 점검</span>
@@ -573,14 +568,16 @@ export default function OverviewPage() {
               {upcomingDue.map((d) => (
                 <Link
                   className="work-due-row"
-                  href={`/sites/${Number(d.siteId) || d.siteId}`}
+                  href={`/sites/${d.siteId}`}
                   key={d.siteId + d.type}
+                  onNavigate={(event) => { event.preventDefault(); setDetailHref(`/sites/${d.siteId}`); }}
                 >
                   <div>
                     <strong>{d.siteName}</strong>
                     <p>
-                      {d.type} · {d.date}
+                      {d.type} · 예정 {d.date}
                     </p>
+                    {d.type === "PM" && <small>최근 PM {d.lastPmDate || "기록 없음"}</small>}
                   </div>
                   <span className={`work-badge ${d.days < 0 ? "overdue" : ""}`}>
                     {d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}
@@ -596,6 +593,7 @@ export default function OverviewPage() {
         <details
           id="work-preparation"
           className="overview-fold"
+          open
         >
           <summary>
             <span>방문 전 확인사항</span>
@@ -617,21 +615,19 @@ export default function OverviewPage() {
               />
             ) : (
               <div className="work-panel">
-                {preparations.map((p) => (
-                  <label
-                    className={`work-preparation ${p.done ? "done" : ""}`}
-                    key={p.id}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={p.done}
-                      onChange={(e) => void check(p.id, e.target.checked)}
-                    />
-                    <div>
-                      <span>{p.siteName || "일반 업무"}</span>
-                      <strong>{p.content}</strong>
-                    </div>
-                  </label>
+                {preparationGroups.map((group) => (
+                  <section className="overview-preparation-group" key={group.key}>
+                    <h3>
+                      {group.siteId ? <button type="button" onClick={() => setDetailHref(`/sites/${group.siteId}`)}>{group.siteName} <span aria-hidden="true">›</span></button> : group.siteName}
+                      <small>{group.items.filter((item) => !item.done).length}건 남음</small>
+                    </h3>
+                    {group.items.map((p) => (
+                      <label className={`work-preparation ${p.done ? "done" : ""}`} key={p.id}>
+                        <input type="checkbox" checked={p.done} onChange={(e) => void check(p.id, e.target.checked)} />
+                        <strong>{p.content}</strong>
+                      </label>
+                    ))}
+                  </section>
                 ))}
                 {!preparations.length && (
                   <Empty>
@@ -642,7 +638,7 @@ export default function OverviewPage() {
             )}
           </div>
         </details>
-        <details className="overview-fold">
+        <details className="overview-fold" open>
           <summary>
             <span>최근 업무기록</span>
             <small>
@@ -671,6 +667,7 @@ export default function OverviewPage() {
                   <Link
                     href={`/work/${r.id}`}
                     className="work-overview-record recent-work-record"
+                    onNavigate={(event) => { event.preventDefault(); setDetailHref(`/work/${r.id}`); }}
                     key={r.id}
                   >
                     <div className="recent-work-content">
@@ -713,6 +710,7 @@ export default function OverviewPage() {
           </div>
         </details>
       </div>
+      {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
     </main>
   );
 }
@@ -763,67 +761,6 @@ function DayEntry({
         </span>
       </div>
     </Link>
-  );
-}
-
-function DayDialog({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: ReactNode;
-}) {
-  const ref = useRef<HTMLDialogElement>(null);
-  useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    dialog.showModal();
-    dialog.focus({ preventScroll: true });
-    return () => {
-      dialog.close();
-      document.body.style.overflow = previous;
-    };
-  }, []);
-  return (
-    <dialog
-      ref={ref}
-      className="work-day-dialog"
-      tabIndex={-1}
-      aria-labelledby="work-day-title"
-      data-ptr-ignore
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target !== e.currentTarget) return;
-        const b = e.currentTarget.getBoundingClientRect();
-        if (
-          e.clientX < b.left ||
-          e.clientX > b.right ||
-          e.clientY < b.top ||
-          e.clientY > b.bottom
-        )
-          onClose();
-      }}
-    >
-      <header>
-        <h2 id="work-day-title">{title}</h2>
-        <button
-          type="button"
-          className="day-close"
-          onClick={onClose}
-          aria-label="날짜 상세 닫기"
-        >
-          ×
-        </button>
-      </header>
-      <div className="work-day-body">{children}</div>
-    </dialog>
   );
 }
 

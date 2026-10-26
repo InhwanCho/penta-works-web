@@ -10,6 +10,7 @@ import {
   type Ref,
 } from "react";
 import Image from "next/image";
+import WorkspaceDrawer from "./workspace-drawer";
 import CustomModal from "@/components/common/custom-modal";
 import { useModal } from "@/components/provider/modal-provider";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ function Photo({
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const modalId = `workspace-photo-${photo.id}`,
     modal = useModal(modalId);
   useEffect(() => {
@@ -82,7 +84,8 @@ function Photo({
           href="#photo"
           onClick={(e) => {
             e.preventDefault();
-            modal.open();
+            if (frame.current?.closest(".workspace-drawer")) setDrawerOpen(true);
+            else modal.open();
           }}
           aria-label={`${photo.name} 크게 보기`}
         >
@@ -99,6 +102,7 @@ function Photo({
           {error || <CircleLoader size="xs" />}
         </span>
       )}
+      {drawerOpen && <WorkspaceDrawer title={photo.name} onClose={() => setDrawerOpen(false)}><FullPhoto photo={photo} /></WorkspaceDrawer>}
       {modal.isOpen && (
         <CustomModal id={modalId}>
           <FullPhoto photo={photo} />
