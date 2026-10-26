@@ -548,7 +548,6 @@ export default function OverviewPage() {
         <details
           id="work-due"
           className="overview-fold"
-          open={mobile}
         >
           <summary>
             <span>다가오는 점검</span>
@@ -599,7 +598,6 @@ export default function OverviewPage() {
         <details
           id="work-preparation"
           className="overview-fold"
-          open={mobile}
         >
           <summary>
             <span>방문 전 확인사항</span>
@@ -644,7 +642,7 @@ export default function OverviewPage() {
             )}
           </div>
         </details>
-        <details className="overview-fold" open={mobile}>
+        <details className="overview-fold">
           <summary>
             <span>최근 업무기록</span>
             <small>
