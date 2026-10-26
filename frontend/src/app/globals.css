@@ -1805,7 +1805,7 @@ h4,
   .admin-card-table .admin-editor-row form { padding: 16px; border: 2px solid var(--work-focus); }
 }
 .workspace-bottom > a { position: relative; }
-.workspace-alert-dot { position: absolute; top: 0; left: calc(50% + 8px); }
+
 .settings-page { max-width: 720px; }
 .settings-page > h1 { margin-bottom: 22px; font-size: 1.6875rem; font-weight: 750; }
 .settings-account-section .settings-account { padding: 0; min-height: 64px; }
@@ -3148,3 +3148,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .recent-work-record .recent-work-meta .work-badge { padding: 2px 6px; font-size: .6875rem; line-height: 1.5; }
 .recent-work-record .recent-work-meta .work-status { font-size: .6875rem; }
 .recent-work-record .recent-work-content > strong { margin: 5px 0 0; }
+
+/* Position the unread dot against the bell itself, independent of navigation labels. */
+.notification-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 0; }
+.notification-icon-dot { position: absolute; top: -3px; right: -4px; display: inline-flex; pointer-events: none; }

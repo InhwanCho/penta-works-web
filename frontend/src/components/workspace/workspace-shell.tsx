@@ -179,13 +179,11 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             className={active(i.href) ? "selected" : ""}
             aria-current={active(i.href) ? "page" : undefined}
           >
-            <WorkIcon name={i.icon} />
+            <span className="notification-icon">
+              <WorkIcon name={i.icon} />
+              {i.href === "/baselines" && <span className="notification-icon-dot"><DeferredUnreadAlertDot /></span>}
+            </span>
             <span>{i.label}</span>
-            {i.href === "/baselines" && (
-              <span className="workspace-alert-dot">
-                <DeferredUnreadAlertDot />
-              </span>
-            )}
           </Link>
         ))}
       </nav>

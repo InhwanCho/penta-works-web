@@ -127,8 +127,10 @@ export default function Navbar() {
                 aria-label="알림 확인 및 관리"
                 className={`${ICON_BUTTON} hidden lg:inline-flex`}
               >
-                <BellIcon />
-                {unread && <UnreadAlertDot />}
+                <span className="notification-icon">
+                  <BellIcon />
+                  {unread && <span className="notification-icon-dot"><UnreadAlertDot /></span>}
+                </span>
               </Link>
             )}
             {session && (
