@@ -260,7 +260,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   const field = form.kind === "FIELD",
     type = form.serviceType;
   return (
-    <main className="work-page work-editor">
+    <main className={`work-page work-editor${editing ? " work-editor-editing" : ""}`}>
       <Link
         href="/work"
         className="work-back"

@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetchBlob } from "@/lib/api";
 import Image from "next/image";
+import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import Link from "@/components/common/app-link";
 import { useEffect, useState } from "react";
 
@@ -372,12 +373,10 @@ function OfficePhotoThumbnail({
   }
 
   return (
-    <a
+    <PhotoPreviewLink
       href={source}
-      target="_blank"
-      rel="noreferrer"
       className="dark:border-background-dark-secondary group/photo relative block aspect-[4/3] overflow-hidden rounded-lg border bg-slate-100"
-      title={photo.originalName || "작업 사진 크게 보기"}
+      label={photo.originalName || "작업 사진"}
     >
       <Image
         src={source}
@@ -387,7 +386,7 @@ function OfficePhotoThumbnail({
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
         className="object-cover transition-transform group-hover/photo:scale-[1.02]"
       />
-    </a>
+    </PhotoPreviewLink>
   );
 }
 

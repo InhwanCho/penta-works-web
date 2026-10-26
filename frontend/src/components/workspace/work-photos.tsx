@@ -10,6 +10,7 @@ import {
   type Ref,
 } from "react";
 import Image from "next/image";
+import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import WorkspaceDrawer from "./workspace-drawer";
 import CustomModal from "@/components/common/custom-modal";
 import { useModal } from "@/components/provider/modal-provider";
@@ -80,14 +81,13 @@ function Photo({
       style={{ minHeight: 170 }}
     >
       {url ? (
-        <a
-          href="#photo"
-          onClick={(e) => {
-            e.preventDefault();
+        <PhotoPreviewLink
+          href={url}
+          onOpen={() => {
             if (frame.current?.closest(".workspace-drawer")) setDrawerOpen(true);
             else modal.open();
           }}
-          aria-label={`${photo.name} 크게 보기`}
+          label={photo.name}
         >
           <Image
             src={url}
@@ -96,7 +96,7 @@ function Photo({
             height={photo.height}
             unoptimized
           />
-        </a>
+        </PhotoPreviewLink>
       ) : (
         <span role={error ? "alert" : undefined}>
           {error || <CircleLoader size="xs" />}

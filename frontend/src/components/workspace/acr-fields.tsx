@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import { createPortal } from "react-dom";
 import { useId, useState, type ReactNode } from "react";
 import { ChoiceGroup } from "./choice-group";
@@ -19,10 +20,10 @@ export function GuideFigures({ figures, title }: { figures?: string[]; title: st
   return <>
     <div className="service-guide-figures">
       {figures?.map((figure, index) => <figure key={figure}>
-        <a href={`/service-guide/acr/${figure}.jpg`} target="_blank" rel="noreferrer" onClick={event => { event.preventDefault(); setExpanded(figure); }} aria-label={`${title} 참고 그림 ${index + 1} 크게 보기`}>
+        <PhotoPreviewLink href={`/service-guide/acr/${figure}.jpg`} onOpen={() => setExpanded(figure)} label={`${title} 참고 그림 ${index + 1}`}>
           <Image src={`/service-guide/acr/${figure}.jpg`} alt={`${title} 참고 그림 ${index + 1}`} width={800} height={600} unoptimized className="work-guide-image" />
-        </a>
-        <figcaption>참고 그림 {index + 1} · 눌러서 확대</figcaption>
+        </PhotoPreviewLink>
+        <figcaption>참고 그림 {index + 1} · 두 번 눌러 확대</figcaption>
       </figure>)}
     </div>
     {expanded && createPortal(<WorkspaceDrawer title={`${title} 참고 그림`} onClose={() => setExpanded(null)} className="service-guide-viewer">
