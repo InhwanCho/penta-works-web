@@ -3020,7 +3020,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .overview-detail-body > .work-panel { padding: 12px; margin: 8px 0; }
 .overview-detail-body .hospital-profile-summary { margin-bottom: 12px; }
 .workspace-drawer .workspace-search-body { padding: 10px 12px 16px; }
-@keyframes workspace-drawer-enter { from { opacity: .6; translate: 0 48px; } to { opacity: 1; translate: 0 0; } }
+@keyframes workspace-drawer-enter { from { translate: 0 48px; } to { translate: 0 0; } }
 @media(prefers-reduced-motion:reduce) { .workspace-drawer[open] { animation: none; } }
 @media(max-width:767px) {
   .work-page.work-overview { padding: 8px 4px 20px; }
@@ -3152,3 +3152,19 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 /* Position the unread dot against the bell itself, independent of navigation labels. */
 .notification-icon { position: relative; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 0; }
 .notification-icon-dot { position: absolute; top: -3px; right: -4px; display: inline-flex; pointer-events: none; }
+
+/* Clear foreground separation and horizontal breathing room in mobile agenda sheets. */
+@media(max-width:1023px) {
+  .work-day-dialog.workspace-drawer { isolation: isolate; background: var(--work-bg, #f3f7fa); border: 1px solid #b5c3d1; border-bottom: 0; box-shadow: 0 -12px 40px #12243840, 0 -2px 8px #12243824; }
+  .work-day-dialog.workspace-drawer::backdrop { background: #101c2e80; }
+  .workspace-drawer-grip { height: 34px; background: var(--work-bg, #f3f7fa); }
+  .workspace-drawer-grip > span { width: 44px; height: 5px; opacity: .7; }
+  .work-day-dialog.workspace-drawer > header { padding: 0 16px 12px; background: var(--work-bg, #f3f7fa); border-bottom: 1px solid var(--work-line); }
+  .workspace-drawer-content { padding: 0 12px 12px; background: var(--work-bg, #f3f7fa); }
+  .workspace-drawer .day-agenda-section { margin: 10px 0; padding: 12px; }
+  .workspace-drawer .day-entry-list { padding: 8px; display: grid; gap: 8px; border: 0; background: var(--work-bg, #f3f7fa); border-radius: 10px; }
+  .workspace-drawer .day-entry, .workspace-drawer .day-entry + .day-entry { padding: 12px 14px; border: 1px solid var(--work-line); border-left: 3px solid var(--day-accent); border-radius: 9px; }
+  .workspace-drawer .day-schedule-row > .day-entry { padding-right: 56px; border-radius: 9px; }
+  .dark .work-day-dialog.workspace-drawer { border-color: #53677d; box-shadow: 0 -12px 40px #0008, 0 -2px 8px #0005; }
+  .workspace-drawer.service-guide-viewer .workspace-drawer-content { padding: 0; }
+}

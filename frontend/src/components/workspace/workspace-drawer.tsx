@@ -19,7 +19,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
   const mobile = useMobileWorkspace();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
-  const gesture = useRef<{ id: number; y: number } | null>(null);
+  const gesture = useRef<{ id: number; y: number; at: number } | null>(null);
   const [offset, setOffset] = useState(0);
   useEffect(() => {
     const dialog = ref.current;
@@ -41,17 +41,19 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     onPointerDown(event: PointerEvent<HTMLDivElement | HTMLElement>) {
       if (!mobile) return;
       if (event.target instanceof Element && event.target.closest("button")) return;
-      gesture.current = { id: event.pointerId, y: event.clientY };
+      gesture.current = { id: event.pointerId, y: event.clientY, at: event.timeStamp };
       event.currentTarget.setPointerCapture(event.pointerId);
     },
     onPointerMove(event: PointerEvent<HTMLDivElement | HTMLElement>) {
       if (gesture.current?.id === event.pointerId) setOffset(Math.max(0, event.clientY - gesture.current.y));
     },
     onPointerUp(event: PointerEvent<HTMLDivElement | HTMLElement>) {
-      const distance = gesture.current?.id === event.pointerId ? event.clientY - gesture.current.y : 0;
+      const start = gesture.current?.id === event.pointerId ? gesture.current : null;
+      const distance = start ? event.clientY - start.y : 0;
+      const duration = start ? Math.max(1, event.timeStamp - start.at) : 0;
       gesture.current = null;
       setOffset(0);
-      if (distance > 70) onClose();
+      if (distance >= 40 || (distance >= 18 && duration > 0 && distance / duration >= 0.45)) onClose();
     },
     onPointerCancel() { gesture.current = null; setOffset(0); },
   };
