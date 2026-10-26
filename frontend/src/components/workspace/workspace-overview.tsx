@@ -6,6 +6,7 @@ import PageLoader from "@/components/common/page-loader";
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
 import WorkspaceSearch from "./workspace-search";
+import { groupRecentWorkByWeek } from "./recent-work-weeks";
 import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
@@ -207,6 +208,7 @@ export default function OverviewPage() {
     ([key, group]) => ({ key, ...group }),
   ).sort((a, b) => a.siteName.localeCompare(b.siteName, "ko"));
   const recentRecords = recent.data?.records || [];
+  const recentWeeks = groupRecentWorkByWeek(recentRecords);
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
   const daySchedules = (schedules.data || []).filter(
@@ -666,7 +668,10 @@ export default function OverviewPage() {
               />
             ) : (
               <div className="work-panel">
-                {recentRecords.map((r) => (
+                {recentWeeks.map((week) => (
+                  <section className="recent-work-week" key={week.key} aria-label={`${week.year}년 ${week.label}`}>
+                    <h3 className="recent-work-week-heading"><span>{week.label}</span><small>{week.records.length}건</small></h3>
+                    {week.records.map((r) => (
                   <Link
                     href={`/work/${r.id}`}
                     className="work-overview-record recent-work-record"
@@ -700,6 +705,8 @@ export default function OverviewPage() {
                       ›
                     </span>
                   </Link>
+                ))}
+                  </section>
                 ))}
                 {!recentRecords.length && (
                   <Empty>

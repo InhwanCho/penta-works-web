@@ -3137,3 +3137,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
   .work-editor-editing .work-form-row { row-gap: 12px; }
   .work-editor-editing .work-acr-body { gap: 12px; padding-top: 11px; padding-bottom: 11px; }
 }
+
+.recent-work-week + .recent-work-week { border-top: 1px solid var(--work-line); }
+.recent-work-week-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; margin: 0; background: var(--work-hover); color: var(--work-ink); font-size: .8125rem; font-weight: 750; }
+.recent-work-week-heading small { color: var(--work-muted); font-size: .6875rem; font-weight: 500; }
