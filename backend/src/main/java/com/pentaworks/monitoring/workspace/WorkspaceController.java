@@ -225,6 +225,21 @@ public class WorkspaceController {
             rows.forEach(r->r.put("linkedRecords",linked.getOrDefault(((Number)r.get("id")).longValue(),List.of())));
         }
         return rows;}
+    @GetMapping("/schedules/search")
+    public Map<String,Object> searchSchedules(@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="20") int size,@RequestParam(defaultValue="") String query,Authentication auth) {
+        var u=users.require(auth);var allowed=users.allowedSiteIds(u);
+        if(query.length()>200)throw new BadRequestException("검색어는 200자 이내로 입력해주세요.");
+        size=Math.max(1,Math.min(size,100));page=Math.max(1,page);
+        var args=new java.util.ArrayList<Object>();args.add(u.companyId());
+        String from="FROM workspace_schedule w JOIN app_user u ON u.id=w.author_id LEFT JOIN site s ON s.site=w.site_id LEFT JOIN workspace_hospital h ON h.company_id=w.company_id AND h.site_id=w.site_id ";
+        String where="WHERE w.company_id=? AND w.deleted_at IS NULL AND (w.site_id IS NULL";
+        if(!allowed.isEmpty()){where+=" OR w.site_id IN ("+String.join(",",java.util.Collections.nCopies(allowed.size(),"?"))+")";args.addAll(allowed);}where+=")";
+        if(!query.isBlank()){where+=" AND (LOCATE(?,w.title)>0 OR LOCATE(?,w.body)>0 OR LOCATE(?,COALESCE(h.name,s.name))>0)";for(int i=0;i<3;i++)args.add(query.trim());}
+        Long total=db.queryForObject("SELECT COUNT(*) "+from+where,Long.class,args.toArray());
+        args.add(size);args.add((long)(page-1)*size);
+        String projection="SELECT w.id,w.revision,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt ";
+        return Map.of("schedules",db.queryForList(projection+from+where+" ORDER BY w.start_at DESC,w.id DESC LIMIT ? OFFSET ?",args.toArray()),"total",total==null?0:total,"page",page);
+    }
     @PostMapping("/schedules") @Transactional
     public Map<String,Object> schedule(@RequestBody ScheduleInput input,Authentication auth){
         var u=users.require(auth);text(input.title(),200,"제목");if(input.body()!=null&&input.body().length()>10000)throw new BadRequestException("내용이 너무 깁니다.");

@@ -5,6 +5,7 @@ import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
+import WorkspaceSearch from "./workspace-search";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -63,6 +64,7 @@ function calendarColor(type: string) {
 }
 export default function OverviewPage() {
   const today = dayString();
+  const [searchOpen, setSearchOpen] = useState(false);
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
@@ -283,6 +285,9 @@ export default function OverviewPage() {
           >
             ›
           </button>
+          <button type="button" className="overview-search-trigger" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
+          </button>
           <button
             type="button"
             className="work-calendar-today"
@@ -397,6 +402,7 @@ export default function OverviewPage() {
           <span className="gcal-other">● 기타</span>
         </div>
       </section>
+      {searchOpen && <WorkspaceSearch onClose={() => setSearchOpen(false)} />}
       {dayOpen && (
         <DayDialog
           onClose={() => setDayOpen(false)}

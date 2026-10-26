@@ -2930,3 +2930,36 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .day-schedule-row > .action-menu { position: absolute; right: 8px; top: 8px; }
 /* Open toward the modal's body so the last row's actions are not cut off below it. */
 .day-schedule-row .action-menu-items { top: auto; bottom: calc(100% + 4px); }
+
+.work-calendar-toolbar > .overview-search-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 44px; margin-left: auto; padding: 8px 10px; font-size: 0.8125rem; border: 1px solid var(--work-line); }
+.overview-search-trigger svg { width: 17px; height: 17px; }
+.work-calendar-toolbar:has(.overview-search-trigger) > .work-calendar-today { margin-left: 0; }
+.workspace-search-dialog { width: min(720px, calc(100vw - 32px)); }
+.workspace-search-body { padding: 0 18px 18px; }
+.workspace-search-form { display: flex; align-items: stretch; gap: 8px; }
+.workspace-search-form input { min-width: 0; flex: 1; min-height: 44px; padding: 10px 12px; border: 1px solid var(--work-line); border-radius: 8px; background: var(--work-paper); color: var(--work-ink); font-size: 16px; }
+.workspace-search-form button { flex-shrink: 0; min-height: 44px; padding: 8px 14px; font-size: 0.875rem; }
+.workspace-search-scopes { display: flex; gap: 6px; margin-top: 14px; }
+.workspace-search-scopes button { min-height: 40px; padding: 8px 14px; border: 1px solid var(--work-line); border-radius: 8px; font-size: 0.8125rem; color: var(--work-muted); background: var(--work-paper); }
+.workspace-search-scopes button[aria-pressed=true] { border-color: var(--work-focus); background: var(--work-soft); color: var(--work-focus); font-weight: 700; }
+.workspace-search-hint { margin: 12px 0; color: var(--work-muted); font-size: 0.75rem; line-height: 1.7; overflow-wrap: anywhere; }
+.workspace-search-loading { display: grid; place-items: center; min-height: 200px; }
+.workspace-search-results { display: grid; gap: 22px; }
+.workspace-search-results section > h3 { margin: 0 0 8px; color: var(--work-ink); font-size: 0.875rem; font-weight: 700; }
+.workspace-search-result { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--work-line); color: var(--work-ink); text-decoration: none; }
+.workspace-search-result > div { min-width: 0; }
+.workspace-search-result strong { font-size: 0.875rem; line-height: 1.5; overflow-wrap: anywhere; }
+.workspace-search-result p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; margin-top: 5px; color: var(--work-muted); font-size: 0.8125rem; line-height: 1.6; overflow-wrap: anywhere; }
+.workspace-search-result small { display: block; margin-top: 5px; color: var(--work-muted); font-size: 0.75rem; line-height: 1.5; }
+.workspace-search-result > span { font-size: 1.25rem; color: var(--work-muted); }
+.workspace-search-empty { padding: 12px 0; color: var(--work-muted); font-size: 0.8125rem; }
+.workspace-search-pages { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 10px; font-size: 0.75rem; }
+.workspace-search-pages button { min-height: 40px; padding: 8px 12px; border: 1px solid var(--work-line); border-radius: 8px; }
+.workspace-search-pages button:disabled { opacity: .4; }
+@media(max-width: 767px) {
+  .work-calendar-toolbar > .overview-search-trigger { padding: 6px; }
+  .overview-search-trigger span { display: none; }
+  .workspace-search-body { padding: 0 12px 14px; }
+  .work-calendar-toolbar:has(.overview-search-trigger) > label { min-width: 0; flex: 1; }
+  .work-calendar-toolbar:has(.overview-search-trigger) input[type=month] { width: 100%; }
+}

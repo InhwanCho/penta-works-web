@@ -41,6 +41,20 @@ class WorkspaceDatabaseTest {
   assertThrows(NotFoundException.class,()->controller.record(520,auth));
   assertEquals(111L,controller.searchRecords(1,20,"기록1","ALL",false,auth).get("total"));
  }
+ @Test void scheduleSearchPaginatesAcrossPastAndFutureAndRestrictsAccessBeforeCounting(){
+  for(int i=0;i<15;i++)db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at) VALUES(1,1,'001',?,'검사 메모','2030-01-01','2030-01-02')","점검"+i);
+  db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at) VALUES(1,1,'001','과거점검','','2020-01-01','2020-01-02'),(1,1,NULL,'팀점검','','2031-01-01','2031-01-02'),(1,1,'002','비허용점검','','2032-01-01','2032-01-02'),(2,1,'001','다른회사점검','','2033-01-01','2033-01-02')");
+  db.update("INSERT INTO workspace_schedule(company_id,author_id,site_id,title,body,start_at,end_at,deleted_at) VALUES(1,1,'001','삭제점검','','2034-01-01','2034-01-02',NOW())");
+  var first=controller.searchSchedules(1,10,"점검",auth);assertEquals(17L,first.get("total"));assertEquals(10,((List<?>)first.get("schedules")).size());
+  assertEquals(7,((List<?>)controller.searchSchedules(2,10,"점검",auth).get("schedules")).size());
+  assertEquals(16L,controller.searchSchedules(1,10,"허용병원",auth).get("total"));
+  assertEquals(15L,controller.searchSchedules(1,10,"검사 메모",auth).get("total"));
+  assertEquals(0L,controller.searchSchedules(1,10,"%' OR 1=1 --",auth).get("total"));
+  var clamped=controller.searchSchedules(0,-1,"점검",auth);assertEquals(1,clamped.get("page"));assertEquals(1,((List<?>)clamped.get("schedules")).size());
+  var latest=(Map<?,?>)((List<?>)first.get("schedules")).get(0);assertEquals("팀점검",latest.get("title"));assertTrue(latest.get("startAt").toString().startsWith("2031"));
+  var user=users.require(auth);when(users.allowedSiteIds(user)).thenReturn(Set.of());assertEquals(1L,controller.searchSchedules(1,10,"점검",auth).get("total"));
+  assertThrows(BadRequestException.class,()->controller.searchSchedules(1,10,"가".repeat(201),auth));
+ }
  @Test void futureDateWindowAndOverlappingSchedulesDoNotUseTodayCutoff(){
   record(1,"001");record(2,"001");db.update("UPDATE workspace_record SET work_date='2029-10-15' WHERE id=2");
   var future=controller.records(LocalDate.of(2029,4,1),LocalDate.of(2030,3,31),null,auth);assertEquals(1,future.size());assertEquals(2L,((Number)future.get(0).get("id")).longValue());assertEquals(1L,((Number)controller.record(1,auth).get("id")).longValue());
