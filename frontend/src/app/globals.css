@@ -3141,3 +3141,10 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .recent-work-week + .recent-work-week { border-top: 1px solid var(--work-line); }
 .recent-work-week-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; margin: 0; background: var(--work-hover); color: var(--work-ink); font-size: .8125rem; font-weight: 750; }
 .recent-work-week-heading small { color: var(--work-muted); font-size: .6875rem; font-weight: 500; }
+
+/* Record metadata shares the first line; the title occupies the second. */
+.recent-work-record .recent-work-meta { gap: 4px 8px; line-height: 1.5; }
+.recent-work-meta time, .recent-work-record .recent-work-meta small { margin: 0; color: var(--work-muted); font-size: .6875rem; }
+.recent-work-record .recent-work-meta .work-badge { padding: 2px 6px; font-size: .6875rem; line-height: 1.5; }
+.recent-work-record .recent-work-meta .work-status { font-size: .6875rem; }
+.recent-work-record .recent-work-content > strong { margin: 5px 0 0; }

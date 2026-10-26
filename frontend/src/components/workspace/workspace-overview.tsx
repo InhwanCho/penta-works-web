@@ -679,11 +679,9 @@ export default function OverviewPage() {
                     key={r.id}
                   >
                     <div className="recent-work-content">
-                      <small>
-                        {r.workDate} · {r.siteName || "일반 업무"}
-                      </small>
-                      <strong>{r.title || "제목 없는 업무기록"}</strong>
                       <div className="recent-work-meta">
+                        <time dateTime={r.workDate}>{r.workDate}</time>
+                        {r.siteName && <small className="recent-work-site">{r.siteName}</small>}
                         <span className="work-badge">
                           {r.kind === "GENERAL"
                             ? "일반 업무"
@@ -697,6 +695,7 @@ export default function OverviewPage() {
                         </span>
                         <small>{r.authorName}</small>
                       </div>
+                      <strong>{r.title || "제목 없는 업무기록"}</strong>
                     </div>
                     <span
                       aria-hidden="true"
