@@ -2,6 +2,7 @@
 
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -1204,9 +1205,7 @@ function formatDate(value: string | null) {
 }
 function Loading() {
   return (
-    <div className="flex min-h-48 items-center justify-center">
-      <CircleLoader size="xl" />
-    </div>
+    <PageLoader />
   );
 }
 function AccessDenied() {

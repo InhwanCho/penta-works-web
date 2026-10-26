@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 
 import HelpButton from "@/components/common/context-help";
@@ -27,7 +28,7 @@ export function NotificationPreferencesSummary() {
   const query=usePreferences();
   const path=usePathname();
   return <section aria-label="내 알림 수신 설정" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-300 bg-white p-3 sm:p-4 dark:border-slate-600 dark:bg-background-dark-card">
-    <div className="min-w-0 flex-1"><h2 className="flex items-center gap-1 text-base font-extrabold">알림 받는 시간·반복<HelpButton title="내 알림 수신 설정" message={ALERT_HELP["내 알림 수신 설정"]}/></h2><p className="mt-1 break-words text-sm leading-6 text-text-secondary">{query.isPending?<CircleLoader size="xs" />:query.isError?"수신 설정을 불러오지 못했습니다.":query.data?.needsSelection?"병원별 기존 설정이 다릅니다. 공통 설정을 선택해주세요.":preferenceSummary(query.data?.preferences??defaults)}</p><p className="mt-1 text-xs leading-5 text-text-secondary">내가 받는 모든 병원의 알림에 적용됩니다.</p></div>
+    <div className="min-w-0 flex-1"><h2 className="flex items-center gap-1 text-base font-extrabold">알림 받는 시간·반복<HelpButton title="내 알림 수신 설정" message={ALERT_HELP["내 알림 수신 설정"]}/></h2><p className="mt-1 break-words text-sm leading-6 text-text-secondary">{query.isPending?<CircleLoader size="xs" inline />:query.isError?"수신 설정을 불러오지 못했습니다.":query.data?.needsSelection?"병원별 기존 설정이 다릅니다. 공통 설정을 선택해주세요.":preferenceSummary(query.data?.preferences??defaults)}</p><p className="mt-1 text-xs leading-5 text-text-secondary">내가 받는 모든 병원의 알림에 적용됩니다.</p></div>
     <Link href={`/notification-settings?from=${path==="/"?"dashboard":"baselines"}`} className="inline-flex min-h-11 items-center rounded-lg border border-sky-300 px-3 text-sm font-bold text-sky-800 dark:border-sky-700 dark:text-sky-200">받는 시간·반복 바꾸기</Link>
   </section>;
 }
@@ -36,7 +37,7 @@ export default function NotificationPreferencesPage() {
   const [back,setBack]=useState("/baselines?view=settings");
   useEffect(()=>{if(new URLSearchParams(window.location.search).get("from")==="dashboard")setBack("/?view=alerts");},[]);
   return <main className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6"><Link href={back} className="inline-flex min-h-11 items-center text-base font-bold text-sky-800 dark:text-sky-200">← {back==="/baselines?view=settings"?"알림 설정 메뉴":"대시보드 알림값"}</Link><div className="my-3 flex items-center justify-between gap-2"><h1 className="text-xl font-extrabold lg:text-2xl">알림 받는 시간·반복</h1><HelpButton title="내 알림 수신 설정" message="내 계정에 한 번 설정하면 현재와 앞으로 추가되는 모든 병원에 적용됩니다. 다른 담당자의 설정에는 영향을 주지 않습니다. 쉬는 시간에도 앱 안의 이상 표시와 기록은 남고, 카톡·문자 발송만 쉽니다."/></div><p className="mb-4 text-sm text-text-secondary">내가 받는 모든 병원에 적용</p>
-    {query.isPending?<p role="status"><CircleLoader size="xs" /></p>:query.isError?<button className={field} onClick={()=>query.refetch()}>수신 설정 다시 불러오기</button>:query.data&&<PreferenceEditor view={query.data}/>}
+    {query.isPending?<PageLoader />:query.isError?<button className={field} onClick={()=>query.refetch()}>수신 설정 다시 불러오기</button>:query.data&&<PreferenceEditor view={query.data}/>}
   </main>;
 }
 function PreferenceEditor({view}:{view:PreferenceView}) {

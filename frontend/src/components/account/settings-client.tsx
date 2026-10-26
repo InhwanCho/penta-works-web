@@ -1,6 +1,6 @@
 "use client";
 
-import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -19,7 +19,7 @@ export default function SettingsClient() {
     queryFn: () => apiFetch<{ name: string }>("/admin/accounts/company"),
     enabled: !!session && isAdmin,
   });
-  if (isLoading) return <main className="flex min-h-[50dvh] items-center justify-center"><CircleLoader size="m" /></main>;
+  if (isLoading) return <PageLoader as="main" />;
   if (!session)
     return (
       <main className="work-page">

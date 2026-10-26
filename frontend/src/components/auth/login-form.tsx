@@ -2,6 +2,7 @@
 import PolicyLinks from "@/components/legal/policy-links";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import Image from "next/image";
 import Link from "@/components/common/app-link";
@@ -91,6 +92,8 @@ export default function LoginForm() {
     [canSubmit, email, login, password, rememberEmail, goAfterLogin],
   );
 
+  if (isLoading || (session && !reauthenticate)) return <PageLoader as="main" />;
+
   return (
     <main className="mx-auto flex w-full max-w-7xl items-center justify-center px-3 py-6 sm:px-4 sm:py-8 lg:min-h-[calc(100dvh-3.5rem)] lg:px-6 lg:py-8">
       <div className="w-full max-w-md">
@@ -114,11 +117,6 @@ export default function LoginForm() {
           </header>
 
           <div className="mt-6">
-            {isLoading || (session && !reauthenticate) ? (
-              <div className="flex min-h-[220px] items-center justify-center">
-                <CircleLoader size="xl" />
-              </div>
-            ) : (
               <form
                 onSubmit={handleSubmit}
                 noValidate
@@ -220,7 +218,6 @@ export default function LoginForm() {
                 </button>
                 <Link href="/forgot-password" className="mt-4 block text-center text-sm font-semibold text-sky-700 dark:text-sky-300">비밀번호를 잊으셨나요?</Link>
               </form>
-            )}
             <PolicyLinks className="login-policy-links" />
           </div>
         </div>

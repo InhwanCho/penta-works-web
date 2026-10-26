@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import AlertSnooze from "./alert-snooze";
 
@@ -303,7 +304,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
           <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{bulkSaving ? <CircleLoader size="xs" inline /> : `${selectedIds.length}건 확인 · 24시간 중지`}</button>
         </div>}
       </div>}
-      {history.isFetching && !busy && <p role="status" className="mb-3 text-sm"><CircleLoader size="xs" /></p>}
+      {history.isPending ? <PageLoader /> : history.isFetching && !busy && <p role="status" className="mb-3 text-center text-sm"><CircleLoader size="xs" inline /></p>}
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
       {!history.isPending && !failed && filtered.length === 0 && (
@@ -785,7 +786,7 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
       </form>
     </div>
   );
-  if (!page && smallScreen) return <p role="status" className="p-4"><CircleLoader size="xs" /></p>;
+  if (!page && smallScreen) return <PageLoader />;
   return page ? editor : createPortal(editor, document.body);
 }
 

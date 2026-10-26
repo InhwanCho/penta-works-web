@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
@@ -220,7 +221,7 @@ export default function OverviewPage() {
   // The overview's queries populate one screen; wait in one place instead of
   // showing a spinner for each calendar source and summary card.
   if (recordsLoading || schedules.isPending || planning.isPending || recent.isPending) {
-    return <main className="work-page flex min-h-[70dvh] items-center justify-center" aria-busy="true"><CircleLoader size="m" /></main>;
+    return <PageLoader as="main" />;
   }
   return (
     <main className="work-page work-overview">

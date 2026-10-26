@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -246,7 +247,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       </main>
     );
   if (id && records.isPending)
-    return <main className="flex min-h-[50dvh] items-center justify-center"><CircleLoader size="m" /></main>;
+    return <PageLoader as="main" />;
   if (id && !record)
     return (
       <main className="work-page">

@@ -3,6 +3,7 @@
 import { ChoiceGroup } from "@/components/workspace/choice-group";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import CompanyMetricsEditor from "@/components/admin/company-metrics-editor";
 import DeleteAccountDialog from "@/components/admin/delete-account-dialog";
 import PhoneInput from "@/components/forms/phone-input";
@@ -1885,9 +1886,7 @@ function groupSites(sites: SiteOption[]) {
 
 function Loading() {
   return (
-    <main className="flex min-h-[50vh] items-center justify-center">
-      <CircleLoader size="xl" />
-    </main>
+    <PageLoader />
   );
 }
 function Empty({ children }: { children: React.ReactNode }) {

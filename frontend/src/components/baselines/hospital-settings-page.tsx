@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import HelpButton from "@/components/common/context-help";
 import {useEffect,useState} from "react";
@@ -28,6 +29,7 @@ export default function HospitalSettingsPage({siteId}:{siteId:string}){
   catch(e){setError(e instanceof Error?e.message:'저장하지 못했습니다.');}finally{setSaving(false);}
  }
  const button='min-h-11 rounded-lg border border-slate-200 px-3 text-sm font-bold dark:border-white/15';
+ if (hours.isPending) return <PageLoader as="main" />;
  return <main className="mx-auto w-full max-w-3xl px-3 py-4 sm:px-6"><Link href="/baselines?view=sites" className="inline-flex min-h-11 items-center font-bold text-sky-700 dark:text-sky-300">← 병원 운영시간·표시 목록</Link><h1 className="mt-3 text-xl font-extrabold">{name} · 병원 공통 설정</h1><p className="mt-2 text-sm text-text-secondary">모든 담당자에게 적용 · 한국 시간 기준</p>
  {!draft?<p role={hours.isError?'alert':'status'} className="mt-5">{hours.isError?'운영 시간을 불러오지 못했습니다.':hours.isSuccess?'접근 가능한 병원이 아닙니다.':<CircleLoader size="xs" />}{hours.isError&&<button onClick={()=>hours.refetch()} className={button}>다시 시도</button>}</p>:<form onChange={()=>setSaved(false)} onSubmit={save} className="mt-5 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/15 dark:bg-background-dark-card">
  <div className="flex items-center justify-between gap-2"><h2 className="text-lg font-bold">운영 시간 · 알림 감시</h2><HelpButton title="운영시간과 알림" message="운영시간 밖에는 새 알림과 카카오톡·문자 발송을 중지합니다. 다시 운영하면 유예 시간 후 새 데이터로 감시합니다. 개인 수신 시간 설정도 함께 적용됩니다."/></div><p className="mt-2 hidden text-sm leading-6 text-text-secondary lg:block">운영시간 밖에는 새 알림과 카카오톡·문자 발송을 중지합니다. 다시 운영하면 유예 시간 후 새 데이터로 감시합니다. 개인 수신 시간 설정도 함께 적용됩니다.</p>

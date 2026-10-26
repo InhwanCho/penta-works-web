@@ -24,7 +24,7 @@ export default function DashboardHiddenSites({ rows, saving, error, onShow }: {
           <button type="button" disabled={saving} aria-label={`${row.name ?? row.siteDb} 다시 표시`} onClick={() => onShow(row.siteDb)} className="min-h-11 shrink-0 px-2 font-bold text-sky-700 underline disabled:opacity-50 dark:text-sky-300">다시 표시</button>
         </li>)}
       </ul>
-      {saving && <p role="status" className="py-1 text-slate-500"><CircleLoader size="xs" /></p>}
+      {saving && <p role="status" className="py-1 text-slate-500"><CircleLoader size="xs" inline /></p>}
       {error && <p role="alert" className="py-1 text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
     </div>
   </details>;

@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -149,7 +150,7 @@ export function TodayPage() {
     (s) => new Date(dateTime(s.endAt) + "+09:00").getTime() >= Date.now(),
   );
   if (records.isPending || schedules.isPending) {
-    return <main className="work-page flex min-h-[50dvh] items-center justify-center" aria-busy="true"><CircleLoader size="m" /></main>;
+    return <PageLoader as="main" />;
   }
   return (
     <main className="work-page">
@@ -296,7 +297,7 @@ export function HospitalsPage() {
           retry={() => void sites.refetch()}
         />
       ) : sites.isPending ? (
-        <p><CircleLoader size="xs" /></p>
+        <PageLoader />
       ) : (
         <div className="work-hospital-grid">
           {rows.map((s) => (
@@ -410,7 +411,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
           retry={() => void records.refetch()}
         />
       ) : records.isPending ? (
-        <p><CircleLoader size="xs" /></p>
+        <PageLoader />
       ) : (
         <>
           <RecordList rows={rows} />
@@ -827,11 +828,7 @@ export function SchedulePage() {
             </article>
           ))}
           {!rows.length && (
-            <Empty>
-              {schedules.isPending
-                ? <CircleLoader size="xs" />
-                : "등록된 일정이 없습니다."}
-            </Empty>
+            schedules.isPending ? <PageLoader /> : <Empty>등록된 일정이 없습니다.</Empty>
           )}
         </div>
       )}

@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
 import {
@@ -73,9 +74,7 @@ export default function CompanyMetricsEditor() {
   }
   if (query.isLoading)
     return (
-      <div className="flex min-h-48 items-center justify-center">
-        <CircleLoader size="xl" />
-      </div>
+      <PageLoader />
     );
   if (query.isError)
     return (

@@ -1,4 +1,4 @@
-import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import { Suspense } from "react";
 import WorkEditor from "@/components/workspace/work-editor";
 export default async function Page({
@@ -8,7 +8,7 @@ export default async function Page({
 }) {
   const { id } = await params;
   return (
-    <Suspense fallback={<div className="flex min-h-[50dvh] items-center justify-center"><CircleLoader size="m" /></div>}>
+    <Suspense fallback={<PageLoader />}>
       <WorkEditor id={id} />
     </Suspense>
   );

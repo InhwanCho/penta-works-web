@@ -1,5 +1,5 @@
-import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 
 export default function AuthPageLoading() {
-  return <main aria-busy="true" className="flex min-h-[calc(100dvh-7rem)] items-center justify-center px-4"><CircleLoader size="m" /></main>;
+  return <PageLoader as="main" />;
 }

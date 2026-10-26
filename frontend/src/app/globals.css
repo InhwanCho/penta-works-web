@@ -2908,3 +2908,14 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 @media (max-width: 767px) {
   .service-hero-image { max-width: 320px; margin-inline: auto; }
 }
+
+/* Loading occupies the available content area, rather than an arbitrary vh fraction. */
+.page-loading-region {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: max(96px, calc(100dvh - var(--page-loader-top, 56px) - var(--page-loader-bottom, 0px)));
+}
+@media (max-width: 1023px) {
+  .workspace-content .page-loading-region { --page-loader-bottom: var(--workspace-bottom-height, 80px); }
+}

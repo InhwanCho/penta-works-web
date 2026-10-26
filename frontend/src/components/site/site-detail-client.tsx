@@ -14,6 +14,7 @@ import { apiFetch, type SiteAlertSettings } from "@/lib/api";
 import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import SiteAlertSummary from "@/components/site/site-alert-summary";
 import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
@@ -33,7 +34,7 @@ const TimeSeriesLines = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="p-8 text-center text-sm"><CircleLoader size="xs" /></div>
+      <div className="flex min-h-64 items-center justify-center"><CircleLoader size="s" inline /></div>
     ),
   },
 );
@@ -192,9 +193,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
 
   if (isLoading || detailLoading) {
     return (
-      <main className="mx-auto flex h-[90vh] w-full items-center justify-center">
-        <CircleLoader size="xl" />
-      </main>
+      <PageLoader as="main" />
     );
   }
 

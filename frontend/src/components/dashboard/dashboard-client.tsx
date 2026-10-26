@@ -175,7 +175,7 @@ export default function DashboardClient() {
   };
   const viewOptions = <div className="mt-3 space-y-2 text-sm">
     <DashboardSiteFilter rows={data.rows} hiddenSites={hiddenSites.data ?? []} disabled={hiddenSites.isError || visibilityMutation.isPending} onChange={(siteId, hidden) => visibilityMutation.mutate({siteId, hidden})} onRestore={() => visibilityMutation.mutate(null)} />
-    {visibilityMutation.isPending && <p role="status" className="text-xs"><CircleLoader size="xs" /></p>}
+    {visibilityMutation.isPending && <p role="status" className="text-xs"><CircleLoader size="xs" inline /></p>}
     {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
     {hiddenSites.isError && <button type="button" onClick={() => hiddenSites.refetch()} className="min-h-11 text-rose-600 underline">병원 표시 설정 불러오기 실패 · 다시 시도</button>}
 
