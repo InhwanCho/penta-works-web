@@ -6,7 +6,7 @@ import PageLoader from "@/components/common/page-loader";
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
 import WorkspaceSearch from "./workspace-search";
-import { groupRecentWorkByWeek } from "./recent-work-weeks";
+import { groupRecentWorkByWeek, recentWorkWindow } from "./recent-work-weeks";
 import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
@@ -80,11 +80,12 @@ export default function OverviewPage() {
   const router = useRouter();
   const [deletingSchedule, setDeletingSchedule] = useState<number | null>(null);
   const [scheduleError, setScheduleError] = useState("");
+  const recentRange = recentWorkWindow(today);
   const recent = useQuery({
-    queryKey: ["workspace-records", "recent", session?.id],
+    queryKey: ["workspace-records", "recent", session?.id, recentRange.from, recentRange.to],
     queryFn: () =>
-      apiFetch<{ records: WorkRecord[] }>(
-        "/workspace/records/search?page=1&size=8",
+      apiFetch<WorkRecord[]>(
+        `/workspace/records?from=${recentRange.from}&to=${recentRange.to}`,
       ),
     enabled: !!session,
   });
@@ -207,7 +208,7 @@ export default function OverviewPage() {
     }, new Map<string, { siteId: string | null; siteName: string; items: typeof preparations }>()),
     ([key, group]) => ({ key, ...group }),
   ).sort((a, b) => a.siteName.localeCompare(b.siteName, "ko"));
-  const recentRecords = recent.data?.records || [];
+  const recentRecords = recent.data || [];
   const recentWeeks = groupRecentWorkByWeek(recentRecords);
   const days = calendarDays(month);
   const dayRecords = summaries.filter((r) => r.date === selected);
@@ -661,6 +662,7 @@ export default function OverviewPage() {
             >
               업무기록 전체 보기 →
             </Link>
+            <p className="work-hint">이번 주 · 이전 4주 ({recentRange.from} ~ {recentRange.to})</p>
             {recent.isError ? (
               <ErrorState
                 error={recent.error}

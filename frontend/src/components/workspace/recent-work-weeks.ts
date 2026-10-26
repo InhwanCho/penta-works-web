@@ -12,3 +12,15 @@ export function groupRecentWorkByWeek<T extends { id: number; workDate: string }
   }
   return [...groups.values()];
 }
+
+/** Current calendar week plus four preceding weeks; independent of the viewed month. */
+export function recentWorkWindow(today: string) {
+  const date = new Date(today + "T00:00:00Z");
+  const sunday = new Date(date);
+  sunday.setUTCDate(date.getUTCDate() - date.getUTCDay());
+  const from = new Date(sunday);
+  from.setUTCDate(from.getUTCDate() - 28);
+  const to = new Date(sunday);
+  to.setUTCDate(to.getUTCDate() + 6);
+  return { from: from.toISOString().slice(0, 10), to: to.toISOString().slice(0, 10) };
+}

@@ -22,3 +22,9 @@ test('leap dates and months with six calendar rows retain the correct week',()=>
  assert.equal(group([{id:1,workDate:'2024-02-29'}])[0].label,'2월 5주차');
  assert.equal(group([{id:1,workDate:'2026-05-31'}])[0].label,'5월 6주차');
 });
+
+test('recent window covers this week and four earlier weeks without an item limit',()=>{
+ assert.equal(JSON.stringify(out.recentWorkWindow('2026-10-26')),JSON.stringify({from:'2026-09-27',to:'2026-10-31'}));
+ assert.equal(JSON.stringify(out.recentWorkWindow('2026-11-01')),JSON.stringify({from:'2026-10-04',to:'2026-11-07'}));
+ assert.equal(JSON.stringify(out.recentWorkWindow('2026-01-01')),JSON.stringify({from:'2025-11-30',to:'2026-01-03'}));
+});
