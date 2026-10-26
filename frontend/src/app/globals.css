@@ -3040,3 +3040,80 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 }
 @media(max-width:1023px) { .workspace-drawer > header { touch-action: none; } }
 .workspace-desktop-dialog .workspace-drawer-grip { display: none; }
+
+/* Restore/discard prompts need their own spacing outside the form. */
+.work-page .work-draft-notice { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px; margin-bottom: 16px; }
+.work-draft-copy { display: grid; gap: 4px; min-width: 0; }
+.work-draft-notice :is(p,strong) { font-size: .875rem; line-height: 1.6; overflow-wrap: anywhere; }
+.work-draft-copy time { color: var(--work-muted); font-size: .75rem; }
+.work-draft-notice .work-form-actions { flex-shrink: 0; align-items: center; padding: 0; margin: 0; }
+.work-draft-notice button { min-height: 40px; padding: 8px 14px; border-radius: 8px; font-size: .875rem; }
+.work-draft-notice button:not(.work-primary) { border: 1px solid var(--work-line); background: var(--work-paper); }
+
+/* Pentaservice PM / ACR measurement forms. */
+.acr-form { display: grid; gap: 14px; min-width: 0; }
+.acr-form .work-radio-group { margin: 0; }
+.acr-preparation { padding: 16px; }
+.acr-preparation > h3, .acr-overall h3 { font-size: .9375rem; font-weight: 750; }
+.service-method { padding-left: 20px; list-style: decimal; font-size: .8125rem; line-height: 1.8; color: var(--work-ink); }
+.service-method li + li { margin-top: 4px; }
+.service-guide-figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 12px; min-width: 0; }
+.service-guide-figures:empty { display: none; }
+.service-guide-figures figure { min-width: 0; padding: 8px; border: 1px solid var(--work-line); border-radius: 8px; background: var(--work-paper); }
+.service-guide-figures a { display: grid; place-items: center; min-height: 100px; background: white; border-radius: 5px; }
+.service-guide-figures .work-guide-image { width: 100%; height: 200px; object-fit: contain; margin: 0; }
+.service-guide-figures figcaption { padding-top: 6px; color: var(--work-muted); font-size: .6875rem; text-align: center; }
+.service-guide-expanded { width: 100%; height: auto; object-fit: contain; max-height: 70dvh; background: white; }
+.service-guide-viewer { width: min(1000px, calc(100% - 24px)); }
+.acr-preparation > :is(.service-method,.service-guide-figures,.work-table-scroll) { margin-top: 12px; }
+.work-acr-section > summary > .acr-section-title { font-size: .875rem; white-space: normal; color: var(--work-ink); font-weight: 700; }
+.work-acr-section > summary > .service-verdict { align-self: start; border-radius: 20px; padding: 4px 9px; line-height: 1.5; font-weight: 650; }
+.service-verdict.verdict-pass { background: #e1f1e8; color: #17623b; }
+.service-verdict.verdict-fail { background: #fce1e1; color: #9b2424; }
+.acr-criteria { border-left: 3px solid var(--work-focus); padding: 9px 12px; background: var(--work-soft); font-size: .8125rem; line-height: 1.7; }
+.acr-measurement-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; min-width: 0; align-items: start; }
+.acr-measurement-grid > div, .acr-measurement { min-width: 0; }
+.acr-measurement { display: grid; gap: 5px; font-size: .8125rem; font-weight: 600; }
+.acr-measurement .work-input { margin: 0; }
+.acr-measurement input { width: 100%; }
+.acr-full-row { grid-column: 1 / -1; }
+.acr-measurement-pair .acr-image-check { margin-top: 8px; }
+.acr-form .acr-image-check { display: flex; align-items: flex-start; gap: 8px; min-height: 38px; margin: 0; padding: 8px 0; font-size: .8125rem; line-height: 1.6; font-weight: 500; }
+.acr-image-check input { flex: 0 0 17px; height: 17px; width: 17px; margin-top: 2px; accent-color: var(--work-focus); }
+.acr-verdict-controls { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.measurement-result { font-size: .6875rem; font-weight: 600; }
+.measurement-result-pass { color: #17623b; }
+.measurement-result-fail, .measurement-result-invalid { color: #a12a2a; }
+.work-input.measurement-pass { background: #e3f3e8; border-color: #6aa681; color: #175434; }
+.work-input:is(.measurement-fail,.measurement-invalid) { background: #fbe0e0; border-color: #c84b4b; color: #842020; font-weight: 700; }
+.work-input.measurement-setting { background: #fff2ce; border-color: #c6a761; color: #66510d; font-weight: 650; }
+.work-pm-item.service-section-fail, .work-pm-read.service-section-fail { padding: 14px; border: 1px solid #d17878; border-radius: 10px; background: #fff0f0; }
+.service-section-fail.work-acr-section, .service-section-fail.acr-overall { border-color: #d17878; background: #fff4f4; }
+.work-pm-item.service-section-warn, .work-pm-read.service-section-warn { padding: 14px; border: 1px solid #d0ad62; border-radius: 10px; background: #fff8e8; }
+.service-section-fail > strong { color: #a12a2a; }
+.pm-range-field { min-width: 0; border: 0; padding: 0; }
+.pm-range-field legend { margin-bottom: 8px; font-size: .875rem; }
+.pm-range-field > div { display: flex; align-items: center; gap: 8px; }
+.pm-range-field input { width: 100%; min-width: 0; }
+.acr-overall { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 16px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); }
+.dark .work-input.measurement-pass { background: #234638; color: #c6f1d6; border-color: #70ac87; }
+.dark .work-input:is(.measurement-fail,.measurement-invalid) { background: #522929; color: #ffd0d0; border-color: #e58b8b; }
+.dark .work-input.measurement-setting { background: #483d23; color: #ffe6a0; border-color: #bda162; }
+.dark .service-section-fail:is(.work-acr-section,.work-pm-item,.work-pm-read,.acr-overall) { background: #38272b; border-color: #b66871; }
+.dark .service-section-warn:is(.work-pm-item,.work-pm-read) { background: #3c3524; color: #ffe7aa; }
+.dark .service-section-fail > strong, .dark :is(.measurement-result-fail,.measurement-result-invalid) { color: #ffb2b2; }
+.dark .measurement-result-pass { color: #9fe2ba; }
+.dark .service-verdict.verdict-pass { background: #234638; color: #c6f1d6; }
+.dark .service-verdict.verdict-fail { background: #522929; color: #ffd0d0; }
+@media(min-width:900px) { .acr-grid-3 { grid-template-columns: repeat(3,minmax(0,1fr)); } .acr-grid-4 { grid-template-columns: repeat(4,minmax(0,1fr)); } }
+@media(max-width:639px) {
+  .work-page .work-draft-notice { align-items: flex-start; flex-wrap: wrap; gap: 10px; padding: 12px; }
+  .work-draft-notice .work-form-actions { margin-left: auto; }
+  .acr-measurement-grid { grid-template-columns: minmax(0,1fr); }
+  .acr-grid-4 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .work-acr-section > summary { padding: 12px; gap: 8px; }
+  .work-acr-body { gap: 14px; padding: 12px; }
+  .service-guide-figures { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .service-guide-figures .work-guide-image { height: 140px; }
+  .acr-preparation { padding: 12px; }
+}

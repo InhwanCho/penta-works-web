@@ -27,6 +27,7 @@ import {
   initialDetails,
   parseDetails,
   computedDetails,
+  magneticFieldFromModel,
   type WorkDetails,
 } from "./service-form-model";
 import {
@@ -303,13 +304,10 @@ export default function WorkEditor({ id }: { id?: string }) {
       />
       {editing && draft.pending && (
         <div
-          className="work-panel"
+          className="work-panel work-draft-notice"
           role="status"
         >
-          <p>
-            저장하지 않은 업무기록이 있습니다. (
-            {new Date(draft.pending.at).toLocaleString("ko-KR")})
-          </p>
+          <div className="work-draft-copy"><strong>저장하지 않은 업무기록이 있습니다.</strong><time dateTime={new Date(draft.pending.at).toISOString()}>{new Date(draft.pending.at).toLocaleString("ko-KR")}</time></div>
           <div className="work-form-actions">
             <button
               type="button"
@@ -499,7 +497,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                 maxLength={200}
                 value={details.model}
                 onChange={(e) =>
-                  setDetails({ ...details, model: e.target.value })
+                  setDetails({ ...details, model: e.target.value, magneticFieldTesla: magneticFieldFromModel(e.target.value) || details.magneticFieldTesla })
                 }
                 placeholder="예: Signa HDxt 1.5T"
               />
@@ -762,7 +760,7 @@ export function ReadRecord({ record: r }: { record: WorkRecord }) {
           <h2>PM 점검표</h2>
           {d.pm.map((item) => (
             <div
-              className="work-pm-read"
+              className={`work-pm-read ${item.result === "fail" ? "service-section-fail" : item.result === "cant" ? "service-section-warn" : ""}`}
               key={item.name}
             >
               <strong>{item.name}</strong>

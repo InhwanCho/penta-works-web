@@ -605,7 +605,7 @@ export function SchedulePage() {
       )}
       {draft.pending && (
         <div
-          className="work-panel"
+          className="work-panel work-draft-notice"
           role="status"
         >
           <p>이 기기에 저장하지 않은 일정이 있습니다.</p>
