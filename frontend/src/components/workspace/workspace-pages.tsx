@@ -5,7 +5,7 @@ import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { useDashboardQuery } from "@/hooks/use-dashboard-query";
@@ -440,9 +440,23 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
     </main>
   );
 }
+function scheduleEditForm(s: WorkSchedule) {
+  return {
+    targetKind: s.targetKind || (s.siteId ? "HOSPITAL" : "GENERAL"),
+    personalKind: s.personalKind || "etc",
+    serviceType: s.serviceType || "ETC",
+    title: s.title,
+    siteId: s.siteId || "",
+    body: s.body || "",
+    startAt: s.startAt.slice(0, 16),
+    endAt: s.endAt.slice(0, 16),
+  };
+}
 export function SchedulePage() {
   const router = useRouter();
   const search = useSearchParams();
+  const requestedEdit = search.get("edit");
+  const openedEdit = useRef<string | null>(null);
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(search.get("date") || "")
     ? search.get("date")!
     : dayString();
@@ -475,12 +489,33 @@ export function SchedulePage() {
     value: { form, editingSchedule },
     enabled: !!session && open,
     onRestore: (d) => {
+      openedEdit.current = requestedEdit;
       setForm(d.form);
       setEditingSchedule(d.editingSchedule);
       setOpen(true);
     },
     restoreNotice: "일정 내용을 이 기기의 임시저장에서 복구했습니다.",
   });
+  useEffect(() => {
+    if (!requestedEdit || !/^\d+$/.test(requestedEdit) || openedEdit.current === requestedEdit || schedules.isPending || schedules.error || !session || draft.pending) return;
+    const schedule = schedules.data?.find(s => String(s.id) === requestedEdit);
+    if (!schedule) {
+      openedEdit.current = requestedEdit;
+      setError("이 날짜에서 수정할 일정을 찾을 수 없습니다.");
+      return;
+    }
+    if (schedule.authorId !== session.id && !isAdmin) {
+      openedEdit.current = requestedEdit;
+      setError("작성한 일정만 수정할 수 있습니다.");
+      return;
+    }
+    openedEdit.current = requestedEdit;
+    if (!draft.confirmLeave()) return;
+    draft.resume();
+    setEditingSchedule(schedule);
+    setForm(scheduleEditForm(schedule));
+    setOpen(true);
+  }, [requestedEdit, schedules.isPending, schedules.error, schedules.data, session, isAdmin, draft]);
   const rows = (schedules.data || [])
     .filter(
       (s) =>
@@ -749,18 +784,7 @@ export function SchedulePage() {
                                 return;
                               draft.resume();
                               setEditingSchedule(s);
-                              setForm({
-                                targetKind:
-                                  s.targetKind ||
-                                  (s.siteId ? "HOSPITAL" : "GENERAL"),
-                                personalKind: s.personalKind || "etc",
-                                serviceType: s.serviceType || "ETC",
-                                title: s.title,
-                                siteId: s.siteId || "",
-                                body: s.body || "",
-                                startAt: s.startAt.slice(0, 16),
-                                endAt: s.endAt.slice(0, 16),
-                              });
+                              setForm(scheduleEditForm(s));
                               setOpen(true);
                               window.scrollTo({ top: 0, behavior: "smooth" });
                             },

@@ -2919,3 +2919,14 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 @media (max-width: 1023px) {
   .workspace-content .page-loading-region { --page-loader-bottom: var(--workspace-bottom-height, 80px); }
 }
+
+/* Keep calendar row navigation and its action menu as separate touch targets. */
+.work-day-dialog .day-schedule-list { overflow: visible; }
+.day-schedule-row { position: relative; }
+.day-schedule-row + .day-schedule-row { border-top: 1px solid var(--work-line); }
+.work-day-dialog .day-schedule-row > .day-entry { padding-right: 62px; border-radius: 0; }
+.work-day-dialog .day-schedule-row:first-child > .day-entry { border-start-start-radius: 11px; border-start-end-radius: 11px; }
+.work-day-dialog .day-schedule-row:last-child > .day-entry { border-end-start-radius: 11px; border-end-end-radius: 11px; }
+.day-schedule-row > .action-menu { position: absolute; right: 8px; top: 8px; }
+/* Open toward the modal's body so the last row's actions are not cut off below it. */
+.day-schedule-row .action-menu-items { top: auto; bottom: calc(100% + 4px); }

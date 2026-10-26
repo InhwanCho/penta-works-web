@@ -4,6 +4,8 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
+import ActionMenu from "@/components/common/action-menu";
+import { useRouter } from "next/navigation";
 import { useMemo, useState, useEffect, useRef, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -65,7 +67,10 @@ export default function OverviewPage() {
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
     [error, setError] = useState("");
-  const { session } = useAuth();
+  const { session, isAdmin } = useAuth();
+  const router = useRouter();
+  const [deletingSchedule, setDeletingSchedule] = useState<number | null>(null);
+  const [scheduleError, setScheduleError] = useState("");
   const recent = useQuery({
     queryKey: ["workspace-records", "recent", session?.id],
     queryFn: () =>
@@ -218,6 +223,19 @@ export default function OverviewPage() {
       setError(errorText(e));
     }
   }
+  async function removeSchedule(id: number) {
+    if (deletingSchedule !== null || !window.confirm("이 일정을 삭제할까요?")) return;
+    setDeletingSchedule(id);
+    setScheduleError("");
+    try {
+      await apiFetch(`/workspace/schedules/${id}`, { method: "DELETE" });
+      await qc.invalidateQueries({ queryKey: ["workspace-schedules"] });
+    } catch (e) {
+      setScheduleError(errorText(e));
+    } finally {
+      setDeletingSchedule(null);
+    }
+  }
   // The overview's queries populate one screen; wait in one place instead of
   // showing a spinner for each calendar source and summary card.
   if (recordsLoading || schedules.isPending || planning.isPending || recent.isPending) {
@@ -335,6 +353,7 @@ export default function OverviewPage() {
                 className={`work-calendar-day ${day.slice(0, 7) !== month ? "outside" : ""} ${selected === day ? "selected" : ""} ${today === day ? "today" : ""}`}
                 onClick={() => {
                   setSelected(day);
+                  setScheduleError("");
                   setDayOpen(true);
                 }}
               >
@@ -453,11 +472,12 @@ export default function OverviewPage() {
                 void schedules.refetch();
               }}
             />
+            {scheduleError && <p role="alert" className="work-error">{scheduleError}</p>}
             {daySchedules.length ? (
-              <div className="day-entry-list">
+              <div className="day-entry-list day-schedule-list">
                 {daySchedules.map((s) => (
+                  <div className="day-schedule-row" key={s.id}>
                   <DayEntry
-                    key={"s" + s.id}
                     href={`/schedule?date=${selected}`}
                     category={s.serviceType || "GENERAL"}
                     type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
@@ -467,6 +487,16 @@ export default function OverviewPage() {
                     }
                     meta={scheduleTimeLabel(s.startAt, s.endAt)}
                   />
+                  <ActionMenu label={`${s.title} 일정 메뉴`} items={[
+                    ...(s.authorId === session?.id || isAdmin ? [{
+                      label: "수정",
+                      disabled: deletingSchedule !== null,
+                      onSelect: () => router.push(`/schedule?date=${selected}&edit=${s.id}`),
+                    }] : []),
+                    { label: "업무기록 작성", disabled: deletingSchedule !== null, onSelect: () => router.push(`/work/new?schedule=${s.id}`) },
+                    ...(s.authorId === session?.id || isAdmin ? [{ label: "삭제", danger: true, disabled: deletingSchedule !== null, onSelect: () => void removeSchedule(s.id) }] : []),
+                  ]} />
+                  </div>
                 ))}
               </div>
             ) : !schedules.isPending && !schedules.error ? (
