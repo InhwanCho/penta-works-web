@@ -1,7 +1,7 @@
 import { initialDetails, type WorkDetails } from "./service-form-model";
 
 export function hasMeaningfulWorkDraft(value: { form?: { title?: string; body?: string }; details?: WorkDetails; photoIds?: number[] | null }) {
-  if (value.form?.title?.trim() || value.form?.body?.trim() || value.photoIds?.length) return true;
+  if ((value.form?.title?.trim().length || 0) >= 3 || (value.form?.body?.trim().length || 0) >= 3 || value.photoIds?.length) return true;
   const d = value.details;
   if (!d) return false;
   if ([d.symptom,d.parts,d.followUp,d.prepItems,d.heLevel,d.coldheadSerial,d.coldheadInDate,d.startTime,d.endTime].some(text => text?.trim())) return true;

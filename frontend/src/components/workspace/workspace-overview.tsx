@@ -409,7 +409,7 @@ export default function OverviewPage() {
           onOpenDetail={mobile ? setDetailHref : undefined}
         >
           <section
-            className={`day-agenda-section${!dayRecords.length ? "day-section-empty" : ""}`}
+            className="day-agenda-section"
           >
             <div className="day-section-toolbar">
               <h3>
@@ -450,16 +450,16 @@ export default function OverviewPage() {
                 ))}
               </div>
             ) : !recordsLoading && !recordsFailed ? (
-              <p className="day-empty">작성된 업무기록이 없습니다.</p>
+              <div className="day-empty-card"><p className="day-empty">작성된 업무기록이 없습니다.</p></div>
             ) : null}
           </section>
           <section
-            className={`day-agenda-section${!daySchedules.length ? "day-section-empty" : ""}`}
+            className="day-agenda-section"
           >
             <div className="day-section-toolbar">
               <h3>
                 등록한 일정{" "}
-                {!schedules.isPending && !schedules.error && daySchedules.length
+                {!schedules.isPending && !schedules.error
                   ? `(${daySchedules.length})`
                   : ""}
               </h3>
@@ -506,7 +506,7 @@ export default function OverviewPage() {
                 ))}
               </div>
             ) : !schedules.isPending && !schedules.error ? (
-              <p className="day-empty">등록된 일정이 없습니다.</p>
+              <div className="day-empty-card"><p className="day-empty">등록된 일정이 없습니다.</p></div>
             ) : null}
           </section>
           <CalendarLoadState

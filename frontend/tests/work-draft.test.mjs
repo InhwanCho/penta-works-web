@@ -54,3 +54,11 @@ test('empty default changes do not save or restore a draft when a content predic
  const stored=new Map([['content:1',JSON.stringify({version:1,at:new Date().toISOString(),value:{body:'',kind:'ACR'}})]]);
  const next=harness({stored});next.render(base);assert.equal(next.current.pending,null);assert.equal(stored.has('content:1'),false);
 });
+
+test('minor edits can be saved as drafts without leave confirmation',()=>{
+ const h=harness({navigation:true});let confirms=0;h.window.confirm=()=>{confirms++;return false;};
+ const base={storageKey:'minor:1',enabled:true,value:{title:''},onRestore(){},warnOnLeave:false};
+ h.render(base);h.render({...base,value:{title:'날짜만 변경'}});assert.equal(h.current.confirmLeave(),true);
+ h.navigate({navigationType:'traverse',cancelable:true,preventDefault(){assert.fail('minor change should not block');}});
+ assert.equal(confirms,0);h.unmount();
+});

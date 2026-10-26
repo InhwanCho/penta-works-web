@@ -3189,3 +3189,5 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
   .work-editor-editing .pm-measurements-grid .work-input { margin-top: 4px; padding: 8px 10px; min-height: 40px; }
   .work-editor-editing .work-pm-item > .work-hint { margin-bottom: 6px; }
 }
+.work-day-dialog .day-empty-card { padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); }
+.work-day-dialog .day-empty-card .day-empty { padding: 14px 8px; margin: 0; text-align: center; }

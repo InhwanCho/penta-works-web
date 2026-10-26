@@ -14,5 +14,5 @@ test('actual text, measurements, checklist results and photos qualify as drafts'
  for(const change of [d=>d.pm[0].result='pass',d=>d.pm[1].fields[1].value='0',d=>d.acr.geo.sag='148',d=>d.prepItems='부품',d=>d.parts='팬']){
   const d=initialDetails();change(d);assert.equal(keep({details:d}),true);
  }
- assert.equal(keep({form:{title:'수리'}}),true);assert.equal(keep({photoIds:[1]}),true);
+ assert.equal(keep({form:{title:'장비 수리'}}),true);assert.equal(keep({photoIds:[1]}),true);
 });

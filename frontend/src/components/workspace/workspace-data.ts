@@ -158,6 +158,7 @@ export function usePlanning() {
 export function scheduleTimeLabel(startAt: string, endAt: string) {
   const start = dateTime(startAt),
     end = dateTime(endAt);
+  if (start.slice(0,16) === end.slice(0,16)) return start.slice(11,16);
   const wholeDay =
     start.slice(11, 16) === "00:00" && end.slice(11, 16) === "23:59";
   if (start.slice(0, 10) === end.slice(0, 10))

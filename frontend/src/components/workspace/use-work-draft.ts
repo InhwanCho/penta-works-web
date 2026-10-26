@@ -6,6 +6,7 @@ export function useWorkDraft<T>({
   enabled,
   onRestore,
   shouldKeep,
+  warnOnLeave = true,
   restoreNotice = "임시저장 내용을 복구했습니다. 첨부 사진은 업로드 후 24시간이 지나면 다시 첨부해야 할 수 있습니다.",
 }: {
   storageKey: string;
@@ -14,6 +15,7 @@ export function useWorkDraft<T>({
   onRestore: (value: T) => void;
   restoreNotice?: string;
   shouldKeep?: (value: T) => boolean;
+  warnOnLeave?: boolean;
 }) {
   const keep = useRef(shouldKeep);
   keep.current = shouldKeep;
@@ -74,10 +76,10 @@ export function useWorkDraft<T>({
       setNotice("임시저장 공간이 부족합니다. 내용을 저장해주세요.");
     }
   }, [dirty, encoded, pending, storageKey, value]);
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
+  const dirtyRef = useRef(dirty && warnOnLeave);
+  dirtyRef.current = dirty && warnOnLeave;
   useEffect(() => {
-    if (!dirty) return;
+    if (!dirty || !warnOnLeave) return;
     const unload = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = "";
@@ -100,7 +102,7 @@ export function useWorkDraft<T>({
       window.removeEventListener("beforeunload", unload);
       document.removeEventListener("click", click, true);
     };
-  }, [dirty]);
+  }, [dirty, warnOnLeave]);
   // Browser back/forward is not a link click. Prefer cancellable navigation where available.
   useEffect(() => {
     if (!enabled) return;
@@ -157,7 +159,7 @@ export function useWorkDraft<T>({
     pending,
     notice,
     confirmLeave: () =>
-      !dirty ||
+      !dirty || !warnOnLeave ||
       window.confirm("저장하지 않은 내용이 있습니다. 이 화면을 나갈까요?"),
     dirty,
     restore: () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { newScheduleForm, scheduleEditForm, scheduleTimes, substantialScheduleChange, normalizeScheduleForm } from "./schedule-form";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
@@ -440,18 +441,6 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
     </main>
   );
 }
-function scheduleEditForm(s: WorkSchedule) {
-  return {
-    targetKind: s.targetKind || (s.siteId ? "HOSPITAL" : "GENERAL"),
-    personalKind: s.personalKind || "etc",
-    serviceType: s.serviceType || "ETC",
-    title: s.title,
-    siteId: s.siteId || "",
-    body: s.body || "",
-    startAt: s.startAt.slice(0, 16),
-    endAt: s.endAt.slice(0, 16),
-  };
-}
 export function SchedulePage() {
   const router = useRouter();
   const search = useSearchParams();
@@ -474,23 +463,16 @@ export function SchedulePage() {
   const [editingSchedule, setEditingSchedule] = useState<WorkSchedule | null>(
     null,
   );
-  const [form, setForm] = useState({
-    targetKind: "GENERAL",
-    personalKind: "etc",
-    serviceType: "ETC",
-    title: "",
-    siteId: "",
-    body: "",
-    startAt: initialDate + "T09:00",
-    endAt: initialDate + "T10:00",
-  });
+  const [form, setForm] = useState(() => newScheduleForm(initialDate));
   const draft = useWorkDraft({
     storageKey: `mreyes-schedule-draft:${session?.id}`,
     value: { form, editingSchedule },
+    shouldKeep: value => substantialScheduleChange(normalizeScheduleForm(value.form, initialDate), value.editingSchedule),
+    warnOnLeave: substantialScheduleChange(form, editingSchedule),
     enabled: !!session && open,
     onRestore: (d) => {
       openedEdit.current = requestedEdit;
-      setForm(d.form);
+      setForm(normalizeScheduleForm(d.form, initialDate));
       setEditingSchedule(d.editingSchedule);
       setOpen(true);
     },
@@ -534,6 +516,8 @@ export function SchedulePage() {
     setSaving(true);
     setError("");
     try {
+      const times = scheduleTimes(form);
+      if (times.endAt < times.startAt) throw new Error("종료 날짜·시간은 시작 이후로 설정해주세요.");
       await apiFetch(
         editingSchedule
           ? `/workspace/schedules/${editingSchedule.id}`
@@ -542,6 +526,7 @@ export function SchedulePage() {
           method: editingSchedule ? "PUT" : "POST",
           body: JSON.stringify({
             ...form,
+            ...scheduleTimes(form),
             revision: editingSchedule?.revision,
             personalKind:
               form.targetKind === "GENERAL" ? form.personalKind : null,
@@ -555,7 +540,7 @@ export function SchedulePage() {
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
       ]);
       draft.clear();
-      setSelected(form.startAt.slice(0, 10));
+      setSelected(form.date);
       setOpen(false);
       setEditingSchedule(null);
       setForm({ ...form, title: "", body: "" });
@@ -586,15 +571,15 @@ export function SchedulePage() {
         title="일정"
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
-      <label className="work-date-picker">
-        조회 날짜
+      {!open && <label className="work-date-picker">
+        일정 날짜
         <input
           className="work-input"
           type="date"
           value={selected}
           onChange={(e) => setSelected(e.target.value)}
         />
-      </label>
+      </label>}
       {error && (
         <p
           role="alert"
@@ -687,28 +672,18 @@ export function SchedulePage() {
             </>
           )}
           <div className="work-form-row">
-            <label>
-              시작
-              <input
-                className="work-input"
-                required
-                type="datetime-local"
-                value={form.startAt}
-                onChange={(e) => setForm({ ...form, startAt: e.target.value })}
-              />
-            </label>
-            <label>
-              종료
-              <input
-                className="work-input"
-                required
-                type="datetime-local"
-                min={form.startAt}
-                value={form.endAt}
-                onChange={(e) => setForm({ ...form, endAt: e.target.value })}
-              />
-            </label>
+            <label>일정 날짜<input className="work-input" required type="date" value={form.date} onChange={event => {
+              const date = event.target.value;
+              setForm({...form,date,endDate:form.endDate === form.date || form.endDate < date ? date : form.endDate});
+            }} /></label>
+            <label>마지막 날짜 <small>(여러 날인 경우)</small><input className="work-input" type="date" min={form.date} value={form.endDate} disabled={!form.allDay && !form.endTime} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
           </div>
+          <label className="work-check"><input type="checkbox" checked={form.allDay} onChange={event=>setForm({...form,allDay:event.target.checked,startTime:form.startTime === "00:00" ? "09:00" : form.startTime})} />종일</label>
+          {!form.allDay && <div className="work-form-row">
+            <label>시작 시간<input className="work-input" required type="time" value={form.startTime} onChange={event=>setForm({...form,startTime:event.target.value})} /></label>
+            <label>종료 시간 <small>(선택)</small><input className="work-input" type="time" value={form.endTime} onChange={event=>setForm({...form,endTime:event.target.value})} /></label>
+          </div>}
+          {!form.allDay && <p className="work-hint">종료 시간을 비워두면 시작 시간만 표시합니다.</p>}
           <label>
             내용
             <textarea
@@ -739,10 +714,10 @@ export function SchedulePage() {
           </div>
         </form>
       )}
-      <div className="work-section">
+      {!open && <div className="work-section">
         <h2>{dateLabel(selected)}</h2>
         <span>{rows.length}건</span>
-      </div>
+      </div>}
       {schedules.error ? (
         <ErrorState
           error={schedules.error}
