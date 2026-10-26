@@ -6,6 +6,8 @@ import PageLoader from "@/components/common/page-loader";
 import { useEffect, useState, useRef, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "@/components/common/app-link";
+import WorkspaceDrawer from "./workspace-drawer";
+import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
 import ActionMenu from "@/components/common/action-menu";
 import { useWorkDraft } from "./use-work-draft";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -99,6 +101,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   const draft = useWorkDraft({
     storageKey: `mreyes-work-draft:${session?.id}:${id || "new"}`,
     value: { form, details, photoIds, revision },
+    shouldKeep: id ? undefined : hasMeaningfulWorkDraft,
     enabled:
       !!session && editing && (!id || (loadedId === id && photoIds !== null)),
     onRestore: (d) => {
@@ -275,19 +278,20 @@ export default function WorkEditor({ id }: { id?: string }) {
             : `${record?.workDate} · 작성자 ${record?.authorName}`
         }
         action={
-          !editing && canEdit ? (
+          !editing && id ? (
             <ActionMenu
               label="업무기록 메뉴"
               items={[
-                {
+                { label: "변경 이력", onSelect: () => setHistoryOpen(true) },
+                ...(canEdit ? [{
                   label: "수정",
                   onSelect: () => {
                     draft.resume();
                     setEditing(true);
                   },
                   disabled: saving,
-                },
-                ...(!record?.assetChange
+                }] : []),
+                ...(canEdit && !record?.assetChange
                   ? [
                       {
                         label: "삭제",
@@ -304,28 +308,28 @@ export default function WorkEditor({ id }: { id?: string }) {
       />
       {editing && draft.pending && (
         <div
-          className="work-panel work-draft-notice"
+          className="work-panel work-draft-notice work-draft-toast"
           role="status"
         >
-          <div className="work-draft-copy"><strong>저장하지 않은 업무기록이 있습니다.</strong><time dateTime={new Date(draft.pending.at).toISOString()}>{new Date(draft.pending.at).toLocaleString("ko-KR")}</time></div>
+          <div className="work-draft-copy"><strong>작성하다 남긴 내용이 있습니다. 이어서 작성할까요?</strong><time dateTime={new Date(draft.pending.at).toISOString()}>{new Date(draft.pending.at).toLocaleString("ko-KR")}</time></div>
           <div className="work-form-actions">
             <button
               type="button"
               onClick={draft.discard}
             >
-              버리기
+              삭제
             </button>
             <button
               type="button"
               className="work-primary"
               onClick={draft.restore}
             >
-              복구
+              이어쓰기
             </button>
           </div>
         </div>
       )}
-      {editing && draft.notice && (
+      {editing && draft.notice && draft.notice !== "이 기기에 임시저장됨" && (
         <p
           className="text-text-secondary my-2 text-sm"
           role="status"
@@ -333,14 +337,9 @@ export default function WorkEditor({ id }: { id?: string }) {
           {draft.notice}
         </p>
       )}
-      {!editing && id && (
-        <details
-          className="mb-4 rounded-xl border border-slate-200 p-3 dark:border-white/15"
-          onToggle={(e) => setHistoryOpen(e.currentTarget.open)}
-        >
-          <summary className="cursor-pointer text-sm font-semibold">
-            변경 이력
-          </summary>
+      {!editing && id && historyOpen && (
+        <WorkspaceDrawer title="업무기록 변경 이력" onClose={() => setHistoryOpen(false)}>
+        <div className="work-history-body">
           {history.isPending ? (
             <p className="py-2 text-sm"><CircleLoader size="xs" /></p>
           ) : history.error ? (
@@ -374,7 +373,8 @@ export default function WorkEditor({ id }: { id?: string }) {
               </details>
             ))
           )}
-        </details>
+        </div>
+        </WorkspaceDrawer>
       )}
       {error && (
         <p

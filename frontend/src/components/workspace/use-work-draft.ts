@@ -5,6 +5,7 @@ export function useWorkDraft<T>({
   value,
   enabled,
   onRestore,
+  shouldKeep,
   restoreNotice = "임시저장 내용을 복구했습니다. 첨부 사진은 업로드 후 24시간이 지나면 다시 첨부해야 할 수 있습니다.",
 }: {
   storageKey: string;
@@ -12,7 +13,10 @@ export function useWorkDraft<T>({
   enabled: boolean;
   onRestore: (value: T) => void;
   restoreNotice?: string;
+  shouldKeep?: (value: T) => boolean;
 }) {
+  const keep = useRef(shouldKeep);
+  keep.current = shouldKeep;
   const encoded = JSON.stringify(value),
     baseline = useRef<string | null>(null),
     saved = useRef(false);
@@ -34,6 +38,7 @@ export function useWorkDraft<T>({
         if (
           draft.version === 1 &&
           draft.value &&
+          (!keep.current || keep.current(draft.value)) &&
           Date.parse(draft.at) <= Date.now() &&
           Date.now() - Date.parse(draft.at) < 7 * 86400000
         )
@@ -55,7 +60,8 @@ export function useWorkDraft<T>({
     ready &&
     !clean &&
     baseline.current !== null &&
-    encoded !== baseline.current;
+    encoded !== baseline.current &&
+    (!shouldKeep || shouldKeep(value));
   useEffect(() => {
     if (!dirty || pending || saved.current) return;
     try {

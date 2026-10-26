@@ -42,3 +42,15 @@ test('account scope change never writes a previous user draft to the next user s
   h.render(base);h.render({...base,value:{title:'개인 초안'}});h.render({...base,storageKey:'user:2',value:{title:''}});
   assert.equal(h.stored.has('user:2'),false);assert.equal(JSON.parse(h.stored.get('user:1')).value.title,'개인 초안');
 });
+
+test('empty default changes do not save or restore a draft when a content predicate is provided',()=>{
+ const keep=value=>!!value.body?.trim();
+ const h=harness({navigation:true});
+ const base={storageKey:'content:1',enabled:true,value:{body:'',kind:'PM'},onRestore(){},shouldKeep:keep};
+ h.render(base);h.render({...base,value:{body:'',kind:'ACR'}});
+ assert.equal(h.current.dirty,false);assert.equal(h.stored.has('content:1'),false);
+ h.render({...base,value:{body:'측정 완료',kind:'ACR'}});assert.equal(h.current.dirty,true);
+ h.unmount();
+ const stored=new Map([['content:1',JSON.stringify({version:1,at:new Date().toISOString(),value:{body:'',kind:'ACR'}})]]);
+ const next=harness({stored});next.render(base);assert.equal(next.current.pending,null);assert.equal(stored.has('content:1'),false);
+});

@@ -53,7 +53,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
       const duration = start ? Math.max(1, event.timeStamp - start.at) : 0;
       gesture.current = null;
       setOffset(0);
-      if (distance >= 40 || (distance >= 18 && duration > 0 && distance / duration >= 0.45)) onClose();
+      if (distance >= 24 || (distance >= 14 && duration > 0 && distance / duration >= 0.45)) onClose();
     },
     onPointerCancel() { gesture.current = null; setOffset(0); },
   };

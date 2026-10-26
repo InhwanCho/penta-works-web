@@ -43,7 +43,7 @@ test('downward drag dismisses; upward, short and cancelled gestures preserve the
   const h = harness(), drawer = h.mount();
   const grip = drawer.tree.props.children[0].props;
   const event = y => ({ pointerId: 1, clientY: y, target: new h.Element(), currentTarget: { setPointerCapture() {} } });
-  grip.onPointerDown(event(100)); grip.onPointerUp(event(130));
+  grip.onPointerDown(event(100)); grip.onPointerUp(event(115));
   grip.onPointerDown(event(100)); grip.onPointerUp(event(10));
   grip.onPointerDown(event(100)); grip.onPointerCancel(); grip.onPointerUp(event(220));
   assert.equal(drawer.count(), 0);
@@ -92,11 +92,11 @@ test('desktop keeps centered dialogs, ordinary detail navigation and no drag dis
   drawer.cleanup();
 });
 
-test('mobile dismissal accepts a gentle 40px drag or a short fast downward flick', () => {
+test('mobile dismissal accepts a gentle 24px drag or a short fast downward flick', () => {
  const h = harness(), drawer = h.mount(), grip = drawer.tree.props.children[0].props;
  const event = (y, at) => ({ pointerId: 1, clientY: y, timeStamp: at, target: new h.Element(), currentTarget: { setPointerCapture() {} } });
- grip.onPointerDown(event(100,0)); grip.onPointerUp(event(139,500)); assert.equal(drawer.count(),0);
- grip.onPointerDown(event(100,1000)); grip.onPointerUp(event(140,1800)); assert.equal(drawer.count(),1);
+ grip.onPointerDown(event(100,0)); grip.onPointerUp(event(123,500)); assert.equal(drawer.count(),0);
+ grip.onPointerDown(event(100,1000)); grip.onPointerUp(event(124,1800)); assert.equal(drawer.count(),1);
  grip.onPointerDown(event(100,2000)); grip.onPointerUp(event(120,2030)); assert.equal(drawer.count(),2);
  grip.onPointerDown(event(100,3000)); grip.onPointerUp(event(110,3010)); assert.equal(drawer.count(),2);
  grip.onPointerDown(event(100,4000)); grip.onPointerUp(event(80,4020)); assert.equal(drawer.count(),2);

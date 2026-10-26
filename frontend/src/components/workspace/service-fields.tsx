@@ -85,7 +85,7 @@ export default function ServiceFields({
                     options={item.options.map((o) => [o.v, o.l])}
                   />
                 )}
-                <div className="work-form-row">
+                <div className={`work-form-row pm-measurements ${["DQA Tool", "DAQA", "LV Shim"].includes(item.name) ? "pm-measurements-grid" : ""}`}>
                   {item.fields.map((f, fi) => {
                     const update = (value: string) => onChange({ ...d, pm: d.pm.map((entry, index) => index === i ? { ...entry, fields: entry.fields.map((field, fieldIndex) => fieldIndex === fi ? { ...field, value } : field) } : entry) });
                     if (f.type === "check") return <label className="work-check" key={f.label}><input type="checkbox" checked={f.value === "Y"} onChange={event => update(event.target.checked ? "Y" : "")} />{f.label}</label>;
