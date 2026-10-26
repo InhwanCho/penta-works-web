@@ -8,6 +8,7 @@ import ActionMenu from "@/components/common/action-menu";
 import WorkspaceSearch from "./workspace-search";
 import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
+import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,6 +68,7 @@ function calendarColor(type: string) {
 }
 export default function OverviewPage() {
   const today = dayString();
+  const mobile = useMobileWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const [month, setMonth] = useState(today.slice(0, 7)),
@@ -303,6 +305,7 @@ export default function OverviewPage() {
           <button type="button" className="overview-search-trigger" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
           </button>
+          {!mobile && <button type="button" className="work-calendar-today" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}>오늘</button>}
         </div>
         <CalendarLoadState
           label="업무기록"
@@ -395,12 +398,12 @@ export default function OverviewPage() {
           <span className="gcal-other">● 기타</span>
         </div>
       </section>
-      {searchOpen && <WorkspaceSearch onClose={() => setSearchOpen(false)} onOpenDetail={setDetailHref} />}
+      {searchOpen && <WorkspaceSearch onClose={() => setSearchOpen(false)} onOpenDetail={mobile ? setDetailHref : undefined} />}
       {dayOpen && (
         <WorkspaceDrawer
           onClose={() => setDayOpen(false)}
           title={dateLabel(selected)}
-          onOpenDetail={setDetailHref}
+          onOpenDetail={mobile ? setDetailHref : undefined}
         >
           <section
             className={`day-agenda-section${!dayRecords.length ? "day-section-empty" : ""}`}
@@ -542,7 +545,7 @@ export default function OverviewPage() {
         <details
           id="work-due"
           className="overview-fold"
-          open
+          open={mobile}
         >
           <summary>
             <span>다가오는 점검</span>
@@ -570,7 +573,7 @@ export default function OverviewPage() {
                   className="work-due-row"
                   href={`/sites/${d.siteId}`}
                   key={d.siteId + d.type}
-                  onNavigate={(event) => { event.preventDefault(); setDetailHref(`/sites/${d.siteId}`); }}
+                  onNavigate={mobile ? (event) => { event.preventDefault(); setDetailHref(`/sites/${d.siteId}`); } : undefined}
                 >
                   <div>
                     <strong>{d.siteName}</strong>
@@ -593,7 +596,7 @@ export default function OverviewPage() {
         <details
           id="work-preparation"
           className="overview-fold"
-          open
+          open={mobile}
         >
           <summary>
             <span>방문 전 확인사항</span>
@@ -618,7 +621,7 @@ export default function OverviewPage() {
                 {preparationGroups.map((group) => (
                   <section className="overview-preparation-group" key={group.key}>
                     <h3>
-                      {group.siteId ? <button type="button" onClick={() => setDetailHref(`/sites/${group.siteId}`)}>{group.siteName} <span aria-hidden="true">›</span></button> : group.siteName}
+                      {group.siteId ? <button type="button" onClick={() => mobile ? setDetailHref(`/sites/${group.siteId}`) : router.push(`/sites/${group.siteId}`)}>{group.siteName} <span aria-hidden="true">›</span></button> : group.siteName}
                       <small>{group.items.filter((item) => !item.done).length}건 남음</small>
                     </h3>
                     {group.items.map((p) => (
@@ -638,7 +641,7 @@ export default function OverviewPage() {
             )}
           </div>
         </details>
-        <details className="overview-fold" open>
+        <details className="overview-fold" open={mobile}>
           <summary>
             <span>최근 업무기록</span>
             <small>
@@ -667,7 +670,7 @@ export default function OverviewPage() {
                   <Link
                     href={`/work/${r.id}`}
                     className="work-overview-record recent-work-record"
-                    onNavigate={(event) => { event.preventDefault(); setDetailHref(`/work/${r.id}`); }}
+                    onNavigate={mobile ? (event) => { event.preventDefault(); setDetailHref(`/work/${r.id}`); } : undefined}
                     key={r.id}
                   >
                     <div className="recent-work-content">

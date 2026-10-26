@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-function harness() {
+function harness(mobile = true) {
   const exports = {}, effects = [];
   const document = { body: { style: { overflow: 'auto' } }, activeElement: null };
   class Element { closest() { return null; } }
@@ -12,6 +12,7 @@ function harness() {
     compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
   }).outputText;
   vm.runInNewContext(source, { exports, document, Element, HTMLElement: Element, require(name) {
+    if (name.includes('use-mobile-workspace')) return { useMobileWorkspace: () => mobile };
     if (name === 'react') return {
       useId: () => 'title', useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => effects.push(fn),
     };
@@ -74,5 +75,19 @@ test('detail links stay in drawers while edit/create links and modified clicks k
   assert.equal(click('/schedule?date=2026-10-26&edit=1'), false);
   assert.equal(click('/work/7', { ctrlKey: true }), false);
   assert.equal(drawer.opened.length, 3);
+  drawer.cleanup();
+});
+
+test('desktop keeps centered dialogs, ordinary detail navigation and no drag dismissal', () => {
+  const h = harness(false), drawer = h.mount();
+  assert.match(drawer.tree.props.className, /workspace-desktop-dialog/);
+  assert.doesNotMatch(drawer.tree.props.className, / workspace-drawer /);
+  const grip = drawer.tree.props.children[0].props;
+  const event = y => ({ pointerId: 1, clientY: y, target: new h.Element(), currentTarget: { setPointerCapture() {} } });
+  grip.onPointerDown(event(100)); grip.onPointerUp(event(220));
+  assert.equal(drawer.count(), 0);
+  const target = new h.Element(); target.closest = () => ({ getAttribute: () => '/work/7' });
+  drawer.tree.props.children[2].props.onClickCapture({ button: 0, target, preventDefault() { assert.fail('desktop should navigate'); }, stopPropagation() {} });
+  assert.equal(drawer.opened.length, 0);
   drawer.cleanup();
 });

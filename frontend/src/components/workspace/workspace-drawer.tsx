@@ -2,6 +2,8 @@
 
 import { useEffect, useId, useRef, useState, type ReactNode, type PointerEvent } from "react";
 
+import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
+
 let openDrawers = 0;
 let previousBodyOverflow = "";
 
@@ -14,6 +16,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
   children: ReactNode;
   className?: string;
 }) {
+  const mobile = useMobileWorkspace();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const gesture = useRef<{ id: number; y: number } | null>(null);
@@ -36,6 +39,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
   }, []);
   const dragHandlers = {
     onPointerDown(event: PointerEvent<HTMLDivElement | HTMLElement>) {
+      if (!mobile) return;
       if (event.target instanceof Element && event.target.closest("button")) return;
       gesture.current = { id: event.pointerId, y: event.clientY };
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -51,7 +55,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     },
     onPointerCancel() { gesture.current = null; setOffset(0); },
   };
-  return <dialog ref={ref} className={`work-day-dialog workspace-drawer ${className}`} aria-labelledby={titleId} tabIndex={-1} data-ptr-ignore
+  return <dialog ref={ref} className={`work-day-dialog ${mobile ? "workspace-drawer" : "workspace-desktop-dialog"} ${className}`} aria-labelledby={titleId} tabIndex={-1} data-ptr-ignore
     style={{ transform: offset ? `translateY(${offset}px)` : undefined }}
     onCancel={event => { event.preventDefault(); onClose(); }}
     onClick={event => {
@@ -59,14 +63,14 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
       const bounds = event.currentTarget.getBoundingClientRect();
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
     }}>
-    <div className="workspace-drawer-grip" {...dragHandlers}><span /></div>
+    <div className={`workspace-drawer-grip${mobile ? "" : " hidden"}`} {...dragHandlers}><span /></div>
     <header {...dragHandlers}>
       {onBack && <button type="button" className="drawer-back" onClick={onBack} aria-label="이전 상세로">‹</button>}
       <h2 id={titleId}>{title}</h2>
       <button type="button" className="day-close" onClick={onClose} aria-label={`${title} 닫기`}>×</button>
     </header>
-    <div className="workspace-drawer-content" onClickCapture={event => {
-      if (!onOpenDetail || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
+    <div className={mobile ? "workspace-drawer-content" : `workspace-dialog-content${className ? "" : " work-day-body"}`} onClickCapture={event => {
+      if (!mobile || !onOpenDetail || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
       const link = event.target.closest("a");
       const href = link?.getAttribute("href");
       if (!href || link?.target === "_blank") return;
