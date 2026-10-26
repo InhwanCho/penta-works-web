@@ -19,14 +19,18 @@ function harness(mobile = true) {
     if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
     return {};
   } });
-  function mount() {
+  function mount(withContent = false) {
     let closes = 0;
     const opened = [];
     const tree = exports.default({ title: '날짜', children: null, onClose: () => closes++, onOpenDetail: href => opened.push(href) });
     const dialog = { showModal() {}, close() {}, focus() {}, getBoundingClientRect: () => ({ top: 300, left: 0, right: 390, bottom: 844 }) };
     tree.props.ref.current = dialog;
-    const cleanup = effects.shift()();
-    return { tree, dialog, cleanup, opened, count: () => closes };
+    const listeners = new Map();
+    const content = { scrollTop: 0, addEventListener: (name, fn) => listeners.set(name, fn), removeEventListener: name => listeners.delete(name) };
+    if (withContent) tree.props.children[2].props.ref.current = content;
+    const cleanups = effects.splice(0).map(fn => fn());
+    const cleanup = () => cleanups.forEach(fn => fn?.());
+    return { tree, dialog, content, listeners, cleanup, opened, count: () => closes };
   }
   return { mount, document, Element };
 }
@@ -92,13 +96,36 @@ test('desktop keeps centered dialogs, ordinary detail navigation and no drag dis
   drawer.cleanup();
 });
 
-test('mobile dismissal accepts a gentle 24px drag or a short fast downward flick', () => {
+test('mobile dismissal accepts a gentle 40px drag or a short fast downward flick', () => {
  const h = harness(), drawer = h.mount(), grip = drawer.tree.props.children[0].props;
  const event = (y, at) => ({ pointerId: 1, clientY: y, timeStamp: at, target: new h.Element(), currentTarget: { setPointerCapture() {} } });
- grip.onPointerDown(event(100,0)); grip.onPointerUp(event(123,500)); assert.equal(drawer.count(),0);
- grip.onPointerDown(event(100,1000)); grip.onPointerUp(event(124,1800)); assert.equal(drawer.count(),1);
+ grip.onPointerDown(event(100,0)); grip.onPointerUp(event(139,500)); assert.equal(drawer.count(),0);
+ grip.onPointerDown(event(100,1000)); grip.onPointerUp(event(140,1800)); assert.equal(drawer.count(),1);
  grip.onPointerDown(event(100,2000)); grip.onPointerUp(event(120,2030)); assert.equal(drawer.count(),2);
  grip.onPointerDown(event(100,3000)); grip.onPointerUp(event(110,3010)); assert.equal(drawer.count(),2);
  grip.onPointerDown(event(100,4000)); grip.onPointerUp(event(80,4020)); assert.equal(drawer.count(),2);
  drawer.cleanup();
+});
+
+test('the mobile body supports downward pull dismissal while preserving scrolling and controls', () => {
+ const h = harness(), drawer = h.mount(true);
+ const target = new h.Element(); target.parentElement = drawer.content;
+ let prevented = 0;
+ const event = (x,y,at) => ({target,timeStamp:at,cancelable:true,touches:[{identifier:1,clientX:x,clientY:y}],changedTouches:[{identifier:1,clientX:x,clientY:y}],preventDefault(){prevented++;}});
+ const emit = (name,...args) => drawer.listeners.get(name)?.(...args);
+ emit('touchstart',event(30,400,0));emit('touchmove',event(31,450,300));emit('touchend',event(31,450,500));
+ assert.equal(drawer.count(),1);assert.equal(prevented,1);
+ let clickBlocked=false;
+ drawer.tree.props.children[2].props.onClickCapture({preventDefault(){clickBlocked=true;},stopPropagation(){}});
+ assert.equal(clickBlocked,true);
+ drawer.content.scrollTop=80;
+ emit('touchstart',event(30,400,1000));emit('touchmove',event(30,480,1200));emit('touchend',event(30,480,1400));
+ assert.equal(drawer.count(),1);
+ drawer.content.scrollTop=0;
+ emit('touchstart',event(30,400,2000));emit('touchmove',event(100,410,2200));emit('touchend',event(100,410,2400));
+ assert.equal(drawer.count(),1);
+ target.closest=()=>({});
+ emit('touchstart',event(30,400,3000));emit('touchmove',event(30,480,3200));emit('touchend',event(30,480,3400));
+ assert.equal(drawer.count(),1);
+ drawer.cleanup();assert.equal(drawer.listeners.size,0);
 });
