@@ -6,6 +6,7 @@ import Link from "@/components/common/app-link";
 import CircleLoader from "@/components/icons/circle-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
+import PmDateEditor from "./pm-date-editor";
 import WorkspaceDrawer from "./workspace-drawer";
 import { ReadRecord } from "./work-editor";
 import HospitalPlanning from "./hospital-planning";
@@ -60,6 +61,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <p>{dateLabel(row.startAt.slice(0, 10))} · {scheduleTimeLabel(row.startAt, row.endAt)}</p>
         {row.body && <p className="work-prewrap">{row.body}</p>}
         <small>{row.authorName}</small>
+        {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
         <div className="work-form-actions">
           {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>일정 수정</Link>}
           <Link className="work-primary" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>

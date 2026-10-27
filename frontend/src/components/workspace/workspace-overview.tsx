@@ -5,6 +5,7 @@ import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
+import PmDateEditor from "./pm-date-editor";
 import WorkspaceSearch from "./workspace-search";
 import { groupRecentWorkByWeek, recentWorkWindow } from "./recent-work-weeks";
 import WorkspaceDrawer from "./workspace-drawer";
@@ -502,6 +503,7 @@ export default function OverviewPage() {
                     { label: "업무기록 작성", disabled: deletingSchedule !== null, onSelect: () => router.push(`/work/new?schedule=${s.id}`) },
                     ...(s.authorId === session?.id || isAdmin ? [{ label: "삭제", danger: true, disabled: deletingSchedule !== null, onSelect: () => void removeSchedule(s.id) }] : []),
                   ]} />
+                  {s.serviceType === "PM" && s.siteId && <PmDateEditor siteId={s.siteId} date={s.startAt.slice(0,10)} schedule={s} />}
                   </div>
                 ))}
               </div>
@@ -531,13 +533,15 @@ export default function OverviewPage() {
               </div>
               <div className="day-entry-list">
                 {dayDue.map((d, i) => (
+                  <div key={"d" + i} className="day-pm-due-item">
                   <DayEntry
-                    key={"d" + i}
                     href={`/sites/${d.siteId}#inspection-plan`}
                     type={d.type}
                     title={d.siteName}
                     meta={`최근 PM ${d.lastPmDate || "기록 없음"}`}
                   />
+                  {d.type === "PM" && <PmDateEditor siteId={d.siteId} date={d.date} />}
+                  </div>
                 ))}
               </div>
             </section>

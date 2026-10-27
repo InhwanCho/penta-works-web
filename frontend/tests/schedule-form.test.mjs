@@ -28,3 +28,9 @@ test('previous timestamp-based drafts retain date, times and entered text',()=>{
  const form=out.normalizeScheduleForm({title:'이전 작성 내용',body:'방문 메모',startAt:'2026-10-28T09:00',endAt:'2026-10-28T10:00'},'2026-10-26');
  assert.equal(form.date,'2026-10-28');assert.equal(form.title,'이전 작성 내용');assert.equal(form.allDay,false);assert.equal(times(form).endAt,'2026-10-28T10:00');
 });
+
+test('quick PM date changes preserve times, duration and omitted end time across month boundaries',()=>{
+ assert.deepEqual(JSON.parse(JSON.stringify(out.moveScheduleDate({startAt:'2026-10-30T09:15:00',endAt:'2026-11-01T18:00:00'},'2026-11-05'))),{startAt:'2026-11-05T09:15:00',endAt:'2026-11-07T18:00:00'});
+ assert.deepEqual(JSON.parse(JSON.stringify(out.moveScheduleDate({startAt:'2026-10-27T00:00:00',endAt:'2026-10-27T23:59:00'},'2026-11-02'))),{startAt:'2026-11-02T00:00:00',endAt:'2026-11-02T23:59:00'});
+ const onlyStart=out.moveScheduleDate({startAt:'2026-10-27T09:00',endAt:'2026-10-27T09:00'},'2026-10-28');assert.equal(onlyStart.startAt,onlyStart.endAt);
+});

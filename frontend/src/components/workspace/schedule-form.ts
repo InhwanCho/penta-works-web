@@ -29,3 +29,10 @@ export function normalizeScheduleForm(value: Partial<ScheduleForm> & {startAt?: 
   if (value.startAt && value.endAt) return scheduleEditForm({targetKind:value.targetKind === "HOSPITAL" ? "HOSPITAL" : "GENERAL",siteId:value.siteId || null,personalKind:value.personalKind,serviceType:value.serviceType,title:value.title || "",body:value.body || "",startAt:value.startAt,endAt:value.endAt});
   return {...newScheduleForm(fallbackDate),...value};
 }
+
+/** Move a scheduled visit while preserving its clock times and multi-day duration. */
+export function moveScheduleDate(schedule: Pick<WorkSchedule,"startAt" | "endAt">, date: string) {
+  const days = Math.round((Date.parse(date+"T00:00:00Z")-Date.parse(schedule.startAt.slice(0,10)+"T00:00:00Z"))/86400000);
+  const end=new Date(schedule.endAt.slice(0,10)+"T00:00:00Z");end.setUTCDate(end.getUTCDate()+days);
+  return { startAt: date+schedule.startAt.slice(10), endAt: end.toISOString().slice(0,10)+schedule.endAt.slice(10) };
+}

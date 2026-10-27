@@ -671,17 +671,22 @@ export function SchedulePage() {
               </div>
             </>
           )}
-          <div className="work-form-row">
+          <div className="schedule-date-fields">
             <label>일정 날짜<input className="work-input" required type="date" value={form.date} onChange={event => {
               const date = event.target.value;
               setForm({...form,date,endDate:form.endDate === form.date || form.endDate < date ? date : form.endDate});
             }} /></label>
-            <label>마지막 날짜 <small>(여러 날인 경우)</small><input className="work-input" type="date" min={form.date} value={form.endDate} disabled={!form.allDay && !form.endTime} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
+
           </div>
+          <details className="schedule-date-range" open={form.endDate > form.date || undefined}>
+            <summary>{form.endDate > form.date ? `여러 날 일정 · ${form.date} ~ ${form.endDate}` : "＋ 여러 날 일정으로 설정"}</summary>
+            <label>종료 날짜<input className="work-input" type="date" min={form.date} value={form.endDate} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
+            <button type="button" className="work-text-button" onClick={event=>{setForm({...form,endDate:form.date});event.currentTarget.closest("details")?.removeAttribute("open");}}>하루 일정으로</button>
+          </details>
           <label className="work-check"><input type="checkbox" checked={form.allDay} onChange={event=>setForm({...form,allDay:event.target.checked,startTime:form.startTime === "00:00" ? "09:00" : form.startTime})} />종일</label>
           {!form.allDay && <div className="work-form-row">
             <label>시작 시간<input className="work-input" required type="time" value={form.startTime} onChange={event=>setForm({...form,startTime:event.target.value})} /></label>
-            <label>종료 시간 <small>(선택)</small><input className="work-input" type="time" value={form.endTime} onChange={event=>setForm({...form,endTime:event.target.value})} /></label>
+            <label>종료 시간 <small>{form.endDate > form.date ? "(여러 날 일정)" : "(선택)"}</small><input className="work-input" required={form.endDate > form.date} type="time" value={form.endTime} onChange={event=>setForm({...form,endTime:event.target.value})} /></label>
           </div>}
           {!form.allDay && <p className="work-hint">종료 시간을 비워두면 시작 시간만 표시합니다.</p>}
           <label>

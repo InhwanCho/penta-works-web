@@ -3191,3 +3191,14 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 }
 .work-day-dialog .day-empty-card { padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); }
 .work-day-dialog .day-empty-card .day-empty { padding: 14px 8px; margin: 0; text-align: center; }
+.schedule-date-range { border: 1px solid var(--work-line); border-radius: 9px; padding: 10px 12px; }
+.schedule-date-range summary { cursor: pointer; color: var(--work-focus); font-size: .8125rem; font-weight: 650; }
+.schedule-date-range > label { display: block; margin: 12px 0 8px; }
+.pm-quick-date { padding: 8px 12px; border-top: 1px solid var(--work-line); }
+.pm-quick-date > label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 650; }
+.pm-quick-date-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.pm-quick-date-actions button { min-height: 36px; padding: 6px 12px; font-size: .8125rem; }
+.work-day-dialog .day-pm-due-item { border: 1px solid var(--work-line); border-radius: 9px; overflow: hidden; background: var(--work-paper); }
+.work-day-dialog .day-schedule-row .pm-quick-date { background: var(--work-paper); }
+.schedule-date-fields { max-width: 100%; }
+.schedule-date-fields > label { display: grid; gap: 6px; }
