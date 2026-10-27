@@ -2248,7 +2248,7 @@ h4,
 .hospital-always-section .hospital-detail-card > h2 { display: none; }
 .hospital-detail-tabs { display: flex; gap: 4px; padding: 4px; margin-bottom: 14px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); }
 .hospital-detail-tabs > button { flex: 1; min-width: 0; min-height: 44px; padding: 9px 12px; border-radius: 8px; color: var(--work-muted); font-size: .9375rem; font-weight: 650; }
-.hospital-detail-tabs > button[aria-selected="true"] { background: var(--work-focus); color: #fff; }
+.hospital-detail-tabs > button[aria-selected="true"] { background: var(--work-focus); color: var(--work-paper); }
 .hospital-detail-tabs > button:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
 .hospital-always-section > .hospital-section-content > .hospital-detail-card > .hospital-title-heading,
 .hospital-always-section > .hospital-section-content .hospital-history-heading > div { display: none; }
