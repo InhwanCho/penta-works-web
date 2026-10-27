@@ -14,12 +14,16 @@ import subprocess
 def sql(container, database, query):
     command = ['docker', 'exec', '-i', container, 'sh', '-c',
                'exec mariadb --default-character-set=utf8mb4 --batch --raw --skip-column-names -uroot -p"$MARIADB_ROOT_PASSWORD" "$1"', 'sh', database]
-    return subprocess.run(command, input=query.encode(), stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE, check=True).stdout.decode()
+    result = subprocess.run(command, input=query.encode(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if result.returncode:
+        # MariaDB prints the whole statement before its error; never log private meeting content.
+        reason = next((line for line in result.stderr.decode().splitlines() if line.startswith('ERROR')), 'Database operation failed')
+        raise RuntimeError(reason)
+    return result.stdout.decode()
 
 
 def literal(value):
-    return 'NULL' if value is None else "CONVERT(0x" + str(value).encode().hex() + " USING utf8mb4)" if str(value) else "''"
+    return 'NULL' if value is None else "CONVERT(0x" + str(value).encode().hex() + " USING utf8mb4) COLLATE utf8mb4_unicode_ci" if str(value) else "''"
 
 
 def main():
