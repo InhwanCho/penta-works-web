@@ -1,6 +1,7 @@
 "use client";
 import { HospitalProfile, useHospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
+import HospitalDetailTabs from "./hospital-detail-tabs";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
 import HospitalWork, { useHospitalHistory } from "@/components/workspace/hospital-work";
@@ -257,6 +258,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
+      <HospitalDetailTabs key={slug} monitoringConnected={monitoringConnected} management={<>
       <HospitalSection key={`${slug}-info`} title="병원 정보" anchor="hospital-info" allScreens>
         <div className="hospital-detail-card">
         {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -278,7 +280,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         <SiteAlertSummary siteId={monitoringSiteId} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
       </HospitalSection>}
 
-      <HospitalSection key={`${slug}-equipment`} title="장비·부품" anchor="hospital-equipment">
+      <HospitalSection key={`${slug}-equipment`} title="장비·부품" anchor="hospital-equipment" allScreens>
         <HospitalEquipmentPanel siteId={data.site.siteDb} returnPath={`/sites/${encodeURIComponent(slug)}`} />
       </HospitalSection>
       <HospitalSection key={`${slug}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>
@@ -287,6 +289,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       <HospitalSection key={`${slug}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
         <HospitalWork siteId={data.site.siteDb} />
       </HospitalSection>
+      </>}>
 
       {monitoringConnected && <section className="hospital-detail-card site-chart-workspace" aria-label="측정값 그래프">
       <header className="site-chart-heading">
@@ -539,6 +542,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           ))}
       </div>
       </section>}
+      </HospitalDetailTabs>
     </main>
   );
 }
