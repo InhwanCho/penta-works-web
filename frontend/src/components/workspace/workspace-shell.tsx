@@ -27,8 +27,9 @@ export function WorkIcon({ name }: { name: string }) {
     >
       {name === "account" ? (
         <>
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
+          <circle cx="12" cy="12" r="9" />
+          <circle cx="12" cy="9" r="3" />
+          <path d="M6 18a6 6 0 0 1 12 0" />
         </>
       ) : name === "settings" ? (
         <>
@@ -190,7 +191,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
               <WorkIcon name={i.href === "/settings" ? "account" : i.icon} />
               {i.href === "/baselines" && <span className="notification-icon-dot"><DeferredUnreadAlertDot /></span>}
             </span>
-            <span>{i.href === "/settings" ? "내 공간" : i.label}</span>
+            <span>{i.href === "/settings" ? "MY" : i.label}</span>
           </Link>
         ))}
       </nav>

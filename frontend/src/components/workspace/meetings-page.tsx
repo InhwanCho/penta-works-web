@@ -35,8 +35,7 @@ export default function MeetingsPage() {
     {error&&<p role="alert" className="work-error">{error}</p>}
     {query.isPending?<PageLoader />:query.error?<div className="work-panel"><p className="work-error">{errorText(query.error)}</p><button className="work-secondary" onClick={()=>void query.refetch()}>다시 시도</button></div>:<div className="meeting-list">
       {filtered.map(row=><button type="button" className="meeting-card" key={row.id} onClick={()=>{setSelected(row.id);setError("");}} aria-haspopup="dialog">
-        <div className="meeting-card-date"><strong>{Number(row.meetingAt.slice(5,7))}월 {Number(row.meetingAt.slice(8,10))}일</strong><small>{row.meetingAt.slice(0,4)}년 · {row.meetingAt.slice(11,16)}</small></div>
-        <div className="meeting-card-main"><h2>{row.title}</h2><p className="meeting-period">지난주 보고 · {meetingReportPeriod(row.meetingAt)}</p><p className="meeting-preview">{meetingText(splitMeeting(row.contentMarkdown)[0])||"지난주 진행 내용이 없습니다."}</p><small>작성 {row.authorName}</small></div><span className="meeting-card-arrow" aria-hidden="true">›</span>
+        <div className="meeting-card-main"><h2>{row.title}</h2><p className="meeting-preview">{meetingText(splitMeeting(row.contentMarkdown)[0])||"지난주 진행 내용이 없습니다."}</p></div><span className="meeting-card-arrow" aria-hidden="true">›</span>
       </button>)}
       {!filtered.length&&<div className="work-panel meeting-empty">{rows.length?"검색에 맞는 회의록이 없습니다.":"첫 회의록을 작성해주세요."}</div>}
     </div>}

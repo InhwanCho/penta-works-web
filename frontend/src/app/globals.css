@@ -3215,13 +3215,10 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-search { display: grid; gap: 6px; margin: 14px 0; font-size: .8125rem; font-weight: 650; }
 .meeting-list { display: grid; gap: 10px; }
 .meeting-card { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; padding: 18px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); color: var(--work-ink); text-align: left; }
-.meeting-card-date { display: flex; flex: 0 0 105px; flex-direction: column; justify-content: center; gap: 5px; border-right: 1px solid var(--work-line); }
-.meeting-card-date strong { font-size: 1.125rem; }
-.meeting-card small { color: var(--work-muted); font-size: .75rem; }
 .meeting-card-main { min-width: 0; flex: 1; }
 .meeting-card-main h2 { font-size: 1rem; font-weight: 750; overflow-wrap: anywhere; }
 .meeting-period { margin-top: 4px; color: var(--work-focus); font-size: .75rem; }
-.meeting-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0; color: var(--work-muted); font-size: .875rem; line-height: 1.6; }
+.meeting-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 0; color: var(--work-muted); font-size: .875rem; line-height: 1.6; }
 .meeting-card-arrow { align-self: center; color: var(--work-muted); font-size: 1.5rem; }
 .meeting-empty { padding: 32px 16px; text-align: center; color: var(--work-muted); }
 .work-day-dialog.meeting-detail-drawer { width: min(900px,calc(100% - 32px)); }
@@ -3242,10 +3239,8 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-form textarea { line-height: 1.65; resize: vertical; font-weight: 400; }
 @media(hover:hover) { .meeting-card:hover { border-color: var(--work-focus); } }
 @media(max-width:1023px) {
- .meeting-card { flex-wrap: wrap; gap: 8px; padding: 12px; }
- .meeting-card-date { flex: 0 0 100%; flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 8px; border: 0; }
- .meeting-card-date strong { font-size: .875rem; }
- .meeting-preview { margin: 5px 0; font-size: .8125rem; }
+ .meeting-card { gap: 8px; padding: 12px; }
+ .meeting-preview { margin: 5px 0 0; font-size: .8125rem; }
  .work-day-dialog.meeting-detail-drawer.workspace-drawer { width: 100%; }
  .meeting-detail, .meeting-form { padding: 12px 14px; }
  .meeting-form input[type="datetime-local"] { width: 100%; min-width: 0; }
