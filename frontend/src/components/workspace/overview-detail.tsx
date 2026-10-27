@@ -55,19 +55,18 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <HospitalSection key={`${siteId}-info`} title="병원 정보" anchor="hospital-info" allScreens defaultOpen>
           <div className="hospital-detail-card"><HospitalProfile siteId={siteId} /></div>
         </HospitalSection>
-        <HospitalSection key={`${siteId}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>
+        <HospitalSection key={`${siteId}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens defaultOpen={url.hash === "#inspection-plan"}>
           <HospitalPlanning siteId={siteId} />
         </HospitalSection>
         <HospitalSection key={`${siteId}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
           <HospitalWork siteId={siteId} />
         </HospitalSection>
-      </> : schedules.isPending ? <CircleLoader size="m" /> : schedules.error ? <ErrorState error={schedules.error} retry={() => void schedules.refetch()} /> : rows.length ? rows.map(row => <section className="work-panel work-form" key={row.id}>
-        <span className="work-badge">{scheduleCategory(row)}</span>
+      </> : schedules.isPending ? <CircleLoader size="m" /> : schedules.error ? <ErrorState error={schedules.error} retry={() => void schedules.refetch()} /> : rows.length ? rows.map(row => <section className="work-panel overview-schedule-detail" key={row.id}>
+        <div className="overview-detail-meta"><span className="work-badge">{scheduleCategory(row)}</span><small>{row.authorName}</small></div>
         <h2>{row.title}</h2>
-        {row.siteId && <Link className="work-back" href={`/sites/${row.siteId}`}>{row.siteName} →</Link>}
-        <p>{dateLabel(row.startAt.slice(0, 10))} · {scheduleTimeLabel(row.startAt, row.endAt)}</p>
-        {row.body && <p className="work-prewrap">{row.body}</p>}
-        <small>{row.authorName}</small>
+        {row.siteId && <Link className="overview-detail-site" href={`/sites/${row.siteId}`}>{row.siteName} →</Link>}
+        <dl className="overview-detail-facts"><div><dt>날짜</dt><dd>{dateLabel(row.startAt.slice(0, 10))}</dd></div><div><dt>시간</dt><dd>{scheduleTimeLabel(row.startAt, row.endAt)}</dd></div></dl>
+        {row.body && <div className="overview-detail-description"><h3>일정 내용</h3><p className="work-prewrap">{row.body}</p></div>}
         {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
         <div className="work-form-actions">
           {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>일정 수정</Link>}

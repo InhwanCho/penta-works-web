@@ -9,6 +9,7 @@ import Link from "@/components/common/app-link";
 import WorkspaceDrawer from "./workspace-drawer";
 import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
 import ActionMenu from "@/components/common/action-menu";
+import AuthoringHeader from "./authoring-header";
 import { useWorkDraft } from "./use-work-draft";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -264,6 +265,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     type = form.serviceType;
   return (
     <main className={`work-page work-editor${editing ? " work-editor-editing" : ""}`}>
+      {editing ? <AuthoringHeader title={id ? "업무기록 수정" : "업무기록 등록"} backHref="/work" backLabel="업무기록 목록으로" /> : <>
       <Link
         href="/work"
         className="work-back"
@@ -306,6 +308,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           ) : undefined
         }
       />
+      </>}
       {editing && draft.pending && (
         <div
           className="work-panel work-draft-notice work-draft-toast"

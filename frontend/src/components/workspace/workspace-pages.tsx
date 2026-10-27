@@ -15,6 +15,7 @@ import { orderHospitalDirectory } from "@/lib/hospital-directory-order";
 import { useWorkDraft } from "./use-work-draft";
 import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
+import AuthoringHeader from "./authoring-header";
 import ActionMenu from "@/components/common/action-menu";
 import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -561,6 +562,7 @@ export function SchedulePage() {
   }
   return (
     <main className={`work-page schedule-page${open ? " schedule-editing" : ""}`}>
+      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} backHref="/overview" backLabel="업무현황 달력으로" /> : <>
       <Link
         className="work-back"
         href="/overview"
@@ -571,6 +573,7 @@ export function SchedulePage() {
         title="일정"
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
+      </>}
       {!open && <label className="work-date-picker">
         일정 날짜
         <input
@@ -625,7 +628,6 @@ export function SchedulePage() {
           aria-label={editingSchedule ? "일정 수정" : "일정 작성"}
           onSubmit={save}
         >
-          <h2>{editingSchedule ? "일정 수정" : "일정 작성"}</h2>
           <label>
             제목
             <input

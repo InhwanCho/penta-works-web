@@ -3024,9 +3024,35 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .workspace-drawer .day-section-toolbar { margin-bottom: 7px; }
 .workspace-drawer .day-entry { padding: 10px 12px; }
 }
-.overview-detail-body { padding: 12px; }
-.overview-detail-body > .work-panel { padding: 12px; margin: 8px 0; }
-.overview-detail-body .hospital-profile-summary { margin-bottom: 12px; }
+.overview-detail-body { display: grid; gap: 10px; min-width: 0; padding: 12px; }
+.overview-detail-body > .work-panel { min-width: 0; padding: 12px; margin: 0; }
+.overview-detail-body > .hospital-always-section { margin: 0; }
+.overview-detail-body .hospital-section-content > .hospital-detail-card { padding: 12px; margin: 0; }
+.overview-detail-body .hospital-profile-summary { margin: 0; padding-top: 0; border-top: 0; }
+.overview-detail-body .hospital-section-toggle { padding: 12px; min-height: 44px; font-size: .9375rem; }
+.overview-detail-body .planning-summary { grid-template-columns: 1fr; gap: 0; margin: 0; }
+.overview-detail-body .planning-summary > div { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: baseline; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--work-line); font-size: .8125rem; }
+.overview-detail-body .planning-summary dd { margin: 0; text-align: right; }
+.overview-detail-body .pm-quick-date { margin-top: 10px; padding: 0; border-top: 0; }
+.overview-detail-body > article.work-form { gap: 12px; }
+.overview-detail-body .work-back { margin: 0; }
+.overview-detail-body .work-details > div { grid-template-columns: 85px minmax(0,1fr); gap: 10px; padding: 8px 0; }
+.overview-detail-body .work-details dd { min-width: 0; overflow-wrap: anywhere; }
+.overview-detail-drawer .work-pm-read { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px 10px; padding: 10px 0; }
+.overview-detail-drawer .work-pm-read > span { float: none; align-self: start; padding: 2px 7px; border-radius: 6px; background: var(--work-soft); font-size: .75rem; }
+.overview-detail-drawer .work-pm-read > p { grid-column: 1 / -1; margin: 0; overflow-wrap: anywhere; }
+.overview-schedule-detail { display: grid; gap: 10px; }
+.overview-detail-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.overview-detail-meta small { color: var(--work-muted); font-size: .75rem; }
+.overview-detail-site { color: var(--work-focus); font-size: .875rem; font-weight: 650; }
+.overview-detail-facts { display: grid; gap: 8px; font-size: .8125rem; }
+.overview-detail-facts > div { display: grid; grid-template-columns: 48px minmax(0,1fr); gap: 10px; }
+.overview-detail-facts dt, .overview-detail-description h3 { color: var(--work-muted); font-size: .8125rem; }
+.overview-detail-facts dd { margin: 0; }
+.overview-detail-description { padding: 10px 12px; border-radius: 8px; background: var(--work-bg); }
+.overview-detail-description p { margin-top: 5px; color: var(--work-ink); font-size: .875rem; font-weight: 400; line-height: 1.65; overflow-wrap: anywhere; }
+.overview-schedule-detail > .work-form-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--work-line); }
+.overview-schedule-detail > .work-form-actions > a { flex: 1 1 120px; min-width: 0; padding: 9px 10px; font-size: .8125rem; }
 .workspace-drawer .workspace-search-body { padding: 10px 12px 16px; }
 @keyframes workspace-drawer-enter { from { translate: 0 48px; } to { translate: 0 0; } }
 @media(prefers-reduced-motion:reduce) { .workspace-drawer[open] { animation: none; } }
@@ -3185,15 +3211,9 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
   .work-day-dialog.workspace-drawer .day-section-toolbar > .day-section-action { flex: 0 0 auto; margin-left: 12px; }
   .workspace-drawer-grip { height: 40px; }
   .work-editor .work-draft-toast { right: 12px; bottom: calc(var(--workspace-bottom-height, 76px) + 12px); }
-  .work-page.work-editor-editing { padding-top: 14px; }
-  .work-editor-editing > .work-back { margin-bottom: 8px; }
-  .work-editor-editing > .work-heading { margin-bottom: 12px; }
-  .work-editor-editing > .work-heading p { margin-top: 3px; }
-  .work-editor-editing > :is(.work-back,.work-heading),
-  .schedule-editing > :is(.work-back,.work-heading),
-  .schedule-editing > form.work-form > h2 { display: none; }
-  .work-page:is(.work-editor-editing,.schedule-editing) { padding-top: 8px; }
-  .work-editor-editing > form.work-form { gap: 12px; padding: 14px; }
+  .work-page:is(.work-editor-editing,.schedule-editing) { max-width: none; padding: 6px 4px 16px; }
+  :is(.work-editor-editing,.schedule-editing) > form.work-form { width: 100%; margin: 0; gap: 10px; padding: 12px; border-radius: 10px; }
+  .work-editor-editing .work-form label > .work-input { margin-top: 4px; }
   .work-editor-editing .work-form-row { gap: 10px; }
   .work-editor-editing .work-pm-item { padding-top: 12px; padding-bottom: 12px; }
   .work-editor-editing .pm-measurements-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
@@ -3207,7 +3227,26 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .schedule-date-range summary { cursor: pointer; color: var(--work-focus); font-size: .8125rem; font-weight: 650; }
 .schedule-date-range > label { display: block; margin: 12px 0 8px; }
 .pm-quick-date { padding: 8px 12px; border-top: 1px solid var(--work-line); }
-.pm-quick-date > label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 650; }
+.pm-date-trigger { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 54px; padding: 10px 12px; border: 1px solid var(--work-focus); border-radius: 9px; background: var(--work-soft); color: var(--work-focus); cursor: pointer; text-align: left; }
+.pm-date-trigger > svg { flex-shrink: 0; }
+.pm-date-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.pm-date-copy small { font-size: .75rem; font-weight: 600; }
+.pm-date-copy strong { color: var(--work-ink); font-size: .9375rem; font-weight: 750; font-variant-numeric: tabular-nums; }
+.pm-date-action { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: .8125rem; font-weight: 750; }
+.pm-date-trigger:hover { background: var(--work-hover); }
+.pm-date-trigger:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
+.pm-date-fields { padding: 10px; border: 1px solid var(--work-focus); border-radius: 9px; background: var(--work-paper); }
+.pm-date-fields[hidden] { display: none; }
+.work-authoring-header { display: flex; align-items: center; gap: 10px; min-height: 44px; margin-bottom: 12px; }
+.work-authoring-header h1 { margin: 0; color: var(--work-ink); font-size: 1.375rem; font-weight: 750; line-height: 1.4; }
+.work-authoring-back { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border: 1px solid var(--work-line); border-radius: 9px; background: var(--work-paper); color: var(--work-ink); }
+.work-authoring-back:hover { background: var(--work-hover); }
+@media(max-width:1023px) {
+ .work-authoring-header { gap: 8px; margin: 0 4px 6px; }
+ .work-authoring-header h1 { font-size: 1.125rem; }
+ .work-editor-editing .work-radio-group, .schedule-editing .work-radio-group { gap: 6px; }
+}
+.pm-date-fields > label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 650; }
 .pm-quick-date-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
 .pm-quick-date-actions button { min-height: 36px; padding: 6px 12px; font-size: .8125rem; }
 .work-day-dialog .day-pm-due-item { border: 1px solid var(--work-line); border-radius: 9px; overflow: hidden; background: var(--work-paper); }
