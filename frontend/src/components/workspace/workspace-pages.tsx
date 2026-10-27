@@ -563,7 +563,7 @@ export function SchedulePage() {
   }
   return (
     <main className={`work-page schedule-page${open ? " schedule-editing" : ""}`}>
-      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} backHref="/overview" backLabel="업무현황 달력으로" /> : <>
+      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} disabled={saving} onBack={()=>draft.back(()=>router.replace("/overview"))} /> : <>
       <Link
         className="work-back"
         href="/overview"

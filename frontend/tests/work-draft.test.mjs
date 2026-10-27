@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
-function harness({ navigation = false, stored = new Map() } = {}) {
+function harness({ navigation = false, stored = new Map(), historyLength = 2 } = {}) {
   let cells=[], cursor=0, queued=[], rerender=false, output, args;
   const listeners=new Map(), nav=new Map(), historyCalls=[];
   const on=(map,k,fn)=>{if(!map.has(k))map.set(k,new Set());map.get(k).add(fn);};
@@ -14,7 +14,7 @@ function harness({ navigation = false, stored = new Map() } = {}) {
     useRef(initial){const i=cursor++;if(!cells[i])cells[i]={current:initial};return cells[i];},
     useEffect(fn,deps){const i=cursor++,prev=cells[i];if(!prev||deps.some((v,j)=>!Object.is(v,prev.deps[j]))){queued.push(()=>{prev?.cleanup?.();cells[i]={deps,cleanup:fn()};});}},
   };
-  const window={confirm:()=>false,location:{href:'https://app.example/schedule'},history:{state:{__NA:true},pushState(state){this.state=state;historyCalls.push('push');},back(){historyCalls.push('back');},forward(){historyCalls.push('forward');}},addEventListener:(k,fn)=>on(listeners,k,fn),removeEventListener:(k,fn)=>off(listeners,k,fn)};
+  const window={confirm:()=>false,location:{href:'https://app.example/schedule'},history:{length:historyLength,state:{__NA:true},pushState(state){this.state=state;this.length++;historyCalls.push('push');},back(){historyCalls.push('back');},forward(){historyCalls.push('forward');}},addEventListener:(k,fn)=>on(listeners,k,fn),removeEventListener:(k,fn)=>off(listeners,k,fn)};
   if(navigation)window.navigation={addEventListener:(k,fn)=>on(nav,k,fn),removeEventListener:(k,fn)=>off(nav,k,fn)};
   const exports={};const code=ts.transpileModule(fs.readFileSync(new URL('../src/components/workspace/use-work-draft.ts',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText;
   vm.runInNewContext(code,{exports,require:()=>react,Date,window,document:{addEventListener(){},removeEventListener(){}},localStorage:{getItem:k=>stored.get(k)||null,setItem:(k,v)=>stored.set(k,v),removeItem:k=>stored.delete(k)}});
@@ -86,4 +86,24 @@ test('clearing a small local edit does not delete a newer draft from another tab
  const other=JSON.stringify({version:1,at:new Date().toISOString(),value:{body:'다른 창에서 더 최근에 입력한 기록입니다.'}});
  h.stored.set('tabs:1',other);h.render({...base,value:{body:'짧음'}});
  assert.equal(h.stored.get('tabs:1'),other);
+});
+test('editor back uses actual browser history and skips only the Safari guard entry',()=>{
+ const h=harness({historyLength:2});let fallbacks=0;
+ h.render({storageKey:'back:1',enabled:true,value:{title:''},onRestore(){}});
+ h.current.back(()=>fallbacks++);assert.equal(h.historyCalls.at(-1),'back');assert.equal(fallbacks,0);
+ h.emit('popstate',{stopImmediatePropagation(){}});
+ assert.equal(h.historyCalls.filter(value=>value==='back').length,2);assert.equal(fallbacks,0);
+});
+test('a direct entry falls back only when no real prior page exists and protects unsaved content',()=>{
+ const h=harness({historyLength:1});let fallbacks=0;
+ const base={storageKey:'direct:1',enabled:true,value:{title:''},onRestore(){}};
+ h.render(base);assert.equal(h.window.history.length,2);
+ h.current.back(()=>fallbacks++);assert.equal(fallbacks,1);assert.equal(h.historyCalls.includes('back'),false);
+ h.render({...base,value:{title:'저장 전 내용'}});h.current.back(()=>fallbacks++);assert.equal(fallbacks,1);
+ h.window.confirm=()=>true;h.current.back(()=>fallbacks++);assert.equal(fallbacks,2);
+});
+test('modern navigation goes straight to the actual previous history entry',()=>{
+ const h=harness({navigation:true,historyLength:2});let fallback=false;
+ h.render({storageKey:'modern-back:1',enabled:true,value:{title:''},onRestore(){}});
+ h.current.back(()=>fallback=true);assert.equal(h.historyCalls.at(-1),'back');assert.equal(h.historyCalls.includes('push'),false);assert.equal(fallback,false);
 });

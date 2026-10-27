@@ -23,6 +23,7 @@ export function useWorkDraft<T>({
     baseline = useRef<string | null>(null),
     baselineValue = useRef<T | undefined>(undefined),
     lastWritten = useRef<string | null>(null),
+    historyBaseLength = useRef<number | null>(null),
     saved = useRef(false);
   const [pending, setPending] = useState<{ value: T; at: string } | null>(null),
     [readyKey, setReadyKey] = useState<string | null>(null),
@@ -32,6 +33,7 @@ export function useWorkDraft<T>({
     baseline.current = null;
     baselineValue.current = undefined;
     lastWritten.current = null;
+    historyBaseLength.current = null;
     saved.current = false;
     setReadyKey(null);
     setPending(null);
@@ -143,9 +145,12 @@ export function useWorkDraft<T>({
     }
     // Safari fallback: retain one same-URL entry so a cancelled back action can return safely.
     const marker = `draft:${storageKey}`;
+    historyBaseLength.current = window.history.state?.mreyesDraftGuard === marker
+      ? window.history.state.mreyesDraftBaseLength ?? Math.max(1,window.history.length-1)
+      : window.history.length;
     if (window.history.state?.mreyesDraftGuard !== marker)
       window.history.pushState(
-        { ...window.history.state, mreyesDraftGuard: marker },
+        { ...window.history.state, mreyesDraftGuard: marker, mreyesDraftBaseLength: historyBaseLength.current },
         "",
         window.location.href,
       );
@@ -171,12 +176,16 @@ export function useWorkDraft<T>({
     window.addEventListener("popstate", pop, true);
     return () => window.removeEventListener("popstate", pop, true);
   }, [enabled, storageKey]);
+  const confirmLeave = () => !dirty || !warnOnLeave || window.confirm("저장하지 않은 내용이 있습니다. 이 화면을 나갈까요?");
   return {
     pending,
     notice,
-    confirmLeave: () =>
-      !dirty || !warnOnLeave ||
-      window.confirm("저장하지 않은 내용이 있습니다. 이 화면을 나갈까요?"),
+    confirmLeave,
+    back: (fallback: () => void) => {
+      // Ignore the extra Safari guard entry when deciding whether a prior page exists.
+      if((historyBaseLength.current ?? window.history.length)>1)window.history.back();
+      else if(confirmLeave())fallback();
+    },
     dirty,
     restore: () => {
       if (pending) {

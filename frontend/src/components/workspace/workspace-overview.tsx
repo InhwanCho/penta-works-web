@@ -265,7 +265,7 @@ export default function OverviewPage() {
     return <PageLoader as="main" />;
   }
   return (
-    <main className="work-page work-overview">
+    <main className="work-page work-overview" aria-label="업무 현황">
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
@@ -725,6 +725,7 @@ export default function OverviewPage() {
         </details>
       </div>
       {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
+      <Link className="work-secondary hospital-register overview-write-mobile" href={`/work/new?date=${selected}`} aria-label="업무기록 작성">＋ 작성</Link>
     </main>
   );
 }

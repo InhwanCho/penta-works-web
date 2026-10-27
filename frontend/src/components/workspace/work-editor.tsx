@@ -267,7 +267,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     type = form.serviceType;
   return (
     <main className={`work-page work-editor${editing ? " work-editor-editing" : ""}`}>
-      {editing ? <AuthoringHeader title={id ? "업무기록 수정" : "업무기록 등록"} backHref="/work" backLabel="업무기록 목록으로" /> : <>
+      {editing ? <AuthoringHeader title={id ? "업무기록 수정" : "업무기록 등록"} disabled={saving || photoBusy} onBack={()=>draft.back(()=>router.replace("/overview"))} /> : <>
       <Link
         href="/work"
         className="work-back"
