@@ -560,7 +560,7 @@ export function SchedulePage() {
     }
   }
   return (
-    <main className="work-page schedule-page">
+    <main className={`work-page schedule-page${open ? " schedule-editing" : ""}`}>
       <Link
         className="work-back"
         href="/overview"
@@ -622,6 +622,7 @@ export function SchedulePage() {
       {open && (
         <form
           className="work-form work-panel"
+          aria-label={editingSchedule ? "일정 수정" : "일정 작성"}
           onSubmit={save}
         >
           <h2>{editingSchedule ? "일정 수정" : "일정 작성"}</h2>

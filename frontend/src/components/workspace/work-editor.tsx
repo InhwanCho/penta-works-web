@@ -396,6 +396,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       )}
       {editing ? (
         <form
+          aria-label={id ? "업무기록 수정" : "업무기록 작성"}
           onDragOver={(e) => {
             if (e.dataTransfer.types.includes("Files")) e.preventDefault();
           }}
