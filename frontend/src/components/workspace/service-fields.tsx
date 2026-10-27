@@ -15,6 +15,10 @@ export default function ServiceFields({
 }) {
   const set = (key: keyof WorkDetails, value: string | boolean) =>
     onChange({ ...d, [key]: value });
+  const pmSections=Array.from(new Set(d.pm.map(item=>item.section)),section=>({
+    title:section,
+    items:d.pm.map((item,index)=>({item,index})).filter(({item})=>item.section===section),
+  }));
   const field = (key: keyof WorkDetails, label: string, inputType = "text") => (
     <label key={key}>
       {label}
@@ -59,14 +63,13 @@ export default function ServiceFields({
             <p className="work-hint">
               각 항목의 실제 점검 결과와 측정값을 입력하세요.
             </p>
-            {d.pm.map((item, i) => (
+            {pmSections.map((group,sectionIndex)=><section className="work-pm-group" key={group.title} aria-label={group.title}>
+              <h3><span>{String(sectionIndex+1).padStart(2,"0")}</span>{group.title}</h3>
+              {group.items.map(({item,index:i}) => (
               <div
                 className={`work-pm-item ${item.result === "fail" ? "service-section-fail" : item.result === "cant" ? "service-section-warn" : ""}`}
                 key={item.name}
               >
-                {i === 0 || d.pm[i - 1].section !== item.section ? (
-                  <h3>{item.section}</h3>
-                ) : null}
                 <strong>{item.name}</strong>
                 <span className="work-hint">{item.purpose}</span>
                 {!item.noCheck && (
@@ -118,7 +121,8 @@ export default function ServiceFields({
                   </label>
                 )}
               </div>
-            ))}
+              ))}
+            </section>)}
           </section>
         </>
       )}
