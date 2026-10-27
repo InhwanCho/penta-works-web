@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 
 
 import { useQuery } from "@tanstack/react-query";
@@ -18,5 +19,6 @@ export default function SiteAlertSummary({siteId, names}: {siteId:string; names:
       {!site.thresholds.some(item=>item.active || item.missingActive) && !site.noDataActive && !site.coldChillerActive && <p className="mt-2 text-text-secondary">켜진 알림 항목이 없습니다.</p>}
       <p className="mt-2 text-xs text-text-secondary">수치 2회 연속 이탈{site.triggerAfterMinutes ? ` · ${site.triggerAfterMinutes}분 지속 후` : " 시"} 알림 · 내 계정 기준</p>
     </>}
+    <div className="hospital-panel-actions"><SiteAlertSettingsButton siteId={siteId} /></div>
   </section>;
 }

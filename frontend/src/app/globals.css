@@ -2254,6 +2254,9 @@ h4,
 .hospital-always-section > .hospital-section-content .hospital-history-heading > div { display: none; }
 .hospital-always-section > .hospital-section-content .hospital-history-heading { justify-content: flex-end; }
 @media(max-width:1023px) {
+ .hospital-detail-tabs { background: var(--work-bg); }
+ .hospital-detail-tabs > button { color: var(--work-ink); }
+ .hospital-detail-tabs > button[aria-selected="true"] { background: var(--work-soft); color: var(--work-focus); box-shadow: inset 0 -2px 0 var(--work-focus); }
  .site-detail-page .hospital-section-content > .hospital-detail-card > .hospital-title-heading { display: none; }
  .hospital-always-section { margin-bottom: 12px; }
  .hospital-always-section > .hospital-section-toggle { padding: 14px; font-size: 1rem; }

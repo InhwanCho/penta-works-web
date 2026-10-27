@@ -18,7 +18,6 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import SiteAlertSummary from "@/components/site/site-alert-summary";
-import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
@@ -259,7 +258,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </div>
 
       <HospitalDetailTabs key={slug} monitoringConnected={monitoringConnected} management={<>
-      <HospitalSection key={`${slug}-info`} title="병원 정보" anchor="hospital-info" allScreens>
+      <HospitalSection key={`${slug}-info`} title="병원 정보" anchor="hospital-info" allScreens defaultOpen>
         <div className="hospital-detail-card">
         {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span>
@@ -268,9 +267,6 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
               {lastAtLabel}
             </span>
           </span>
-          <div className="ml-auto shrink-0">
-            <SiteAlertSettingsButton siteId={monitoringSiteId} />
-          </div>
         </div>}
         <HospitalProfile siteId={data.site.siteDb} />
         </div>

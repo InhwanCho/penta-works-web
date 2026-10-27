@@ -13,3 +13,7 @@ test('policy editing from management returns to thresholds without adding metric
  const url=new URL(exports.alertSettingsPageUrl('002','/baselines',{pane:'schedule'}),'https://local.test');
  assert.equal(url.searchParams.get('pane'),'schedule');assert.equal(url.searchParams.has('only'),false);assert.equal(url.searchParams.get('return'),'/baselines?view=thresholds');
 });
+test('editing hospital alert settings returns to that hospital alert section',()=>{
+ const url=new URL(exports.alertSettingsPageUrl('006','/sites/6',{}),'https://local.test');
+ assert.equal(url.searchParams.get('return'),'/sites/6#hospital-alert-summary');
+});

@@ -1,9 +1,9 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 
-/** Collapsed on narrow screens; desktop retains the full detail layout. */
-export default function HospitalSection({ title, anchor, children, allScreens = false }: { title: string; anchor: string; children: ReactNode; allScreens?: boolean }) {
-  const [open, setOpen] = useState(false);
+/** Shared disclosure; selected sections can be expanded by default on every screen. */
+export default function HospitalSection({ title, anchor, children, allScreens = false, defaultOpen = false }: { title: string; anchor: string; children: ReactNode; allScreens?: boolean; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   useEffect(() => {
     const reveal = () => { if (window.location.hash === `#${anchor}`) setOpen(true); };
     reveal();

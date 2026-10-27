@@ -52,7 +52,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <ReadRecord record={record.data} />
         <Link href={`/work/${recordId}?view=page`} className="work-secondary">업무기록 페이지 열기</Link>
       </> : siteId ? <>
-        <HospitalSection key={`${siteId}-info`} title="병원 정보" anchor="hospital-info" allScreens>
+        <HospitalSection key={`${siteId}-info`} title="병원 정보" anchor="hospital-info" allScreens defaultOpen>
           <div className="hospital-detail-card"><HospitalProfile siteId={siteId} /></div>
         </HospitalSection>
         <HospitalSection key={`${siteId}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>

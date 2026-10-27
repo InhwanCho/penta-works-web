@@ -21,7 +21,7 @@ const SiteThresholdEditor = dynamic(() => import("./baselines-client").then(modu
 export default function SiteAlertSettingsButton({ siteId }: { siteId: string }) {
   const [open, setOpen] = useState(false);
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="min-h-11 rounded-lg border border-sky-200 px-3 py-2 text-xs font-bold text-sky-800 dark:border-sky-800 dark:text-sky-200">알림값 설정</button>
+    <button type="button" onClick={() => setOpen(true)} className="work-secondary hospital-section-action">알림값 설정</button>
     {open && <SiteAlertSettingsDialog siteId={siteId} onClose={() => setOpen(false)} />}
   </>;
 }
