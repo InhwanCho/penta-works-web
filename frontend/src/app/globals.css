@@ -3052,10 +3052,6 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .overview-detail-facts dd { margin: 0; }
 .overview-detail-description { padding: 10px 12px; border-radius: 8px; background: var(--work-bg); }
 .overview-detail-description p { margin-top: 5px; color: var(--work-ink); font-size: .875rem; font-weight: 400; line-height: 1.65; overflow-wrap: anywhere; }
-.workspace-create-form { display: grid; gap: 16px; min-width: 0; padding: 14px 16px 18px; }
-.workspace-create-form > label { display: grid; gap: 6px; min-width: 0; font-size: .8125rem; font-weight: 650; }
-.workspace-create-form .work-radio-group > div { display: grid; grid-template-columns: 1fr 1fr; }
-.workspace-create-form .work-radio-group label { justify-content: center; }
 .overview-schedule-detail > .work-form-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--work-line); }
 .overview-schedule-detail > .work-form-actions > a { flex: 1 1 120px; min-width: 0; padding: 9px 10px; font-size: .8125rem; }
 .workspace-drawer .workspace-search-body { padding: 10px 12px 16px; }
@@ -3251,17 +3247,12 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .work-authoring-kind .work-radio-group legend { margin-bottom: 7px; }
 .work-authoring-kind .work-radio-group label { justify-content: center; padding: 8px 12px; }
 .work-authoring-kind .work-radio-group:disabled { opacity: .6; }
-.overview-create-trigger { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 44px; padding: 8px 14px 8px 10px; border: 1px solid var(--work-focus); border-radius: 10px; background: var(--work-paper); color: var(--work-focus); font-size: .875rem; font-weight: 750; cursor: pointer; }
-.overview-create-trigger > span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: var(--work-soft); }
-.overview-create-trigger:hover { background: var(--work-hover); }
-.overview-create-trigger:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
 @media(max-width:1023px) {
  .work-authoring-header { gap: 8px; margin: 0 4px 6px; }
  .work-authoring-header h1 { font-size: 1.125rem; }
  .work-authoring-kind { margin-bottom: 8px; padding: 8px 10px; }
  .work-authoring-kind .work-radio-group legend { margin-bottom: 5px; font-size: .75rem; }
  .work-authoring-kind .work-radio-group label { min-height: 40px; }
- .overview-create-trigger { padding: 6px 10px 6px 7px; font-size: .8125rem; }
  .work-editor-editing .work-radio-group, .schedule-editing .work-radio-group { gap: 6px; }
 }
 .pm-date-fields > label { display: grid; gap: 6px; font-size: .8125rem; font-weight: 650; }
