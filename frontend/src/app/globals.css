@@ -3238,30 +3238,24 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-content table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
 .meeting-content :is(th,td) { padding: 6px 10px; border: 1px solid var(--work-line); }
 .meeting-updated { padding-top: 12px; border-top: 1px solid var(--work-line); }
-.meeting-form-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.meeting-form :is(label,.meeting-form-meta > label) { display: grid; min-width: 0; gap: 6px; font-size: .875rem; font-weight: 650; }
+.meeting-form label { display: grid; min-width: 0; gap: 6px; font-size: .875rem; font-weight: 650; }
 .meeting-form textarea { line-height: 1.65; resize: vertical; font-weight: 400; }
 @media(hover:hover) { .meeting-card:hover { border-color: var(--work-focus); } }
 @media(max-width:1023px) {
- .meetings-page .work-heading { align-items: center; gap: 10px; }
- .meetings-page .work-heading h1 { font-size: 1.35rem; }
- .meetings-page .work-heading p { font-size: .75rem; }
- .meetings-page .work-heading > button { flex-shrink: 0; padding: 8px 10px; font-size: .8125rem; }
  .meeting-card { flex-wrap: wrap; gap: 8px; padding: 12px; }
  .meeting-card-date { flex: 0 0 100%; flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 8px; border: 0; }
  .meeting-card-date strong { font-size: .875rem; }
  .meeting-preview { margin: 5px 0; font-size: .8125rem; }
  .work-day-dialog.meeting-detail-drawer.workspace-drawer { width: 100%; }
  .meeting-detail, .meeting-form { padding: 12px 14px; }
- .meeting-form-meta { grid-template-columns: 1fr; gap: 10px; }
  .meeting-form input[type="datetime-local"] { width: 100%; min-width: 0; }
- /* Keep touch feedback neutral. A selected date gets a border above its labels. */
- .work-overview .work-calendar .work-calendar-day { position: relative; isolation: isolate; transition: none; -webkit-tap-highlight-color: transparent; }
+ /* Gentle press feedback; a thin selected-date border stays above its labels. */
+ .work-overview .work-calendar .work-calendar-day { position: relative; isolation: isolate; transition: background-color 100ms ease; -webkit-tap-highlight-color: transparent; }
  .work-overview .work-calendar .work-calendar-day:is(:hover,:active,:focus,.selected) { box-shadow: none !important; }
- .work-overview .work-calendar .work-calendar-day:not(.outside):is(:hover,:active) { background: var(--work-paper); }
- .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: #f5f6f8; }
- .dark .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: #17242f; }
+ .work-overview .work-calendar .work-calendar-day:not(.outside):is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,var(--work-paper)); }
+ .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,#f5f6f8); }
+ .dark .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,#17242f); }
  .work-overview .work-calendar .work-calendar-day.selected { z-index: 1; }
- .work-overview .work-calendar .work-calendar-day.selected::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 3px solid var(--work-focus); pointer-events: none; }
+ .work-overview .work-calendar .work-calendar-day.selected::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 1.5px solid var(--work-focus); pointer-events: none; }
  .work-overview .work-calendar .work-calendar-day > :is(span,.work-calendar-tags) { position: relative; z-index: 0; }
 }

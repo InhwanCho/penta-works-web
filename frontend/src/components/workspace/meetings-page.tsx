@@ -18,7 +18,7 @@ export default function MeetingsPage() {
   const qc=useQueryClient();
   const [search,setSearch]=useState(""), [selected,setSelected]=useState<number|null>(null), [editing,setEditing]=useState<Meeting|"new"|null>(null), [error,setError]=useState("");
   const rows=useMemo(()=>(query.data||[]).map(row=>({...row,plain:meetingText(row.contentMarkdown)})),[query.data]);
-  const filtered=rows.filter(row=>`${row.title} ${row.plain} ${row.participantNames} ${row.authorName}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const filtered=rows.filter(row=>`${row.title} ${row.plain} ${row.authorName}`.toLowerCase().includes(search.trim().toLowerCase()));
   const current=rows.find(row=>row.id===selected);
   if(isLoading||session&&access.isPending)return <PageLoader as="main" />;
   if(!session)return <main className="work-page"><Link href="/login?next=/meetings">로그인 후 회의록을 이용하세요.</Link></main>;
@@ -30,13 +30,13 @@ export default function MeetingsPage() {
     catch(e){setError(errorText(e));}
   }
   return <main className="work-page meetings-page">
-    <header className="work-heading"><div><h1>회의록</h1><p>지난주 진행 내용부터 이번 주 계획까지 · 펜타웍스 사내 공유</p></div><button type="button" className="work-primary" onClick={()=>setEditing("new")}>＋ 회의록 작성</button></header>
-    <label className="meeting-search">회의록 검색<input type="search" className="work-input" placeholder="제목·내용·참석자 검색" value={search} onChange={event=>setSearch(event.target.value)} /></label>
+    <header className="work-heading"><div><h1>회의록</h1></div><button type="button" className="work-primary" aria-label="회의록 작성" onClick={()=>setEditing("new")}>＋ 작성</button></header>
+    <label className="meeting-search">회의록 검색<input type="search" className="work-input" placeholder="제목·내용·작성자 검색" value={search} onChange={event=>setSearch(event.target.value)} /></label>
     {error&&<p role="alert" className="work-error">{error}</p>}
     {query.isPending?<PageLoader />:query.error?<div className="work-panel"><p className="work-error">{errorText(query.error)}</p><button className="work-secondary" onClick={()=>void query.refetch()}>다시 시도</button></div>:<div className="meeting-list">
       {filtered.map(row=><button type="button" className="meeting-card" key={row.id} onClick={()=>{setSelected(row.id);setError("");}} aria-haspopup="dialog">
         <div className="meeting-card-date"><strong>{Number(row.meetingAt.slice(5,7))}월 {Number(row.meetingAt.slice(8,10))}일</strong><small>{row.meetingAt.slice(0,4)}년 · {row.meetingAt.slice(11,16)}</small></div>
-        <div className="meeting-card-main"><h2>{row.title}</h2><p className="meeting-period">지난주 보고 · {meetingReportPeriod(row.meetingAt)}</p><p className="meeting-preview">{meetingText(splitMeeting(row.contentMarkdown)[0])||"지난주 진행 내용이 없습니다."}</p><small>작성 {row.authorName}{row.participantNames?` · 참석 ${row.participantNames}`:""}</small></div><span className="meeting-card-arrow" aria-hidden="true">›</span>
+        <div className="meeting-card-main"><h2>{row.title}</h2><p className="meeting-period">지난주 보고 · {meetingReportPeriod(row.meetingAt)}</p><p className="meeting-preview">{meetingText(splitMeeting(row.contentMarkdown)[0])||"지난주 진행 내용이 없습니다."}</p><small>작성 {row.authorName}</small></div><span className="meeting-card-arrow" aria-hidden="true">›</span>
       </button>)}
       {!filtered.length&&<div className="work-panel meeting-empty">{rows.length?"검색에 맞는 회의록이 없습니다.":"첫 회의록을 작성해주세요."}</div>}
     </div>}
@@ -45,7 +45,6 @@ export default function MeetingsPage() {
         {error&&<p role="alert" className="work-error">{error}</p>}
         <div className="meeting-detail-toolbar"><p>{current.meetingAt.replace("T"," ")} · 작성 {current.authorName}</p><ActionMenu label="회의록 메뉴" items={[{label:"수정",onSelect:()=>setEditing(current)},...(isAdmin||current.authorId===session.id?[{label:"삭제",danger:true,onSelect:()=>void remove(current)}]:[])]} /></div>
         <p className="meeting-period">지난주 보고 · {meetingReportPeriod(current.meetingAt)}</p>
-        {current.participantNames&&<p className="work-hint">참석자 · {current.participantNames}</p>}
         <article className="meeting-content" dangerouslySetInnerHTML={{__html:meetingHtml(current.contentMarkdown)}} />
         <p className="work-hint meeting-updated">최근 수정 {current.updatedByName} · {current.updatedAt}</p>
       </div>
@@ -58,7 +57,7 @@ export default function MeetingsPage() {
 
 function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>Promise<void>;onCancel:()=>void}) {
   const originals=useMemo(()=>splitMeeting(row?.contentMarkdown||""),[row?.contentMarkdown]);
-  const [title,setTitle]=useState(row?.title||""),[date,setDate]=useState(row?.meetingAt||`${dayString()}T10:00`),[participants,setParticipants]=useState(row?.participantNames||"");
+  const [title,setTitle]=useState(row?.title||""),[date,setDate]=useState(row?.meetingAt||`${dayString()}T10:00`);
   const [sections,setSections]=useState<MeetingSections>(()=>originals.map(meetingText) as MeetingSections);
   const [busy,setBusy]=useState(false),[error,setError]=useState("");
   const meaningful=sections.some(value=>meetingText(value).trim());
@@ -66,14 +65,14 @@ function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>P
     event.preventDefault();if(!meaningful)return;setBusy(true);setError("");
     try {
       const resolvedTitle=title.trim()||`${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일 주간 회의록`;
-      const input={title:resolvedTitle,meetingAt:date,participantNames:participants,contentMarkdown:joinMeeting(sections,originals),revision:row?.revision};
+      const input={title:resolvedTitle,meetingAt:date,participantNames:row?.participantNames||"",contentMarkdown:joinMeeting(sections,originals),revision:row?.revision};
       const result=await apiFetch<{id:number}|undefined>(`/workspace/meetings${row?`/${row.id}`:""}`,{method:row?"PUT":"POST",body:JSON.stringify(input)});
       await onSaved(row?.id||result!.id);
     } catch(e){setError(errorText(e));}finally{setBusy(false);}
   }
   return <form className="work-form meeting-form" onSubmit={submit}>
     <label>제목<input className="work-input" maxLength={200} value={title} placeholder="비우면 회의 날짜로 제목을 만듭니다" disabled={busy} onChange={event=>setTitle(event.target.value)} /></label>
-    <div className="meeting-form-meta"><label>회의 일시<input className="work-input" type="datetime-local" required value={date} disabled={busy} onChange={event=>setDate(event.target.value)} /></label><label>참석자<input className="work-input" value={participants} maxLength={1000} placeholder="이름을 쉼표로 구분" disabled={busy} onChange={event=>setParticipants(event.target.value)} /></label></div>
+    <label>회의 일시<input className="work-input" type="datetime-local" required value={date} disabled={busy} onChange={event=>setDate(event.target.value)} /></label>
     <p className="work-hint">지난주 보고 · {meetingReportPeriod(date)}</p>
     {meetingHeadings.map((heading,i)=><label key={heading}>{heading}<textarea className="work-input" rows={i===0?7:4} value={sections[i]} disabled={busy} placeholder={["방문·점검·수리 내용과 결과","계속 진행 중인 작업, 병원별 이슈","이번 주 방문·PM·수리 계획"][i]} onChange={event=>setSections(value=>value.map((text,index)=>index===i?event.target.value:text) as MeetingSections)} /></label>)}
     {error&&<p className="work-error" role="alert">{error}</p>}
