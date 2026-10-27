@@ -11,15 +11,24 @@ export default function PwaProvider() {
     let disposed = false;
     let previouslyControlled = Boolean(navigator.serviceWorker.controller);
     let reloading = false;
+    let pendingMenu: {href:string;at:number} | null = null;
+    const menuNavigation = (event:Event) => {
+      const href=(event as CustomEvent<unknown>).detail;
+      if(typeof href==="string"&&["/","/overview","/hospitals","/baselines","/settings"].includes(href))pendingMenu={href,at:Date.now()};
+    };
     const applyUpdate = () => {
       if (disposed || reloading) return;
       if (previouslyControlled) {
         reloading = true;
-        window.location.reload();
+        // A cold-start update can arrive before Next commits the first menu click.
+        // Continue to that approved destination instead of reloading the old page.
+        if(pendingMenu&&Date.now()-pendingMenu.at<10_000&&pendingMenu.href!==window.location.pathname+(window.location.search||""))window.location.assign(pendingMenu.href);
+        else window.location.reload();
       }
       previouslyControlled = true;
     };
     navigator.serviceWorker.addEventListener("controllerchange", applyUpdate);
+    window.addEventListener("mreyes:menu-navigation",menuNavigation);
     let registration: ServiceWorkerRegistration | undefined;
     let installing: ServiceWorker | null = null;
     const changed = () => {
@@ -53,6 +62,7 @@ export default function PwaProvider() {
       window.removeEventListener("online", check);
       window.removeEventListener("pageshow", check);
       navigator.serviceWorker.removeEventListener("controllerchange", applyUpdate);
+      window.removeEventListener("mreyes:menu-navigation",menuNavigation);
       registration?.removeEventListener("updatefound", found);
       installing?.removeEventListener("statechange", changed);
     };

@@ -59,6 +59,7 @@ export const statusLabels: Record<string, string> = {
 export function useWorkspace(
   options: {
     records?: boolean;
+    schedules?: boolean;
     recordFrom?: string;
     recordTo?: string;
     recordSiteId?: string;
@@ -72,6 +73,7 @@ export function useWorkspace(
   const sites = useQuery({
     queryKey: ["workspace-sites", scope],
     queryFn: () => apiFetch<Hospital[]>("/workspace/hospitals"),
+    staleTime: 60_000,
     enabled,
   });
   const records = useQuery({
@@ -104,7 +106,8 @@ export function useWorkspace(
       if (options.scheduleTo) p.set("to", options.scheduleTo);
       return apiFetch<WorkSchedule[]>(`/workspace/schedules?${p}`);
     },
-    enabled,
+    enabled: enabled && options.schedules !== false,
+    staleTime: 30_000,
   });
   return { sites, records, schedules };
 }

@@ -813,6 +813,8 @@ h4,
     box-shadow: 0 -3px 16px #12364b05;
   }
   .workspace-bottom a {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
     display: flex;
     flex-direction: column;
     justify-content: center;

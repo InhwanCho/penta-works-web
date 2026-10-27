@@ -269,7 +269,7 @@ export default function OverviewPage() {
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
-        action={<Link className="work-primary" href={`/work/new?date=${selected}`}>＋ 작성</Link>}
+        action={<Link className="work-secondary hospital-register" href={`/work/new?date=${selected}`}>＋ 작성</Link>}
       />
       <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>

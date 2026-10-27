@@ -4,9 +4,8 @@ import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
-import { createMobileNavTouchHandlers } from "@/lib/mobile-nav-touch";
 import { useMeetingAccess } from "./meetings-data";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 const items = [
   { href: "/", label: "모니터링", icon: "monitor" },
   { href: "/overview", label: "업무 현황", icon: "home" },
@@ -107,7 +106,6 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const meetingAccess = useMeetingAccess();
   const bottomNav = useRef<HTMLElement>(null);
-  const bottomNavTouch = useMemo(createMobileNavTouchHandlers, []);
   useEffect(() => {
     const nav = bottomNav.current;
     if (!nav) return;
@@ -177,13 +175,13 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
         className="workspace-bottom"
         aria-label="주 메뉴"
         data-ptr-ignore
-        {...bottomNavTouch}
       >
         {items.map((i) => (
           <Link
             key={i.href}
             href={i.href}
             scroll={false}
+            onNavigate={()=>window.dispatchEvent(new CustomEvent("mreyes:menu-navigation",{detail:i.href}))}
             className={active(i.href) || (i.href === "/settings" && path.startsWith("/meetings")) ? "selected" : ""}
             aria-current={active(i.href) || (i.href === "/settings" && path.startsWith("/meetings")) ? "page" : undefined}
           >

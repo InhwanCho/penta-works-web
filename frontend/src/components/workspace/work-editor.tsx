@@ -53,7 +53,8 @@ export default function WorkEditor({ id }: { id?: string }) {
     search = useSearchParams(),
     qc = useQueryClient();
   const { session, isAdmin } = useAuth();
-  const { sites, schedules } = useWorkspace({ records: false });
+  const [schedulePickerOpen,setSchedulePickerOpen]=useState(false);
+  const { sites, schedules } = useWorkspace({ records: false, schedules: !!id || !!search.get("schedule") || schedulePickerOpen });
   const records = useQuery({
     queryKey: ["workspace-records", "detail", session?.id, id],
     queryFn: () => apiFetch<WorkRecord>(`/workspace/records/${id}`),
@@ -518,6 +519,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           )}
           <details
             className="work-schedule-link"
+            onToggle={event=>setSchedulePickerOpen(event.currentTarget.open)}
             key={details.scheduleId ? "linked" : "unlinked"}
             open={details.scheduleId ? true : undefined}
           >
