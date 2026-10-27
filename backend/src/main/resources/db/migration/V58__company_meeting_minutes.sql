@@ -1,7 +1,7 @@
 -- Intranet weekly meeting structure, scoped to the company in MReyes.
 CREATE TABLE workspace_meeting (
  id BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY,
- company_id BIGINT NOT NULL,
+ company_id BIGINT UNSIGNED NOT NULL,
  source_id VARCHAR(100) NULL,
  title VARCHAR(200) NOT NULL,
  meeting_at DATETIME(6) NOT NULL,

@@ -19,7 +19,7 @@ class WorkspaceMeetingsDatabaseTest {
  @BeforeEach void setup() throws Exception {
   db=new JdbcTemplate(new DriverManagerDataSource(System.getenv("MEETINGS_TEST_DB_URL"),"mreyes_meetings_qa",System.getenv("MEETINGS_TEST_DB_PASSWORD")));
   db.execute("DROP TABLE IF EXISTS workspace_meeting");db.execute("DROP TABLE IF EXISTS company");
-  db.execute("CREATE TABLE company(id BIGINT PRIMARY KEY,code VARCHAR(100),status VARCHAR(20))");
+  db.execute("CREATE TABLE company(id BIGINT UNSIGNED PRIMARY KEY,code VARCHAR(100),status VARCHAR(20))");
   db.execute("INSERT INTO company VALUES(1,'PENTAWORKS','ACTIVE'),(2,'OTHER','ACTIVE')");
   try(var stream=Objects.requireNonNull(getClass().getResourceAsStream("/db/migration/V58__company_meeting_minutes.sql"))) {
    db.execute(new String(stream.readAllBytes(),StandardCharsets.UTF_8));
