@@ -16,6 +16,7 @@ import { useWorkDraft } from "./use-work-draft";
 import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
 import AuthoringHeader from "./authoring-header";
+import AuthoringKind from "./authoring-kind";
 import ActionMenu from "@/components/common/action-menu";
 import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -574,6 +575,7 @@ export function SchedulePage() {
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
       </>}
+      {open && !editingSchedule && <AuthoringKind value="schedule" date={form.date} disabled={saving} confirmLeave={draft.confirmLeave} />}
       {!open && <label className="work-date-picker">
         일정 날짜
         <input

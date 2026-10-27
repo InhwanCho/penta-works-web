@@ -271,7 +271,7 @@ export default function OverviewPage() {
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
-        action={<button type="button" className="work-primary" aria-haspopup="dialog" onClick={()=>setCreateOpen(true)}>＋ 작성</button>}
+        action={<button type="button" className="overview-create-trigger" aria-haspopup="dialog" onClick={()=>setCreateOpen(true)}><span aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg></span>작성</button>}
       />
       <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>

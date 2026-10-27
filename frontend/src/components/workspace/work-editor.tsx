@@ -10,6 +10,7 @@ import WorkspaceDrawer from "./workspace-drawer";
 import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
 import ActionMenu from "@/components/common/action-menu";
 import AuthoringHeader from "./authoring-header";
+import AuthoringKind from "./authoring-kind";
 import { useWorkDraft } from "./use-work-draft";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -102,7 +103,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   const draft = useWorkDraft({
     storageKey: `mreyes-work-draft:${session?.id}:${id || "new"}`,
     value: { form, details, photoIds, revision },
-    shouldKeep: id ? undefined : hasMeaningfulWorkDraft,
+    shouldKeep: hasMeaningfulWorkDraft,
     enabled:
       !!session && editing && (!id || (loadedId === id && photoIds !== null)),
     onRestore: (d) => {
@@ -309,6 +310,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         }
       />
       </>}
+      {editing && !id && <AuthoringKind value="work" date={form.workDate} disabled={saving || photoBusy} confirmLeave={draft.confirmLeave} />}
       {editing && draft.pending && (
         <div
           className="work-panel work-draft-notice work-draft-toast"

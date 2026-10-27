@@ -14,13 +14,15 @@ export function useWorkDraft<T>({
   enabled: boolean;
   onRestore: (value: T) => void;
   restoreNotice?: string;
-  shouldKeep?: (value: T) => boolean;
+  shouldKeep?: (value: T, baseline?: T) => boolean;
   warnOnLeave?: boolean;
 }) {
   const keep = useRef(shouldKeep);
   keep.current = shouldKeep;
   const encoded = JSON.stringify(value),
     baseline = useRef<string | null>(null),
+    baselineValue = useRef<T | undefined>(undefined),
+    lastWritten = useRef<string | null>(null),
     saved = useRef(false);
   const [pending, setPending] = useState<{ value: T; at: string } | null>(null),
     [readyKey, setReadyKey] = useState<string | null>(null),
@@ -28,6 +30,8 @@ export function useWorkDraft<T>({
   const [clean, setClean] = useState(false);
   useEffect(() => {
     baseline.current = null;
+    baselineValue.current = undefined;
+    lastWritten.current = null;
     saved.current = false;
     setReadyKey(null);
     setPending(null);
@@ -40,7 +44,7 @@ export function useWorkDraft<T>({
         if (
           draft.version === 1 &&
           draft.value &&
-          (!keep.current || keep.current(draft.value)) &&
+          (!keep.current || keep.current(draft.value, draft.baseline)) &&
           Date.parse(draft.at) <= Date.now() &&
           Date.now() - Date.parse(draft.at) < 7 * 86400000
         )
@@ -54,23 +58,35 @@ export function useWorkDraft<T>({
   }, [storageKey]);
   const ready = readyKey === storageKey;
   useEffect(() => {
-    if (enabled && ready && baseline.current === null)
+    if (enabled && ready && baseline.current === null) {
       baseline.current = encoded;
-  }, [enabled, ready, encoded]);
+      baselineValue.current = JSON.parse(encoded) as T;
+    }
+  }, [enabled, ready, encoded, value]);
+  useEffect(() => {
+    if(!enabled||!ready||!pending||!shouldKeep||shouldKeep(pending.value,baselineValue.current))return;
+    setPending(null);
+    try{localStorage.removeItem(storageKey);}catch{}
+  },[enabled,ready,pending,shouldKeep,storageKey,encoded]);
   const dirty =
     enabled &&
     ready &&
     !clean &&
     baseline.current !== null &&
     encoded !== baseline.current &&
-    (!shouldKeep || shouldKeep(value));
+    (!shouldKeep || shouldKeep(value,baselineValue.current));
+  useEffect(()=>{
+    if(!enabled||!ready||pending||saved.current||!lastWritten.current||!shouldKeep||shouldKeep(value,baselineValue.current))return;
+    try{if(localStorage.getItem(storageKey)===lastWritten.current)localStorage.removeItem(storageKey);}catch{}
+    lastWritten.current=null;
+    setNotice(current=>current==="이 기기에 임시저장됨"?"":current);
+  },[enabled,ready,pending,shouldKeep,encoded,storageKey,value]);
   useEffect(() => {
     if (!dirty || pending || saved.current) return;
     try {
-      localStorage.setItem(
-        storageKey,
-        JSON.stringify({ version: 1, value, at: new Date().toISOString() }),
-      );
+      const snapshot=JSON.stringify({ version: 1, value, baseline:baselineValue.current, at: new Date().toISOString() });
+      localStorage.setItem(storageKey,snapshot);
+      lastWritten.current=snapshot;
       setNotice("이 기기에 임시저장됨");
     } catch {
       setNotice("임시저장 공간이 부족합니다. 내용을 저장해주세요.");
@@ -186,6 +202,7 @@ export function useWorkDraft<T>({
       saved.current = true;
       dirtyRef.current = false;
       baseline.current = encoded;
+      baselineValue.current = JSON.parse(encoded) as T;
       setClean(true);
       setPending(null);
       try {
@@ -197,6 +214,7 @@ export function useWorkDraft<T>({
       saved.current = false;
       setClean(false);
       baseline.current = null;
+      baselineValue.current = undefined;
     },
   };
 }

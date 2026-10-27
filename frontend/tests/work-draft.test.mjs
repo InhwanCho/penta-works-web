@@ -62,3 +62,28 @@ test('minor edits can be saved as drafts without leave confirmation',()=>{
  h.navigate({navigationType:'traverse',cancelable:true,preventDefault(){assert.fail('minor change should not block');}});
  assert.equal(confirms,0);h.unmount();
 });
+test('reducing entered content below the threshold removes a previously stored draft',()=>{
+ const h=harness({navigation:true});const keep=value=>value.body.trim().length>=12;
+ const base={storageKey:'reduce:1',enabled:true,value:{body:''},shouldKeep:keep,onRestore(){}};
+ h.render(base);h.render({...base,value:{body:'회의 후 펌프 및 냉각수 상태를 다시 확인하기로 했습니다.'}});
+ assert.ok(h.stored.has('reduce:1'));
+ assert.equal(JSON.parse(h.stored.get('reduce:1')).baseline.body,'');
+ h.render({...base,value:{body:'메모'}});
+ assert.equal(h.current.dirty,false);assert.equal(h.stored.has('reduce:1'),false);
+});
+test('legacy edit drafts are revalidated against the loaded original before offering recovery',()=>{
+ const body='이미 저장되어 있는 충분히 긴 원본 업무기록입니다.';
+ const stored=new Map([['legacy:1',JSON.stringify({version:1,at:new Date().toISOString(),value:{body}})]]);
+ const keep=(value,baseline)=>value.body.length>=12&&value.body!==baseline?.body;
+ const h=harness({navigation:true,stored});const base={storageKey:'legacy:1',enabled:false,value:{body:''},shouldKeep:keep,onRestore(){}};
+ h.render(base);assert.ok(h.current.pending);
+ h.render({...base,enabled:true,value:{body}});
+ assert.equal(h.current.pending,null);assert.equal(h.stored.has('legacy:1'),false);
+});
+test('clearing a small local edit does not delete a newer draft from another tab',()=>{
+ const h=harness({navigation:true});const base={storageKey:'tabs:1',enabled:true,value:{body:''},shouldKeep:value=>value.body.length>=12,onRestore(){}};
+ h.render(base);h.render({...base,value:{body:'이 창에서 입력한 충분히 긴 업무 메모입니다.'}});
+ const other=JSON.stringify({version:1,at:new Date().toISOString(),value:{body:'다른 창에서 더 최근에 입력한 기록입니다.'}});
+ h.stored.set('tabs:1',other);h.render({...base,value:{body:'짧음'}});
+ assert.equal(h.stored.get('tabs:1'),other);
+});

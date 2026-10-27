@@ -1,4 +1,5 @@
 import type { WorkSchedule } from "./workspace-data";
+import { changedTextSize, MIN_DRAFT_TEXT } from "./draft-content";
 export function scheduleEditForm(s: Pick<WorkSchedule, "targetKind" | "siteId" | "personalKind" | "serviceType" | "title" | "body" | "startAt" | "endAt">) {
   return {
     targetKind: s.targetKind || (s.siteId ? "HOSPITAL" : "GENERAL"), personalKind: s.personalKind || "etc", serviceType: s.serviceType || "ETC",
@@ -18,10 +19,7 @@ export function scheduleTimes(form: ScheduleForm) {
 }
 export function substantialScheduleChange(form: ScheduleForm, previous?: WorkSchedule | null) {
   const old = previous ? scheduleEditForm(previous) : newScheduleForm(form.date);
-  return ["title","body"].some(key => {
-    const field = key as "title" | "body";
-    return form[field].trim() !== old[field].trim() && Math.max(form[field].trim().length, old[field].trim().length) >= 3;
-  });
+  return changedTextSize(form.title,old.title)+changedTextSize(form.body,old.body)>=MIN_DRAFT_TEXT;
 }
 
 export function normalizeScheduleForm(value: Partial<ScheduleForm> & {startAt?: string; endAt?: string}, fallbackDate: string): ScheduleForm {

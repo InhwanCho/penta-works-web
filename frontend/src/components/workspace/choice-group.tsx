@@ -6,16 +6,18 @@ export function ChoiceGroup({
   onChange,
   options,
   compact = false,
+  disabled = false,
 }: {
   legend: string;
   value: string;
   onChange: (value: string) => void;
   options: [string, string][];
   compact?: boolean;
+  disabled?: boolean;
 }) {
   const id = useId();
   return (
-    <fieldset className={`work-radio-group ${compact ? "compact" : ""}`}>
+    <fieldset className={`work-radio-group ${compact ? "compact" : ""}`} disabled={disabled}>
       <legend>{legend}</legend>
       <div>
         {options.map(([v, label]) => (
