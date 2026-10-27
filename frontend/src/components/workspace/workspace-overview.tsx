@@ -7,6 +7,7 @@ import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
 import PmDateEditor from "./pm-date-editor";
 import WorkspaceSearch from "./workspace-search";
+import WorkspaceCreate from "./workspace-create";
 import { groupRecentWorkByWeek, recentWorkWindow } from "./recent-work-weeks";
 import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
@@ -72,6 +73,7 @@ export default function OverviewPage() {
   const today = dayString();
   const mobile = useMobileWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
@@ -269,6 +271,7 @@ export default function OverviewPage() {
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
+        action={<button type="button" className="work-primary" aria-haspopup="dialog" onClick={()=>setCreateOpen(true)}>＋ 작성</button>}
       />
       <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>
@@ -724,6 +727,7 @@ export default function OverviewPage() {
         </details>
       </div>
       {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
+      {createOpen && <WorkspaceCreate date={selected} onClose={()=>setCreateOpen(false)} />}
     </main>
   );
 }

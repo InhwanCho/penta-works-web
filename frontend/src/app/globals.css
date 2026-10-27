@@ -2331,13 +2331,14 @@ h4,
 }
 
 /* Reserve the measured bottom navigation height, including safe-area and large text. */
-.dashboard-filter-trigger { bottom: calc(var(--workspace-bottom-height, 0px) + 12px); }
+.dashboard-filter-trigger { position: fixed; top: auto; right: 0; left: auto; margin: 0; bottom: var(--dashboard-filter-bottom, calc(var(--workspace-bottom-height, 0px) + 12px)); }
 .dashboard-filter-dialog {
- bottom: calc(var(--workspace-bottom-height, 0px) + 12px);
+ bottom: var(--dashboard-filter-bottom, calc(var(--workspace-bottom-height, 0px) + 12px));
  max-height: min(70dvh, calc(100dvh - var(--workspace-bottom-height, 0px) - 5rem - env(safe-area-inset-top, 0px)));
 }
 @media (max-width: 1023px) {
  :root { --workspace-bottom-height: calc(68px + env(safe-area-inset-bottom, 0px)); }
+ .dashboard-compact-controls { --dashboard-filter-bottom: calc(max(var(--workspace-bottom-height, 68px), calc(68px + env(safe-area-inset-bottom, 0px))) + 12px); }
  .workspace-frame { padding-bottom: calc(var(--workspace-bottom-height) + 12px); }
 }
 
@@ -3051,6 +3052,10 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .overview-detail-facts dd { margin: 0; }
 .overview-detail-description { padding: 10px 12px; border-radius: 8px; background: var(--work-bg); }
 .overview-detail-description p { margin-top: 5px; color: var(--work-ink); font-size: .875rem; font-weight: 400; line-height: 1.65; overflow-wrap: anywhere; }
+.workspace-create-form { display: grid; gap: 16px; min-width: 0; padding: 14px 16px 18px; }
+.workspace-create-form > label { display: grid; gap: 6px; min-width: 0; font-size: .8125rem; font-weight: 650; }
+.workspace-create-form .work-radio-group > div { display: grid; grid-template-columns: 1fr 1fr; }
+.workspace-create-form .work-radio-group label { justify-content: center; }
 .overview-schedule-detail > .work-form-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 10px; border-top: 1px solid var(--work-line); }
 .overview-schedule-detail > .work-form-actions > a { flex: 1 1 120px; min-width: 0; padding: 9px 10px; font-size: .8125rem; }
 .workspace-drawer .workspace-search-body { padding: 10px 12px 16px; }
@@ -3065,7 +3070,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
   .work-overview .work-calendar-toolbar input[type=month] { max-width: 160px; font-size: .9375rem; padding: 5px; }
   .work-overview .work-calendar-toolbar > .overview-search-trigger { margin-left: auto; padding: 6px 10px; min-width: 64px; }
   .work-overview .work-calendar-day { min-height: 82px; padding: 2px 1px; }
-  .work-overview .work-calendar-day > span { width: 18px; height: 18px; font-size: .625rem; line-height: 18px; }
+  .work-overview .work-calendar-day > span { width: 18px; height: 18px; min-width: 0; padding: 0; flex-shrink: 0; aspect-ratio: 1; font-size: .625rem; line-height: 1; font-variant-numeric: tabular-nums; }
   .work-overview .work-calendar-tags > span { padding: 1px 2px; font-size: .625rem; border-radius: 2px; }
   .work-overview .work-calendar-legend { padding: 6px; gap: 3px 8px; font-size: .625rem; }
   .work-overview .overview-fold-body { padding: 0 6px 6px; }
