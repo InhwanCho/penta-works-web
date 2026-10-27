@@ -5,6 +5,7 @@ import Link from "@/components/common/app-link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/provider/auth-provider";
 import { createMobileNavTouchHandlers } from "@/lib/mobile-nav-touch";
+import { useMeetingAccess } from "./meetings-data";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 const items = [
   { href: "/", label: "모니터링", icon: "monitor" },
@@ -98,6 +99,7 @@ export function WorkIcon({ name }: { name: string }) {
 export default function WorkspaceShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const { session } = useAuth();
+  const meetingAccess = useMeetingAccess();
   const bottomNav = useRef<HTMLElement>(null);
   const bottomNavTouch = useMemo(createMobileNavTouchHandlers, []);
   useEffect(() => {
@@ -142,7 +144,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
     <div className="workspace-frame">
       <aside className="workspace-sidebar">
         <span className="workspace-caption">WORKSPACE</span>
-        {items.map((i) => (
+        {(meetingAccess.data?.allowed ? [...items.slice(0, 4), {href:"/meetings",label:"회의록",icon:"record"},items[4]] : items).map((i) => (
           <Link
             key={i.href}
             href={i.href}
@@ -176,14 +178,14 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             key={i.href}
             href={i.href}
             scroll={false}
-            className={active(i.href) ? "selected" : ""}
-            aria-current={active(i.href) ? "page" : undefined}
+            className={active(i.href) || (i.href === "/settings" && path.startsWith("/meetings")) ? "selected" : ""}
+            aria-current={active(i.href) || (i.href === "/settings" && path.startsWith("/meetings")) ? "page" : undefined}
           >
             <span className="notification-icon">
               <WorkIcon name={i.icon} />
               {i.href === "/baselines" && <span className="notification-icon-dot"><DeferredUnreadAlertDot /></span>}
             </span>
-            <span>{i.label}</span>
+            <span>{i.href === "/settings" ? "더보기" : i.label}</span>
           </Link>
         ))}
       </nav>

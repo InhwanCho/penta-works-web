@@ -10,9 +10,11 @@ import CalendarConnection from "./calendar-connection";
 import LogoutControls from "./logout-controls";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { useMeetingAccess } from "@/components/workspace/meetings-data";
 
 export default function SettingsClient() {
   const { session, isAdmin, isLoading } = useAuth();
+  const meetingAccess=useMeetingAccess();
   const { theme, setTheme, isLargeText, toggleLargeText } = useTheme();
   const company = useQuery({
     queryKey: ["settings-company", session?.id],
@@ -47,6 +49,10 @@ export default function SettingsClient() {
         </Link>
         <p className="settings-account-hint">내 정보 · 비밀번호 관리</p>
       </section>
+      {meetingAccess.data?.allowed && <section className="work-panel settings-section">
+        <h2>사내 업무</h2>
+        <SettingsLink href="/meetings" title="회의록" description="지난주 진행 내용 · 이슈 · 이번 주 계획" />
+      </section>}
       <section className="work-panel settings-section">
         <h2>화면 설정</h2>
         <ChoiceGroup

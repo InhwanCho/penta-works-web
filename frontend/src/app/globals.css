@@ -2116,11 +2116,9 @@ h4,
  .work-calendar .work-calendar-day.outside:hover { background: #f5f6f8; }
  .dark .work-calendar .work-calendar-day.outside:hover { background: #17242f; }
  .work-calendar .work-calendar-day.selected,
- .work-calendar .work-calendar-day.selected:hover,
- .work-calendar .work-calendar-day:active { box-shadow: inset 0 0 0 3px #2864ab; }
+ .work-calendar .work-calendar-day.selected:hover { box-shadow: inset 0 0 0 3px #2864ab; }
  .dark .work-calendar .work-calendar-day.selected,
- .dark .work-calendar .work-calendar-day.selected:hover,
- .dark .work-calendar .work-calendar-day:active { box-shadow: inset 0 0 0 3px #88b6ec; }
+ .dark .work-calendar .work-calendar-day.selected:hover { box-shadow: inset 0 0 0 3px #88b6ec; }
  .work-calendar .work-calendar-toolbar button:hover { background: var(--work-paper); color: var(--work-ink); }
  .work-day-dialog .day-close:hover { background: transparent; color: var(--day-secondary); }
  .work-day-dialog .day-close:active { background: var(--work-hover); }
@@ -3212,3 +3210,58 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .work-day-dialog .day-schedule-row .pm-quick-date { background: var(--work-paper); }
 .schedule-date-fields { max-width: 100%; }
 .schedule-date-fields > label { display: grid; gap: 6px; }
+
+/* Company meeting minutes: reuse the intranet weekly date/content hierarchy. */
+.meeting-search { display: grid; gap: 6px; margin: 14px 0; font-size: .8125rem; font-weight: 650; }
+.meeting-list { display: grid; gap: 10px; }
+.meeting-card { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; padding: 18px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); color: var(--work-ink); text-align: left; }
+.meeting-card-date { display: flex; flex: 0 0 105px; flex-direction: column; justify-content: center; gap: 5px; border-right: 1px solid var(--work-line); }
+.meeting-card-date strong { font-size: 1.125rem; }
+.meeting-card small { color: var(--work-muted); font-size: .75rem; }
+.meeting-card-main { min-width: 0; flex: 1; }
+.meeting-card-main h2 { font-size: 1rem; font-weight: 750; overflow-wrap: anywhere; }
+.meeting-period { margin-top: 4px; color: var(--work-focus); font-size: .75rem; }
+.meeting-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0; color: var(--work-muted); font-size: .875rem; line-height: 1.6; }
+.meeting-card-arrow { align-self: center; color: var(--work-muted); font-size: 1.5rem; }
+.meeting-empty { padding: 32px 16px; text-align: center; color: var(--work-muted); }
+.work-day-dialog.meeting-detail-drawer { width: min(900px,calc(100% - 32px)); }
+.meeting-detail, .meeting-form { min-width: 0; padding: 18px 20px; }
+.meeting-detail-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8125rem; color: var(--work-muted); }
+.meeting-content { margin: 20px 0; font-size: .9375rem; line-height: 1.85; overflow-wrap: anywhere; }
+.meeting-content :is(h1,h2,h3,h4) { margin: 20px 0 10px; font-weight: 750; line-height: 1.5; }
+.meeting-content h2 { padding-top: 12px; border-top: 1px solid var(--work-line); font-size: 1.0625rem; }
+.meeting-content :is(p,ul,ol,blockquote) { margin: 8px 0; }
+.meeting-content ul { list-style: disc; padding-left: 22px; }
+.meeting-content ol { list-style: decimal; padding-left: 22px; }
+.meeting-content a { color: var(--work-focus); text-decoration: underline; }
+.meeting-content pre { white-space: pre-wrap; padding: 12px; background: var(--work-bg); border-radius: 8px; }
+.meeting-content table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
+.meeting-content :is(th,td) { padding: 6px 10px; border: 1px solid var(--work-line); }
+.meeting-updated { padding-top: 12px; border-top: 1px solid var(--work-line); }
+.meeting-form-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.meeting-form :is(label,.meeting-form-meta > label) { display: grid; min-width: 0; gap: 6px; font-size: .875rem; font-weight: 650; }
+.meeting-form textarea { line-height: 1.65; resize: vertical; font-weight: 400; }
+@media(hover:hover) { .meeting-card:hover { border-color: var(--work-focus); } }
+@media(max-width:1023px) {
+ .meetings-page .work-heading { align-items: center; gap: 10px; }
+ .meetings-page .work-heading h1 { font-size: 1.35rem; }
+ .meetings-page .work-heading p { font-size: .75rem; }
+ .meetings-page .work-heading > button { flex-shrink: 0; padding: 8px 10px; font-size: .8125rem; }
+ .meeting-card { flex-wrap: wrap; gap: 8px; padding: 12px; }
+ .meeting-card-date { flex: 0 0 100%; flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 8px; border: 0; }
+ .meeting-card-date strong { font-size: .875rem; }
+ .meeting-preview { margin: 5px 0; font-size: .8125rem; }
+ .work-day-dialog.meeting-detail-drawer.workspace-drawer { width: 100%; }
+ .meeting-detail, .meeting-form { padding: 12px 14px; }
+ .meeting-form-meta { grid-template-columns: 1fr; gap: 10px; }
+ .meeting-form input[type="datetime-local"] { width: 100%; min-width: 0; }
+ /* Keep touch feedback neutral. A selected date gets a border above its labels. */
+ .work-overview .work-calendar .work-calendar-day { position: relative; isolation: isolate; transition: none; -webkit-tap-highlight-color: transparent; }
+ .work-overview .work-calendar .work-calendar-day:is(:hover,:active,:focus,.selected) { box-shadow: none !important; }
+ .work-overview .work-calendar .work-calendar-day:not(.outside):is(:hover,:active) { background: var(--work-paper); }
+ .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: #f5f6f8; }
+ .dark .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: #17242f; }
+ .work-overview .work-calendar .work-calendar-day.selected { z-index: 1; }
+ .work-overview .work-calendar .work-calendar-day.selected::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 3px solid var(--work-focus); pointer-events: none; }
+ .work-overview .work-calendar .work-calendar-day > :is(span,.work-calendar-tags) { position: relative; z-index: 0; }
+}

@@ -22,11 +22,13 @@
     "@tanstack/react-query-devtools": "^5.91.1",
     "chart.js": "^4.5.1",
     "chartjs-plugin-zoom": "^2.2.0",
+    "marked": "18.0.13",
     "next": "15.5.24",
     "react": "19.1.0",
     "react-chartjs-2": "^5.3.1",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.89.0",
+    "sanitize-html": "^2.18.1",
     "tailwind-scrollbar": "^4.0.2"
   },
   "devDependencies": {
@@ -35,6 +37,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/sanitize-html": "^2.16.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.24",
     "eslint-config-prettier": "^10.1.8",
