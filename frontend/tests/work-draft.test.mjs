@@ -107,3 +107,30 @@ test('modern navigation goes straight to the actual previous history entry',()=>
  h.render({storageKey:'modern-back:1',enabled:true,value:{title:''},onRestore(){}});
  h.current.back(()=>fallback=true);assert.equal(h.historyCalls.at(-1),'back');assert.equal(h.historyCalls.includes('push'),false);assert.equal(fallback,false);
 });
+
+test('Safari mode switches remove their guard before replacing and do not stack registration pages',()=>{
+ const h=harness({historyLength:2});
+ const base={storageKey:'mreyes-work-draft:1:new',enabled:true,value:{title:''},onRestore(){}};
+ h.render(base);
+ for(const key of ['mreyes-schedule-draft:1','mreyes-work-draft:1:new','mreyes-schedule-draft:1']){
+  let replaced=false;
+  h.current.replace(()=>{replaced=true;h.window.history.state={__NA:true};});
+  assert.equal(replaced,false);
+  h.window.history.length--;
+  h.emit('popstate',{stopImmediatePropagation(){}});
+  assert.equal(replaced,true);
+  h.render({...base,storageKey:key});
+  assert.equal(h.window.history.length,3,'one original form entry and one guard after every mode switch');
+ }
+ let fallback=false;
+ h.current.back(()=>fallback=true);
+ h.emit('popstate',{stopImmediatePropagation(){}});
+ assert.equal(fallback,false);
+ assert.equal(h.historyCalls.filter(item=>item==='back').length,5);
+});
+test('modern mode switches replace directly without moving back or adding a guard',()=>{
+ const h=harness({navigation:true});
+ h.render({storageKey:'switch:1',enabled:true,value:{title:''},onRestore(){}});
+ let replaced=false;h.current.replace(()=>replaced=true);
+ assert.equal(replaced,true);assert.equal(h.historyCalls.length,0);
+});

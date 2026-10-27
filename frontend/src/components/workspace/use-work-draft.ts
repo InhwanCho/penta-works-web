@@ -122,6 +122,7 @@ export function useWorkDraft<T>({
     };
   }, [dirty, warnOnLeave]);
   // Browser back/forward is not a link click. Prefer cancellable navigation where available.
+  const replaceAfterGuard = useRef<(() => void) | null>(null);
   useEffect(() => {
     if (!enabled) return;
     const navigation = (window as unknown as { navigation?: EventTarget })
@@ -156,6 +157,14 @@ export function useWorkDraft<T>({
       );
     let returning = false;
     const pop = (e: PopStateEvent) => {
+      if (replaceAfterGuard.current) {
+        e.stopImmediatePropagation();
+        const action = replaceAfterGuard.current;
+        replaceAfterGuard.current = null;
+        window.removeEventListener("popstate", pop, true);
+        action();
+        return;
+      }
       if (returning) {
         returning = false;
         e.stopImmediatePropagation();
@@ -181,6 +190,16 @@ export function useWorkDraft<T>({
     pending,
     notice,
     confirmLeave,
+    replace: (action: () => void) => {
+      // Remove Safari's duplicate entry before replacing the authoring route.
+      // The next editor installs its own guard without stacking previous forms.
+      if (enabled && !(window as unknown as { navigation?: EventTarget }).navigation &&
+          window.history.state?.mreyesDraftGuard === `draft:${storageKey}`) {
+        if (replaceAfterGuard.current) return;
+        replaceAfterGuard.current = action;
+        window.history.back();
+      } else action();
+    },
     back: (fallback: () => void) => {
       // Ignore the extra Safari guard entry when deciding whether a prior page exists.
       if((historyBaseLength.current ?? window.history.length)>1)window.history.back();

@@ -3,8 +3,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ChoiceGroup } from "./choice-group";
 
-export default function AuthoringKind({ value, date, disabled = false, confirmLeave }: {
-  value: "work" | "schedule"; date: string; disabled?: boolean; confirmLeave: () => boolean;
+export default function AuthoringKind({ value, date, disabled = false, confirmLeave, navigate }: {
+  value: "work" | "schedule"; date: string; disabled?: boolean; confirmLeave: () => boolean; navigate: (action: () => void) => void;
 }) {
   const router=useRouter();
   useEffect(()=>{
@@ -17,7 +17,7 @@ export default function AuthoringKind({ value, date, disabled = false, confirmLe
       if(disabled||next===value||!confirmLeave())return;
       const query=new URLSearchParams({date});
       if(next==="schedule")query.set("new","1");
-      router.push(`${next==="schedule"?"/schedule":"/work/new"}?${query}`);
+      navigate(() => router.replace(`${next==="schedule"?"/schedule":"/work/new"}?${query}`));
     }} />
   </div>;
 }

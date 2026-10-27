@@ -269,7 +269,7 @@ export default function OverviewPage() {
       <PageHeading
         title="업무 현황"
         description="점검 예정일, 일정과 방문 전 확인사항을 한눈에 확인하세요."
-        action={<Link className="work-secondary hospital-register" href={`/work/new?date=${selected}`}>＋ 작성</Link>}
+        action={<Link className="work-secondary hospital-register" href={`/schedule?date=${selected}&new=1`}>＋ 작성</Link>}
       />
       <div className="work-section overview-calendar-heading">
         <h2>일정 달력</h2>
@@ -725,7 +725,7 @@ export default function OverviewPage() {
         </details>
       </div>
       {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
-      <Link className="work-secondary hospital-register overview-write-mobile" href={`/work/new?date=${selected}`} aria-label="업무기록 작성">＋ 작성</Link>
+      <Link className="work-secondary hospital-register overview-write-mobile" href={`/schedule?date=${selected}&new=1`} aria-label="일정 등록">＋ 작성</Link>
     </main>
   );
 }

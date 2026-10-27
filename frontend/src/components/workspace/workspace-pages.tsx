@@ -575,7 +575,7 @@ export function SchedulePage() {
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
       </>}
-      {open && !editingSchedule && <AuthoringKind value="schedule" date={form.date} disabled={saving} confirmLeave={draft.confirmLeave} />}
+      {open && !editingSchedule && <AuthoringKind value="schedule" date={form.date} disabled={saving} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
       {!open && <label className="work-date-picker">
         일정 날짜
         <input

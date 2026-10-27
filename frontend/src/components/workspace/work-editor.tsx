@@ -39,7 +39,7 @@ import {
   PhotoGallery,
   type PhotoAttachmentApi,
 } from "./work-photos";
-import { AssetSelection, AssetRecordSummary } from "./hospital-assets";
+import { AssetSelection, AssetRecordSummary, HospitalEquipmentSelection } from "./hospital-assets";
 const generalTypes: [string, string][] = [
   ["office", "사무실 업무"],
   ["education", "교육 · 세미나"],
@@ -311,7 +311,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         }
       />
       </>}
-      {editing && !id && <AuthoringKind value="work" date={form.workDate} disabled={saving || photoBusy} confirmLeave={draft.confirmLeave} />}
+      {editing && !id && <AuthoringKind value="work" date={form.workDate} disabled={saving || photoBusy} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
       {editing && draft.pending && (
         <div
           className="work-panel work-draft-notice work-draft-toast"
@@ -453,7 +453,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                   value={form.siteId}
                   onChange={(siteId) => {
                     setForm({ ...form, siteId });
-                    setDetails({ ...details, assetIds: [] });
+                    setDetails({ ...details, assetIds: [], model: "" });
                   }}
                 />
                 {sites.error && (
@@ -497,18 +497,8 @@ export default function WorkEditor({ id }: { id?: string }) {
             )}
           </div>
           {field && type !== "CALL" && (
-            <label>
-              장비 (모델)
-              <input
-                className="work-input"
-                maxLength={200}
-                value={details.model}
-                onChange={(e) =>
-                  setDetails({ ...details, model: e.target.value, magneticFieldTesla: magneticFieldFromModel(e.target.value) || details.magneticFieldTesla })
-                }
-                placeholder="예: Signa HDxt 1.5T"
-              />
-            </label>
+            <HospitalEquipmentSelection siteId={form.siteId} value={details.assetIds} model={details.model}
+              onChange={(assetIds, model) => setDetails({ ...details, assetIds, model, magneticFieldTesla: magneticFieldFromModel(model) || details.magneticFieldTesla })} />
           )}
           {field && (
             <AssetSelection

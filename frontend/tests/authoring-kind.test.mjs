@@ -8,12 +8,12 @@ function harness(){
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(new URL('../src/components/workspace/authoring-kind.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText,{
   exports,URLSearchParams,require(name){
    if(name==='react')return {useEffect:fn=>fn()};
-   if(name==='next/navigation')return {useRouter:()=>({push:value=>routes.push(value),prefetch:value=>prefetched.push(value)})};
+   if(name==='next/navigation')return {useRouter:()=>({push:()=>assert.fail("mode switches must not add history entries"),replace:value=>routes.push(value),prefetch:value=>prefetched.push(value)})};
    if(name==='react/jsx-runtime')return {jsx:(type,props)=>({type,props}),jsxs:(type,props)=>({type,props})};
    return {ChoiceGroup:'Choices'};
   }
  });
- return {routes,prefetched,render:args=>exports.default({value:'work',date:'2026-11-03',confirmLeave:()=>true,...args}).props.children.props};
+ return {routes,prefetched,render:args=>exports.default({value:'work',date:'2026-11-03',confirmLeave:()=>true,navigate:action=>action(),...args}).props.children.props};
 }
 test('switching registration types keeps the entered date and opens the intended form',()=>{
  const h=harness();h.render().onChange('schedule');assert.equal(h.routes[0],'/schedule?date=2026-11-03&new=1');
