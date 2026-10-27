@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode, type PointerEvent } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState, type ReactNode, type PointerEvent } from "react";
 
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
 
@@ -8,11 +8,12 @@ let openDrawers = 0;
 let previousBodyOverflow = "";
 
 /** Shared bottom drawer. Native dialogs preserve focus and Escape behavior when stacked. */
-export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, children, className = "" }: {
+export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, scrollKey, children, className = "" }: {
   title: string;
   onClose: () => void;
   onBack?: () => void;
   onOpenDetail?: (href: string) => void;
+  scrollKey?: string;
   children: ReactNode;
   className?: string;
 }) {
@@ -25,6 +26,12 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
   const titleId = useId();
   const gesture = useRef<{ id: number; y: number; at: number } | null>(null);
   const [offset, setOffset] = useState(0);
+  useLayoutEffect(() => {
+    // A detail link reuses this drawer; reset its scroll containers, not the page behind it.
+    for (const node of [ref.current, contentRef.current]) {
+      if (node) { node.scrollTop = 0; node.scrollLeft = 0; }
+    }
+  }, [scrollKey]);
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;

@@ -4,6 +4,46 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 
+test('moving between details resets drawer scroll, while data refreshes preserve it', () => {
+  const exports = {}, refs = [], dependencies = [], effects = [];
+  let refIndex = 0, effectIndex = 0;
+  const source = ts.transpileModule(fs.readFileSync(new URL('../src/components/workspace/workspace-drawer.tsx', import.meta.url), 'utf8'), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX },
+  }).outputText;
+  vm.runInNewContext(source, { exports, require(name) {
+    if (name.includes('use-mobile-workspace')) return { useMobileWorkspace: () => true };
+    if (name === 'react') return {
+      useId: () => 'title', useState: value => [value, () => {}], useEffect() {},
+      useRef(value) { return refs[refIndex++] ??= { current: value }; },
+      useLayoutEffect(fn, deps) {
+        const index = effectIndex++;
+        if (!dependencies[index] || deps.some((value, i) => value !== dependencies[index][i])) effects.push(fn);
+        dependencies[index] = deps;
+      },
+    };
+    if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+    return {};
+  } });
+  const dialog = { scrollTop: 120, scrollLeft: 5 }, content = { scrollTop: 500, scrollLeft: 10 };
+  function render(scrollKey) {
+    refIndex = effectIndex = 0;
+    const tree = exports.default({ title: '상세', scrollKey, onClose() {} });
+    tree.props.ref.current = dialog;
+    tree.props.children[2].props.ref.current = content;
+    effects.splice(0).forEach(fn => fn());
+  }
+  render('/work/42');
+  assert.equal(content.scrollTop, 0);
+  content.scrollTop = 700;
+  render('/work/42');
+  assert.equal(content.scrollTop, 700);
+  render('/sites/11');
+  for (const node of [dialog, content]) {
+    assert.equal(node.scrollTop, 0);
+    assert.equal(node.scrollLeft, 0);
+  }
+});
+
 function harness(mobile = true) {
   const exports = {}, effects = [];
   const document = { body: { style: { overflow: 'auto' } }, activeElement: null };
@@ -14,7 +54,7 @@ function harness(mobile = true) {
   vm.runInNewContext(source, { exports, document, Element, HTMLElement: Element, require(name) {
     if (name.includes('use-mobile-workspace')) return { useMobileWorkspace: () => mobile };
     if (name === 'react') return {
-      useId: () => 'title', useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => effects.push(fn),
+      useId: () => 'title', useRef: value => ({ current: value }), useState: value => [value, () => {}], useEffect: fn => effects.push(fn), useLayoutEffect: fn => effects.push(fn),
     };
     if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
     return {};

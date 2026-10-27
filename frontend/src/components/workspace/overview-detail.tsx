@@ -8,6 +8,7 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
 import PmDateEditor from "./pm-date-editor";
 import WorkspaceDrawer from "./workspace-drawer";
+import HospitalSection from "@/components/site/hospital-section";
 import { ReadRecord } from "./work-editor";
 import HospitalPlanning from "./hospital-planning";
 import HospitalWork from "./hospital-work";
@@ -44,16 +45,22 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
   const rows = (schedules.data || []).filter(row => !scheduleId || String(row.id) === scheduleId);
   return <WorkspaceDrawer title={recordId ? "업무기록 상세" : siteId ? profile.data?.name || "병원 · 점검 상세" : "일정 상세"} onClose={onClose}
     onBack={history.length ? () => setHistory(value => value.slice(0, -1)) : undefined}
-    onOpenDetail={next => setHistory(value => [...value, next])} className="overview-detail-drawer">
+    onOpenDetail={next => setHistory(value => [...value, next])} scrollKey={current} className="overview-detail-drawer">
     <div className="overview-detail-body" key={current}>
       {recordId ? record.isPending ? <CircleLoader size="m" /> : record.error ? <ErrorState error={record.error} retry={() => void record.refetch()} /> : record.data && <>
         <p className="work-hint">{record.data.workDate} · {record.data.authorName}</p>
         <ReadRecord record={record.data} />
         <Link href={`/work/${recordId}?view=page`} className="work-secondary">업무기록 페이지 열기</Link>
       </> : siteId ? <>
-        <HospitalProfile siteId={siteId} />
-        <HospitalPlanning siteId={siteId} />
-        <HospitalWork siteId={siteId} />
+        <HospitalSection key={`${siteId}-info`} title="병원 정보" anchor="hospital-info" allScreens>
+          <div className="hospital-detail-card"><HospitalProfile siteId={siteId} /></div>
+        </HospitalSection>
+        <HospitalSection key={`${siteId}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>
+          <HospitalPlanning siteId={siteId} />
+        </HospitalSection>
+        <HospitalSection key={`${siteId}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
+          <HospitalWork siteId={siteId} />
+        </HospitalSection>
       </> : schedules.isPending ? <CircleLoader size="m" /> : schedules.error ? <ErrorState error={schedules.error} retry={() => void schedules.refetch()} /> : rows.length ? rows.map(row => <section className="work-panel work-form" key={row.id}>
         <span className="work-badge">{scheduleCategory(row)}</span>
         <h2>{row.title}</h2>

@@ -15,6 +15,7 @@ import type { TimeSeriesPoint } from "@/components/charts/time-series-lines";
 import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
+import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import SiteAlertSummary from "@/components/site/site-alert-summary";
 import SiteAlertSettingsButton from "@/components/baselines/site-alert-settings-button";
 import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
@@ -110,12 +111,12 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const detailLoading = !!data && (profile.isPending || assets.isPending || officeAssets.isPending || planning.isPending || history.isPending || (data.monitoringConnected !== false && alertSettings.isPending));
   const openedSite = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (isLoading || !data || openedSite.current === slug) return;
+    if (isLoading || detailLoading || !data || openedSite.current === slug) return;
     openedSite.current = slug;
     // Next can preserve scroll while the loading placeholder is replaced by the page.
     // Reset only on entering a hospital, not on chart filters, refetches or anchor links.
-    if (!window.location.hash) window.scrollTo({ top: 0, left: 0, behavior: "instant" });
-  }, [slug, isLoading, data]);
+    if (!window.location.hash) scrollPageToTop();
+  }, [slug, isLoading, detailLoading, data]);
   const metrics = useMemo(() => companyMetrics(data?.metricConfig), [data?.metricConfig]);
   const [selected, setSelected] = useState<MetricKey[]>(["hepres", "heleve"]);
   const [mode, setMode] = useState<ViewMode>("single");
@@ -254,7 +255,11 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             {data.site.name || "-"}
           </h1>
         </div>
-        {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+      </div>
+
+      <HospitalSection key={`${slug}-info`} title="병원 정보" anchor="hospital-info" allScreens>
+        <div className="hospital-detail-card">
+        {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span>
             최신 수집
             <span className="text-text-major dark:text-text-dark-primary/80 ml-1 font-medium tabular-nums">
@@ -266,19 +271,20 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           </div>
         </div>}
         <HospitalProfile siteId={data.site.siteDb} />
-      </div>
+        </div>
+      </HospitalSection>
 
-      {monitoringConnected && <HospitalSection title="내 알림 기준" anchor="hospital-alert-summary" allScreens>
+      {monitoringConnected && <HospitalSection key={`${slug}-alerts`} title="내 알림 기준" anchor="hospital-alert-summary" allScreens>
         <SiteAlertSummary siteId={monitoringSiteId} names={Object.fromEntries(metrics.map(metric=>[metric.key,metric.label ?? metric.code]))} />
       </HospitalSection>}
 
-      <HospitalSection title="장비·부품" anchor="hospital-equipment">
+      <HospitalSection key={`${slug}-equipment`} title="장비·부품" anchor="hospital-equipment">
         <HospitalEquipmentPanel siteId={data.site.siteDb} returnPath={`/sites/${encodeURIComponent(slug)}`} />
       </HospitalSection>
-      <HospitalSection title="점검 주기·지정일" anchor="inspection-plan">
+      <HospitalSection key={`${slug}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>
         <HospitalPlanning siteId={data.site.siteDb} />
       </HospitalSection>
-      <HospitalSection title="병원 정비이력" anchor="hospital-history">
+      <HospitalSection key={`${slug}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
         <HospitalWork siteId={data.site.siteDb} />
       </HospitalSection>
 

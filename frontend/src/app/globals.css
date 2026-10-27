@@ -2244,8 +2244,11 @@ h4,
 .hospital-always-section { display: block; margin-bottom: 16px; border: 1px solid var(--work-line); border-radius: 14px; background: var(--work-paper); }
 .hospital-always-section > .hospital-section-toggle { display: flex; width: 100%; min-height: 52px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; color: var(--work-ink); text-align: left; font-size: 1.0625rem; font-weight: 650; }
 .hospital-always-section > .hospital-section-content[data-open="false"] { display: none; }
-.site-detail-page .hospital-always-section > .hospital-section-content > .hospital-detail-card { margin: 0; border: 0; border-radius: 0 0 14px 14px; border-top: 1px solid var(--work-line); }
+.hospital-always-section > .hospital-section-content > .hospital-detail-card { margin: 0; border: 0; border-radius: 0 0 14px 14px; border-top: 1px solid var(--work-line); }
 .hospital-always-section .hospital-detail-card > h2 { display: none; }
+.hospital-always-section > .hospital-section-content > .hospital-detail-card > .hospital-title-heading,
+.hospital-always-section > .hospital-section-content .hospital-history-heading > div { display: none; }
+.hospital-always-section > .hospital-section-content .hospital-history-heading { justify-content: flex-end; }
 @media(max-width:1023px) {
  .site-detail-page .hospital-section-content > .hospital-detail-card > .hospital-title-heading { display: none; }
  .hospital-always-section { margin-bottom: 12px; }
