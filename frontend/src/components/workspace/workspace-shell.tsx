@@ -25,12 +25,10 @@ export function WorkIcon({ name }: { name: string }) {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      {name === "menu" ? (
+      {name === "account" ? (
         <>
-          <rect x="3" y="3" width="7" height="7" rx="2" />
-          <rect x="14" y="3" width="7" height="7" rx="2" />
-          <rect x="3" y="14" width="7" height="7" rx="2" />
-          <rect x="14" y="14" width="7" height="7" rx="2" />
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 21v-2a8 8 0 0 1 16 0v2" />
         </>
       ) : name === "settings" ? (
         <>
@@ -189,10 +187,10 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
             aria-current={active(i.href) || (i.href === "/settings" && path.startsWith("/meetings")) ? "page" : undefined}
           >
             <span className="notification-icon">
-              <WorkIcon name={i.href === "/settings" ? "menu" : i.icon} />
+              <WorkIcon name={i.href === "/settings" ? "account" : i.icon} />
               {i.href === "/baselines" && <span className="notification-icon-dot"><DeferredUnreadAlertDot /></span>}
             </span>
-            <span>{i.href === "/settings" ? "메뉴" : i.label}</span>
+            <span>{i.href === "/settings" ? "내 공간" : i.label}</span>
           </Link>
         ))}
       </nav>
