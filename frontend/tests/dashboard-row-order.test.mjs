@@ -37,3 +37,8 @@ test('current red readings participate in warning filters and counts without inv
  assert.equal(order.dashboardRowStatus(make('008',{alertStatus:'NO_DATA',metrics:{hepres:3}}),{'008':bounds},metrics),'NO_DATA');
  assert.equal(order.dashboardRowStatus(make('008'),{'008':bounds},metrics),'NORMAL');
 });
+
+test('hospital names sort in Korean order within each alert priority, regardless of internal codes',()=>{
+ const rows=[make('001',{name:'하늘병원'}),make('090',{name:'가나병원'}),make('010',{name:'나무병원'}),make('003',{name:'하늘경고',alertStatus:'WARNING',unacknowledgedAlertCount:2}),make('099',{name:'가나경고',alertStatus:'WARNING',unacknowledgedAlertCount:2}),make('100',{name:'우선경고',alertStatus:'WARNING',unacknowledgedAlertCount:3})];
+ assert.deepEqual(ids(order.sortDashboardRows(rows,{},metrics)),['100','099','003','090','010','001']);
+});

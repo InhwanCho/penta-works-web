@@ -10,6 +10,8 @@ export function dashboardRowStatus(row: SiteRow, ctrl: Record<string, CtrlRange>
 }
 
 function compareSite(a: SiteRow, b: SiteRow) {
+  const nameOrder = (a.name?.trim() || a.siteSlug).localeCompare(b.name?.trim() || b.siteSlug, "ko", { numeric: true });
+  if (nameOrder) return nameOrder;
   const aSlug = a.siteSlug ?? "", bSlug = b.siteSlug ?? "";
   const aIsNum = /^\d+$/.test(aSlug), bIsNum = /^\d+$/.test(bSlug);
   if (aIsNum && bIsNum) return Number(aSlug) - Number(bSlug);
