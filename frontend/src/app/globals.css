@@ -1258,6 +1258,7 @@ h4,
   margin-top: 15px;
 }
 .work-photo {
+  position: relative;
   border: 1px solid var(--work-line);
   border-radius: 10px;
   overflow: hidden;
@@ -1280,27 +1281,22 @@ h4,
   font-size: 0.75rem;
   color: var(--work-muted);
 }
-.work-photo > div {
-  padding: 5px 9px;
-  display: flex;
-  gap: 7px;
-  align-items: center;
-  font-size: 0.6875rem;
-  color: var(--work-muted);
+.work-photo .work-photo-remove {
+  position: absolute; top: 5px; right: 5px;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #fff; color: #b42318; font-size: 22px; cursor: pointer;
 }
-.work-photo > div > span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.photo-modal {
+  position: fixed; inset: 0; margin: 0;
+  width: 100%; height: 100%; max-width: none; max-height: none;
+  padding: 64px 24px; border: 0; background: transparent; color: #fff;
 }
-.work-photo button {
-  margin-left: auto;
-  min-width: 36px;
-  min-height: 36px;
-  font-size: 1.375rem;
-  cursor: pointer;
-  color: var(--work-alert);
-}
+.photo-modal[open] { display: flex; align-items: center; justify-content: center; }
+.photo-modal::backdrop { background: rgb(10 20 30 / .78); backdrop-filter: blur(3px); }
+.photo-modal-content { display: flex; align-items: center; justify-content: center; width: 100%; }
+.photo-modal-content img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 128px); object-fit: contain; border-radius: 6px; }
+.photo-modal-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 44px; border-radius: 50%; background: rgb(255 255 255 / .15); color: #fff; font-size: 30px; cursor: pointer; }
+@media (min-width: 768px) { .photo-modal { padding-inline: 64px; } }
 .work-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

@@ -11,9 +11,7 @@ import {
 } from "react";
 import Image from "next/image";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
-import WorkspaceDrawer from "./workspace-drawer";
-import CustomModal from "@/components/common/custom-modal";
-import { useModal } from "@/components/provider/modal-provider";
+import PhotoModal from "@/components/common/photo-modal";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { errorText } from "./workspace-data";
@@ -34,9 +32,7 @@ function Photo({
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const modalId = `workspace-photo-${photo.id}`,
-    modal = useModal(modalId);
+  const [expanded, setExpanded] = useState(false);
   useEffect(() => {
     if (!frame.current) return;
     if (!("IntersectionObserver" in window)) {
@@ -78,15 +74,11 @@ function Photo({
     <div
       className="work-photo"
       ref={frame}
-      style={{ minHeight: 170 }}
     >
       {url ? (
         <PhotoPreviewLink
           href={url}
-          onOpen={() => {
-            if (frame.current?.closest(".workspace-drawer")) setDrawerOpen(true);
-            else modal.open();
-          }}
+          onOpen={() => setExpanded(true)}
           label="업무 사진"
         >
           <Image
@@ -102,23 +94,8 @@ function Photo({
           {error || <CircleLoader size="xs" />}
         </span>
       )}
-      {drawerOpen && <WorkspaceDrawer title="사진 확대" onClose={() => setDrawerOpen(false)}><FullPhoto photo={photo} /></WorkspaceDrawer>}
-      {modal.isOpen && (
-        <CustomModal id={modalId}>
-          <FullPhoto photo={photo} />
-        </CustomModal>
-      )}
-      {onRemove && <div>
-        {onRemove && (
-          <button
-            type="button"
-            aria-label="사진 제거"
-            onClick={onRemove}
-          >
-            ×
-          </button>
-        )}
-      </div>}
+      {expanded && <PhotoModal onClose={() => setExpanded(false)}><FullPhoto photo={photo} /></PhotoModal>}
+      {onRemove && <button className="work-photo-remove" type="button" aria-label="사진 제거" onClick={onRemove}>×</button>}
     </div>
   );
 }
@@ -142,42 +119,15 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
     };
   }, [photo.id]);
   return (
-    <section className="p-4 pt-12">
-      <h2 className="mb-3 text-sm font-semibold">사진 확대</h2>
-      {error ? (
-        <p
-          role="alert"
-          className="text-sm"
-        >
-          {error}
-        </p>
-      ) : url ? (
-        <>
-          <div className="max-h-[60dvh] overflow-auto">
-            <Image
-              src={url}
-              alt="업무 사진"
-              width={photo.width}
-              height={photo.height}
-              unoptimized
-              className="h-auto w-full object-contain"
-            />
-          </div>
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex min-h-10 items-center text-sm font-semibold text-sky-700 dark:text-sky-300"
-          >
-            사진 크게 열기 ↗
-          </a>
-        </>
-      ) : (
-        <p className="py-8 text-sm"><CircleLoader size="xs" /></p>
-      )}
+    <section className="photo-modal-content">
+      {error ? <p role="alert">{error}</p> : url ? (
+        <Image src={url} alt="업무 사진" width={photo.width} height={photo.height} unoptimized
+          onClick={event => event.stopPropagation()} />
+      ) : <CircleLoader size="m" inline />}
     </section>
   );
 }
+
 async function prepare(file: File): Promise<File> {
   if (file.size > 10 * 1024 * 1024)
     throw Error(`${file.name}: 사진 한 장은 10MB 이하여야 합니다.`);

@@ -10,6 +10,7 @@ import {
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetchBlob } from "@/lib/api";
 import Image from "next/image";
+import PhotoModal from "@/components/common/photo-modal";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import Link from "@/components/common/app-link";
 import { useEffect, useState } from "react";
@@ -335,6 +336,7 @@ function OfficePhotoThumbnail({
   maintenanceId: number;
   photo: OfficePhoto;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const [source, setSource] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -373,8 +375,10 @@ function OfficePhotoThumbnail({
   }
 
   return (
+    <>
     <PhotoPreviewLink
       href={source}
+      onOpen={() => setExpanded(true)}
       className="dark:border-background-dark-secondary group/photo relative block aspect-[4/3] overflow-hidden rounded-lg border bg-slate-100"
       label="정비 작업 사진"
     >
@@ -387,6 +391,8 @@ function OfficePhotoThumbnail({
         className="object-cover transition-transform group-hover/photo:scale-[1.02]"
       />
     </PhotoPreviewLink>
+    {expanded && <PhotoModal onClose={() => setExpanded(false)}><section className="photo-modal-content"><Image src={source} alt="정비 작업 사진" width={1600} height={1200} unoptimized onClick={event => event.stopPropagation()} /></section></PhotoModal>}
+    </>
   );
 }
 
