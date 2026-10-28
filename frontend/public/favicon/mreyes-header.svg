@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" fill="none">
+  <title>MReyes</title>
+  <rect width="128" height="128" rx="16" fill="#0055DD"/>
+  <path d="M16 81 L25 61 Q29 52 35 62 L40 69 Q43 73 47 64 L52 57 Q57 50 62 61 L70 80 V43 Q70 38 75 38 H87 C107 38 108 65 87 65 H82 L111 91" stroke="white" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

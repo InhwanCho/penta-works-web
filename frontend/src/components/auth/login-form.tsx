@@ -101,12 +101,12 @@ export default function LoginForm() {
           {/* 워드마크 */}
           <header className="flex flex-col items-center text-center">
             <Image
-              src="/favicon/android-chrome-192x192.png"
+              src="/favicon/mreyes-header.svg"
               alt=""
               width={48}
               height={48}
               priority
-              className="h-14 w-14 rounded-xl shadow-[0_5px_14px_rgba(22,58,82,0.12)]"
+              className="h-14 w-14 rounded-[7px] shadow-[0_5px_14px_rgba(22,58,82,0.12)]"
             />
             <h1 className="text-text-major dark:text-text-dark-primary mt-4 text-2xl font-extrabold tracking-tight">
               MReyes

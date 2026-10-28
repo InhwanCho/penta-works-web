@@ -105,12 +105,12 @@ export default function Navbar() {
             className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white"
           >
             <Image
-              src="/favicon/android-chrome-192x192.png"
+              src="/favicon/mreyes-header.svg"
               alt="MReyes"
               width={32}
               height={32}
               priority
-              className="h-8 w-8 rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
+              className="h-8 w-8 rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
             />
             <span className="text-[15px] font-bold tracking-[-0.02em]">
               MReyes
