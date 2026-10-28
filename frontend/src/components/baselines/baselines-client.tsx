@@ -1,6 +1,7 @@
 "use client";
 
 import CircleLoader from "@/components/icons/circle-loader";
+import AlertInboxTabs from "./alert-inbox-tabs";
 import PageLoader from "@/components/common/page-loader";
 
 import AlertSnooze from "./alert-snooze";
@@ -279,9 +280,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
   return (
     <section className="alert-inbox">
-      <div className="alert-inbox-tabs" aria-label="알림 보기">
-        {(["unacknowledged", "open", "all"] as const).map(value => <button key={value} type="button" aria-pressed={value === (filter === "failed" || filter === "skipped" ? "all" : filter)} onClick={() => { setFilter(value); setSelecting(false); setSelected([]); }}>{value === "unacknowledged" ? "확인 필요" : value === "open" ? "진행 중" : "전체 기록"}</button>)}
-      </div>
+      <AlertInboxTabs value={filter} onChange={value => { setFilter(value); setSelecting(false); setSelected([]); }} />
       <p className="alert-inbox-guide">{filter === "unacknowledged" ? "아직 확인하지 않은 알림입니다. 확인하면 같은 알림을 24시간 쉬어갑니다." : filter === "open" ? "확인 여부와 관계없이 아직 정상으로 복구되지 않은 문제입니다." : "확인한 알림과 정상으로 복구된 기록도 함께 볼 수 있습니다."}</p>
       <details className="alert-inbox-filters">
         <summary>상세 검색{(query || siteId || fromDate || toDate || kind !== "all" || filter === "failed" || filter === "skipped") ? " · 적용 중" : ""}</summary>
@@ -304,7 +303,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
           <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{bulkSaving ? <CircleLoader size="xs" inline /> : `${selectedIds.length}건 확인 · 24시간 중지`}</button>
         </div>}
       </div>}
-      {history.isPending ? <PageLoader /> : history.isFetching && !busy && <p role="status" className="mb-3 text-center text-sm"><CircleLoader size="xs" inline /></p>}
+      {history.isPending && <div className="flex min-h-32 items-center justify-center"><CircleLoader size="m" inline /></div>}
       {failed && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">알림 이력을 불러오지 못했습니다. <button type="button" onClick={() => history.refetch()} className="min-h-11 underline">다시 시도</button></p>}
       {error && <p className="mb-3 rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
       {!history.isPending && !failed && filtered.length === 0 && (
