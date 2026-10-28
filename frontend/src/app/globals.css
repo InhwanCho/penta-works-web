@@ -3316,3 +3316,30 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
  .work-overview .work-calendar .work-calendar-day.selected::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 1.5px solid var(--work-focus); pointer-events: none; }
  .work-overview .work-calendar .work-calendar-day > :is(span,.work-calendar-tags) { position: relative; z-index: 0; }
 }
+
+/* A compact three-dot indicator also works during brief route transitions. */
+.loading-dots {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12%;
+  color: #0055dd;
+}
+.dark .loading-dots { color: #80afff; }
+.loading-dots > span {
+  width: 15%;
+  aspect-ratio: 1;
+  flex: none;
+  border-radius: 50%;
+  background: currentColor;
+  animation: loading-dot-pulse 1.4s ease-in-out infinite;
+}
+.loading-dots > span:nth-child(2) { animation-delay: .16s; }
+.loading-dots > span:nth-child(3) { animation-delay: .32s; }
+@keyframes loading-dot-pulse {
+  0%, 60%, 100% { opacity: .28; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-35%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loading-dots > span { animation: none; opacity: .65; }
+}
