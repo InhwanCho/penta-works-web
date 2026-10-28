@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
-/** Two pointer clicks/taps open a photo; native keyboard activation stays accessible. */
+/** Open on a single click, tap or native keyboard activation. */
 export default function PhotoPreviewLink({ href, label, onOpen, className, children }: {
   href: string;
   label: string;
@@ -10,18 +10,12 @@ export default function PhotoPreviewLink({ href, label, onOpen, className, child
   className?: string;
   children: ReactNode;
 }) {
-  const previousClick = useRef<number | null>(null);
-  return <a href={href} target="_blank" rel="noreferrer" className={`photo-preview-link ${className || ""}`} aria-label={`${label} · 두 번 눌러 확대`} title="두 번 클릭하거나 탭하면 확대됩니다"
+  return <a href={href} target="_blank" rel="noreferrer" className={`photo-preview-link ${className || ""}`} aria-label={`${label} · 확대`} title="클릭하거나 탭하면 확대됩니다"
     onClick={event => {
       event.preventDefault();
-      const previous = previousClick.current;
-      const twice = event.detail === 2 || (previous !== null && event.timeStamp >= previous && event.timeStamp - previous <= 500);
-      if (event.detail === 0 || twice) {
-        previousClick.current = null;
-        if (onOpen) onOpen();
-        else window.open(href, "_blank", "noopener,noreferrer");
-      } else previousClick.current = event.timeStamp;
+      if (event.detail > 1) return;
+      if (onOpen) onOpen();
+      else window.open(href, "_blank", "noopener,noreferrer");
     }}
-    onDoubleClick={event => event.preventDefault()}
   >{children}</a>;
 }

@@ -87,11 +87,11 @@ function Photo({
             if (frame.current?.closest(".workspace-drawer")) setDrawerOpen(true);
             else modal.open();
           }}
-          label={photo.name}
+          label="업무 사진"
         >
           <Image
             src={url}
-            alt={photo.name}
+            alt="업무 사진"
             width={photo.width}
             height={photo.height}
             unoptimized
@@ -102,24 +102,23 @@ function Photo({
           {error || <CircleLoader size="xs" />}
         </span>
       )}
-      {drawerOpen && <WorkspaceDrawer title={photo.name} onClose={() => setDrawerOpen(false)}><FullPhoto photo={photo} /></WorkspaceDrawer>}
+      {drawerOpen && <WorkspaceDrawer title="사진 확대" onClose={() => setDrawerOpen(false)}><FullPhoto photo={photo} /></WorkspaceDrawer>}
       {modal.isOpen && (
         <CustomModal id={modalId}>
           <FullPhoto photo={photo} />
         </CustomModal>
       )}
-      <div>
-        <span>{photo.name}</span>
+      {onRemove && <div>
         {onRemove && (
           <button
             type="button"
-            aria-label={`${photo.name} 제거`}
+            aria-label="사진 제거"
             onClick={onRemove}
           >
             ×
           </button>
         )}
-      </div>
+      </div>}
     </div>
   );
 }
@@ -144,7 +143,7 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
   }, [photo.id]);
   return (
     <section className="p-4 pt-12">
-      <h2 className="mb-3 truncate text-sm font-semibold">{photo.name}</h2>
+      <h2 className="mb-3 text-sm font-semibold">사진 확대</h2>
       {error ? (
         <p
           role="alert"
@@ -157,7 +156,7 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
           <div className="max-h-[60dvh] overflow-auto">
             <Image
               src={url}
-              alt={photo.name}
+              alt="업무 사진"
               width={photo.width}
               height={photo.height}
               unoptimized

@@ -23,7 +23,7 @@ export function GuideFigures({ figures, title }: { figures?: string[]; title: st
         <PhotoPreviewLink href={`/service-guide/acr/${figure}.jpg`} onOpen={() => setExpanded(figure)} label={`${title} 참고 그림 ${index + 1}`}>
           <Image src={`/service-guide/acr/${figure}.jpg`} alt={`${title} 참고 그림 ${index + 1}`} width={800} height={600} unoptimized className="work-guide-image" />
         </PhotoPreviewLink>
-        <figcaption>참고 그림 {index + 1} · 두 번 눌러 확대</figcaption>
+        <figcaption>참고 그림 {index + 1} · 눌러서 확대</figcaption>
       </figure>)}
     </div>
     {expanded && createPortal(<WorkspaceDrawer title={`${title} 참고 그림`} onClose={() => setExpanded(null)} className="service-guide-viewer">

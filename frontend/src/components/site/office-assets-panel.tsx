@@ -376,11 +376,11 @@ function OfficePhotoThumbnail({
     <PhotoPreviewLink
       href={source}
       className="dark:border-background-dark-secondary group/photo relative block aspect-[4/3] overflow-hidden rounded-lg border bg-slate-100"
-      label={photo.originalName || "작업 사진"}
+      label="정비 작업 사진"
     >
       <Image
         src={source}
-        alt={photo.originalName || "정비 작업 사진"}
+        alt="정비 작업 사진"
         fill
         unoptimized
         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
