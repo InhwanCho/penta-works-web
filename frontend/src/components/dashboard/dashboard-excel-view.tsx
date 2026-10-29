@@ -157,7 +157,7 @@ export default function DashboardExcelView({
   );
 
   return (
-    <section className="relative flex min-h-0 flex-[0_1_auto] flex-col border-y border-slate-200/80 bg-white shadow-[0_10px_35px_rgba(22,58,82,0.07)] sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
+    <section className="relative flex min-h-0 flex-[0_1_auto] flex-col border-y border-slate-200/80 bg-white sm:rounded-2xl sm:border dark:border-white/8 dark:bg-background-dark-card">
       <div className="dashboard-table-heading hidden shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3 sm:flex dark:border-white/7">
         <div>
         <h2 className="text-text-major dark:text-text-dark-primary text-base font-extrabold tracking-tight">

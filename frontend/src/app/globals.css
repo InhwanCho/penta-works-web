@@ -3601,3 +3601,50 @@ html.dark {
  .work-overview .work-calendar-toolbar { flex-wrap: wrap; row-gap: 8px; }
  .work-overview .work-calendar-toolbar > label { min-width: 0; }
 }
+
+/* Monitoring controls share flat surfaces and the approved outlined actions. */
+:is(.dashboard-expanded-header, .dashboard-expanded-filters,
+ .dashboard-filter-section, .dashboard-status-button, .dashboard-filter-dialog) {
+ border: 1px solid var(--work-line, #dbe3ed);
+ border-radius: 14px;
+ background: var(--work-paper, #fff);
+ box-shadow: none;
+}
+.dashboard-status-button {
+ border-radius: 10px;
+ font-weight: 500;
+ transition: background-color .15s, border-color .15s;
+}
+@media (hover: hover) {
+ .dashboard-status-button:not([aria-pressed="true"]):hover {
+  background: var(--work-hover, #f6f8fa);
+  border-color: var(--button-hover-line);
+ }
+}
+:is(.dashboard-expanded-filters, details.dashboard-filter-section) > summary {
+ position: relative;
+ display: flex;
+ align-items: center;
+ min-height: 40px;
+ padding-right: 32px;
+ list-style: none;
+ font-size: .875rem;
+ font-weight: 600;
+ cursor: pointer;
+}
+:is(.dashboard-expanded-filters, details.dashboard-filter-section) > summary::-webkit-details-marker { display: none; }
+:is(.dashboard-expanded-filters, details.dashboard-filter-section) > summary::after {
+ content: '';
+ position: absolute;
+ right: 12px;
+ top: 50%;
+ width: 7px;
+ height: 7px;
+ border-right: 1.5px solid currentColor;
+ border-bottom: 1.5px solid currentColor;
+ transform: translateY(-70%) rotate(45deg);
+}
+:is(.dashboard-expanded-filters, details.dashboard-filter-section)[open] > summary::after {
+ transform: translateY(-30%) rotate(225deg);
+}
+.dashboard-filter-trigger { box-shadow: none; border-color: var(--work-line, #dbe3ed); }

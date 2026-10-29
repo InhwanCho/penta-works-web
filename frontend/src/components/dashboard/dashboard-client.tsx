@@ -179,12 +179,12 @@ export default function DashboardClient() {
     {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
     {hiddenSites.isError && <button type="button" onClick={() => hiddenSites.refetch()} className="min-h-11 text-rose-600 underline">병원 표시 설정 불러오기 실패 · 다시 시도</button>}
 
-    <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 dark:border-slate-600 dark:bg-background-dark-primary dark:text-text-dark-primary">표시할 열 ({visibleColumns.length})</button>
-    {showColumns && <fieldset className="rounded-xl border border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-background-dark-secondary"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
+    <button type="button" aria-expanded={showColumns} onClick={() => setShowColumns(value => !value)} className="work-secondary min-h-11 rounded-lg border border-slate-300 bg-white px-3 text-slate-800 dark:border-slate-600 dark:bg-background-dark-primary dark:text-text-dark-primary">표시할 열 ({visibleColumns.length})</button>
+    {showColumns && <fieldset className="dashboard-filter-section rounded-xl border border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-background-dark-secondary"><legend>내 전체표 열 선택</legend><div className="grid grid-cols-2 gap-1">{allColumns.map(column => <label key={column.key} className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={visibleColumns.some(item => item.key === column.key)} onChange={event => {
       const keys = visibleColumns.map(item => item.key);
       updatePreferences({ ...preferences, columns: event.target.checked ? [...keys, column.key] : keys.filter(key => key !== column.key) });
-    }} />{column.displayName}</label>)}</div><button type="button" onClick={() => updatePreferences({ ...preferences, columns: null })} className="min-h-11 text-sky-700 underline">전체 열 복원</button></fieldset>}
-    <button type="button" onClick={() => {setStatusFilter("all");}} className="min-h-11 px-3 underline">병원 필터 초기화</button>
+    }} />{column.displayName}</label>)}</div><button type="button" onClick={() => updatePreferences({ ...preferences, columns: null })} className="work-secondary">전체 열 복원</button></fieldset>}
+    <button type="button" onClick={() => {setStatusFilter("all");}} className="work-secondary">병원 필터 초기화</button>
   </div>;
 
   const statusFilterButtons = (
@@ -207,7 +207,7 @@ export default function DashboardClient() {
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
         {viewOptions}
       </MobileFilterDialog>}
-      <button type="button" aria-label="대시보드 필터" aria-expanded={showMobileFilters} aria-controls="dashboard-mobile-tools" onClick={() => setShowMobileFilters(open => !open)} className="dashboard-filter-trigger fixed right-0 z-[35] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 shadow-sm dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">필터 {showMobileFilters ? "›" : "‹"}{statusFilter !== "all" && <span className="ml-1 inline-block h-2 w-2 rounded-full bg-sky-500" aria-label={`${STATUS_FILTER_LABEL[statusFilter]} ${sortedRows.length}개`} />}</button>
+      <button type="button" aria-label="대시보드 필터" aria-expanded={showMobileFilters} aria-controls="dashboard-mobile-tools" onClick={() => setShowMobileFilters(open => !open)} className="dashboard-filter-trigger fixed right-0 z-[35] min-h-11 rounded-l-xl border border-slate-200 bg-white/95 px-2 text-xs font-bold text-sky-800 dark:border-white/10 dark:bg-background-dark-card dark:text-sky-200">필터 {showMobileFilters ? "›" : "‹"}{statusFilter !== "all" && <span className="ml-1 inline-block h-2 w-2 rounded-full bg-sky-500" aria-label={`${STATUS_FILTER_LABEL[statusFilter]} ${sortedRows.length}개`} />}</button>
     </div>
   );
 
@@ -222,7 +222,7 @@ export default function DashboardClient() {
         {linkedSite && data.rows.some(row => (row.siteDb === linkedSite || row.siteSlug === String(Number(linkedSite))) && (hiddenSites.data ?? []).includes(row.siteDb)) && <p role="status" className="mb-2 p-2 text-sm text-amber-700">이 링크의 병원은 숨김·알림 중지 상태입니다. 아래 ‘숨긴 병원’에서 다시 표시할 수 있습니다.</p>}
         <Suspense fallback={null}><DashboardScrollTo offset={80} ready={statusFilter === "all" && !isFetching && !hiddenSites.isFetching} layoutKey={`${sortedRows.map(row=>row.siteDb).join(",")}:${dashboardMetrics.map(metric=>metric.key).join(",")}`} onTargetRequested={resetStatusFilter} /></Suspense>
 
-        <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white px-3 py-2 shadow-[0_10px_35px_rgba(22,58,82,0.07)] backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card">
+        <header className="dashboard-expanded-header mb-3 hidden shrink-0 flex-wrap items-center justify-between gap-2 overflow-hidden rounded-2xl border border-slate-200/70 bg-white px-3 py-2 backdrop-blur-sm lg:flex lg:mb-5 lg:gap-4 lg:rounded-3xl lg:px-5 lg:py-4 dark:border-white/8 dark:bg-background-dark-card">
           <div className="flex min-w-0 items-center gap-3">
             <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 dark:from-sky-950 dark:to-cyan-950">
               <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400/50" />
@@ -239,7 +239,7 @@ export default function DashboardClient() {
             {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="min-h-11 rounded-xl border px-4 text-sm font-bold disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
+          <button type="button" disabled={isFetching} onClick={handleRefresh} className="work-secondary disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
         </header>
         <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border border-slate-300 bg-white p-3 text-slate-800 lg:block dark:border-slate-600 dark:bg-background-dark-card dark:text-text-dark-primary"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
 
@@ -282,7 +282,7 @@ export default function DashboardClient() {
 
 function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: ReactNode; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
   const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
-  return <button type="button" onClick={onClick} aria-pressed={active} className={`cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:-translate-y-0.5 dark:bg-background-dark-card ${active ? "border-sky-300 bg-sky-50 dark:border-slate-500 dark:bg-slate-800" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-xs font-semibold">{label}</span><span className={`mt-0.5 flex min-h-7 items-center ${typeof value === "number" ? "text-xl font-extrabold tabular-nums" : "text-sm font-semibold"} ${colors[tone]}`}>{value}</span></button>;
+  return <button type="button" onClick={onClick} aria-pressed={active} className={`dashboard-status-button cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left transition-colors dark:bg-background-dark-card ${active ? "border-sky-300 bg-sky-50 dark:border-slate-500 dark:bg-slate-800" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-xs font-semibold">{label}</span><span className={`mt-0.5 flex min-h-7 items-center ${typeof value === "number" ? "text-xl font-extrabold tabular-nums" : "text-sm font-semibold"} ${colors[tone]}`}>{value}</span></button>;
 }
 
 function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClose: () => void }) {
@@ -312,7 +312,7 @@ function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClos
       const bounds = event.currentTarget.getBoundingClientRect();
       if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
     }}
-    className="dashboard-filter-dialog fixed inset-x-3 top-auto m-0 mx-auto w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-text-major shadow-xl backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
+    className="dashboard-filter-dialog fixed inset-x-3 top-auto m-0 mx-auto w-[calc(100%-1.5rem)] max-w-sm overflow-y-auto overscroll-contain rounded-2xl border border-slate-200 bg-white p-4 text-text-major backdrop:bg-slate-900/30 backdrop:backdrop-blur-sm dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
     {children}
   </dialog>;
 }
