@@ -70,6 +70,7 @@ export default function DashboardClient() {
   const profile = useQuery({queryKey: ["my-profile", userId], queryFn: () => apiFetch<{phone: string | null}>("/auth/profile"), enabled: userId != null});
   const [preferences, setPreferences] = useState<DashboardPreferences>(defaultPreferences);
   const [showColumns, setShowColumns] = useState(false);
+  const [showDesktopFilters, setShowDesktopFilters] = useState(false);
   const queryClient = useQueryClient();
   const hiddenSitesKey = ["dashboard-hidden-sites", userId];
   const hiddenSites = useQuery({ queryKey: hiddenSitesKey, queryFn: () => apiFetch<string[]>("/dashboard/hidden-sites"), enabled: userId != null, staleTime: 0 });
@@ -173,7 +174,7 @@ export default function DashboardClient() {
     noData: displayedRows.filter(row => row.alertStatus === "NO_DATA").length,
     normal: displayedRows.filter(row => row.alertStatus === "NORMAL").length,
   };
-  const viewOptions = <div className="mt-3 space-y-2 text-sm">
+  const viewOptions = <div className="dashboard-view-options mt-3 space-y-2 text-sm">
     <DashboardSiteFilter rows={data.rows} hiddenSites={hiddenSites.data ?? []} disabled={hiddenSites.isError || visibilityMutation.isPending} onChange={(siteId, hidden) => visibilityMutation.mutate({siteId, hidden})} onRestore={() => visibilityMutation.mutate(null)} />
     {visibilityMutation.isPending && <p role="status" className="text-xs"><CircleLoader size="xs" inline /></p>}
     {visibilityMutation.isError && <p role="alert" className="text-xs text-rose-600">저장하지 못했습니다. 다시 시도해주세요.</p>}
@@ -239,9 +240,19 @@ export default function DashboardClient() {
             {isError && <p className="mt-1 text-xs font-bold text-amber-700 dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
             </div>
           </div>
-          <button type="button" disabled={isFetching} onClick={handleRefresh} className="work-secondary disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
+          <div className="dashboard-header-actions">
+            <button type="button" disabled={isFetching} onClick={handleRefresh} className="work-secondary disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
+            <button type="button" className="work-secondary dashboard-desktop-filter-button" aria-expanded={showDesktopFilters} aria-controls="dashboard-desktop-filters" onClick={() => setShowDesktopFilters(open => !open)}>
+              <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="currentColor"/><circle cx="15" cy="17" r="2" fill="currentColor"/></svg>
+              필터 설정
+              <svg className="dashboard-filter-chevron" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="m6 9 6 6 6-6"/></svg>
+            </button>
+          </div>
         </header>
-        <details className="dashboard-expanded-filters mb-3 hidden shrink-0 rounded-xl border border-slate-300 bg-white p-3 text-slate-800 lg:block dark:border-slate-600 dark:bg-background-dark-card dark:text-text-dark-primary"><summary className="cursor-pointer text-sm font-bold">필터</summary>{viewOptions}</details>
+        {showDesktopFilters && <section id="dashboard-desktop-filters" aria-label="모니터링 필터 설정" className="dashboard-expanded-filters dashboard-desktop-filter-panel mb-5 hidden shrink-0 lg:block">
+          <div className="dashboard-filter-panel-heading"><h2>필터 설정</h2><p>표시할 병원과 열을 선택하세요.</p></div>
+          {viewOptions}
+        </section>}
 
         {isError && <p role="status" className="dashboard-compact-feedback mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 

@@ -3648,3 +3648,19 @@ html.dark {
  transform: translateY(-30%) rotate(225deg);
 }
 .dashboard-filter-trigger { box-shadow: none; border-color: var(--work-line, #dbe3ed); }
+
+/* Desktop monitoring filters live beside refresh, with an in-flow settings panel. */
+.dashboard-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.dashboard-desktop-filter-button .dashboard-filter-chevron { transition: transform .15s; }
+.dashboard-desktop-filter-button[aria-expanded="true"] .dashboard-filter-chevron { transform: rotate(180deg); }
+.dashboard-desktop-filter-button[aria-expanded="true"] { border-color: var(--control-active-border) !important; color: var(--control-active-text) !important; }
+.dashboard-desktop-filter-panel { padding: 18px 20px; }
+.dashboard-filter-panel-heading { display: flex; align-items: baseline; gap: 12px; }
+.dashboard-filter-panel-heading h2 { font-size: .9375rem; font-weight: 650; }
+.dashboard-filter-panel-heading p { color: var(--work-muted); font-size: .8125rem; }
+.dashboard-view-options > button { margin-right: 8px; }
+@media (min-width: 1024px) {
+ .dashboard-desktop-filter-panel .dashboard-filter-section { padding: 12px 14px; }
+ .dashboard-desktop-filter-panel .dashboard-filter-section > summary { min-height: 32px; }
+ .dashboard-desktop-filter-panel .dashboard-filter-section > fieldset { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 16px; }
+}
