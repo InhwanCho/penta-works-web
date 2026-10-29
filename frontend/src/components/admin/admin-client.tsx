@@ -84,7 +84,7 @@ type PasswordResetCreated = {
 const CARD =
   "management-panel rounded-xl border border-slate-200/80 bg-white dark:border-white/10 dark:bg-background-dark-card";
 const INPUT =
-  "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20 dark:focus:bg-white/8";
+  "min-w-0 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm transition hover:border-slate-300 focus:border-sky-400 dark:border-white/10 dark:bg-background-dark-primary dark:text-text-dark-primary dark:caret-sky-300 dark:placeholder:text-text-dark-primary/55 dark:hover:border-white/20";
 
 const ADMIN_TASKS = [
   {
@@ -254,7 +254,7 @@ export default function AdminClient() {
             onClick={() => selectTask("home")}
             className="management-back"
           >
-            ‹ 관리설정
+            ← 관리설정
           </button>
         )}
         <h1>{task?.label ?? "관리설정"}</h1>
@@ -1244,7 +1244,7 @@ function InvitationSection({
         <button
           type="submit"
           disabled={saving}
-          className="bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
+          className="work-primary bg-button-primary hover:bg-button-primary-hover w-full cursor-pointer rounded-xl px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
         >
           {saving && !resendingId ? (
             <CircleLoader
@@ -1426,7 +1426,7 @@ function SiteSection({
           <button
             type="submit"
             disabled={saving}
-            className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="work-primary bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50"
           >
             {saving ? (
               <CircleLoader

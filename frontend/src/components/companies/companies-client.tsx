@@ -49,7 +49,7 @@ type CompanyActivity = {
 const CARD =
   "management-panel rounded-xl border border-slate-200/80 bg-white dark:border-white/10 dark:bg-background-dark-card";
 const INPUT =
-  "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition focus:border-sky-400 focus:bg-white dark:border-white/10 dark:bg-white/5";
+  "w-full rounded-xl border border-slate-200 bg-slate-50/60 px-3.5 py-2.5 text-sm transition focus:border-sky-400 dark:border-white/10 dark:bg-white/5";
 
 export default function CompaniesClient() {
   const { session, isLoading } = useAuth();
@@ -98,7 +98,7 @@ export default function CompaniesClient() {
               scrollPageToTop();
             }}
           >
-            ‹ 회사 목록
+            ← 회사 목록
           </button>
         ) : (
           <Link
@@ -583,7 +583,7 @@ function CreateCompany({ onCreated }: { onCreated: (id: number) => void }) {
       <button
         type="submit"
         disabled={saving}
-        className="bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
+        className="work-primary bg-button-primary hover:bg-button-primary-hover w-full rounded-xl px-4 py-3 text-sm font-bold text-white disabled:opacity-50"
       >
         {saving ? (
           <CircleLoader
@@ -942,7 +942,7 @@ function CompanyCard({
                 type="button"
                 disabled={busy}
                 onClick={openDocument}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
+                className="work-secondary rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
               >
                 등록증 보기
               </button>
@@ -951,7 +951,7 @@ function CompanyCard({
                   type="button"
                   disabled={busy}
                   onClick={verify}
-                  className="rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                  className="work-primary rounded-lg bg-sky-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
                 >
                   등록증 확인 완료
                 </button>
@@ -998,7 +998,7 @@ function CompanyCard({
               <button
                 type="submit"
                 disabled={busy}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5"
+                className="work-secondary rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold hover:bg-slate-50 disabled:opacity-50 dark:border-white/10 dark:bg-white/5"
               >
                 {company.businessRegistrationUrl
                   ? "등록증 교체"

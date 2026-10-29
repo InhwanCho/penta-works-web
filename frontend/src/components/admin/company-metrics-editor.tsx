@@ -117,14 +117,14 @@ export default function CompanyMetricsEditor() {
                 aria-label={`${metric.displayName} 사용 여부`}
                 disabled={!canEdit || saving}
                 onClick={() => change(index, { visible: !metric.visible })}
-                className={`mt-1 flex min-h-11 w-full cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 text-xs font-bold disabled:cursor-default ${metric.visible ? "border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" : "border-slate-300 bg-slate-100 text-slate-600 dark:border-white/15 dark:bg-white/5 dark:text-slate-300"}`}
+                className="reference-switch mt-1 w-full"
               >
                 <span>{metric.visible ? "표시" : "숨김"}</span>
                 <span
                   aria-hidden="true"
-                  className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 ${metric.visible ? "justify-end bg-emerald-600" : "justify-start bg-slate-400"}`}
+                  className="reference-switch-track"
                 >
-                  <span className="h-4 w-4 rounded-full bg-white shadow-sm" />
+                  <span />
                 </span>
               </button>
               <p className="text-text-secondary mt-1 text-[11px] sm:absolute sm:top-full">

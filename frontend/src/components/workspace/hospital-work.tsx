@@ -50,7 +50,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           </p>
         </div>
         <Link
-          className="work-secondary hospital-record-create"
+          className="work-secondary hospital-register hospital-record-create"
           href={`/work/new?site=${encodeURIComponent(siteId)}`}
         >
           <svg

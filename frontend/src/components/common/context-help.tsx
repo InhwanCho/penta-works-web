@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 type Explanation = { title: string; message: string };
+type HelpRequest = Explanation & { host?: HTMLElement };
 const eventName = "mreyes-context-help";
 export default function HelpButton({ title, message }: Explanation) {
   return (
@@ -14,8 +15,8 @@ export default function HelpButton({ title, message }: Explanation) {
         event.preventDefault();
         event.stopPropagation();
         window.dispatchEvent(
-          new CustomEvent<Explanation>(eventName, {
-            detail: { title, message },
+          new CustomEvent<HelpRequest>(eventName, {
+            detail: { title, message, host: event.currentTarget.closest<HTMLElement>('dialog, [role="dialog"]') ?? undefined },
           }),
         );
       }}
@@ -32,13 +33,13 @@ export default function HelpButton({ title, message }: Explanation) {
 }
 /** One shared card escapes sticky table clipping and replaces the previous explanation. */
 export function ContextHelpHost() {
-  const [help, setHelp] = useState<Explanation | null>(null);
+  const [help, setHelp] = useState<HelpRequest | null>(null);
   const pathname = usePathname();
   useEffect(() => {
     setHelp(null);
     const close = () => setHelp(null);
     const show = (event: Event) => {
-      const explanation = (event as CustomEvent<Explanation>).detail;
+      const explanation = (event as CustomEvent<HelpRequest>).detail;
       if (!explanation?.title || !explanation?.message) return;
       setHelp(explanation);
     };
@@ -85,6 +86,6 @@ export function ContextHelpHost() {
         {help.message}
       </p>
     </aside>,
-    document.body,
+    help.host?.isConnected ? help.host : document.body,
   );
 }

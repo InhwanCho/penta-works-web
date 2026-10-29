@@ -18,13 +18,13 @@ export default function ManagementTabs<T extends string>({
   return (
     <>
       {items.length > 3 && (
-        <fieldset className="mb-4 sm:hidden">
+        <fieldset className="reference-choices mb-4 sm:hidden">
           <legend className="mb-2 text-sm font-bold">{label}</legend>
           <div className="grid grid-cols-2 gap-2">
             {items.map((item) => (
               <label
                 key={item.value}
-                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold ${value === item.value ? "border-sky-600 bg-sky-50 text-sky-900 dark:border-sky-400 dark:bg-sky-950/60 dark:text-sky-200" : "dark:bg-background-dark-card border-slate-200 bg-white dark:border-white/15"}`}
+                className={`flex min-h-12 cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-bold ${value === item.value ? "selected border-sky-600 bg-sky-50 text-sky-900 dark:border-sky-400 dark:bg-sky-950/60 dark:text-sky-200" : "dark:bg-background-dark-card border-slate-200 bg-white dark:border-white/15"}`}
               >
                 <input
                   type="radio"
@@ -46,7 +46,7 @@ export default function ManagementTabs<T extends string>({
       <div
         role="tablist"
         aria-label={label}
-        className={`mb-5 w-full min-w-0 overflow-x-auto gap-1 ${items.length > 3 ? "hidden sm:flex" : "flex"}`}
+        className={`reference-tabs mb-5 w-full min-w-0 overflow-x-auto gap-1 ${items.length > 3 ? "hidden sm:flex" : "flex"}`}
       >
         {items.map((item, index) => (
           <button
