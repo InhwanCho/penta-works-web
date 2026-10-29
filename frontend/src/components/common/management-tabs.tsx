@@ -46,7 +46,7 @@ export default function ManagementTabs<T extends string>({
       <div
         role="tablist"
         aria-label={label}
-        className={`mb-5 w-full min-w-0 overflow-x-auto border-b border-slate-200 dark:border-white/10 ${items.length > 3 ? "hidden sm:flex" : "flex"}`}
+        className={`mb-5 w-full min-w-0 overflow-x-auto gap-1 ${items.length > 3 ? "hidden sm:flex" : "flex"}`}
       >
         {items.map((item, index) => (
           <button
@@ -74,7 +74,7 @@ export default function ManagementTabs<T extends string>({
                 event.currentTarget.parentElement?.children[next] as HTMLElement
               )?.focus();
             }}
-            className={`flex min-h-12 min-w-max flex-1 items-center justify-center gap-1 border-b-2 px-2 sm:px-4 ${large ? "text-base" : "text-sm"} font-bold whitespace-nowrap transition ${value === item.value ? "border-sky-700 text-sky-800 dark:border-sky-400 dark:text-sky-300" : "border-transparent text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"}`}
+            className={`flex min-h-12 min-w-max flex-1 items-center justify-center gap-1 rounded-lg px-2 sm:px-4 ${large ? "text-base" : "text-sm"} font-bold whitespace-nowrap transition ${value === item.value ? "bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"}`}
           >
             {item.label}
             {Boolean(item.badge) && (

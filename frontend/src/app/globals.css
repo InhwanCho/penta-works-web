@@ -2504,9 +2504,7 @@ body:has(.legal-document-surface) .site-footer strong { color: #111; }
 .legal-page.legal-document .policy-links a[aria-current="page"] {
   font-weight: 750;
   color: #111;
-  text-decoration-line: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 7px;
+  text-decoration: none;
 }
 .dark .policy-links a[aria-current="page"] { color: #f1f5f9; }
 body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: #111; }
