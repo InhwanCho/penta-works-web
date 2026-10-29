@@ -1,5 +1,6 @@
 "use client";
 
+import Pagination from "@/components/common/pagination";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
@@ -209,7 +210,7 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
   if (thresholds.length === 0) return null;
   return <section className="mb-4 rounded-xl border border-sky-200/80 bg-sky-50/50 p-4 dark:border-sky-900/40 dark:bg-sky-950/15">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-extrabold">신규 사용자의 초기 기준</h2><p className="text-text-secondary mt-1 text-sm">개인 설정을 처음 만들 때 참고하는 기준입니다. 이미 만들어진 다른 사용자의 설정은 변경되지 않습니다.</p></div><button type="button" onClick={() => setOpen(!open)} className="min-h-10 cursor-pointer rounded-lg border border-sky-200 bg-white px-4 text-sm font-bold text-sky-700 hover:bg-sky-50 dark:border-sky-900/50 dark:bg-background-dark-card dark:text-sky-200">{open ? "접기" : "회사 기준 보기"}</button></div>
-    {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? <CircleLoader size="xs" inline /> : "회사 기준 저장"}</button></div>}</>}
+    {open && <><div className="mt-4 grid gap-3 md:grid-cols-2">{draft.map((threshold) => <MetricEditor key={threshold.key} threshold={threshold} disabled={!canEdit || saving} onChange={(patch) => setDraft((current) => current.map((item) => item.key === threshold.key ? { ...item, ...patch } : item))} />)}</div>{error && <p role="alert" className="mt-3 text-sm text-rose-700">{error}</p>}{canEdit && <div className="mt-4 flex justify-end"><button type="button" disabled={saving || draft.length === 0} onClick={save} className="action-save bg-button-primary min-h-11 cursor-pointer rounded-lg px-5 text-sm font-bold text-white disabled:opacity-50">{saving ? <CircleLoader size="xs" inline /> : "회사 기준 저장"}</button></div>}</>}
   </section>;
 }
 
@@ -298,7 +299,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       {total > 0 && <div className="mb-3 flex min-h-11 flex-wrap items-center gap-2">
         <span className="text-sm font-bold">{total}건</span>
         <HelpButton title="알림 확인" message="확인했어요를 누르면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다. 종료되거나 확인한 알림은 전체 기록에서 볼 수 있습니다."/>
-        <button type="button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setSelected([]); }} className="ml-auto min-h-11 px-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{selecting ? "선택 취소" : "선택"}</button>
+        <button type="button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setSelected([]); }} className="action-cancel ml-auto min-h-11 px-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{selecting ? "선택 취소" : "선택"}</button>
         {selecting && <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 dark:bg-white/5">
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every(id => selected.includes(id))} onChange={event => setSelected(event.target.checked ? selectableIds : [])} className="h-5 w-5 accent-sky-700"/>이 페이지 선택</label>
           <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{bulkSaving ? <CircleLoader size="xs" inline /> : `${selectedIds.length}건 확인 · 24시간 중지`}</button>
@@ -319,7 +320,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       <div className={filter === "all" || filter === "failed" || filter === "skipped" ? "received-alert-history" : "alert-inbox-list"}>
         {filtered.map((event) => <AlertEventRow key={event.id} compact={filter === "all" || filter === "failed" || filter === "skipped"} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} disabled={busy} acknowledging={acknowledging === event.id} retrying={retrying === event.id} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}
       </div>
-      {(total > 20 || currentPage > 1) && <div className="mt-4 flex items-center justify-center gap-4"><button type="button" disabled={currentPage <= 1} onClick={() => setPage(currentPage - 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">이전</button><span className="text-sm">{currentPage} / {Math.max(1, Math.ceil(total / 20))}</span><button type="button" disabled={history.isFetching || currentPage * 20 >= total} onClick={() => setPage(currentPage + 1)} className="min-h-11 rounded-lg border px-4 disabled:opacity-30">다음</button></div>}
+      {(total > 20 || currentPage > 1) && <Pagination page={currentPage} total={total} onPageChange={setPage} disabled={history.isFetching} label="알림 이력 페이지" />}
     </section>
   );
 }
@@ -780,8 +781,8 @@ export function SiteThresholdEditor({ page = false, entry, canEdit, initialMetri
         </div>
         {error && <p role="alert" className="shrink-0 bg-red-50 px-5 py-2 text-sm font-semibold text-red-700 dark:bg-red-950/30 dark:text-red-300">{error}</p>}
         <footer className="grid shrink-0 grid-cols-2 gap-2 border-t border-slate-100 bg-white px-5 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:flex sm:justify-end sm:px-6 dark:border-white/7 dark:bg-background-dark-card">
-          <button type="button" disabled={saving} onClick={onClose} className="min-h-12 rounded-xl border border-slate-200 px-5 py-3 text-base font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">{canEdit ? "취소" : "닫기"}</button>
-          {canEdit && <button type="submit" disabled={saving} className="bg-button-primary hover:bg-button-primary-hover min-h-12 rounded-xl px-6 py-3 text-base font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? <CircleLoader size="xs" inline /> : onlyMetricKey ? "이 알림 저장" : "설정 저장"}</button>}
+          <button type="button" disabled={saving} onClick={onClose} className="action-cancel min-h-12 rounded-xl border border-slate-200 px-5 py-3 text-base font-bold transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5">{canEdit ? "취소" : "닫기"}</button>
+          {canEdit && <button type="submit" disabled={saving} className="action-save bg-button-primary hover:bg-button-primary-hover min-h-12 rounded-xl px-6 py-3 text-base font-bold text-white shadow-sm transition disabled:opacity-50">{saving ? <CircleLoader size="xs" inline /> : onlyMetricKey ? "이 알림 저장" : "설정 저장"}</button>}
         </footer>
       </form>
     </div>

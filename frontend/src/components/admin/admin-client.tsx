@@ -1,5 +1,6 @@
 "use client";
 
+import Pagination from "@/components/common/pagination";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -243,9 +244,9 @@ export default function AdminClient() {
         {tab === "home" ? (
           <Link
             href="/settings"
-            className="management-back"
+            className="work-back management-back"
           >
-            ‹ 설정
+            ← 설정
           </Link>
         ) : (
           <button
@@ -626,29 +627,7 @@ function UserSection({
         {filtered.length === 0 && <Empty>조건에 맞는 사용자가 없습니다.</Empty>}
       </div>
       {filtered.length > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-          <span className="text-text-secondary text-xs">
-            총 {filtered.length}명 · {page}/{pageCount} 페이지
-          </span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((value) => value - 1)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10"
-            >
-              이전
-            </button>
-            <button
-              type="button"
-              disabled={page >= pageCount}
-              onClick={() => setPage((value) => value + 1)}
-              className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-bold disabled:opacity-40 dark:border-white/10"
-            >
-              다음
-            </button>
-          </div>
-        </div>
+        <Pagination page={page} total={filtered.length} pageSize={pageSize} onPageChange={setPage} label="사용자 페이지" unit="명" />
       )}
     </section>
   );
@@ -882,7 +861,7 @@ function UserEditor({
             type="button"
             disabled={saving}
             onClick={save}
-            className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
+            className="action-save bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
           >
             {saving ? (
               <CircleLoader
@@ -1339,7 +1318,7 @@ function InvitationSection({
                   type="button"
                   disabled={saving}
                   onClick={() => revoke(invitation.id)}
-                  className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                  className="action-cancel cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   취소
                 </button>
@@ -1629,7 +1608,7 @@ function SiteEditor({ site }: { site: SiteOption }) {
           <button
             type="submit"
             disabled={saving}
-            className="bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
+            className="action-save bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"
           >
             {saving ? (
               <CircleLoader

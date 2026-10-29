@@ -134,7 +134,7 @@ export default function LogoutControls({
                 autoFocus
                 disabled={busy}
                 onClick={() => setScope(null)}
-                className="min-h-12 rounded-xl border border-slate-300 font-bold disabled:opacity-50 dark:border-slate-600"
+                className="action-cancel min-h-12 rounded-xl border border-slate-300 font-bold disabled:opacity-50 dark:border-slate-600"
               >
                 취소
               </button>

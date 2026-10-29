@@ -316,7 +316,7 @@ export default function DashboardExcelView({
                             "cursor-cell px-[3px] py-[5px] text-right leading-tight whitespace-nowrap tabular-nums lg:px-3 lg:py-2",
                             CELL_BORDER,
                             selectedCell?.key === `${row.siteDb}:${m.code}`
-                              ? "relative z-10 outline-2 -outline-offset-2 outline-blue-500 dark:outline-sky-400"
+                              ? "relative z-10 outline-1 -outline-offset-1 outline-[var(--control-active-border)] bg-[var(--control-active-bg)]"
                               : "",
                             alert
                               ? "bg-red-50 font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400"

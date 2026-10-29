@@ -37,7 +37,7 @@ export default function PmDateEditor({ siteId, date, schedule }: { siteId: strin
     </button>}
     <div id={editorId} className="pm-date-fields" hidden={!editing}>
       <label>PM {schedule ? "일정 날짜" : "예정일"}<input type="date" className="work-input" value={value} disabled={busy} required onChange={event=>setValue(event.target.value)} /></label>
-      <div className="pm-quick-date-actions"><button className="work-secondary" type="button" disabled={busy} onClick={()=>{setEditing(false);setError("");}}>취소</button><button type="button" className="work-primary" disabled={busy || !value || value===date} onClick={()=>void save()}>{busy ? "저장 중" : "날짜 저장"}</button></div>
+      <div className="pm-quick-date-actions"><button className="action-cancel work-secondary" type="button" disabled={busy} onClick={()=>{setEditing(false);setError("");}}>취소</button><button type="button" className="action-save work-primary" disabled={busy || !value || value===date} onClick={()=>void save()}>{busy ? "저장 중" : "날짜 저장"}</button></div>
       {error && <p className="work-error" role="alert">{error}</p>}
     </div>
   </div>;

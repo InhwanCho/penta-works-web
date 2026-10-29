@@ -1,5 +1,6 @@
 "use client";
 
+import Pagination from "@/components/common/pagination";
 import { useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import WorkspaceDrawer from "./workspace-drawer";
@@ -65,8 +66,7 @@ export default function WorkspaceSearch({ onClose, onOpenDetail }: { onClose: ()
 }
 function SearchPages({ page, total, label, change }: { page: number; total: number; label: string; change: (page: number) => void }) {
   if (total <= pageSize) return null;
-  const pages = Math.ceil(total / pageSize);
-  return <nav className="workspace-search-pages" aria-label={`${label} 검색 페이지`}><button type="button" disabled={page <= 1} onClick={() => change(page - 1)}>이전</button><span>{page} / {pages}</span><button type="button" disabled={page >= pages} onClick={() => change(page + 1)}>다음</button></nav>;
+  return <Pagination page={page} total={total} pageSize={pageSize} onPageChange={change} label={`${label} 검색 페이지`} />;
 }
 function SearchError({ error, retry }: { error: unknown; retry: () => void }) {
   return <div role="alert" className="work-error"><p>{errorText(error)}</p><button type="button" className="work-text-button" onClick={retry}>다시 시도</button></div>;

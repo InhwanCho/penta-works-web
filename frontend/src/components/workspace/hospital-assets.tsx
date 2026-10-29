@@ -280,14 +280,14 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
           <div className="work-form-actions">
             <button
               type="button"
-              className="work-secondary"
+              className="action-cancel work-secondary"
               disabled={busy}
               onClick={() => setEditing(undefined)}
             >
               취소
             </button>
             <button
-              className="work-primary"
+              className="action-save work-primary"
               disabled={busy}
             >
               {busy ? <CircleLoader size="xs" inline /> : "정보와 이력 저장"}

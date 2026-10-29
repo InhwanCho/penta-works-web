@@ -668,7 +668,7 @@ export default function WorkEditor({ id }: { id?: string }) {
               취소
             </Link>
             <button
-              className="work-primary"
+              className="action-save work-primary"
               disabled={saving || photoBusy || !!draft.pending}
             >
               {saving

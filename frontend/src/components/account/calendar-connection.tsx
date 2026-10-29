@@ -75,7 +75,7 @@ export default function CalendarConnection({ userId }: { userId: number }) {
       <p className="mt-2 text-sm leading-6">Google LLC가 해외 서버에서 처리할 수 있으며 계정별 저장 국가는 지정되지 않습니다. 연결하지 않아도 다른 기능은 이용할 수 있습니다. 해제하면 추가 전송은 중단되지만 이미 보낸 일정은 Google Calendar에서 직접 삭제해야 합니다.</p>
       <Link href="/privacy" className="mt-2 inline-flex min-h-11 items-center text-sm font-bold underline">개인정보 처리방침 보기</Link>
       <label className="mt-2 flex min-h-11 items-start gap-2 text-sm leading-6"><input type="checkbox" checked={understood} onChange={e => setUnderstood(e.target.checked)} className="mt-1 h-4 w-4 shrink-0" />전송 범위와 연결 해제 방법을 확인했습니다.</label>
-      <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={!understood || busy} onClick={connect} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">Google에서 연결 계속</button><button type="button" disabled={busy} onClick={() => setShowNotice(false)} className="min-h-11 rounded-lg border px-4 text-sm">취소</button></div>
+      <div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={!understood || busy} onClick={connect} className="min-h-11 rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-40">Google에서 연결 계속</button><button type="button" disabled={busy} onClick={() => setShowNotice(false)} className="action-cancel min-h-11 rounded-lg border px-4 text-sm">취소</button></div>
     </div>}
   </section>;
 }

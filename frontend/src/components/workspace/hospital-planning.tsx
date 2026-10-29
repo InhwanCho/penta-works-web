@@ -164,13 +164,13 @@ function PlanEditor({
         <div className="work-form-actions">
           <button
             type="button"
-            className="work-secondary"
+            className="action-cancel work-secondary"
             onClick={onSaved}
           >
             취소
           </button>
           <button
-            className="work-primary"
+            className="action-save work-primary"
             disabled={busy}
           >
             {busy ? <CircleLoader size="xs" inline /> : "점검 기준 저장"}

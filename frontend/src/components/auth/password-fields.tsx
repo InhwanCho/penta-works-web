@@ -3,7 +3,7 @@
 import { useWatch, type UseFormReturn } from "react-hook-form";
 
 export type PasswordValues = { password: string; confirm: string };
-const INPUT = "mt-1.5 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20 aria-[invalid=true]:border-rose-400 dark:border-white/15 dark:bg-background-dark-primary";
+const INPUT = "mt-1.5 min-h-12 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base focus:border-sky-500 focus:outline-none aria-[invalid=true]:border-rose-400 dark:border-white/15 dark:bg-background-dark-primary";
 
 export default function PasswordFields({ form }: { form: UseFormReturn<PasswordValues> }) {
   const { register, getValues, formState: { errors } } = form;

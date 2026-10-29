@@ -219,7 +219,7 @@ export default function CompanyMetricsEditor() {
                 type="button"
                 disabled={saving || !draft}
                 onClick={save}
-                className="bg-button-primary min-h-11 flex-1 cursor-pointer rounded-lg px-5 font-bold text-white disabled:opacity-50 sm:flex-none"
+                className="action-save bg-button-primary min-h-11 flex-1 cursor-pointer rounded-lg px-5 font-bold text-white disabled:opacity-50 sm:flex-none"
               >
                 {saving ? (
                   <CircleLoader

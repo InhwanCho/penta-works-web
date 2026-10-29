@@ -1,5 +1,6 @@
 "use client";
 
+import Pagination from "@/components/common/pagination";
 import { newScheduleForm, scheduleEditForm, scheduleTimes, substantialScheduleChange, normalizeScheduleForm } from "./schedule-form";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
@@ -418,26 +419,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
       ) : (
         <>
           <RecordList rows={rows} />
-          <div className="work-form-actions mt-4">
-            <button
-              type="button"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => p - 1)}
-            >
-              이전
-            </button>
-            <span className="text-sm">
-              {page} / {Math.max(1, Math.ceil((records.data?.total || 0) / 20))}{" "}
-              · {records.data?.total || 0}건
-            </span>
-            <button
-              type="button"
-              disabled={page * 20 >= (records.data?.total || 0)}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              다음
-            </button>
-          </div>
+          <Pagination page={page} total={records.data?.total || 0} onPageChange={setPage} label="업무기록 페이지" />
         </>
       )}
     </main>
@@ -704,7 +686,7 @@ export function SchedulePage() {
             />
           </label>
           <div className="work-form-actions">
-            <button
+            <button className="action-cancel"
               type="button"
               onClick={() => {
                 if (draft.confirmLeave()) {
@@ -717,7 +699,7 @@ export function SchedulePage() {
             </button>
             <button
               disabled={saving || !!draft.pending}
-              className="work-primary"
+              className="action-save work-primary"
             >
               {saving ? <CircleLoader size="xs" inline /> : "일정 저장"}
             </button>

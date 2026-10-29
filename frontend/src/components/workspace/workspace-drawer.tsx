@@ -130,7 +130,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     }}>
     <div className={`workspace-drawer-grip${mobile ? "" : " hidden"}`} {...dragHandlers}><span /></div>
     <header {...dragHandlers}>
-      {onBack && <button type="button" className="drawer-back" onClick={onBack} aria-label="이전 상세로">‹</button>}
+      {onBack && <button type="button" className="drawer-back" onClick={onBack} aria-label="이전 상세로">← 뒤로</button>}
       <h2 id={titleId}>{title}</h2>
       <button type="button" className="day-close" onClick={onClose} aria-label={`${title} 닫기`}>×</button>
     </header>

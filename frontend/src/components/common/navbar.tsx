@@ -158,7 +158,7 @@ export default function Navbar() {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((value) => !value)}
-                  className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-3"
+                  className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-9"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
                     {initial}
@@ -172,7 +172,7 @@ export default function Navbar() {
                     </span>
                   </span>
                   <ChevronIcon
-                    className={`hidden h-4 w-4 text-white/70 transition sm:block ${menuOpen ? "rotate-180" : ""}`}
+                    className={`absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-white/70 transition sm:block ${menuOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 

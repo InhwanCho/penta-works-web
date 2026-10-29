@@ -103,9 +103,9 @@ export default function CompaniesClient() {
         ) : (
           <Link
             href="/settings"
-            className="management-back"
+            className="work-back management-back"
           >
-            ‹ 설정
+            ← 설정
           </Link>
         )}
         <h1>
@@ -929,7 +929,7 @@ function CompanyCard({
               <button
                 type="submit"
                 disabled={busy}
-                className="shrink-0 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white disabled:opacity-50"
+                className="action-save shrink-0 rounded-lg bg-sky-700 px-3 text-xs font-bold text-white disabled:opacity-50"
               >
                 저장
               </button>
@@ -1047,7 +1047,7 @@ function CompanyCard({
                   type="button"
                   disabled={busy}
                   onClick={revoke}
-                  className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
+                  className="action-cancel rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
                 >
                   초대 취소
                 </button>

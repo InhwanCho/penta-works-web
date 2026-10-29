@@ -180,12 +180,6 @@
   [role="button"] {
     touch-action: manipulation;
   }
-
-  /* shadcn 느낌 포커스 링 기본값 */
-  :where(button, a, [role="button"], input, select, textarea):focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-ring);
-  }
 }
 
 /* PWA 전체 화면에서 둥근 화면 모서리와 홈 인디케이터 안쪽에 콘텐츠를 둡니다. */
@@ -1644,7 +1638,7 @@ h4,
 .workspace-frame .work-primary:hover { background: #1254b3; color: #fff; }
 .workspace-frame .work-secondary { border-color: #b8c9e3; color: #195bb6; }
 .dark .workspace-frame .work-secondary { border-color: #526b8d; color: #b6d2ff; }
-.workspace-frame :is(button,a,input,textarea,summary):focus-visible { outline: 3px solid #4285f4; outline-offset: 3px; }
+
 .work-form legend, .work-form > label { font-weight: 650; }
 .work-calendar { padding: 0; overflow: hidden; border-color: #cbd5e1; box-shadow: 0 4px 22px #33415508; }
 .work-calendar-toolbar { margin: 0; padding: 18px 20px; background: var(--work-paper); border-bottom: 1px solid var(--work-line); }
@@ -1789,12 +1783,6 @@ h4,
   .work-day-body { padding: 0 16px 20px; }
 }
 .workspace-bottom > a { flex: 1 1 0; width: auto; min-width: 0; }
-/* The user search uses one focus border instead of overlapping rings. */
-.workspace-frame .admin-user-filters > input[type="search"]:focus {
-  border-color: var(--work-focus);
-  outline: none !important;
-  box-shadow: none !important;
-}
 .admin-user-filters .work-radio-group legend { font-size: 0.75rem; margin-bottom: 6px; }
 .admin-user-filters .work-radio-group label { min-height: 40px; padding: 8px 10px; }
 .admin-card-table .admin-editor-row > td { padding: 12px; }
@@ -1811,7 +1799,7 @@ h4,
   .admin-card-table .admin-editor-row { display: block; padding: 0; border: 0; margin-top: -4px; }
   .admin-card-table .admin-editor-row > td { padding: 0; }
   .admin-card-table .admin-editor-row > td::before { display: none; }
-  .admin-card-table .admin-editor-row form { padding: 16px; border: 2px solid var(--work-focus); }
+  .admin-card-table .admin-editor-row form { padding: 16px; border: 1px solid var(--control-active-border); }
 }
 .workspace-bottom > a { position: relative; }
 
@@ -2644,35 +2632,6 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 @media(hover:none) { .workspace-frame .hospital-register:hover { background: var(--work-paper); } }
 .workspace-frame .hospital-register:active { background: var(--work-soft); }
 
-/* Mobile taps should not leave keyboard-style halos, including in portal dialogs. */
-@media (max-width: 1023px), (hover: none) and (pointer: coarse) {
-  :is(button, a, summary, label, input, select, textarea, [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [tabindex]) {
-    -webkit-tap-highlight-color: transparent;
-  }
-  :is(button, a, summary, [role="button"], [role="tab"], [role="switch"], [role="checkbox"], [role="radio"], [tabindex]:not(input, textarea, select), input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"])):is(:focus, :focus-visible) {
-    outline: none !important;
-    outline-offset: 0 !important;
-    box-shadow: var(--tw-shadow, none) !important;
-    --tw-ring-shadow: 0 0 #0000 !important;
-    --tw-ring-offset-shadow: 0 0 #0000 !important;
-  }
-  label:has(input:is([type="checkbox"], [type="radio"]):is(:focus, :focus-visible)) {
-    outline: none !important;
-    box-shadow: none !important;
-  }
-  :is(input:not([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"]), textarea, select):is(:focus, :focus-visible) {
-    outline: none !important;
-    outline-offset: 0 !important;
-    box-shadow: 0 0 0 1px color-mix(in srgb, var(--work-focus, #1967d2) 18%, transparent) !important;
-    --tw-ring-shadow: 0 0 #0000 !important;
-    --tw-ring-offset-shadow: 0 0 #0000 !important;
-  }
-  /* This is the selected date, rather than a transient focus decoration. */
-  .work-calendar .work-calendar-day.selected:is(:focus, :focus-visible) { box-shadow: inset 0 0 0 3px #3979c6 !important; }
-  .dark .work-calendar .work-calendar-day.selected:is(:focus, :focus-visible) { box-shadow: inset 0 0 0 3px #88b6ec !important; }
-}
-
-/* Notification inbox: one navigation level and progressive detail. */
 .alert-inbox-heading { margin: 4px 0 18px; }
 .alert-inbox-heading h1 { margin-top: 4px; color: var(--work-ink); font-size: 1.25rem; font-weight: 750; }
 .alert-inbox-heading p, .alert-inbox-guide { color: var(--work-muted); font-size: .8125rem; line-height: 1.6; }
@@ -3357,3 +3316,121 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 @media (prefers-reduced-motion: reduce) {
   .loading-dots > span { animation: none; opacity: .65; }
 }
+
+/* Shared interaction treatment, including controls rendered in portal dialogs.
+   An inset focus line cannot be clipped by a scroll/overflow container. */
+:root {
+  --control-active-border: #91b2e5;
+  --control-active-bg: #edf3ff;
+  --control-active-text: #245fb8;
+}
+html.dark {
+  --control-active-border: #5876a3;
+  --control-active-bg: #22334d;
+  --control-active-text: #b5d0ff;
+}
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]), textarea, select):focus {
+  border: 1px solid var(--control-active-border) !important;
+  background-color: var(--control-active-bg) !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+:is(input, textarea, select)[aria-invalid="true"]:focus { border-color: #d58484 !important; }
+:is(button, a, summary, [role="button"], [role="tab"], [role="switch"], [role="option"], input:is([type="button"], [type="submit"], [type="reset"])):focus-visible {
+  outline: 1px solid var(--control-active-border) !important;
+  outline-offset: -1px !important;
+  border-color: var(--control-active-border) !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+/* A wrapped native radio/checkbox delegates its focus line to its label. */
+label:has(input:is([type="checkbox"], [type="radio"]):focus-visible) {
+  outline: 1px solid var(--control-active-border) !important;
+  outline-offset: -1px !important;
+  border-color: var(--control-active-border) !important;
+  box-shadow: none !important;
+}
+label input:is([type="checkbox"], [type="radio"]):focus-visible { outline: none; box-shadow: none; }
+:is(button.selected, a.selected, label.selected, button.is-active, button[aria-pressed="true"], [role="tab"][aria-selected="true"], [role="option"][aria-selected="true"]) {
+  outline: 1px solid var(--control-active-border) !important;
+  outline-offset: -1px !important;
+  border-color: var(--control-active-border) !important;
+  background-color: var(--control-active-bg) !important;
+  color: var(--control-active-text) !important;
+  box-shadow: none !important;
+}
+.work-calendar .work-calendar-day.selected { background-color: var(--control-active-bg) !important; }
+.work-overview .work-calendar .work-calendar-day.selected::after { border: 1px solid var(--control-active-border); }
+
+@media (hover: none) and (pointer: coarse) {
+  :is(button, a, summary, label, input, select, textarea, [role="button"], [role="tab"], [role="switch"]) { -webkit-tap-highlight-color: transparent; }
+}
+
+/* Shared shadcn-style pagination: quiet ghost buttons and one selected border. */
+.pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; font-size: .8125rem; }
+.pagination-total { color: var(--work-muted, #64748b); white-space: nowrap; }
+.pagination-list { display: flex; align-items: center; justify-content: center; gap: 4px; list-style: none; padding: 0; margin: 0; }
+.pagination-number { display: flex; align-items: center; gap: 4px; }
+.pagination-button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 36px; height: 36px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--work-ink, #334155); font-size: inherit; font-weight: 500; transition: background-color .15s; }
+.pagination-button[aria-current="page"] { border-color: var(--control-active-border); background: var(--control-active-bg); color: var(--control-active-text); }
+.pagination-direction { padding-inline: 10px; }
+.pagination-button:disabled { opacity: .4; cursor: not-allowed; }
+.pagination-ellipsis { display: inline-flex; align-items: center; justify-content: center; width: 28px; color: var(--work-muted, #64748b); }
+.pagination-mobile-status { display: none; }
+@media (hover:hover) { .pagination-button:not(:disabled):hover { background: var(--work-hover, #f1f5f9); } }
+@media (max-width: 639px) {
+ .pagination { justify-content: center; gap: 8px; }
+ .pagination-total { flex-basis: 100%; text-align: center; }
+ .pagination-number { display: none; }
+ .pagination-mobile-status { display: block; min-width: 76px; text-align: center; font-variant-numeric: tabular-nums; }
+ .pagination-button { min-width: 44px; height: 44px; }
+}
+
+/* Plain return navigation, shared by pages and drawer headers. */
+:is(.work-back, .management-back, .work-authoring-back, .workspace-drawer .drawer-back) {
+ display: inline-flex; align-items: center; justify-content: flex-start; gap: 6px;
+ min-height: 40px; padding: 6px 0; border: 0; border-radius: 4px;
+ background: transparent; color: #197599; font-size: .875rem; font-weight: 500;
+ text-decoration: none; box-shadow: none;
+}
+.dark :is(.work-back, .management-back, .work-authoring-back, .workspace-drawer .drawer-back) { color: #87cce5; }
+:is(.work-back, .management-back, .work-authoring-back, .workspace-drawer .drawer-back):hover { background: transparent; color: var(--work-focus, #1967d2); }
+/* Keep disclosure arrows centered independently of text wrapping or line height. */
+:is(.work-picker-trigger, .hospital-section-toggle, .management-expand, .dropdown-trigger) { position: relative; padding-right: 44px; }
+:is(.work-picker-trigger, .management-expand) > span[aria-hidden="true"],
+.hospital-section-chevron, .dropdown-arrow {
+ position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+ margin: 0; line-height: 1; pointer-events: none;
+}
+.hospital-section-toggle[aria-expanded="true"] .hospital-section-chevron,
+.dropdown-trigger[aria-expanded="true"] .dropdown-arrow { transform: translateY(-50%) rotate(180deg); }
+:is(.overview-fold, .site-chart-query, .management-disclosure) > summary { position: relative; padding-right: 44px; }
+:is(.overview-fold, .management-disclosure) > summary::after {
+ position: absolute; right: 16px; top: 50%; transform: translateY(-50%); margin: 0; line-height: 1;
+}
+.overview-fold[open] > summary::after { transform: translateY(-50%) rotate(180deg); }
+.site-chart-query > summary::after { position: absolute; right: 16px; top: 50%; margin: 0; transform: translateY(-70%) rotate(45deg); }
+.site-chart-query[open] > summary::after { margin: 0; transform: translateY(-30%) rotate(225deg); }
+.planning-guide > summary { position: relative; padding-right: 44px; }
+.planning-guide > summary > svg { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); }
+.planning-guide[open] > summary > svg { transform: translateY(-50%) rotate(180deg); }
+
+/* Consistent form actions across pages and portal dialogs. */
+button:is(.action-save, .action-cancel) {
+ display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+ min-height: 42px; min-width: 80px; padding: 10px 18px; border-radius: 8px;
+ border: 1px solid transparent; font-size: .875rem; line-height: 20px; font-weight: 600;
+ box-shadow: none !important; transition: background-color .15s, border-color .15s;
+}
+button.action-save { background: #2563eb !important; color: #fff !important; border-color: #2563eb !important; }
+button.action-cancel { background: var(--work-paper, #fff) !important; color: var(--work-ink, #334155) !important; border-color: var(--work-line, #dbe3ed) !important; }
+html.dark button.action-cancel { background: #192d3d !important; color: #dce7f2 !important; border-color: #3a5067 !important; }
+@media (hover:hover) {
+ button.action-save:not(:disabled):hover { background: #1d4ed8 !important; border-color: #1d4ed8 !important; }
+ button.action-cancel:not(:disabled):hover { background: var(--control-active-bg) !important; border-color: var(--control-active-border) !important; }
+}
+button:is(.action-save, .action-cancel):disabled { opacity: .5; cursor: not-allowed; }
+.work-form-actions { gap: 10px; align-items: center; }

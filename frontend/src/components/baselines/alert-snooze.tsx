@@ -173,7 +173,7 @@ export default function AlertSnooze({
             </button>
             <button
               type="button"
-              className={button}
+              className={`action-cancel ${button}`}
               disabled={busy}
               onClick={() => setOpen(false)}
             >

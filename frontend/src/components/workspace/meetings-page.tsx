@@ -75,6 +75,6 @@ function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>P
     <p className="work-hint">지난주 보고 · {meetingReportPeriod(date)}</p>
     {meetingHeadings.map((heading,i)=><label key={heading}>{heading}<textarea className="work-input" rows={i===0?7:4} value={sections[i]} disabled={busy} placeholder={["방문·점검·수리 내용과 결과","계속 진행 중인 작업, 병원별 이슈","이번 주 방문·PM·수리 계획"][i]} onChange={event=>setSections(value=>value.map((text,index)=>index===i?event.target.value:text) as MeetingSections)} /></label>)}
     {error&&<p className="work-error" role="alert">{error}</p>}
-    <div className="work-form-actions"><button type="button" className="work-secondary" disabled={busy} onClick={onCancel}>취소</button><button type="submit" className="work-primary" disabled={busy||!meaningful}>{busy?"저장 중…":"저장"}</button></div>
+    <div className="work-form-actions"><button type="button" className="action-cancel work-secondary" disabled={busy} onClick={onCancel}>취소</button><button type="submit" className="action-save work-primary" disabled={busy||!meaningful}>{busy?"저장 중…":"저장"}</button></div>
   </form>;
 }

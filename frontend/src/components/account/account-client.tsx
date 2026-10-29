@@ -75,7 +75,7 @@ export default function AccountClient() {
     <main className="mx-auto max-w-lg px-4 py-6 sm:py-10">
       <Link
         href="/settings"
-        className="mb-4 inline-flex min-h-11 items-center font-semibold text-sky-700 dark:text-sky-300"
+        className="work-back mb-4 inline-flex min-h-11 items-center font-semibold text-sky-700 dark:text-sky-300"
       >
         ← 설정
       </Link>
@@ -228,13 +228,13 @@ export default function AccountClient() {
                     setMode(null);
                     setMessage(null);
                   }}
-                  className="min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10"
+                  className="action-cancel min-h-12 rounded-xl border border-slate-200 font-bold dark:border-white/10"
                 >
                   취소
                 </button>
                 <button
                   disabled={saving}
-                  className="bg-button-primary min-h-12 rounded-xl font-bold text-white disabled:opacity-50"
+                  className="action-save bg-button-primary min-h-12 rounded-xl font-bold text-white disabled:opacity-50"
                 >
                   {saving ? <CircleLoader size="xs" inline /> : "변경 저장"}
                 </button>

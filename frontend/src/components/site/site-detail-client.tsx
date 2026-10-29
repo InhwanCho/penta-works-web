@@ -393,7 +393,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             onClick={() => setPickerOpen(!pickerOpen)}
             aria-expanded={pickerOpen}
             aria-controls="metric-picker"
-            className="border-border dark:border-background-dark-secondary dark:bg-background-dark-secondary bg-background-primary inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-bold shadow-sm"
+            className="dropdown-trigger border-border dark:border-background-dark-secondary dark:bg-background-dark-secondary bg-background-primary inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-bold shadow-sm"
           >
             <span>
               측정항목{" "}
@@ -406,7 +406,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             </span>
             <span
               aria-hidden="true"
-              className={`text-base leading-none transition-transform ${pickerOpen ? "rotate-180" : ""}`}
+              className="dropdown-arrow"
             >
               ▾
             </span>
