@@ -241,7 +241,7 @@ export default function DashboardClient() {
             </div>
           </div>
           <div className="dashboard-header-actions">
-            <button type="button" disabled={isFetching} onClick={handleRefresh} className="work-secondary disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "새로고침"}</button>
+            <button type="button" disabled={isFetching} onClick={handleRefresh} className="work-secondary dashboard-refresh-button disabled:opacity-50" aria-label={isFetching ? "새로고침 중" : "새로고침"} aria-busy={isFetching}><span className={isFetching ? "invisible" : ""}>새로고침</span>{isFetching && <span className="dashboard-refresh-spinner"><CircleLoader size="xs" inline /></span>}</button>
             <button type="button" className="work-secondary dashboard-desktop-filter-button" aria-expanded={showDesktopFilters} aria-controls="dashboard-desktop-filters" onClick={() => setShowDesktopFilters(open => !open)}>
               <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="currentColor"/><circle cx="15" cy="17" r="2" fill="currentColor"/></svg>
               필터 설정

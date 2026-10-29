@@ -92,6 +92,7 @@ export default function OverviewPage() {
   });
   const range = calendarWindow(month);
   const { sites, records, schedules } = useWorkspace({
+    retainMonthData: true,
     recordFrom: range.from,
     recordTo: range.to,
     scheduleFrom: range.from,
@@ -112,6 +113,7 @@ export default function OverviewPage() {
         }[];
         failedSites: string[];
       }>(`/workspace/legacy-history?from=${range.from}&to=${range.to}`),
+    placeholderData: (previous, query) => query?.queryKey[1] === session?.id ? previous : undefined,
     enabled: !!session,
     staleTime: 300000,
   });
@@ -277,7 +279,7 @@ export default function OverviewPage() {
           <Link href="/work">업무기록 목록</Link>
         </div>
       </div>
-      <section className="work-panel work-calendar">
+      <section className="work-panel work-calendar" aria-busy={records.isFetching || schedules.isFetching || legacy.isFetching}>
         <div className="work-calendar-toolbar">
           <button
             type="button"

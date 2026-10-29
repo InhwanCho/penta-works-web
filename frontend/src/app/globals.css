@@ -3422,12 +3422,12 @@ label input:is([type="checkbox"], [type="radio"]):focus-visible { outline: none;
 /* Approved component references, 2026-10-29.
    Keep pagination, select pickers and save/cancel actions outside this scope. */
 :root {
-  --reference-input-line: #dbe1e9;
+  --reference-input-line: #bdcbd8;
   --reference-input-surface: #fff;
   --reference-card-radius: 14px;
 }
 html.dark {
-  --reference-input-line: #3a5067;
+  --reference-input-line: #526b80;
   --reference-input-surface: #192d3d;
 }
 /* The settings title is the common page heading; drawer titles stay contextual. */
@@ -3663,4 +3663,20 @@ html.dark {
  .dashboard-desktop-filter-panel .dashboard-filter-section { padding: 12px 14px; }
  .dashboard-desktop-filter-panel .dashboard-filter-section > summary { min-height: 32px; }
  .dashboard-desktop-filter-panel .dashboard-filter-section > fieldset { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 0 16px; }
+}
+
+.dashboard-refresh-button { position: relative; }
+.dashboard-refresh-spinner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+@media (hover: hover) {
+ .work-overview .recent-work-record:hover { background: var(--work-soft); }
+}
+.work-overview .recent-work-week-heading { background: var(--work-bg); }
+
+/* Slightly stronger neutral edges on form controls across all pages. */
+:is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"], [type="hidden"], [type="button"], [type="submit"], [type="reset"]), textarea, select):not(:focus, [aria-invalid="true"]) {
+ border-color: var(--reference-input-line) !important;
+}
+:is(.work-radio-group label, .work-kind-choice label, .reference-choices label,
+ .work-picker-trigger, .dropdown-trigger, .work-schedule-link):not(.selected, :focus-visible, [aria-expanded="true"], [aria-invalid="true"]):not(:has(input:checked, input:focus-visible)) {
+ border-color: var(--reference-input-line);
 }

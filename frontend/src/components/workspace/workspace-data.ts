@@ -59,6 +59,7 @@ export const statusLabels: Record<string, string> = {
 export function useWorkspace(
   options: {
     records?: boolean;
+    retainMonthData?: boolean;
     schedules?: boolean;
     recordFrom?: string;
     recordTo?: string;
@@ -91,6 +92,7 @@ export function useWorkspace(
       if (options.recordSiteId) p.set("siteId", options.recordSiteId);
       return apiFetch<WorkRecord[]>(`/workspace/records?${p}`);
     },
+    placeholderData: (previous, query) => options.retainMonthData && query?.queryKey[1] === scope ? previous : undefined,
     enabled: enabled && options.records !== false,
   });
   const schedules = useQuery({
@@ -106,6 +108,7 @@ export function useWorkspace(
       if (options.scheduleTo) p.set("to", options.scheduleTo);
       return apiFetch<WorkSchedule[]>(`/workspace/schedules?${p}`);
     },
+    placeholderData: (previous, query) => options.retainMonthData && query?.queryKey[1] === scope ? previous : undefined,
     enabled: enabled && options.schedules !== false,
     staleTime: 30_000,
   });
