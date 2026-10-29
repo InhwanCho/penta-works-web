@@ -167,7 +167,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
         ))}
       </aside>
       <div className="workspace-content">
-        {children}
+        <div className="workspace-page-content">{children}</div>
         <SiteFooter />
       </div>
       <nav

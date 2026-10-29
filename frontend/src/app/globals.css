@@ -1789,6 +1789,12 @@ h4,
   .work-day-body { padding: 0 16px 20px; }
 }
 .workspace-bottom > a { flex: 1 1 0; width: auto; min-width: 0; }
+/* The user search uses one focus border instead of overlapping rings. */
+.workspace-frame .admin-user-filters > input[type="search"]:focus {
+  border-color: var(--work-focus);
+  outline: none !important;
+  box-shadow: none !important;
+}
 .admin-user-filters .work-radio-group legend { font-size: 0.75rem; margin-bottom: 6px; }
 .admin-user-filters .work-radio-group label { min-height: 40px; padding: 8px 10px; }
 .admin-card-table .admin-editor-row > td { padding: 12px; }
@@ -1826,6 +1832,14 @@ h4,
 .settings-switch > span:last-child { display: flex; align-items: center; width: 44px; height: 26px; padding: 3px; border-radius: 30px; background: #8896a7; flex-shrink: 0; }
 .settings-switch > span.on:last-child { justify-content: flex-end; background: #1967d2; }
 .settings-switch i { width: 20px; height: 20px; border-radius: 50%; background: white; }
+/* Highlight the whole settings row without changing its text hierarchy. */
+@media (min-width: 1024px) {
+ .settings-page :is(.settings-link, .settings-switch) { padding-inline: 12px; border-radius: 10px; cursor: pointer; transition: background-color .15s; }
+ .settings-page :is(.settings-link, .settings-switch):focus-visible { background: var(--work-hover); }
+}
+@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
+ .workspace-frame .settings-page :is(.settings-link, .settings-switch):hover { background: var(--work-hover); color: var(--work-ink); }
+}
 @media (max-width: 640px) { .settings-page { padding: 22px 16px 40px; } }
 
 /* Overview is a page, not the legacy two-column card container. */
@@ -2433,6 +2447,9 @@ h4,
 .dark .legal-page a { color: #8ad4f5; }
 .dark .legal-draft, .dark .legal-page section .legal-pending { background: #362e20; color: #f2d69b; border-color: #76613b; }
 @media (min-width: 1024px) {
+  .workspace-content { display: flex; flex-direction: column; }
+  .workspace-page-content { flex: 1; min-width: 0; }
+  .workspace-content > .site-footer { flex-shrink: 0; }
   .site-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 24px; margin: 32px 24px 0; padding: 20px 4px; border-top: 1px solid #dce4ed; color: #617082; font-size: 0.75rem; }
   .site-footer > div { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
   .site-footer strong { color: #33536c; font-size: 0.875rem; }
@@ -2925,6 +2942,9 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
   place-items: center;
   width: 100%;
   min-height: max(96px, calc(100dvh - var(--page-loader-top, 56px) - var(--page-loader-bottom, 0px)));
+}
+@media (min-width: 1024px) {
+  .page-loading-region .loading-dots { width: 64px; height: 64px; }
 }
 @media (max-width: 1023px) {
   .workspace-content .page-loading-region { --page-loader-bottom: var(--workspace-bottom-height, 80px); }

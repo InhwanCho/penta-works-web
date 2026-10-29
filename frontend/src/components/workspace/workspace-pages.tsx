@@ -163,7 +163,7 @@ export function TodayPage() {
         description="오늘의 일정과 팀의 업무를 확인하세요."
         action={
           <Link
-            className="work-primary desktop-work-action"
+            className="work-secondary hospital-register desktop-work-action"
             href="/work/new"
           >
             ＋ 업무기록
@@ -242,7 +242,7 @@ export function TodayPage() {
       </div>
       <Link
         href="/work/new"
-        className="work-primary work-floating"
+        className="work-secondary hospital-register work-floating"
       >
         ＋ 업무기록
       </Link>
@@ -372,7 +372,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
         action={
           <Link
             href="/work/new"
-            className="work-primary"
+            className="work-secondary hospital-register"
           >
             ＋ 작성
           </Link>

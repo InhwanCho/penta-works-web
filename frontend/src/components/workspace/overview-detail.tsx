@@ -70,7 +70,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
         <div className="work-form-actions">
           {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>일정 수정</Link>}
-          <Link className="work-primary" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>
+          <Link className="work-secondary hospital-register" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>
         </div>
       </section>) : <Empty>일정을 찾을 수 없습니다.</Empty>}
     </div>
