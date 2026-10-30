@@ -1318,7 +1318,7 @@ function InvitationSection({
                   type="button"
                   disabled={saving}
                   onClick={() => revoke(invitation.id)}
-                  className="action-cancel cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
+                  className="action-cancel action-danger cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50 dark:hover:bg-red-950/30"
                 >
                   취소
                 </button>

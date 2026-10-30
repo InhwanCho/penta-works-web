@@ -15,12 +15,12 @@ function harness(){
  });
  return {render(){cursor=0;exports.ContextHelpHost();effects.splice(0).forEach(fn=>fn());},show(title='설명'){listeners.get('mreyes-context-help')?.({detail:{title,message:'도움말'}});},advance(ms){now+=ms;for(const [i,t]of[...timers])if(t.at<=now){timers.delete(i);t.fn();}},get help(){return hooks[0];},get timers(){return timers.size;},outside(inside=false){listeners.get('pointerdown')?.({target:new Element(inside)});},escape(){listeners.get('keydown')?.({key:'Escape'});},navigate(){path='/notification-settings';this.render();},unmount(){hooks.forEach(h=>h?.cleanup?.());},get listeners(){return listeners.size;}};
 }
-test('help closes three seconds after the click without rerenders extending it',()=>{
- const h=harness();h.render();h.show();h.advance(2000);h.render();h.advance(999);assert.ok(h.help);h.advance(1);assert.equal(h.help,null);
+test('help remains readable until explicitly dismissed',()=>{
+ const h=harness();h.render();h.show();h.advance(2000);h.render();h.advance(999);assert.ok(h.help);h.advance(1);assert.ok(h.help);assert.equal(h.timers,0);h.advance(60000);assert.ok(h.help);
 });
-test('rapid help clicks replace the explanation and leave one timer for the last click',()=>{
- const h=harness();h.render();for(let i=0;i<100;i++){h.advance(20);h.show(String(i));}assert.equal(h.help.title,'99');assert.equal(h.timers,1);h.advance(2999);assert.ok(h.help);h.advance(1);assert.equal(h.help,null);
+test('rapid help clicks replace the explanation without creating auto-close timers',()=>{
+ const h=harness();h.render();for(let i=0;i<100;i++){h.advance(20);h.show(String(i));}assert.equal(h.help.title,'99');assert.equal(h.timers,0);h.advance(60000);assert.equal(h.help.title,'99');
 });
-test('outside click, Escape, navigation and unmount cancel stale help timers',()=>{
+test('outside click, Escape, navigation and unmount dismiss help and clean listeners',()=>{
  const h=harness();h.render();h.show();h.outside(true);assert.ok(h.help);h.outside();assert.equal(h.help,null);assert.equal(h.timers,0);h.show();h.escape();assert.equal(h.help,null);h.show();h.navigate();assert.equal(h.help,null);assert.equal(h.timers,0);h.show();h.unmount();assert.equal(h.timers,0);assert.equal(h.listeners,0);
 });

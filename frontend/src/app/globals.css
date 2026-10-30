@@ -2066,10 +2066,10 @@ h4,
 .action-menu { position: relative; flex-shrink: 0; color: var(--work-ink, #223e50); }
 .action-menu > summary { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 8px; font-size: 1.625rem; line-height: 1; list-style: none; cursor: pointer; }
 .action-menu > summary::-webkit-details-marker { display: none; }
-.action-menu > summary:hover { background: var(--work-hover, #eef4ff); }
+@media (hover: hover) { .action-menu > summary:hover { background: var(--work-hover, #eef4ff); } }
 .action-menu-items { position: absolute; top: calc(100% + 4px); right: 0; z-index: 40; min-width: 160px; padding: 5px; border: 1px solid var(--work-line, #dbe3ed); border-radius: 10px; background: var(--work-paper, #fff); box-shadow: 0 8px 24px #0002; }
 .action-menu-items > button { display: block; width: 100%; min-height: 44px; padding: 10px 12px; border-radius: 6px; text-align: left; font-size: 0.875rem; font-weight: 650; color: inherit; cursor: pointer; }
-.action-menu-items > button:hover { background: var(--work-hover, #eef4ff); }
+@media (hover: hover) { .action-menu-items > button:not(:disabled):hover { background: var(--work-hover, #eef4ff); } }
 .action-menu-items > button.is-danger { color: #b42318; }
 .action-menu-items > button:disabled { opacity: .5; cursor: default; }
 .dark .action-menu { color: var(--work-ink, #e1eaf0); }
@@ -3213,7 +3213,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .pm-date-copy small { font-size: .75rem; font-weight: 600; }
 .pm-date-copy strong { color: var(--work-ink); font-size: .9375rem; font-weight: 750; font-variant-numeric: tabular-nums; }
 .pm-date-action { display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0; font-size: .8125rem; font-weight: 750; }
-.pm-date-trigger:hover { background: var(--work-hover); }
+@media (hover: hover) { .pm-date-trigger:hover { background: var(--work-hover); } }
 .pm-date-trigger:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 2px; }
 .pm-date-fields { padding: 10px; border: 1px solid var(--work-focus); border-radius: 9px; background: var(--work-paper); }
 .pm-date-fields[hidden] { display: none; }
@@ -3849,4 +3849,96 @@ html.dark {
  }
  .work-day-dialog textarea.work-input { font-size: 16px; scroll-margin-block: 16px; }
  .workspace-frame .work-overview .overview-fold > summary { grid-template-columns: 106px 28px minmax(0,1fr); gap: 6px; }
+}
+
+/* Approved A2: calendar actions use dark surfaces in the dark theme. */
+.dark .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action {
+ background: #192d3d !important; color: #c2d0dc !important; border-color: #465c70 !important;
+}
+@media (hover: hover) {
+ .dark .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action:hover {
+  background: #315d80 !important; color: #e1f0ff !important; border-color: #6b9dc2 !important;
+ }
+}
+/* Approved B1: invitation revocation differs from ordinary editing cancellation. */
+.action-cancel.action-danger {
+ --action-ink: #a72e35; --action-line: #e1a0a5;
+ --action-hover-paper: #fbe1e3; --action-hover-line: #c96e78;
+}
+.dark .action-cancel.action-danger {
+ --action-ink: #ffced3; --action-line: #b56d7a;
+ --action-hover-paper: #562b34; --action-hover-line: #b56d7a;
+}
+@media (hover: hover) {
+ .action-cancel.action-danger:not(:disabled, [aria-disabled="true"]):hover { color: #8a2027 !important; }
+ .dark .action-cancel.action-danger:not(:disabled, [aria-disabled="true"]):hover { color: #ffced3 !important; }
+}
+
+/* Selected A1/A3: softer outline hover and consistent calendar action heights. */
+.work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action {
+ height: 40px !important; min-height: 40px !important;
+}
+@media (hover: hover) {
+ html:not(.dark) .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action:hover {
+  background: #fff !important; border-color: #7399bd !important; color: #325b80 !important;
+  box-shadow: inset 0 0 0 1px #7399bd !important;
+ }
+}
+@media (max-width:1023px) {
+ .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action {
+  height: 44px !important; min-height: 44px !important;
+ }
+}
+/* Selected B2: keep the selected surface separate from keyboard focus. */
+:is(button,a,summary,[role="button"],[role="tab"],[role="switch"],[role="option"],input:is([type="button"],[type="submit"],[type="reset"])):focus-visible,
+label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
+ outline: 2px solid #286a9e !important; outline-offset: 3px !important;
+}
+.dark :is(button,a,summary,[role="button"],[role="tab"],[role="switch"],[role="option"],input:is([type="button"],[type="submit"],[type="reset"])):focus-visible,
+.dark label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
+ outline-color: #94cfff !important;
+}
+/* Selected C1: filled primary actions; editing cancellation stays neutral. */
+:is(.work-primary,.management-primary,.hospital-register,.action-save):not(.action-cancel,.action-danger) {
+ background: #2868a8 !important; color: #fff !important; border-color: #2868a8 !important;
+}
+.dark :is(.work-primary,.management-primary,.hospital-register,.action-save):not(.action-cancel,.action-danger) {
+ background: #3576b6 !important; color: #fff !important; border-color: #3576b6 !important;
+}
+@media (hover: hover) {
+ :is(.work-primary,.management-primary,.hospital-register,.action-save):not(.action-cancel,.action-danger):not(:disabled,[aria-disabled="true"]):hover {
+  background: #1c4f83 !important; border-color: #1c4f83 !important;
+ }
+ .dark :is(.work-primary,.management-primary,.hospital-register,.action-save):not(.action-cancel,.action-danger):not(:disabled,[aria-disabled="true"]):hover {
+  background: #448acb !important; border-color: #448acb !important;
+ }
+}
+/* Selected C2: a 22px circular symbol inside a borderless 44px target. */
+.work-help-button {
+ display: inline-flex; align-items: center; justify-content: center; flex: 0 0 44px;
+ width: 44px; height: 44px; min-width: 44px; min-height: 44px; padding: 0;
+ border: 0; border-radius: 50%; background: transparent; color: #325b7d;
+ vertical-align: middle; cursor: pointer;
+}
+.work-help-symbol {
+ display: inline-grid; place-items: center; width: 22px; height: 22px;
+ border: 1.5px solid currentColor; border-radius: 50%; font-size: 13px; line-height: 1; font-weight: 700;
+}
+.dark .work-help-button { color: #c2d0dc; }
+@media (hover: hover) {
+ .work-help-button:hover { background: #d2e4f1; color: #235977; }
+ .dark .work-help-button:hover { background: #31556e; color: #e1f0ff; }
+}
+.workspace-frame .work-overview .overview-fold > summary { grid-template-columns: 116px 44px minmax(0,1fr); padding-block: 5px; }
+@media(max-width:1023px) {
+ .workspace-frame .work-overview .overview-fold > summary { grid-template-columns: 106px 44px minmax(0,1fr); }
+}
+/* Selected C3: touch feedback exists only while pressing, never as sticky hover. */
+@media (hover:none) {
+ :is(.action-menu > summary,.action-menu-items > button:not(:disabled),.pm-date-trigger):active {
+  background: #e2e9ef;
+ }
+ .dark :is(.action-menu > summary,.action-menu-items > button:not(:disabled),.pm-date-trigger):active {
+  background: #2d4b60;
+ }
 }

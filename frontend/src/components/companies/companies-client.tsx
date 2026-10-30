@@ -1047,7 +1047,7 @@ function CompanyCard({
                   type="button"
                   disabled={busy}
                   onClick={revoke}
-                  className="action-cancel rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
+                  className="action-cancel action-danger rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-600 dark:border-rose-900/40"
                 >
                   초대 취소
                 </button>

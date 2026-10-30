@@ -20,11 +20,11 @@ export default function HelpButton({ title, message }: Explanation) {
           }),
         );
       }}
-      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg align-middle text-sky-800 hover:bg-sky-100 focus-visible:outline-2 focus-visible:outline-sky-600 dark:text-sky-200 dark:hover:bg-slate-700"
+      className="work-help-button"
     >
       <span
         aria-hidden="true"
-        className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current text-xs font-extrabold"
+        className="work-help-symbol"
       >
         ?
       </span>

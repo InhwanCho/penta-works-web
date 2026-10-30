@@ -606,7 +606,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>다가오는 점검</span>
-            <button type="button" className="overview-list-help" aria-label="다가오는 점검 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "다가오는 점검 안내", body: "PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료 기록과 병원별 지정일로 계산합니다. 45일 이내 점검을 표시하며, 방문 확정 일정과는 다릅니다." }); }}>?</button>
+            <button type="button" className="overview-list-help work-help-button" aria-label="다가오는 점검 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "다가오는 점검 안내", body: "PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료 기록과 병원별 지정일로 계산합니다. 45일 이내 점검을 표시하며, 방문 확정 일정과는 다릅니다." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
             <small>
               45일 이내
               {!planningLoading && !planningFailed
@@ -655,7 +655,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>방문 전 확인사항</span>
-            <button type="button" className="overview-list-help" aria-label="방문 전 확인사항 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "방문 전 확인사항 안내", body: "업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." }); }}>?</button>
+            <button type="button" className="overview-list-help work-help-button" aria-label="방문 전 확인사항 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "방문 전 확인사항 안내", body: "업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
             <small>{preparations.filter((p) => !p.done).length}건 남음</small>
           </summary>
           <div className="overview-fold-body">
@@ -701,7 +701,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>최근 업무기록</span>
-            <button type="button" className="overview-list-help" aria-label="최근 업무기록 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "최근 업무기록 안내", body: "이번 주와 이전 4주의 업무기록을 표시합니다." }); }}>?</button>
+            <button type="button" className="overview-list-help work-help-button" aria-label="최근 업무기록 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "최근 업무기록 안내", body: "이번 주와 이전 4주의 업무기록을 표시합니다." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
             <small>
               {recent.isPending
                 ? <CircleLoader size="xs" inline />
