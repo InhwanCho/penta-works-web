@@ -32,6 +32,7 @@ import {
   scheduleTimeLabel,
   scheduleCategory,
   personalScheduleLabels,
+  isLeaveSchedule,
   type WorkRecord,
   type WorkSchedule,
 } from "./workspace-data";
@@ -656,12 +657,6 @@ export function SchedulePage() {
             <label>종료 날짜<input className="work-input" type="date" min={form.date} value={form.endDate} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
             <button type="button" className="work-text-button" onClick={event=>{setForm({...form,endDate:form.date});event.currentTarget.closest("details")?.removeAttribute("open");}}>하루 일정으로</button>
           </details>
-          <label className="work-check"><input type="checkbox" checked={form.allDay} onChange={event=>setForm({...form,allDay:event.target.checked,startTime:form.startTime === "00:00" ? "09:00" : form.startTime})} />종일</label>
-          {!form.allDay && <div className="work-form-row">
-            <label>시작 시간<input className="work-input" required type="time" value={form.startTime} onChange={event=>setForm({...form,startTime:event.target.value})} /></label>
-            <label>종료 시간 <small>{form.endDate > form.date ? "(여러 날 일정)" : "(선택)"}</small><input className="work-input" required={form.endDate > form.date} type="time" value={form.endTime} onChange={event=>setForm({...form,endTime:event.target.value})} /></label>
-          </div>}
-          {!form.allDay && <p className="work-hint">종료 시간을 비워두면 시작 시간만 표시합니다.</p>}
           <label>
             메모
             <textarea
@@ -720,15 +715,11 @@ export function SchedulePage() {
                   >
                     {scheduleCategory(s)}
                   </span>
-                  <h3>{s.title}</h3>
                 </div>
                 <ActionMenu
                   label={`${s.title} 일정 메뉴`}
                   items={[
-                    {
-                      label: "업무기록 작성",
-                      onSelect: () => router.push(`/work/new?schedule=${s.id}`),
-                    },
+                    ...(!isLeaveSchedule(s) ? [{label:"업무기록 작성",onSelect:()=>router.push(`/work/new?schedule=${s.id}`)}] : []),
                     ...(s.authorId === session?.id || isAdmin
                       ? [
                           {
@@ -797,10 +788,10 @@ export function SchedulePage() {
                   <dd>{s.authorName || "정보 없음"}</dd>
                 </div>
               </dl>
-              {s.body?.trim() && s.body.trim() !== s.title.trim() && (
+              {(s.body?.trim() || s.title) && (
                 <div className="schedule-card-note">
                   <span>메모</span>
-                  <p className="work-prewrap">{s.body}</p>
+                  <p className="work-prewrap">{s.body || s.title}</p>
                 </div>
               )}
             </article>

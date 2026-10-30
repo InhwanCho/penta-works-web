@@ -17,6 +17,7 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
   useWorkspace,
+  isLeaveSchedule,
   dayString,
   errorText,
   statusLabels,
@@ -44,7 +45,6 @@ const generalTypes: [string, string][] = [
   ["office", "사무실 업무"],
   ["education", "교육 · 세미나"],
   ["leave", "휴가"],
-  ["annual", "연차"],
   ["etc", "기타 일정"],
 ];
 export default function WorkEditor({ id }: { id?: string }) {
@@ -152,7 +152,7 @@ export default function WorkEditor({ id }: { id?: string }) {
       (s) => String(s.id) === search.get("schedule"),
     );
     linkedFromQuery.current = true;
-    if (!schedule) {
+    if (!schedule || isLeaveSchedule(schedule)) {
       setError("연결할 일정을 찾을 수 없습니다. 일정을 다시 선택해주세요.");
       return;
     }
@@ -529,6 +529,7 @@ export default function WorkEditor({ id }: { id?: string }) {
               >
                 <option value="">일정 없이 작성</option>
                 {(schedules.data || [])
+                  .filter(s=>!isLeaveSchedule(s))
                   .filter(
                     (s) =>
                       s.siteId ===
@@ -717,10 +718,6 @@ export function ReadRecord({ record: r }: { record: WorkRecord }) {
           ["담당자", d.engineer],
           ["증상 / 요청", d.symptom],
           ["교체 부품", d.parts],
-          [
-            "작업 시간",
-            d.startTime || d.endTime ? `${d.startTime} ~ ${d.endTime}` : "",
-          ],
           ["헬륨 레벨", d.heLevel ? d.heLevel + "%" : ""],
           [
             "Cold Head",

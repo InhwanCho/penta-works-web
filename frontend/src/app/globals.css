@@ -3984,3 +3984,12 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .inspection-due-auto { padding:8px 0; min-height:44px; background:transparent; border:0; color:var(--control-active-text); text-decoration:underline; text-underline-offset:3px; }
 .inspection-due-date .work-error { flex-basis:100%; }
 @media(max-width:600px) { .inspection-due-name { flex-basis:100%; } .inspection-due-links { margin-left:auto; } .inspection-due-name strong { font-size:16px; } }
+
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar { background:#dce8f8; }
+.dark .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { background:#294260; }
+.calendar-month-enter { animation: calendar-month-enter 150ms ease-out; }
+@keyframes calendar-month-enter { from { opacity:.65; transform:translateX(8px); } to { opacity:1; transform:translateX(0); } }
+@media(prefers-reduced-motion:reduce) { .calendar-month-enter { animation:none; } }
+
+.calendar-month-back { animation-name: calendar-month-back; }
+@keyframes calendar-month-back { from { opacity:.65; transform:translateX(-8px); } to { opacity:1; transform:translateX(0); } }

@@ -6,6 +6,7 @@ import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import ActionMenu from "@/components/common/action-menu";
+import { isLeaveSchedule } from "./workspace-data";
 import InspectionDueDate from "./inspection-due-date";
 import PmDateEditor from "./pm-date-editor";
 import WorkspaceSearch from "./workspace-search";
@@ -80,10 +81,12 @@ export default function OverviewPage() {
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
   const suppressCalendarClick = useRef(false);
-  const [month, setMonth] = useState(today.slice(0, 7)),
+  const [month, setMonthValue] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
     [error, setError] = useState("");
+  const [monthDirection,setMonthDirection] = useState(1);
+  const setMonth = (value:string|((current:string)=>string)) => { const next=typeof value === "function" ? value(month) : value; setMonthDirection(next < month ? -1 : 1); setMonthValue(next); };
   const { session, isAdmin } = useAuth();
   const router = useRouter();
   const [deletingSchedule, setDeletingSchedule] = useState<number | null>(null);
@@ -344,7 +347,7 @@ export default function OverviewPage() {
           pending={planningLoading}
           retry={retryPlanning}
         />
-        <div className="overview-calendar-inner"
+        <div key={month} className={`overview-calendar-inner calendar-month-enter${monthDirection < 0 ? " calendar-month-back" : ""}`}
           onPointerDown={(event) => {
             if (!event.isPrimary || event.button !== 0) return;
             suppressCalendarClick.current = false;
@@ -448,7 +451,7 @@ export default function OverviewPage() {
         <div className="work-calendar-legend">
           <span className="gcal-pm">● PM</span>
           <span className="gcal-acr">● ACR</span>
-          <span className="gcal-leave">● 휴가·연차</span>
+          <span className="gcal-leave">● 휴가</span>
           <span className="gcal-repair">● 고장수리·부품교체·설치</span>
           <span className="gcal-call">● 콜</span>
           <span className="gcal-office">● 사무실</span>
@@ -554,7 +557,7 @@ export default function OverviewPage() {
                       disabled: deletingSchedule !== null,
                       onSelect: () => router.push(`/schedule?date=${selected}&edit=${s.id}`),
                     }] : []),
-                    { label: "업무기록 작성", disabled: deletingSchedule !== null, onSelect: () => router.push(`/work/new?schedule=${s.id}`) },
+                    ...(!isLeaveSchedule(s) ? [{ label: "업무기록 작성", disabled: deletingSchedule !== null, onSelect: () => router.push(`/work/new?schedule=${s.id}`) }] : []),
                     ...(s.authorId === session?.id || isAdmin ? [{ label: "삭제", danger: true, disabled: deletingSchedule !== null, onSelect: () => void removeSchedule(s.id) }] : []),
                   ]} />
                   {s.serviceType === "PM" && s.siteId && <PmDateEditor siteId={s.siteId} date={s.startAt.slice(0,10)} schedule={s} />}

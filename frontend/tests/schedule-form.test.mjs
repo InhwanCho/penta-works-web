@@ -11,12 +11,12 @@ test('new hospital and general schedules default to all-day',()=>{
  assert.deepEqual(times(f),{startAt:'2026-10-27T00:00',endAt:'2026-10-27T23:59'});
  f.targetKind='HOSPITAL';f.endDate='2026-10-29';assert.equal(times(f).endAt,'2026-10-29T23:59');
 });
-test('date-only edits retain times and missing end time survives reopening',()=>{
+test('schedule saves always use whole days while retaining date ranges',()=>{
  const record={siteId:'001',title:'방문',body:'',startAt:'2026-10-27T09:00:00',endAt:'2026-10-27T10:00:00'};
  const f=out.scheduleEditForm(record);f.date='2026-10-28';f.endDate='2026-10-28';
- assert.deepEqual(times(f),{startAt:'2026-10-28T09:00',endAt:'2026-10-28T10:00'});
- f.endTime='';assert.deepEqual(times(f),{startAt:'2026-10-28T09:00',endAt:'2026-10-28T09:00'});
- assert.equal(out.scheduleEditForm({...record,...times(f)}).endTime,'');
+ assert.deepEqual(times(f),{startAt:'2026-10-28T00:00',endAt:'2026-10-28T23:59'});
+ f.endTime='';assert.deepEqual(times(f),{startAt:'2026-10-28T00:00',endAt:'2026-10-28T23:59'});
+ assert.equal(out.scheduleEditForm({...record,...times(f)}).allDay,true);
 });
 test('minor date or classification changes do not trigger leave warnings',()=>{
  const f=out.newScheduleForm('2026-10-27');f.title='a';assert.equal(out.substantialScheduleChange(f),false);
@@ -27,9 +27,9 @@ test('minor date or classification changes do not trigger leave warnings',()=>{
  edit.body='정전 이후 전원 인가 및 장비 상태 확인 예정';assert.equal(out.substantialScheduleChange(edit,old),true);
  const typo=out.scheduleEditForm(old);typo.title+='.';assert.equal(out.substantialScheduleChange(typo,old),false);
 });
-test('previous timestamp-based drafts retain date, times and entered text',()=>{
+test('previous timestamp-based drafts retain dates and text and save as whole days',()=>{
  const form=out.normalizeScheduleForm({title:'이전 작성 내용',body:'방문 메모',startAt:'2026-10-28T09:00',endAt:'2026-10-28T10:00'},'2026-10-26');
- assert.equal(form.date,'2026-10-28');assert.equal(form.title,'이전 작성 내용');assert.equal(form.allDay,false);assert.equal(times(form).endAt,'2026-10-28T10:00');
+ assert.equal(form.date,'2026-10-28');assert.equal(form.title,'이전 작성 내용');assert.equal(form.allDay,false);assert.equal(times(form).endAt,'2026-10-28T23:59');
 });
 
 test('quick PM date changes preserve times, duration and omitted end time across month boundaries',()=>{

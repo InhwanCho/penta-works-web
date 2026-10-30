@@ -20,11 +20,11 @@ public class WorkspacePlanning {
  var merged=new LinkedHashMap<String,Map<String,Object>>();
  for(var p:plans)merged.put(p.get("siteId").toString(),new LinkedHashMap<>(p));
  for(var last:db.queryForList("""
- SELECT site_id siteId,DATE_FORMAT(MAX(work_date),'%Y-%m-%d') lastVisitDate,
- DATE_FORMAT(MAX(CASE WHEN service_type='PM' OR counts_as_pm=TRUE THEN work_date END),'%Y-%m-%d') lastPmDate,
- DATE_FORMAT(MAX(CASE WHEN service_type='ACR' AND acr_kind='full' THEN work_date END),'%Y-%m-%d') lastAcrFullDate,
- DATE_FORMAT(MAX(CASE WHEN service_type='ACR' AND acr_kind IN ('full','doc') THEN work_date END),'%Y-%m-%d') lastAcrDocDate
- FROM workspace_record WHERE company_id=? AND deleted_at IS NULL AND status='COMPLETED' AND site_id IS NOT NULL GROUP BY site_id
+ SELECT site_id siteId,DATE_FORMAT(MAX(CASE WHEN COALESCE(service_type,'')<>'CALL' THEN work_date END),'%Y-%m-%d') lastVisitDate,
+ DATE_FORMAT(MAX(CASE WHEN status='COMPLETED' AND (service_type='PM' OR counts_as_pm=TRUE) THEN work_date END),'%Y-%m-%d') lastPmDate,
+ DATE_FORMAT(MAX(CASE WHEN status='COMPLETED' AND service_type='ACR' AND acr_kind='full' THEN work_date END),'%Y-%m-%d') lastAcrFullDate,
+ DATE_FORMAT(MAX(CASE WHEN status='COMPLETED' AND service_type='ACR' AND acr_kind IN ('full','doc') THEN work_date END),'%Y-%m-%d') lastAcrDocDate
+ FROM workspace_record WHERE company_id=? AND deleted_at IS NULL AND site_id IS NOT NULL GROUP BY site_id
  """,u.companyId())) {
   String sid=last.get("siteId").toString();if(!sites.contains(sid))continue;
   var plan=merged.computeIfAbsent(sid,key->{var row=new LinkedHashMap<String,Object>();row.put("siteId",key);row.put("pmIntervalMonths",2);return row;});

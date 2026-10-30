@@ -167,12 +167,6 @@ export default function ServiceFields({
           />
         </label>
       )}
-      {type !== "CALL" && (
-        <div className="work-form-row">
-          {field("startTime", "작업 시작", "time")}
-          {field("endTime", "작업 종료", "time")}
-        </div>
-      )}
       {["REPAIR", "COLDHEAD"].includes(type) &&
         field("heLevel", "헬륨 레벨 (%)", "number")}
     </>

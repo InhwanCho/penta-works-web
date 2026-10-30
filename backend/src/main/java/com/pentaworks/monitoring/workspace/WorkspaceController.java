@@ -177,8 +177,9 @@ public class WorkspaceController {
             if(raw!=null) {
                 if(!(raw instanceof Number n)||n.longValue()<=0||n.doubleValue()!=n.longValue())throw new BadRequestException("연결할 일정을 확인해주세요.");
                 schedule=n.longValue();
-                var rows=db.queryForList("SELECT site_id FROM workspace_schedule WHERE id=? AND company_id=? AND (deleted_at IS NULL OR id=(SELECT schedule_id FROM workspace_record WHERE id=? AND company_id=?)) FOR UPDATE",schedule,u.companyId(),id,u.companyId());
+                var rows=db.queryForList("SELECT site_id,personal_kind FROM workspace_schedule WHERE id=? AND company_id=? AND (deleted_at IS NULL OR id=(SELECT schedule_id FROM workspace_record WHERE id=? AND company_id=?)) FOR UPDATE",schedule,u.companyId(),id,u.companyId());
                 if(rows.isEmpty()||!java.util.Objects.equals(sid,rows.get(0).get("site_id")))throw new BadRequestException("같은 병원의 일정만 연결할 수 있습니다.");
+                if(List.of("leave","annual").contains(String.valueOf(rows.get(0).get("personal_kind"))))throw new BadRequestException("휴가 일정에는 업무기록을 작성할 수 없습니다.");
                 if(sid!=null)users.requireSiteAccess(u,sid);
             }
             db.update("UPDATE workspace_record SET schedule_id=? WHERE id=? AND company_id=?",schedule,id,u.companyId());
