@@ -3798,7 +3798,8 @@ html.dark {
 .overview-list-help { display: inline-grid; place-items: center; flex-shrink: 0; width: 28px; height: 28px; border: 1px solid var(--work-line); border-radius: 50%; color: var(--work-muted); background: var(--work-paper); font-size: 12px; font-weight: 600; }
 .overview-list-help-copy { padding: 16px; color: var(--work-muted); font-size: 14px; line-height: 1.8; }
 @media (hover: hover) {
- .overview-list-help:hover { color: var(--work-focus); background: var(--work-soft); }
+ .overview-list-help:hover { color: #174b7a; background: #c9e2fa; border-color: #80afd8; }
+ .dark .overview-list-help:hover { color: #e1f0ff; background: #315d80; border-color: #6b9dc2; }
  .work-overview .overview-preparation-group .work-preparation:hover { background: var(--work-hover); }
 }
 @media (max-width: 767px) {
