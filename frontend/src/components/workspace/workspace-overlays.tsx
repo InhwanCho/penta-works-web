@@ -2,12 +2,13 @@
 import { Suspense, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
+import PageLoader from "@/components/common/page-loader";
 import WorkspaceDrawer from "./workspace-drawer";
 import { OverlayNavigation, isWorkspaceOverlay } from "./overlay-navigation";
-const WorkEditor = dynamic(() => import("./work-editor"));
-const WorkPage = dynamic(() => import("./workspace-pages").then(m => m.WorkPage));
+const WorkEditor = dynamic(() => import("./work-editor"), { loading: () => <PageLoader /> });
+const WorkPage = dynamic(() => import("./workspace-pages").then(m => m.WorkPage), { loading: () => <PageLoader /> });
 const OverviewDetail = dynamic(() => import("./overview-detail"));
-const SchedulePage = dynamic(() => import("./workspace-pages").then(m => m.SchedulePage));
+const SchedulePage = dynamic(() => import("./workspace-pages").then(m => m.SchedulePage), { loading: () => <PageLoader /> });
 export default function WorkspaceOverlays() {
  const pathname = usePathname(); const router = useRouter();
  const [stack, setStack] = useState<{ key: number; href: string }[]>([]);
@@ -25,7 +26,7 @@ export default function WorkspaceOverlays() {
   const close = () => { if (!window.dispatchEvent(new CustomEvent("workspace-overlay-close", { cancelable: true, detail: entry.href }))) return; setStack(s => s.slice(0, index)); if (index === 0 && isWorkspaceOverlay(pathname)) router.replace("/overview"); };
   return <OverlayNavigation.Provider key={entry.key} value={{ href: entry.href, close, push: href => window.dispatchEvent(new CustomEvent("workspace-overlay", { detail: href })), replace: href => setStack(s => s.map((item, i) => i === index ? { ...item, href } : item)) }}>
    {schedule && url.hash.startsWith("#schedule-") ? <OverviewDetail href={entry.href} onClose={close} /> : <WorkspaceDrawer title={title} onClose={close} className="workspace-route-overlay">
-    <Suspense fallback={<p role="status">불러오는 중…</p>}>
+    <Suspense fallback={<PageLoader />}>
      {schedule ? <SchedulePage key={entry.href} /> : id || url.pathname === "/work/new" ? <WorkEditor key={url.pathname} id={id} /> : <WorkPage onlyOpen={url.searchParams.get("status") === "open"} />}
     </Suspense>
    </WorkspaceDrawer>}

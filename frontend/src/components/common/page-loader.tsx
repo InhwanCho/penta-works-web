@@ -9,6 +9,11 @@ export default function PageLoader({ as: Tag = "div" }: { as?: "main" | "div" })
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
+    const overlay = element.closest<HTMLElement>(".workspace-drawer-content,.workspace-dialog-content,dialog,[role=dialog]");
+    if (overlay) {
+      element.dataset.overlay = "true";
+      return () => { delete element.dataset.overlay; };
+    }
     const navigation = document.querySelector<HTMLElement>(".workspace-bottom");
     const parent = element.parentElement;
     const measure = () => {

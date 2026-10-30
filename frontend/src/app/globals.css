@@ -3958,3 +3958,13 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .day-due-actions .pm-date-fields { flex: 1 0 100%; min-width: 0; }
 .pm-date-readonly { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; }
 .pm-date-readonly small { font-size: 11px; color: var(--work-muted); }
+
+/* Center overlay loading in the actual visible body, independent of page/nav height. */
+:is(dialog,[role="dialog"]) .page-loading-region[data-overlay="true"] {
+ height: auto; min-height: 280px;
+ padding: 0; margin: 0; display: grid; place-items: center;
+}
+.work-day-dialog .page-loading-region .loading-spinner { margin: 0; }
+
+:is(.workspace-dialog-content,.workspace-drawer-content):has(.page-loading-region[data-overlay="true"]) { position: relative; }
+.work-day-dialog :is(.workspace-dialog-content,.workspace-drawer-content) .page-loading-region[data-overlay="true"] { position: absolute; inset: 0; height: 100%; min-height: 0; }

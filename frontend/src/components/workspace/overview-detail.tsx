@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "@/components/common/app-link";
-import CircleLoader from "@/components/icons/circle-loader";
+import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
 import PmDateEditor from "./pm-date-editor";
@@ -47,7 +47,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
     onBack={history.length ? () => setHistory(value => value.slice(0, -1)) : undefined}
     onOpenDetail={next => setHistory(value => [...value, next])} scrollKey={current} className="overview-detail-drawer">
     <div className="overview-detail-body" key={current}>
-      {recordId ? record.isPending ? <CircleLoader size="m" /> : record.error ? <ErrorState error={record.error} retry={() => void record.refetch()} /> : record.data && <>
+      {recordId ? record.isPending ? <PageLoader /> : record.error ? <ErrorState error={record.error} retry={() => void record.refetch()} /> : record.data && <>
         <p className="work-hint">{record.data.workDate} · {record.data.authorName}</p>
         <ReadRecord record={record.data} />
         <Link href={`/work/${recordId}?view=page`} className="work-secondary">업무기록 페이지 열기</Link>
@@ -61,7 +61,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <HospitalSection key={`${siteId}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
           <HospitalWork siteId={siteId} />
         </HospitalSection>
-      </> : schedules.isPending ? <CircleLoader size="m" /> : schedules.error ? <ErrorState error={schedules.error} retry={() => void schedules.refetch()} /> : rows.length ? rows.map(row => <section className="work-panel overview-schedule-detail" key={row.id}>
+      </> : schedules.isPending ? <PageLoader /> : schedules.error ? <ErrorState error={schedules.error} retry={() => void schedules.refetch()} /> : rows.length ? rows.map(row => <section className="work-panel overview-schedule-detail" key={row.id}>
         <div className="overview-detail-meta"><span className="work-badge">{scheduleCategory(row)}</span><small>{row.authorName}</small></div>
         <h2>{row.title}</h2>
         {row.siteId && <Link className="overview-detail-site" href={`/sites/${row.siteId}`}>{row.siteName} →</Link>}
