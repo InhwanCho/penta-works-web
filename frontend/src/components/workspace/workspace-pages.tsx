@@ -6,7 +6,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
-import { useRouter, useSearchParams } from "./overlay-navigation";
+import { useSearchParams } from "./overlay-navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
