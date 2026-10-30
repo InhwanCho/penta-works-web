@@ -589,8 +589,9 @@ export default function OverviewPage() {
                     title={d.siteName}
                     meta={`최근 PM ${d.lastPmDate || "기록 없음"}`}
                   />
-                  <Link className="work-secondary inspection-record-create" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${d.type === "PM" ? "PM" : "ACR"}&acrKind=${d.type.includes("정밀") ? "full" : "doc"}`}>업무기록 작성</Link>
-                  {d.type === "PM" && <PmDateEditor siteId={d.siteId} date={d.date} />}
+                  <div className="day-due-actions"><Link className="work-secondary inspection-record-create" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${d.type === "PM" ? "PM" : "ACR"}&acrKind=${d.type.includes("정밀") ? "full" : "doc"}`}>업무기록 작성</Link>
+                  {d.type === "PM" && <PmDateEditor siteId={d.siteId} date={d.date} compact />}
+                  </div>
                   </div>
                 ))}
               </div>

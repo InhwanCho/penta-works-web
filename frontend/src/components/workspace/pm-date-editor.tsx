@@ -6,13 +6,14 @@ import { apiFetch } from "@/lib/api";
 import { usePlanning, errorText, type WorkSchedule } from "./workspace-data";
 import { moveScheduleDate } from "./schedule-form";
 
-export default function PmDateEditor({ siteId, date, schedule }: { siteId: string; date: string; schedule?: WorkSchedule }) {
+export default function PmDateEditor({ siteId, date, schedule, compact = false }: { siteId: string; date: string; schedule?: WorkSchedule; compact?: boolean }) {
   const { session, isAdmin } = useAuth();
   const planning = usePlanning();
   const qc = useQueryClient();
   const editorId = useId();
   const [editing,setEditing] = useState(false), [value,setValue] = useState(date), [busy,setBusy] = useState(false), [error,setError] = useState("");
-  if (schedule ? schedule.authorId !== session?.id && !isAdmin : !isAdmin) return null;
+  if (!session) return null;
+  if (schedule ? schedule.authorId !== session.id && !isAdmin : !isAdmin) return compact ? <span className="pm-date-readonly"><button type="button" className="work-secondary" disabled>날짜 변경</button><small>관리자만 변경</small></span> : null;
   async function save() {
     setBusy(true);setError("");
     try {
@@ -29,14 +30,14 @@ export default function PmDateEditor({ siteId, date, schedule }: { siteId: strin
       setEditing(false);
     } catch(error) { setError(errorText(error)); } finally { setBusy(false); }
   }
-  return <div className="pm-quick-date">
-    {!editing && <button type="button" className="pm-date-trigger" aria-expanded={false} aria-controls={editorId} onClick={()=>{setValue(date);setError("");setEditing(true);}}>
+  return <div className={`pm-quick-date${compact ? " pm-quick-date-compact" : ""}`}>
+    {!editing && <button type="button" className={compact ? "work-secondary pm-date-compact-trigger" : "pm-date-trigger"} aria-label="PM 날짜 변경" aria-expanded={false} aria-controls={editorId} onClick={()=>{setValue(date);setError("");setEditing(true);}}>
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M7 3v4m10-4v4M3 11h18m-11 4h4" /></svg>
-      <span className="pm-date-copy"><small>PM {schedule ? "일정 날짜" : "예정일"}</small><strong>{date}</strong></span>
+      {!compact && <span className="pm-date-copy"><small>PM {schedule ? "일정 날짜" : "예정일"}</small><strong>{date}</strong></span>}
       <span className="pm-date-action">날짜 변경<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5" /></svg></span>
     </button>}
     <div id={editorId} className="pm-date-fields" hidden={!editing}>
-      <label>PM {schedule ? "일정 날짜" : "예정일"}<input type="date" className="work-input" value={value} disabled={busy} required onChange={event=>setValue(event.target.value)} /></label>
+      <label htmlFor={`${editorId}-date`}>PM {schedule ? "일정 날짜" : "예정일"}<input id={`${editorId}-date`} type="date" className="work-input" value={value} disabled={busy} required onChange={event=>setValue(event.target.value)} /></label>
       <div className="pm-quick-date-actions"><button className="action-cancel work-secondary" type="button" disabled={busy} onClick={()=>{setEditing(false);setError("");}}>취소</button><button type="button" className="action-save work-primary" disabled={busy || !value || value===date} onClick={()=>void save()}>{busy ? "저장 중" : "날짜 저장"}</button></div>
       {error && <p className="work-error" role="alert">{error}</p>}
     </div>
