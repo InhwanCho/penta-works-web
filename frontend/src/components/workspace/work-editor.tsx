@@ -4,7 +4,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
 import { useEffect, useState, useRef, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "./overlay-navigation";
 import Link from "@/components/common/app-link";
 import WorkspaceDrawer from "./workspace-drawer";
 import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
@@ -63,7 +63,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   const [form, setForm] = useState({
     kind: "FIELD",
     siteId: search.get("site") || "",
-    serviceType: "PM",
+    serviceType: ["PM", "ACR"].includes(search.get("type") || "") ? search.get("type")! : "PM",
     title: "",
     body: "",
     workDate: search.get("date") || dayString(),
@@ -71,6 +71,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   });
   const [details, setDetails] = useState<WorkDetails>(() => ({
       ...initialDetails(),
+      ...(["full", "doc"].includes(search.get("acrKind") || "") ? { acrKind: search.get("acrKind")! } : {}),
       assetIds:
         search.get("asset") && /^\d+$/.test(search.get("asset")!)
           ? [Number(search.get("asset"))]

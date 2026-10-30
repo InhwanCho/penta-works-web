@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useId, useRef, useState, type ReactNode, type PointerEvent } from "react";
 
+import { isWorkspaceOverlay, openWorkspaceOverlay } from "./overlay-navigation";
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
 
 let openDrawers = 0;
@@ -136,10 +137,12 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     </header>
     <div ref={contentRef} className={mobile ? "workspace-drawer-content" : `workspace-dialog-content${className ? "" : " work-day-body"}`} onClickCapture={event => {
       if (suppressClick.current) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); return; }
-      if (!mobile || !onOpenDetail || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || !(event.target instanceof Element)) return;
       const link = event.target.closest("a");
       const href = link?.getAttribute("href");
       if (!href || link?.target === "_blank") return;
+      if (isWorkspaceOverlay(href)) { event.preventDefault(); event.stopPropagation(); openWorkspaceOverlay(href); return; }
+      if (!onOpenDetail) return;
       if (/^\/work\/\d+$/.test(href) || /^\/sites\/[^/?#]+(?:#inspection-plan)?$/.test(href) || (/^\/schedule\?/.test(href) && !/[?&](new|edit)=/.test(href))) {
         event.preventDefault();
         event.stopPropagation();

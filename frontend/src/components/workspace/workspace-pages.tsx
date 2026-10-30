@@ -6,7 +6,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "./overlay-navigation";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
@@ -515,7 +515,7 @@ export function SchedulePage() {
             personalKind:
               form.targetKind === "GENERAL" ? form.personalKind : null,
             serviceType:
-              form.targetKind === "HOSPITAL" ? form.serviceType : null,
+              form.targetKind === "HOSPITAL" ? (form.serviceType.startsWith("ACR_") ? "ACR" : form.serviceType) : null,
           }),
         },
       );
@@ -645,8 +645,8 @@ export function SchedulePage() {
               <ChoiceGroup
                 legend="서비스 유형"
                 value={form.serviceType}
-                options={Object.entries(serviceLabels)}
-                onChange={(serviceType) => setForm({ ...form, serviceType })}
+                options={Object.entries(serviceLabels).flatMap(([key, label]) => key === "CALL" ? [] : key === "ACR" ? [["ACR_DOC", "ACR 서류"], ["ACR_FULL", "ACR 정밀"]] : [[key, label]])}
+                onChange={(serviceType) => setForm({ ...form, serviceType, title: !form.title.trim() || Object.values(serviceLabels).includes(form.title) || ["ACR 서류", "ACR 정밀"].includes(form.title) ? (serviceType === "ACR_DOC" ? "ACR 서류" : serviceType === "ACR_FULL" ? "ACR 정밀" : serviceLabels[serviceType]) : form.title })}
               />
               <div className="work-picker-field">
                 병원 *

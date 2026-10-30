@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+import { OverlayNavigation } from "./overlay-navigation";
 export function useWorkDraft<T>({
   storageKey,
   value,
@@ -17,6 +18,13 @@ export function useWorkDraft<T>({
   shouldKeep?: (value: T, baseline?: T) => boolean;
   warnOnLeave?: boolean;
 }) {
+  const overlay = useContext(OverlayNavigation);
+  useEffect(() => {
+    if (!overlay) return;
+    const close = (event: Event) => { if ((event as CustomEvent<string>).detail === overlay.href && dirtyRef.current && !window.confirm("저장하지 않은 내용이 있습니다. 닫을까요?")) event.preventDefault(); };
+    window.addEventListener("workspace-overlay-close", close);
+    return () => window.removeEventListener("workspace-overlay-close", close);
+  }, [overlay]);
   const keep = useRef(shouldKeep);
   keep.current = shouldKeep;
   const encoded = JSON.stringify(value),
@@ -124,7 +132,7 @@ export function useWorkDraft<T>({
   // Browser back/forward is not a link click. Prefer cancellable navigation where available.
   const replaceAfterGuard = useRef<(() => void) | null>(null);
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || overlay) return;
     const navigation = (window as unknown as { navigation?: EventTarget })
       .navigation;
     if (navigation) {
@@ -201,6 +209,7 @@ export function useWorkDraft<T>({
       } else action();
     },
     back: (fallback: () => void) => {
+      if (overlay) { overlay.close(); return; }
       // Ignore the extra Safari guard entry when deciding whether a prior page exists.
       if((historyBaseLength.current ?? window.history.length)>1)window.history.back();
       else if(confirmLeave())fallback();

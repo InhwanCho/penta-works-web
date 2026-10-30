@@ -3680,3 +3680,69 @@ html.dark {
  .work-picker-trigger, .dropdown-trigger, .work-schedule-link):not(.selected, :focus-visible, [aria-expanded="true"], [aria-invalid="true"]):not(:has(input:checked, input:focus-visible)) {
  border-color: var(--reference-input-line);
 }
+
+/* Overview reference layout: separate date tiles and quiet, collapsible lists. */
+.workspace-frame .work-overview .work-calendar { padding: 0; background: var(--work-bg); box-shadow: none; }
+.work-overview .work-calendar .work-calendar-toolbar { padding: 12px 14px; gap: 8px; flex-wrap: nowrap; background: #206681; color: #fff; border-bottom: 0; }
+.work-overview .work-calendar-toolbar > .overview-month-picker { position: relative; flex: 0 1 auto; min-width: 0; display: inline-flex; align-items: center; min-height: 44px; cursor: pointer; }
+.overview-month-picker strong { font-size: 15px; font-weight: 800; letter-spacing: -.02em; white-space: nowrap; }
+.work-overview .work-calendar-toolbar .overview-month-picker input[type=month] { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; opacity: 0; padding: 0; cursor: pointer; }
+.overview-month-picker:focus-within { outline: 1px solid #fff; outline-offset: 2px; border-radius: 5px; }
+.work-overview .work-calendar .work-calendar-toolbar > button { flex-shrink: 0; min-width: 36px; min-height: 40px; color: #fff !important; border: 1px solid #ffffff60 !important; border-radius: 8px; background: #ffffff18 !important; box-shadow: none !important; }
+.work-overview .work-calendar .work-calendar-toolbar > button[aria-label$=" 달"] { border-color: transparent !important; background: transparent !important; }
+.work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { margin-left: auto; min-width: 0; }
+.work-overview .work-calendar .work-calendar-toolbar > .work-calendar-today { margin-left: 0; padding: 8px 12px; }
+@media (hover: hover) { .work-overview .work-calendar .work-calendar-toolbar > button:hover { background: #ffffff30 !important; } }
+.work-overview .overview-calendar-inner { padding: 14px; }
+.work-overview .overview-calendar-inner .work-calendar-grid { gap: 3px; }
+.work-overview .overview-calendar-inner .weekdays { padding: 2px 0; margin-bottom: 4px; font-size: 11px; font-weight: 600; background: transparent; }
+.work-overview .work-calendar .work-calendar-day { min-height: 96px; padding: 4px 4px 5px; gap: 2px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); text-align: left; box-shadow: none; }
+.work-overview .work-calendar .work-calendar-day > span { align-self: flex-start; margin: 0; min-width: 20px; width: 20px; height: 20px; line-height: 20px; font-size: 12px; font-weight: 600; background: transparent; color: var(--work-ink); }
+.work-overview .work-calendar .work-calendar-day:nth-child(7n+1) > span { color: #c34b48; }
+.work-overview .work-calendar .work-calendar-day:nth-child(7n) > span { color: #376eaa; }
+.work-overview .work-calendar .work-calendar-day.outside { opacity: .45; background: var(--work-paper); }
+.work-overview .work-calendar .work-calendar-day.today { background: var(--work-soft); border-color: #91b2c5; }
+.work-overview .work-calendar .work-calendar-day.today > span { color: #206681; font-weight: 800; }
+.work-overview .work-calendar .work-calendar-day.selected { border-color: #7babbf; background: var(--work-paper) !important; }
+.work-overview .work-calendar .work-calendar-day.selected::after { content: none; }
+.work-overview .work-calendar .work-calendar-day.selected > span { background: #206681; color: #fff; border-radius: 50%; font-weight: 800; }
+@media (hover: hover) { .work-overview .work-calendar .work-calendar-day:hover { border-color: #7babbf; } }
+.work-overview .work-calendar .work-calendar-tags { margin-top: 0; gap: 2px; }
+.work-overview .work-calendar .work-calendar-tags > span { padding: 1px 4px; border-radius: 5px; font-size: 10px; font-weight: 600; line-height: 1.35; }
+.work-overview .work-calendar .work-calendar-legend { padding: 8px 14px 12px; border-top: 0; background: var(--work-bg); }
+.workspace-frame .work-overview .overview-folds { gap: 18px; margin-top: 22px; }
+.workspace-frame .work-overview .overview-fold { border: 0; border-radius: 0; background: transparent; box-shadow: none; overflow: visible; }
+.workspace-frame .work-overview .overview-fold > summary { min-height: 44px; padding: 8px 30px 8px 2px; font-size: 15px; font-weight: 800; letter-spacing: -.02em; border-radius: 8px; }
+.workspace-frame .work-overview .overview-fold > summary small { font-size: 12px; font-weight: 500; letter-spacing: 0; }
+.work-overview .overview-fold[open] > summary { margin-bottom: 8px; }
+.work-overview .overview-fold-body { max-height: min(640px, 72dvh); overflow-y: auto; overscroll-behavior-y: contain; scrollbar-gutter: stable; padding: 10px 14px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); }
+.work-overview .overview-fold-body > .work-panel { margin: 0; border-radius: 0; background: transparent; }
+.work-overview .overview-fold-body :is(.work-due-row,.recent-work-record) { padding: 12px 2px; gap: 12px; border-radius: 0; border-bottom: 1px solid var(--work-line); }
+.work-overview .overview-fold-body :is(.work-due-row,.recent-work-record):last-child { border-bottom: 0; }
+.work-overview .work-due-row strong, .work-overview .recent-work-content > strong { font-size: 14px; font-weight: 600; }
+.work-overview .overview-preparation-group { padding: 8px 0; }
+.work-overview .recent-work-week-heading { padding: 8px; border-radius: 6px; }
+@media (max-width: 767px) {
+ .work-overview .work-calendar .work-calendar-toolbar { padding: 8px; gap: 2px; }
+ .work-overview .work-calendar-toolbar > .overview-month-picker { flex: 0 1 auto; }
+ .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { padding: 8px 10px !important; }
+ .work-overview .overview-calendar-inner { padding: 8px; }
+ .work-overview .work-calendar .work-calendar-day { min-height: 76px; padding: 3px 2px; border-radius: 8px; }
+ .work-overview .work-calendar .work-calendar-tags > span { font-size: 9px; padding: 1px 2px; }
+}
+@media (max-width: 1023px) {
+ .work-overview .overview-fold-body { max-height: min(360px, 55dvh); padding: 8px 10px; }
+ .workspace-bottom { padding-top: 7px; padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+}
+
+/* Let vertical touch scrolling remain native while handling horizontal month swipes. */
+.work-overview .overview-calendar-inner { touch-action: pan-y pinch-zoom; user-select: none; -webkit-user-select: none; }
+
+.planning-summary dd { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; }
+.planning-date-edit { min-height: 40px; padding: 6px 10px; border: 1px solid var(--work-line); border-radius: 8px; color: var(--work-focus); font-size: .8125rem; font-weight: 600; }
+.inspection-record-create { display: inline-flex; align-items: center; justify-content: center; margin: 8px 12px; }
+
+.workspace-route-overlay.workspace-desktop-dialog { width: min(1000px, calc(100vw - 48px)); max-height: 90dvh; }
+.workspace-route-overlay .work-page { width: 100%; max-width: none; margin: 0; padding: 20px; }
+.workspace-route-overlay .work-authoring-header { position: static; }
+@media (max-width: 1023px) { .workspace-route-overlay .work-page { padding: 14px 10px; } }

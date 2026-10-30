@@ -1,7 +1,5 @@
 "use client";
 
-import PmDateEditor from "./pm-date-editor";
-import { nextDue } from "./work-planning";
 import CircleLoader from "@/components/icons/circle-loader";
 
 import { useState, type FormEvent } from "react";
@@ -46,18 +44,17 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
             </div>
             <div>
               <dt>PM 지정일</dt>
-              <dd>{plan?.pmOverride || "자동 계산"}</dd>
+              <dd>{plan?.pmOverride || "자동 계산"}{isAdmin && <button type="button" className="planning-date-edit" onClick={() => setEditing(true)}>날짜 변경</button>}</dd>
             </div>
             <div>
               <dt>ACR 정밀 지정일</dt>
-              <dd>{plan?.acrFullOverride || "자동 계산 · 36개월"}</dd>
+              <dd>{plan?.acrFullOverride || "자동 계산 · 36개월"}{isAdmin && <button type="button" className="planning-date-edit" onClick={() => setEditing(true)}>날짜 변경</button>}</dd>
             </div>
             <div>
               <dt>ACR 서류 지정일</dt>
-              <dd>{plan?.acrDocOverride || "자동 계산 · 12개월"}</dd>
+              <dd>{plan?.acrDocOverride || "자동 계산 · 12개월"}{isAdmin && <button type="button" className="planning-date-edit" onClick={() => setEditing(true)}>날짜 변경</button>}</dd>
             </div>
           </dl>
-          {nextDue(plan?.lastPmDate || undefined, plan?.pmOverride, plan?.pmIntervalMonths || 2) && <PmDateEditor siteId={siteId} date={nextDue(plan?.lastPmDate || undefined, plan?.pmOverride, plan?.pmIntervalMonths || 2)!} />}
           <div className="hospital-panel-actions planning-actions">
             <details className="planning-guide">
               <summary><span>점검 기준 안내</span><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg></summary>

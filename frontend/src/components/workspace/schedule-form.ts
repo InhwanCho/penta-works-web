@@ -2,7 +2,7 @@ import type { WorkSchedule } from "./workspace-data";
 import { changedTextSize, MIN_DRAFT_TEXT } from "./draft-content";
 export function scheduleEditForm(s: Pick<WorkSchedule, "targetKind" | "siteId" | "personalKind" | "serviceType" | "title" | "body" | "startAt" | "endAt">) {
   return {
-    targetKind: s.targetKind || (s.siteId ? "HOSPITAL" : "GENERAL"), personalKind: s.personalKind || "etc", serviceType: s.serviceType || "ETC",
+    targetKind: s.targetKind || (s.siteId ? "HOSPITAL" : "GENERAL"), personalKind: s.personalKind || "etc", serviceType: s.serviceType === "ACR" ? (s.title.includes("정밀") ? "ACR_FULL" : "ACR_DOC") : s.serviceType || "ETC",
     title: s.title, siteId: s.siteId || "", body: s.body || "",
     date: s.startAt.slice(0,10), endDate: s.endAt.slice(0,10),
     allDay: s.startAt.slice(11,16) === "00:00" && s.endAt.slice(11,16) === "23:59",

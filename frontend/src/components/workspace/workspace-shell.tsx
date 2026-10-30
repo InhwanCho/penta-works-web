@@ -1,4 +1,8 @@
 "use client";
+import WorkspaceOverlays from "./workspace-overlays";
+import dynamic from "next/dynamic";
+import { isWorkspaceOverlay } from "./overlay-navigation";
+const OverlayBackground = dynamic(() => import("./workspace-overview"));
 import SiteFooter from "@/components/legal/site-footer";
 import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import Link from "@/components/common/app-link";
@@ -167,7 +171,7 @@ export default function WorkspaceShell({ children }: { children: ReactNode }) {
         ))}
       </aside>
       <div className="workspace-content">
-        <div className="workspace-page-content">{children}</div>
+        <div className="workspace-page-content">{isWorkspaceOverlay(path) ? <OverlayBackground /> : children}</div><WorkspaceOverlays />
         <SiteFooter />
       </div>
       <nav

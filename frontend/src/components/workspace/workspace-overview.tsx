@@ -11,8 +11,8 @@ import { groupRecentWorkByWeek, recentWorkWindow } from "./recent-work-weeks";
 import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
-import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useRouter } from "./overlay-navigation";
+import { useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
@@ -73,6 +73,8 @@ export default function OverviewPage() {
   const mobile = useMobileWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailHref, setDetailHref] = useState<string | null>(null);
+  const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
+  const suppressCalendarClick = useRef(false);
   const [month, setMonth] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
@@ -290,7 +292,8 @@ export default function OverviewPage() {
           >
             ‹
           </button>
-          <label>
+          <label className="overview-month-picker">
+            <strong aria-hidden="true">{Number(month.slice(0, 4))}년 {Number(month.slice(5))}월</strong>
             <span className="sr-only">조회 연월</span>
             <input
               type="month"
@@ -334,6 +337,46 @@ export default function OverviewPage() {
           pending={planningLoading}
           retry={retryPlanning}
         />
+        <div className="overview-calendar-inner"
+          onPointerDown={(event) => {
+            if (!event.isPrimary || event.button !== 0) return;
+            suppressCalendarClick.current = false;
+            calendarGesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
+          }}
+          onPointerMove={(event) => {
+            const start = calendarGesture.current;
+            if (!start || start.id !== event.pointerId) return;
+            const dx = event.clientX - start.x;
+            const dy = event.clientY - start.y;
+            if (Math.abs(dy) > 20 && Math.abs(dy) > Math.abs(dx)) {
+              calendarGesture.current = null;
+              return;
+            }
+            if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+              suppressCalendarClick.current = true;
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }
+          }}
+          onPointerUp={(event) => {
+            const start = calendarGesture.current;
+            calendarGesture.current = null;
+            if (!start || start.id !== event.pointerId) return;
+            const dx = event.clientX - start.x;
+            const dy = event.clientY - start.y;
+            if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+              suppressCalendarClick.current = true;
+              setMonth((current) => addCalendarMonths(current + "-01", dx < 0 ? 1 : -1).slice(0, 7));
+            }
+          }}
+          onPointerCancel={() => { calendarGesture.current = null; }}
+          onClickCapture={(event) => {
+            if (suppressCalendarClick.current) {
+              event.preventDefault();
+              event.stopPropagation();
+              suppressCalendarClick.current = false;
+            }
+          }}
+        >
         <div className="work-calendar-grid weekdays">
           {["일", "월", "화", "수", "목", "금", "토"].map((w) => (
             <span key={w}>{w}</span>
@@ -393,6 +436,7 @@ export default function OverviewPage() {
               </button>
             );
           })}
+        </div>
         </div>
         <div className="work-calendar-legend">
           <span className="gcal-pm">● PM</span>
@@ -543,6 +587,7 @@ export default function OverviewPage() {
                     title={d.siteName}
                     meta={`최근 PM ${d.lastPmDate || "기록 없음"}`}
                   />
+                  <Link className="work-secondary inspection-record-create" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${d.type === "PM" ? "PM" : "ACR"}&acrKind=${d.type.includes("정밀") ? "full" : "doc"}`}>업무기록 작성</Link>
                   {d.type === "PM" && <PmDateEditor siteId={d.siteId} date={d.date} />}
                   </div>
                 ))}

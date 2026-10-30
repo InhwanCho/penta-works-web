@@ -1,5 +1,5 @@
 "use client";
-import { useRouter } from "next/navigation";
+import { useRouter } from "./overlay-navigation";
 import { useEffect } from "react";
 import { ChoiceGroup } from "./choice-group";
 

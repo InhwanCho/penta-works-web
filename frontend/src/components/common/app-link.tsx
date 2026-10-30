@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { isWorkspaceOverlay, openWorkspaceOverlay } from "../workspace/overlay-navigation";
 import { forwardRef, type ComponentProps } from "react";
 import { scrollPageToTop } from "./route-scroll-reset";
 
@@ -13,6 +14,7 @@ const AppLink = forwardRef<HTMLAnchorElement, ComponentProps<typeof Link>>(
     return <Link {...props} ref={ref} href={href}
       scroll={scroll ?? (targetsSection ? true : false)}
       onNavigate={(event) => {
+        if (typeof href === "string" && isWorkspaceOverlay(href)) { event.preventDefault(); openWorkspaceOverlay(href); return; }
         let cancelled = false;
         onNavigate?.({ preventDefault: () => { cancelled = true; event.preventDefault(); } });
         if (cancelled || targetsSection) return;
