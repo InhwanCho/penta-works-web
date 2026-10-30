@@ -59,8 +59,8 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     const measure = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        dialog.style.setProperty("--drawer-viewport-top", `${viewport.offsetTop + 8}px`);
-        dialog.style.setProperty("--drawer-viewport-height", `${Math.max(0, viewport.height - 16)}px`);
+        dialog.style.setProperty("--drawer-viewport-top", `${viewport.offsetTop + viewport.height * 0.15}px`);
+        dialog.style.setProperty("--drawer-viewport-height", `${Math.max(0, viewport.height * 0.85)}px`);
       });
     };
     measure();

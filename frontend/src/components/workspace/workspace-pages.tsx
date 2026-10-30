@@ -426,7 +426,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
     </main>
   );
 }
-export function SchedulePage() {
+export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
   const router = useRouter();
   const search = useSearchParams();
   const requestedEdit = search.get("edit");
@@ -531,6 +531,7 @@ export function SchedulePage() {
       setOpen(false);
       setEditingSchedule(null);
       setForm({ ...form, title: "", body: "" });
+      onSaved?.();
     } catch (e) {
       setError(errorText(e));
     } finally {

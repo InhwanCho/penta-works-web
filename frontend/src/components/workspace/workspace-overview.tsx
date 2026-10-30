@@ -1,4 +1,6 @@
 "use client";
+import OverviewHelp from "./overview-help";
+import DayComposer from "./day-composer";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 
 import CircleLoader from "@/components/icons/circle-loader";
@@ -77,7 +79,6 @@ export default function OverviewPage() {
   const today = dayString();
   const mobile = useMobileWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
-  const [listHelp, setListHelp] = useState<{ title: string; body: string } | null>(null);
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
   const suppressCalendarClick = useRef(false);
@@ -325,6 +326,7 @@ export default function OverviewPage() {
           <button type="button" className="overview-search-trigger calendar-toolbar-action" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
           </button>
+          <Link className="calendar-toolbar-action calendar-records-link" href="/work">업무기록</Link>
           {!mobile && <button type="button" className="work-calendar-today calendar-toolbar-action" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg><span>오늘</span></button>}
         </div>
         <CalendarLoadState
@@ -476,12 +478,7 @@ export default function OverviewPage() {
                   ? ` (${dayRecords.length})`
                   : ""}
               </h3>
-              <Link
-                className="day-section-action"
-                href={`/work/new?date=${selected}`}
-              >
-                작성
-              </Link>
+
             </div>
             <CalendarLoadState
               label="업무기록"
@@ -521,12 +518,7 @@ export default function OverviewPage() {
                   ? `(${daySchedules.length})`
                   : ""}
               </h3>
-              <Link
-                className="day-section-action"
-                href={`/schedule?date=${selected}&new=1`}
-              >
-                일정 등록
-              </Link>
+
             </div>
             <CalendarLoadState
               label="일정"
@@ -589,6 +581,7 @@ export default function OverviewPage() {
               })}</div>
             </section>
           )}
+          <DayComposer key={selected} date={selected} />
         </WorkspaceDrawer>
       )}
       <div className="overview-folds">
@@ -599,7 +592,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>다가오는 점검</span>
-            <button type="button" className="overview-list-help work-help-button" aria-label="다가오는 점검 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "다가오는 점검 안내", body: "PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료 기록과 병원별 지정일로 계산합니다. 45일 이내 점검을 표시하며, 방문 확정 일정과는 다릅니다." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
+            <OverviewHelp title="다가오는 점검 안내" body="PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료 기록과 병원별 지정일로 계산합니다. 45일 이내 점검을 표시하며, 방문 확정 일정과는 다릅니다." />
             <small>
               45일 이내
               {!planningLoading && !planningFailed
@@ -648,7 +641,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>방문 전 확인사항</span>
-            <button type="button" className="overview-list-help work-help-button" aria-label="방문 전 확인사항 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "방문 전 확인사항 안내", body: "업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
+            <OverviewHelp title="방문 전 확인사항 안내" body="업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." />
             <small>{preparations.filter((p) => !p.done).length}건 남음</small>
           </summary>
           <div className="overview-fold-body">
@@ -694,7 +687,7 @@ export default function OverviewPage() {
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
             <span>최근 업무기록</span>
-            <button type="button" className="overview-list-help work-help-button" aria-label="최근 업무기록 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "최근 업무기록 안내", body: "이번 주와 이전 4주의 업무기록을 표시합니다." }); }}><span className="work-help-symbol" aria-hidden="true">?</span></button>
+            <OverviewHelp title="최근 업무기록 안내" body="이번 주와 이전 4주의 업무기록을 표시합니다." />
             <small>
               {recent.isPending
                 ? <CircleLoader size="xs" inline />
@@ -704,12 +697,7 @@ export default function OverviewPage() {
             </small>
           </summary>
           <div className="overview-fold-body">
-            <Link
-              className="work-back"
-              href="/work"
-            >
-              업무기록 전체 보기 →
-            </Link>
+
 
             {recent.isError ? (
               <ErrorState
@@ -769,7 +757,6 @@ export default function OverviewPage() {
           </div>
         </details>
       </div>
-      {listHelp && <WorkspaceDrawer title={listHelp.title} onClose={() => setListHelp(null)}><p className="overview-list-help-copy">{listHelp.body}</p></WorkspaceDrawer>}
       {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
       <Link className="work-secondary hospital-register overview-write-mobile" href={`/schedule?date=${selected}&new=1`} aria-label="일정 등록">＋ 작성</Link>
     </main>
