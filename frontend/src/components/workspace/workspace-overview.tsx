@@ -137,7 +137,7 @@ export default function OverviewPage() {
           return {
             key: "new-" + r.id,
             recordId: r.id,
-            assetChange: r.assetChange,
+            assetChange: !!r.assetChange,
             siteId: r.siteId,
             siteName: r.siteName || "일반 업무",
             title: r.title,
