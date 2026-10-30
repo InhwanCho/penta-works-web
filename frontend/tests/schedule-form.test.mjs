@@ -23,7 +23,7 @@ test('minor date or classification changes do not trigger leave warnings',()=>{
  f.title='정전 일정에 따른 장비 점검 방문 계획';assert.equal(out.substantialScheduleChange(f),true);
  const old={siteId:null,title:f.title,body:'',startAt:'2026-10-27T00:00:00',endAt:'2026-10-27T23:59:00'};
  const edit=out.scheduleEditForm(old);edit.date='2026-10-28';edit.endDate='2026-10-28';edit.personalKind='leave';assert.equal(out.substantialScheduleChange(edit,old),false);
- edit.body='특이사항 입력';assert.equal(out.substantialScheduleChange(edit,old),false);
+ edit.body+='.';assert.equal(out.substantialScheduleChange(edit,old),false);
  edit.body='정전 이후 전원 인가 및 장비 상태 확인 예정';assert.equal(out.substantialScheduleChange(edit,old),true);
  const typo=out.scheduleEditForm(old);typo.title+='.';assert.equal(out.substantialScheduleChange(typo,old),false);
 });
@@ -36,4 +36,12 @@ test('quick PM date changes preserve times, duration and omitted end time across
  assert.deepEqual(JSON.parse(JSON.stringify(out.moveScheduleDate({startAt:'2026-10-30T09:15:00',endAt:'2026-11-01T18:00:00'},'2026-11-05'))),{startAt:'2026-11-05T09:15:00',endAt:'2026-11-07T18:00:00'});
  assert.deepEqual(JSON.parse(JSON.stringify(out.moveScheduleDate({startAt:'2026-10-27T00:00:00',endAt:'2026-10-27T23:59:00'},'2026-11-02'))),{startAt:'2026-11-02T00:00:00',endAt:'2026-11-02T23:59:00'});
  const onlyStart=out.moveScheduleDate({startAt:'2026-10-27T09:00',endAt:'2026-10-27T09:00'},'2026-10-28');assert.equal(onlyStart.startAt,onlyStart.endAt);
+});
+test('memo supplies the calendar/search title without requiring another input',()=>{
+ assert.equal(out.scheduleMemoTitle('  장비 점검 방문\n담당자와 일정 확인  '),'장비 점검 방문');
+ assert.equal(out.scheduleMemoTitle('검사 지원','ACR_FULL'),'ACR 정밀 · 검사 지원');
+ assert.equal(out.scheduleMemoTitle('a'.repeat(250)).length,200);
+ const old={siteId:null,title:'기존 제목',body:'',startAt:'2026-10-27T00:00:00',endAt:'2026-10-27T23:59:00'};
+ assert.equal(out.scheduleEditForm(old).body,'기존 제목');
+ assert.equal(out.normalizeScheduleForm({date:'2026-10-27',title:'이전 임시저장'},'2026-10-27').body,'이전 임시저장');
 });

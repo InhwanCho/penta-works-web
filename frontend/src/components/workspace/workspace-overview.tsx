@@ -394,7 +394,7 @@ export default function OverviewPage() {
               dueItems = due.filter((d) => d.date === day);
             const tags = [
               ...events.map((s) => ({
-                title: `${s.siteName || s.title} · ${s.serviceType === "PM" ? "PM" : scheduleCategory(s)}`,
+                title: `${s.siteName ? `${s.siteName} · ` : ""}${s.body?.trim() || s.title} · ${s.serviceType === "PM" ? "PM" : scheduleCategory(s)}`,
                 type: calendarColor(
                   s.siteId ? s.serviceType || "ETC" : s.personalKind || "etc",
                 ),
@@ -537,9 +537,9 @@ export default function OverviewPage() {
                     href={`/schedule?date=${selected}#schedule-${s.id}`}
                     category={s.serviceType || "GENERAL"}
                     type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
-                    title={s.siteName || s.title}
+                    title={s.body?.trim() || s.title}
                     description={
-                      s.siteName && s.title !== s.siteName ? s.title : undefined
+                      s.siteName || undefined
                     }
                     meta={scheduleTimeLabel(s.startAt, s.endAt)}
                   />

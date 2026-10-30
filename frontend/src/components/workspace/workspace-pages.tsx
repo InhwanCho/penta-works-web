@@ -1,7 +1,7 @@
 "use client";
 
 import Pagination from "@/components/common/pagination";
-import { newScheduleForm, scheduleEditForm, scheduleTimes, substantialScheduleChange, normalizeScheduleForm } from "./schedule-form";
+import { scheduleMemoTitle, newScheduleForm, scheduleEditForm, scheduleTimes, substantialScheduleChange, normalizeScheduleForm } from "./schedule-form";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
@@ -500,6 +500,7 @@ export function SchedulePage() {
     setSaving(true);
     setError("");
     try {
+      if (!form.body.trim()) throw new Error("메모를 입력해주세요.");
       const times = scheduleTimes(form);
       if (times.endAt < times.startAt) throw new Error("종료 날짜·시간은 시작 이후로 설정해주세요.");
       await apiFetch(
@@ -510,6 +511,7 @@ export function SchedulePage() {
           method: editingSchedule ? "PUT" : "POST",
           body: JSON.stringify({
             ...form,
+            title: scheduleMemoTitle(form.body, form.targetKind === "HOSPITAL" ? form.serviceType : ""),
             ...scheduleTimes(form),
             revision: editingSchedule?.revision,
             personalKind:
@@ -606,16 +608,6 @@ export function SchedulePage() {
           aria-label={editingSchedule ? "일정 수정" : "일정 작성"}
           onSubmit={save}
         >
-          <label>
-            제목
-            <input
-              className="work-input"
-              required
-              maxLength={200}
-              value={form.title}
-              onChange={(e) => setForm({ ...form, title: e.target.value })}
-            />
-          </label>
           <ChoiceGroup
             legend="대상"
             value={form.targetKind}
@@ -671,8 +663,9 @@ export function SchedulePage() {
           </div>}
           {!form.allDay && <p className="work-hint">종료 시간을 비워두면 시작 시간만 표시합니다.</p>}
           <label>
-            내용
+            메모
             <textarea
+              required
               className="work-input"
               maxLength={10000}
               value={form.body}
@@ -806,7 +799,7 @@ export function SchedulePage() {
               </dl>
               {s.body?.trim() && s.body.trim() !== s.title.trim() && (
                 <div className="schedule-card-note">
-                  <span>내용</span>
+                  <span>메모</span>
                   <p className="work-prewrap">{s.body}</p>
                 </div>
               )}
