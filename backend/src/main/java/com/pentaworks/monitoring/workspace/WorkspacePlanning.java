@@ -61,10 +61,11 @@ public class WorkspacePlanning {
    case "ACR_DOC" -> {column="acr_doc_override";lastColumn="last_acr_doc_date";condition="service_type='ACR' AND acr_kind IN ('full','doc')";}
    default -> throw new BadRequestException("점검 유형을 확인해주세요.");
   }
-  if(!input.automatic()) {
-   if(input.date()==null)throw new BadRequestException("변경할 날짜를 선택해주세요.");
+  if(!input.automatic()&&input.date()==null)throw new BadRequestException("변경할 날짜를 선택해주세요.");
+  {
    LocalDate last=db.queryForObject("SELECT MAX(d) FROM (SELECT "+lastColumn+" d FROM workspace_hospital_plan WHERE company_id=? AND site_id=? UNION ALL SELECT MAX(work_date) d FROM workspace_record WHERE company_id=? AND site_id=? AND deleted_at IS NULL AND status='COMPLETED' AND "+condition+") completed_inspection",LocalDate.class,u.companyId(),sid,u.companyId(),sid);
-   if(last!=null&&!input.date().isAfter(last))throw new BadRequestException("최근 점검 날짜("+last+") 이후로 선택해주세요.");
+   if(input.automatic()&&last==null)throw new BadRequestException("최근 점검 기록이 없어 자동 계산할 수 없습니다. 지정일을 유지합니다.");
+   if(!input.automatic()&&last!=null&&!input.date().isAfter(last))throw new BadRequestException("최근 점검 날짜("+last+") 이후로 선택해주세요.");
   }
   db.update("INSERT INTO workspace_hospital_plan(company_id,site_id,pm_interval_months,"+column+") VALUES(?,?,2,?) ON DUPLICATE KEY UPDATE "+column+"=VALUES("+column+")",u.companyId(),sid,input.automatic()?null:input.date());
   changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));return Map.of("saved",true);

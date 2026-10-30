@@ -60,6 +60,7 @@ type Due = {
   days: number;
   lastPmDate?: string;
   lastVisitDate?: string | null;
+  automaticDate?: string | null;
 };
 function calendarColor(type: string) {
   if (type === "PM") return "gcal-pm";
@@ -202,6 +203,7 @@ export default function OverviewPage() {
           days: daysBetween(date, today),
           lastPmDate: pm,
           lastVisitDate: plan?.lastVisitDate,
+          automaticDate: type === "PM" ? nextDue(pm, null, plan?.pmIntervalMonths || 2) : type === "ACR 정밀" ? nextDue(full, null, 36) : nextDue(doc, null, 12),
         });
     }
   }
@@ -579,7 +581,7 @@ export default function OverviewPage() {
                 return <article key={`${d.siteId}-${type}`} className="inspection-due-row">
                   <div className="inspection-due-top"><div className="inspection-due-name"><span className="inspection-due-badge">{type === "PM" ? "정기점검(PM)" : d.type}</span><strong>{d.siteName}</strong></div><div className="inspection-due-links"><Link className="work-secondary" href={`/sites/${d.siteId}#inspection-plan`}>병원 보기</Link><Link className="work-primary" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${type === "PM" ? "PM" : "ACR"}&acrKind=${type === "ACR_FULL" ? "full" : "doc"}`}>일지 작성</Link></div></div>
                   <p className="inspection-due-meta">최근 PM {d.lastPmDate || "기록 없음"} · 최근 방문 {d.lastVisitDate || "기록 없음"}</p>
-                  <InspectionDueDate siteId={d.siteId} type={type} date={d.date} overridden={!!override} />
+                  <InspectionDueDate siteId={d.siteId} type={type} date={d.date} overridden={!!override} automaticDate={d.automaticDate || null} />
                 </article>;
               })}</div>
             </section>
