@@ -81,9 +81,9 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <div className="overview-detail-description"><h3>메모</h3><p className="work-prewrap">{row.body || row.title}</p></div>
         {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
         <div className="work-form-actions detail-bottom-actions">
+          {!isLeaveSchedule(row) && <Link className="work-secondary" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>}
           {!!session && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>수정</Link>}
           {!!session && <button type="button" className="action-danger" disabled={deleting} onClick={() => void removeSchedule(row.id)}>삭제</button>}
-          {!isLeaveSchedule(row) && <Link className="work-secondary hospital-register" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>}
         </div>
         {deleteError && <p className="work-error" role="alert">{deleteError}</p>}
       </section>) : <Empty>일정을 찾을 수 없습니다.</Empty>}

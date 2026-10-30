@@ -4022,3 +4022,20 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-page:is(.work-editor-editing,.schedule-editing) > :is(.work-authoring-kind,form.work-form) { width: 100%; max-width: none; min-width: 0; box-sizing: border-box; }
 .work-authoring-kind .work-radio-group > div { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .work-authoring-kind .work-radio-group label { min-width: 0; width: 100%; box-sizing: border-box; }
+
+/* Keep schedule content and its actions in one card, with consistent button geometry. */
+.work-day-dialog .day-schedule-list { display: grid; gap: 10px; border: 0; background: transparent; }
+.work-day-dialog .day-schedule-row { border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); overflow: hidden; }
+.work-day-dialog .day-schedule-row > .day-entry { border: 0; border-radius: 0; padding: 14px 16px; }
+.work-day-dialog .day-schedule-row > .detail-bottom-actions { border-top: 0; margin: 0; padding: 0 16px 14px; }
+.detail-bottom-actions > :is(a,button) { display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; width: auto; min-width: 64px; height: 40px; min-height: 40px; box-sizing: border-box; padding: 8px 14px; margin: 0; border: 1px solid var(--work-line); border-radius: 8px; font-size: 13px; font-weight: 600; line-height: 20px; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.overview-schedule-detail > .detail-bottom-actions > :is(a,button) { flex: 0 0 auto; padding: 8px 14px; }
+.detail-bottom-actions > .action-danger { color: #b42332; border-color: #d97983; background: transparent; }
+.dark .detail-bottom-actions > .action-danger { color: #f6a6ae; border-color: #b86672; background: transparent; }
+@media (hover:hover) {
+ .detail-bottom-actions > .action-danger:not(:disabled):hover { color: #9c1b29; border-color: #b42332; background: #fff0f2; }
+ .dark .detail-bottom-actions > .action-danger:not(:disabled):hover { color: #ffd3d8; border-color: #ef99a4; background: #482b35; }
+}
+.detail-bottom-actions > :is(a,button):focus-visible { outline: 2px solid var(--work-focus); outline-offset: 3px; }
+.detail-bottom-actions > button:disabled { opacity: .5; cursor: wait; }
+@media (max-width:1023px) { .detail-bottom-actions > :is(a,button) { height: 44px; min-height: 44px; } }
