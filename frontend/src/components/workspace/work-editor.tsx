@@ -77,7 +77,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     [photoIds, setPhotoIds] = useState<number[] | null>(null),
     [photoBusy, setPhotoBusy] = useState(false);
   const [loadedId, setLoadedId] = useState<string | undefined>(),
-    [editing, setEditing] = useState(!id),
+    [editing, setEditing] = useState(!id || search.get("edit") === "1"),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
   const record = records.data;

@@ -51,6 +51,8 @@ type Summary = {
   type: string;
   status: string;
   href: string;
+  recordId?: number;
+  assetChange?: boolean;
   acrKind?: string;
   countsAsPm?: boolean;
 };
@@ -134,6 +136,8 @@ export default function OverviewPage() {
           const d = parseDetails(r.detailsJson);
           return {
             key: "new-" + r.id,
+            recordId: r.id,
+            assetChange: r.assetChange,
             siteId: r.siteId,
             siteName: r.siteName || "일반 업무",
             title: r.title,
@@ -259,6 +263,17 @@ export default function OverviewPage() {
     } catch (e) {
       setError(errorText(e));
     }
+  }
+  const [deletingRecord, setDeletingRecord] = useState<number | null>(null);
+  const [recordError, setRecordError] = useState("");
+  async function removeRecord(id: number) {
+    if (deletingRecord !== null || !window.confirm("이 업무기록을 삭제할까요?")) return;
+    setDeletingRecord(id); setRecordError("");
+    try {
+      await apiFetch(`/workspace/records/${id}`, { method: "DELETE" });
+      await Promise.all(["workspace-records", "workspace-schedules", "workspace-planning"].map(key => qc.invalidateQueries({ queryKey: [key] })));
+    } catch (error) { setRecordError(errorText(error)); }
+    finally { setDeletingRecord(null); }
   }
   async function removeSchedule(id: number) {
     if (deletingSchedule !== null || !window.confirm("이 일정을 삭제할까요?")) return;
@@ -485,11 +500,12 @@ export default function OverviewPage() {
               pending={recordsLoading}
               retry={retryRecords}
             />
+            {recordError && <p className="work-error" role="alert">{recordError}</p>}
             {dayRecords.length ? (
-              <div className="day-entry-list">
+              <div className="day-entry-list day-schedule-list">
                 {dayRecords.map((r) => (
+                  <article className="day-schedule-row" key={r.key}>
                   <DayEntry
-                    key={r.key}
                     href={r.href}
                     date={r.date}
                     category={r.type}
@@ -501,6 +517,11 @@ export default function OverviewPage() {
                     description={r.title !== r.siteName ? r.title : undefined}
                     meta={statusLabels[r.status] || r.status}
                   />
+                  {r.recordId && <div className="work-form-actions detail-bottom-actions">
+                    <Link className="work-secondary" href={`/work/${r.recordId}?edit=1`}>수정</Link>
+                    {!r.assetChange && <button type="button" className="action-danger" disabled={deletingRecord !== null} onClick={() => void removeRecord(r.recordId!)}>삭제</button>}
+                  </div>}
+                  </article>
                 ))}
               </div>
             ) : !recordsLoading && !recordsFailed ? (
