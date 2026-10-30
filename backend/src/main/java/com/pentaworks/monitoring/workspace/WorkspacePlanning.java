@@ -34,6 +34,22 @@ public class WorkspacePlanning {
  public record PlanInput(int pmIntervalMonths,LocalDate pmOverride,LocalDate acrFullOverride,LocalDate acrDocOverride){}
  @PutMapping("/planning/{siteId}") @org.springframework.transaction.annotation.Transactional
  public Map<String,Boolean> plan(@PathVariable String siteId,@RequestBody PlanInput input,Authentication auth){var u=users.require(auth);String sid=SiteService.normalizeSiteId(siteId);users.requireSiteAccess(u,sid);if(!u.isAdmin())throw new ForbiddenException("관리자만 점검 주기를 변경할 수 있습니다.");if(input.pmIntervalMonths()<1||input.pmIntervalMonths()>120)throw new BadRequestException("PM 주기는 1~120개월로 입력해주세요.");db.update("INSERT INTO workspace_hospital_plan(company_id,site_id,pm_interval_months,pm_override,acr_full_override,acr_doc_override) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE pm_interval_months=VALUES(pm_interval_months),pm_override=VALUES(pm_override),acr_full_override=VALUES(acr_full_override),acr_doc_override=VALUES(acr_doc_override)",u.companyId(),sid,input.pmIntervalMonths(),input.pmOverride(),input.acrFullOverride(),input.acrDocOverride());changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));return Map.of("saved",true);}
+ public record PmDateInput(LocalDate date){}
+ @PatchMapping("/planning/{siteId}/pm-date") @org.springframework.transaction.annotation.Transactional
+ public Map<String,Boolean> pmDate(@PathVariable String siteId,@RequestBody PmDateInput input,Authentication auth){
+  var u=users.require(auth);String sid=SiteService.normalizeSiteId(siteId);users.requireSiteAccess(u,sid);
+  if(input.date()==null)throw new BadRequestException("변경할 날짜를 선택해주세요.");
+  LocalDate last=db.queryForObject("""
+   SELECT MAX(d) FROM (
+    SELECT last_pm_date d FROM workspace_hospital_plan WHERE company_id=? AND site_id=?
+    UNION ALL
+    SELECT MAX(work_date) d FROM workspace_record WHERE company_id=? AND site_id=? AND deleted_at IS NULL AND status='COMPLETED' AND (service_type='PM' OR counts_as_pm=TRUE)
+   ) completed_pm
+   """,LocalDate.class,u.companyId(),sid,u.companyId(),sid);
+  if(last!=null&&!input.date().isAfter(last))throw new BadRequestException("최근 PM 날짜("+last+") 이후로 선택해주세요.");
+  db.update("INSERT INTO workspace_hospital_plan(company_id,site_id,pm_interval_months,pm_override) VALUES(?,?,2,?) ON DUPLICATE KEY UPDATE pm_override=VALUES(pm_override)",u.companyId(),sid,input.date());
+  changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));return Map.of("saved",true);
+ }
  public record Checked(boolean done){}
  @PatchMapping("/preparations/{id}")
  public Map<String,Boolean> checked(@PathVariable long id,@RequestBody Checked input,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT site_id FROM workspace_preparation WHERE id=? AND company_id=?",id,u.companyId());if(rows.isEmpty())throw new NotFoundException("방문 전 확인사항을 찾을 수 없습니다.");Object sid=rows.get(0).get("site_id");if(sid!=null)users.requireSiteAccess(u,sid.toString());db.update("UPDATE workspace_preparation SET done=? WHERE id=? AND company_id=?",input.done(),id,u.companyId());return Map.of("saved",true);}

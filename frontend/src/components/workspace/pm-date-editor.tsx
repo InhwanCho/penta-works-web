@@ -13,7 +13,7 @@ export default function PmDateEditor({ siteId, date, schedule, compact = false }
   const editorId = useId();
   const [editing,setEditing] = useState(false), [value,setValue] = useState(date), [busy,setBusy] = useState(false), [error,setError] = useState("");
   if (!session) return null;
-  if (schedule ? schedule.authorId !== session.id && !isAdmin : !isAdmin) return compact ? <span className="pm-date-readonly"><button type="button" className="work-secondary" disabled>날짜 변경</button><small>관리자만 변경</small></span> : null;
+  if (schedule && schedule.authorId !== session.id && !isAdmin) return null;
   async function save() {
     setBusy(true);setError("");
     try {
@@ -24,7 +24,7 @@ export default function PmDateEditor({ siteId, date, schedule, compact = false }
         if (fresh.error || !fresh.data) throw fresh.error || new Error("점검 기준을 불러오지 못했습니다.");
         const plan=fresh.data.plans.find(item=>item.siteId===siteId);
         if (plan?.lastPmDate && value <= plan.lastPmDate) throw new Error(`최근 PM 날짜(${plan.lastPmDate}) 이후로 선택해주세요.`);
-        await apiFetch(`/workspace/planning/${encodeURIComponent(siteId)}`,{method:"PUT",body:JSON.stringify({pmIntervalMonths:plan?.pmIntervalMonths || 2,pmOverride:value,acrFullOverride:plan?.acrFullOverride || null,acrDocOverride:plan?.acrDocOverride || null})});
+        await apiFetch(`/workspace/planning/${encodeURIComponent(siteId)}/pm-date`,{method:"PATCH",body:JSON.stringify({date:value})});
       }
       await Promise.all([qc.invalidateQueries({queryKey:["workspace-planning"]}),qc.invalidateQueries({queryKey:["workspace-schedules"]}),qc.invalidateQueries({queryKey:["workspace-search"]})]);
       setEditing(false);
