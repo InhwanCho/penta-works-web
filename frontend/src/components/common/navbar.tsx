@@ -10,8 +10,11 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "@/components/common/app-link";
+import { useQuery } from "@tanstack/react-query";
+import { clampTake, type SiteDetailResponse } from "@/hooks/use-site-detail-query";
+import { useSearchParams } from "next/navigation";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 const ICON_BUTTON =
   "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-white/85 transition hover:bg-white/12 hover:text-white focus-visible:bg-white/12";
@@ -21,11 +24,23 @@ const SiteSearchModal = dynamic(
   { ssr: false },
 );
 
+// Observe the detail query cache without issuing another request or polling timer.
+function MobileHospitalTitle({ slug }: { slug: string }) {
+  const params = useSearchParams();
+  const { data } = useQuery<SiteDetailResponse>({
+    queryKey: ["siteDetail", slug, clampTake(Number(params.get("take") ?? 50)), params.get("from"), params.get("to")],
+    enabled: false,
+  });
+  const name = data?.site.name || "병원 상세";
+  return <span className="mobile-hospital-title" title={name}>{name}</span>;
+}
+
 export default function Navbar() {
   const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
   const { session, isAdmin } = useAuth();
   const { open: openSearchModal, isOpen: searchOpen } = useModal("SearchModal");
   const pathname = usePathname();
+  const hospitalSlug = pathname.match(/^\/sites\/([^/]+)$/)?.[1];
   const menuRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -112,7 +127,7 @@ export default function Navbar() {
               priority
               className="h-8 w-8 rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
             />
-            <span className="text-[15px] font-bold tracking-[-0.02em]">
+            <span className={`text-[15px] font-bold tracking-[-0.02em] ${hospitalSlug ? "hidden lg:inline" : ""}`}>
               MReyes
             </span>
             {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && (
@@ -120,6 +135,7 @@ export default function Navbar() {
             )}
           </Link>
 
+          {hospitalSlug && <Suspense fallback={<span className="mobile-hospital-title">병원 상세</span>}><MobileHospitalTitle slug={decodeURIComponent(hospitalSlug)} /></Suspense>}
           <nav className="flex shrink-0 items-center gap-1.5">
             {session && (
               <Link

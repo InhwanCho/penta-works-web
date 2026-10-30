@@ -50,5 +50,7 @@ export function useSiteDetailQuery(slug: string, take: number, from: string | nu
     queryKey: ["siteDetail", slug, take, from, to] as const,
     queryFn: () => fetchSiteDetail(slug, take, from, to),
     staleTime: 10_000,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 }

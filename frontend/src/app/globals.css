@@ -3942,3 +3942,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
   background: #2d4b60;
  }
 }
+
+.mobile-hospital-title { display: none; }
+.workspace-frame .site-detail-page h1 { font-size: 22px; line-height: 1.4; }
+@media(max-width:1023px) {
+ .mobile-hospital-title { display: block; flex: 1; min-width: 0; margin: 0 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 14px; font-weight: 650; line-height: 1.4; }
+ .workspace-frame .site-detail-page h1 { font-size: 18px; }
+}
