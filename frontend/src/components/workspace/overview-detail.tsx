@@ -37,7 +37,7 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
   const requestedSiteId = url.pathname.match(/^\/sites\/([^/]+)$/)?.[1];
   const date = url.searchParams.get("date") || "";
   const scheduleId = url.hash.match(/^#schedule-(\d+)$/)?.[1];
-  const { session, isAdmin } = useAuth();
+  const { session } = useAuth();
   const sites = useQuery({
     queryKey: ["workspace-sites", session?.id],
     queryFn: () => apiFetch<Hospital[]>("/workspace/hospitals"),
@@ -81,8 +81,8 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <div className="overview-detail-description"><h3>메모</h3><p className="work-prewrap">{row.body || row.title}</p></div>
         {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
         <div className="work-form-actions detail-bottom-actions">
-          {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>수정</Link>}
-          {(row.authorId === session?.id || isAdmin) && <button type="button" className="action-danger" disabled={deleting} onClick={() => void removeSchedule(row.id)}>삭제</button>}
+          {!!session && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>수정</Link>}
+          {!!session && <button type="button" className="action-danger" disabled={deleting} onClick={() => void removeSchedule(row.id)}>삭제</button>}
           {!isLeaveSchedule(row) && <Link className="work-secondary hospital-register" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>}
         </div>
         {deleteError && <p className="work-error" role="alert">{deleteError}</p>}

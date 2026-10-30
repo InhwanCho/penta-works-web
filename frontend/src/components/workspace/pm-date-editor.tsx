@@ -7,13 +7,12 @@ import { usePlanning, errorText, type WorkSchedule } from "./workspace-data";
 import { moveScheduleDate } from "./schedule-form";
 
 export default function PmDateEditor({ siteId, date, schedule, compact = false }: { siteId: string; date: string; schedule?: WorkSchedule; compact?: boolean }) {
-  const { session, isAdmin } = useAuth();
+  const { session } = useAuth();
   const planning = usePlanning();
   const qc = useQueryClient();
   const editorId = useId();
   const [editing,setEditing] = useState(false), [value,setValue] = useState(date), [busy,setBusy] = useState(false), [error,setError] = useState("");
   if (!session) return null;
-  if (schedule && schedule.authorId !== session.id && !isAdmin) return null;
   async function save() {
     setBusy(true);setError("");
     try {

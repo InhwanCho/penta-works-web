@@ -49,7 +49,7 @@ export default function WorkEditor({ id }: { id?: string }) {
   const router = useRouter(),
     search = useSearchParams(),
     qc = useQueryClient();
-  const { session, isAdmin } = useAuth();
+  const { session } = useAuth();
   const [schedulePickerOpen,setSchedulePickerOpen]=useState(false);
   const { sites, schedules } = useWorkspace({ records: false, schedules: !!id || !!search.get("schedule") || schedulePickerOpen });
   const records = useQuery({
@@ -261,7 +261,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         <Link href="/work">목록으로</Link>
       </main>
     );
-  const canEdit = !record || record.authorId === session?.id || isAdmin;
+  const canEdit = !!session;
   const field = form.kind === "FIELD",
     type = form.serviceType;
   return (

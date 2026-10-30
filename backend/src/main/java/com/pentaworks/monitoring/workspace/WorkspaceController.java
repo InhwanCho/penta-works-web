@@ -200,19 +200,18 @@ public class WorkspaceController {
         }
         for(String line:lines)db.update("INSERT INTO workspace_preparation(company_id,author_id,site_id,record_id,content) SELECT ?,?,?,?,? WHERE NOT EXISTS(SELECT 1 FROM workspace_preparation WHERE record_id=? AND company_id=? AND content=?)",u.companyId(),u.id(),sid,id,line,id,u.companyId(),line);
     }
-    private void requireRecordOwner(long id,CurrentUser u) {
+    private void requireRecordAccess(long id,CurrentUser u) {
         var rows=db.queryForList("SELECT author_id,site_id siteId FROM workspace_record WHERE id=? AND company_id=? AND deleted_at IS NULL FOR UPDATE",id,u.companyId());
         if(rows.isEmpty())throw new NotFoundException("업무 기록을 찾을 수 없습니다.");
         var r=rows.get(0);if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());
-        if(!u.isAdmin()&&((Number)r.get("author_id")).longValue()!=u.id())throw new ForbiddenException("작성한 업무만 수정할 수 있습니다.");
     }
     @PutMapping("/records/{id}") @Transactional
     public Map<String,Object> update(@PathVariable long id,@RequestBody WorkInput input,Authentication auth){
-        var u=users.require(auth);requireRecordOwner(id,u);checkRevision(input.revision(),db.queryForObject("SELECT revision FROM workspace_record WHERE id=? AND company_id=?",Long.class,id,u.companyId()));snapshot(u,"RECORD",id,"BEFORE");validate(input);String sid="FIELD".equals(input.kind())?site(u,input.siteId()):null;
+        var u=users.require(auth);requireRecordAccess(id,u);checkRevision(input.revision(),db.queryForObject("SELECT revision FROM workspace_record WHERE id=? AND company_id=?",Long.class,id,u.companyId()));snapshot(u,"RECORD",id,"BEFORE");validate(input);String sid="FIELD".equals(input.kind())?site(u,input.siteId()):null;
         db.update("UPDATE workspace_record SET revision=revision+1,site_id=?,kind=?,service_type=?,title=?,body=?,work_date=?,status=?,details_json=JSON_MERGE_PATCH(COALESCE(details_json,JSON_OBJECT()),?) WHERE id=? AND company_id=? AND deleted_at IS NULL",sid,input.kind(),sid==null?null:input.serviceType(),input.title().trim(),input.body(),input.workDate(),input.status(),detailsJson(input),id,u.companyId());new WorkspacePhotos(db,users).attach(u,id,input.photoIds());syncRecordFields(u,id,sid,input);syncPreparation(u,id,sid,input.details());new WorkspaceAssets(db,users).sync(u,id,sid,input.details());snapshot(u,"RECORD",id,"UPDATE");changed(u.companyId());return Map.of("saved",true,"revision",input.revision()+1);
     }
     @DeleteMapping("/records/{id}") @Transactional
-    public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordOwner(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");snapshot(u,"RECORD",id,"DELETE");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());changed(u.companyId());return Map.of("deleted",true);}
+    public Map<String,Boolean> delete(@PathVariable long id,Authentication auth){var u=users.require(auth);requireRecordAccess(id,u);if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_asset_history WHERE record_id=? AND change_kind IN ('REGISTER','UPDATE'))",Boolean.class,id)))throw new BadRequestException("장비·부품 변경 이력은 삭제할 수 없습니다. 정보 변경에서 정정 내용을 남겨주세요.");snapshot(u,"RECORD",id,"DELETE");db.update("DELETE FROM workspace_preparation WHERE record_id=? AND company_id=? AND done=FALSE",id,u.companyId());db.update("UPDATE workspace_record SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());changed(u.companyId());return Map.of("deleted",true);}
     @GetMapping("/schedules")
     public List<Map<String,Object>> schedules(@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate from,@RequestParam(required=false) @org.springframework.format.annotation.DateTimeFormat(iso=org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate to,Authentication auth){var u=users.require(auth);var allowed=users.allowedSiteIds(u);var rows=db.queryForList("""
         SELECT w.id,w.revision,w.author_id authorId,u.name authorName,w.site_id siteId,COALESCE(h.name,s.name) siteName,w.target_kind targetKind,w.personal_kind personalKind,w.service_type serviceType,w.title,w.body,DATE_FORMAT(w.start_at,'%Y-%m-%dT%H:%i:%s') startAt,DATE_FORMAT(w.end_at,'%Y-%m-%dT%H:%i:%s') endAt
@@ -272,7 +271,6 @@ public class WorkspaceController {
         var rows=db.queryForList("SELECT author_id,site_id,revision FROM workspace_schedule WHERE id=? AND company_id=? AND deleted_at IS NULL FOR UPDATE",id,u.companyId());
         if(rows.isEmpty())throw new NotFoundException("일정을 찾을 수 없습니다.");var row=rows.get(0);
         if(row.get("site_id")!=null)users.requireSiteAccess(u,row.get("site_id").toString());
-        if(!u.isAdmin()&&((Number)row.get("author_id")).longValue()!=u.id())throw new ForbiddenException("작성한 일정만 수정할 수 있습니다.");
         checkRevision(input.revision(),row.get("revision"));
         if(!java.util.Objects.equals(sid,row.get("site_id"))&&Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_record WHERE company_id=? AND schedule_id=? AND deleted_at IS NULL)",Boolean.class,u.companyId(),id)))throw new BadRequestException("연결된 업무기록이 있어 병원은 변경할 수 없습니다. 날짜와 내용은 수정할 수 있습니다.");
         snapshot(u,"SCHEDULE",id,"BEFORE");
@@ -280,5 +278,5 @@ public class WorkspaceController {
         snapshot(u,"SCHEDULE",id,"UPDATE");changed(u.companyId());return Map.of("saved",true);
     }
     @DeleteMapping("/schedules/{id}") @Transactional
-    public Map<String,Boolean> deleteSchedule(@PathVariable long id,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT author_id,site_id siteId FROM workspace_schedule WHERE id=? AND company_id=? AND deleted_at IS NULL",id,u.companyId());if(rows.isEmpty())throw new NotFoundException("일정을 찾을 수 없습니다.");var r=rows.get(0);if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());if(!u.isAdmin()&&((Number)r.get("author_id")).longValue()!=u.id())throw new ForbiddenException("작성한 일정만 삭제할 수 있습니다.");db.update("UPDATE workspace_schedule SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());changed(u.companyId());return Map.of("deleted",true);}
+    public Map<String,Boolean> deleteSchedule(@PathVariable long id,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT author_id,site_id siteId FROM workspace_schedule WHERE id=? AND company_id=? AND deleted_at IS NULL",id,u.companyId());if(rows.isEmpty())throw new NotFoundException("일정을 찾을 수 없습니다.");var r=rows.get(0);if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());db.update("UPDATE workspace_schedule SET deleted_at=CURRENT_TIMESTAMP(6) WHERE id=? AND company_id=?",id,u.companyId());changed(u.companyId());return Map.of("deleted",true);}
 }

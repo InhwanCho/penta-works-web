@@ -432,7 +432,7 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
   const initialDate = /^\d{4}-\d{2}-\d{2}$/.test(search.get("date") || "")
     ? search.get("date")!
     : dayString();
-  const { session, isAdmin } = useAuth();
+  const { session } = useAuth();
   const qc = useQueryClient();
   const [selected, setSelected] = useState(initialDate),
     [open, setOpen] = useState(search.get("new") === "1"),
@@ -469,18 +469,14 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
       setError("이 날짜에서 수정할 일정을 찾을 수 없습니다.");
       return;
     }
-    if (schedule.authorId !== session.id && !isAdmin) {
-      openedEdit.current = requestedEdit;
-      setError("작성한 일정만 수정할 수 있습니다.");
-      return;
-    }
+
     openedEdit.current = requestedEdit;
     if (!draft.confirmLeave()) return;
     draft.resume();
     setEditingSchedule(schedule);
     setForm(scheduleEditForm(schedule));
     setOpen(true);
-  }, [requestedEdit, schedules.isPending, schedules.error, schedules.data, session, isAdmin, draft]);
+  }, [requestedEdit, schedules.isPending, schedules.error, schedules.data, session, draft]);
   const rows = (schedules.data || [])
     .filter(
       (s) =>
@@ -767,7 +763,7 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
               )}
               <div className="work-form-actions detail-bottom-actions">
                 {!isLeaveSchedule(s) && <Link className="work-secondary" href={`/work/new?schedule=${s.id}`}>업무기록 작성</Link>}
-                {(s.authorId === session?.id || isAdmin) && <>
+                {!!session && <>
                   <button type="button" className="work-primary" onClick={() => {
                     if (draft.pending || !draft.confirmLeave()) return;
                     draft.resume(); setEditingSchedule(s); setForm(scheduleEditForm(s)); setOpen(true);

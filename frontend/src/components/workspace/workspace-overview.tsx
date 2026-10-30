@@ -87,7 +87,7 @@ export default function OverviewPage() {
     [error, setError] = useState("");
   const [monthDirection,setMonthDirection] = useState(1);
   const setMonth = (value:string|((current:string)=>string)) => { const next=typeof value === "function" ? value(month) : value; setMonthDirection(next < month ? -1 : 1); setMonthValue(next); };
-  const { session, isAdmin } = useAuth();
+  const { session } = useAuth();
   const router = useRouter();
   const [deletingSchedule, setDeletingSchedule] = useState<number | null>(null);
   const [scheduleError, setScheduleError] = useState("");
@@ -544,7 +544,7 @@ export default function OverviewPage() {
                   />
                   <div className="work-form-actions detail-bottom-actions">
                     {!isLeaveSchedule(s) && <Link className="work-secondary" href={`/work/new?schedule=${s.id}`}>업무기록 작성</Link>}
-                    {(s.authorId === session?.id || isAdmin) && <>
+                    {!!session && <>
                       <Link className="work-secondary" href={`/schedule?date=${selected}&edit=${s.id}`}>수정</Link>
                       <button type="button" className="action-danger" disabled={deletingSchedule !== null} onClick={() => void removeSchedule(s.id)}>삭제</button>
                     </>}
