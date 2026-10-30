@@ -4012,3 +4012,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-records-link { height: 32px !important; min-height: 32px; padding: 4px 7px; font-size: 12px; }
 }
 .overview-help-bubble { position-anchor: auto; margin: 0; }
+
+.detail-bottom-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--work-line); }
+.day-schedule-row > .detail-bottom-actions { padding: 10px 12px; margin-top: 0; }
+.work-day-dialog .day-schedule-row > .day-entry { padding-right: 14px; }

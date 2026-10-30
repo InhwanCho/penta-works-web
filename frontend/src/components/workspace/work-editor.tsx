@@ -8,7 +8,6 @@ import { useRouter, useSearchParams } from "./overlay-navigation";
 import Link from "@/components/common/app-link";
 import WorkspaceDrawer from "./workspace-drawer";
 import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
-import ActionMenu from "@/components/common/action-menu";
 import AuthoringHeader from "./authoring-header";
 import AuthoringKind from "./authoring-kind";
 import { useWorkDraft } from "./use-work-draft";
@@ -275,34 +274,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             ? "작업 구분에 맞는 점검·서비스 기록을 작성하세요."
             : `${record?.workDate} · 작성자 ${record?.authorName}`
         }
-        action={
-          !editing && id ? (
-            <ActionMenu
-              label="업무기록 메뉴"
-              items={[
-                { label: "변경 이력", onSelect: () => setHistoryOpen(true) },
-                ...(canEdit ? [{
-                  label: "수정",
-                  onSelect: () => {
-                    draft.resume();
-                    setEditing(true);
-                  },
-                  disabled: saving,
-                }] : []),
-                ...(canEdit && !record?.assetChange
-                  ? [
-                      {
-                        label: "삭제",
-                        danger: true,
-                        onSelect: () => void remove(),
-                        disabled: saving,
-                      },
-                    ]
-                  : []),
-              ]}
-            />
-          ) : undefined
-        }
+
       />
       </>}
       {editing && !id && <AuthoringKind value="work" date={form.workDate} disabled={saving || photoBusy} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
@@ -677,7 +649,12 @@ export default function WorkEditor({ id }: { id?: string }) {
           </div>
         </form>
       ) : (
-        record && <ReadRecord record={record} />
+        record && <><ReadRecord record={record} />
+          <div className="work-form-actions detail-bottom-actions">
+            <button type="button" className="work-secondary" onClick={() => setHistoryOpen(true)}>변경 이력</button>
+            {canEdit && <button type="button" className="work-primary" disabled={saving} onClick={() => { draft.resume(); setEditing(true); }}>수정</button>}
+            {canEdit && !record.assetChange && <button type="button" className="action-danger" disabled={saving} onClick={() => void remove()}>삭제</button>}
+          </div></>
       )}
     </main>
   );

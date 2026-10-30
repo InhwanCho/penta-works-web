@@ -18,7 +18,6 @@ import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
 import AuthoringHeader from "./authoring-header";
 import AuthoringKind from "./authoring-kind";
-import ActionMenu from "@/components/common/action-menu";
 import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
@@ -427,7 +426,6 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   );
 }
 export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
-  const router = useRouter();
   const search = useSearchParams();
   const requestedEdit = search.get("edit");
   const openedEdit = useRef<string | null>(null);
@@ -715,33 +713,7 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
                     {scheduleCategory(s)}
                   </span>
                 </div>
-                <ActionMenu
-                  label={`${s.title} 일정 메뉴`}
-                  items={[
-                    ...(!isLeaveSchedule(s) ? [{label:"업무기록 작성",onSelect:()=>router.push(`/work/new?schedule=${s.id}`)}] : []),
-                    ...(s.authorId === session?.id || isAdmin
-                      ? [
-                          {
-                            label: "수정",
-                            onSelect: () => {
-                              if (draft.pending || !draft.confirmLeave())
-                                return;
-                              draft.resume();
-                              setEditingSchedule(s);
-                              setForm(scheduleEditForm(s));
-                              setOpen(true);
-                              window.scrollTo({ top: 0, behavior: "smooth" });
-                            },
-                          },
-                          {
-                            label: "삭제",
-                            danger: true,
-                            onSelect: () => void remove(s.id),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
+
               </div>
               <div className="work-section">
                 {(s.linkedRecords || []).map((r) => (
@@ -793,6 +765,16 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
                   <p className="work-prewrap">{s.body || s.title}</p>
                 </div>
               )}
+              <div className="work-form-actions detail-bottom-actions">
+                {!isLeaveSchedule(s) && <Link className="work-secondary" href={`/work/new?schedule=${s.id}`}>업무기록 작성</Link>}
+                {(s.authorId === session?.id || isAdmin) && <>
+                  <button type="button" className="work-primary" onClick={() => {
+                    if (draft.pending || !draft.confirmLeave()) return;
+                    draft.resume(); setEditingSchedule(s); setForm(scheduleEditForm(s)); setOpen(true);
+                  }}>수정</button>
+                  <button type="button" className="action-danger" onClick={() => void remove(s.id)}>삭제</button>
+                </>}
+              </div>
             </article>
           ))}
           {!rows.length && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "@/components/common/app-link";
 import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
@@ -14,9 +14,22 @@ import HospitalPlanning from "./hospital-planning";
 import HospitalWork from "./hospital-work";
 import { HospitalProfile, useHospitalProfile } from "./hospital-profile";
 import { ErrorState, Empty } from "./workspace-pages";
-import { dateLabel, scheduleCategory, isLeaveSchedule, type Hospital, type WorkRecord, type WorkSchedule } from "./workspace-data";
+import { errorText, dateLabel, scheduleCategory, isLeaveSchedule, type Hospital, type WorkRecord, type WorkSchedule } from "./workspace-data";
 
 export default function OverviewDetail({ href, onClose }: { href: string; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  async function removeSchedule(id: number) {
+    if (!window.confirm("이 일정을 삭제할까요?")) return;
+    setDeleting(true); setDeleteError("");
+    try {
+      await apiFetch(`/workspace/schedules/${id}`, { method: "DELETE" });
+      await qc.invalidateQueries({ queryKey: ["workspace-schedules"] });
+      onClose();
+    } catch (error) { setDeleteError(errorText(error)); }
+    finally { setDeleting(false); }
+  }
   const [history, setHistory] = useState<string[]>([]);
   const current = history.at(-1) || href;
   const url = new URL(current, "https://workspace.local");
@@ -67,10 +80,12 @@ export default function OverviewDetail({ href, onClose }: { href: string; onClos
         <dl className="overview-detail-facts"><div><dt>날짜</dt><dd>{dateLabel(row.startAt.slice(0, 10))}</dd></div></dl>
         <div className="overview-detail-description"><h3>메모</h3><p className="work-prewrap">{row.body || row.title}</p></div>
         {row.serviceType === "PM" && row.siteId && <PmDateEditor siteId={row.siteId} date={row.startAt.slice(0,10)} schedule={row} />}
-        <div className="work-form-actions">
-          {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>일정 수정</Link>}
+        <div className="work-form-actions detail-bottom-actions">
+          {(row.authorId === session?.id || isAdmin) && <Link className="work-secondary" href={`/schedule?date=${date}&edit=${row.id}`}>수정</Link>}
+          {(row.authorId === session?.id || isAdmin) && <button type="button" className="action-danger" disabled={deleting} onClick={() => void removeSchedule(row.id)}>삭제</button>}
           {!isLeaveSchedule(row) && <Link className="work-secondary hospital-register" href={`/work/new?schedule=${row.id}`}>업무기록 작성</Link>}
         </div>
+        {deleteError && <p className="work-error" role="alert">{deleteError}</p>}
       </section>) : <Empty>일정을 찾을 수 없습니다.</Empty>}
     </div>
   </WorkspaceDrawer>;

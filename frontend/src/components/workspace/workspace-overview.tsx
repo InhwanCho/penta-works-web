@@ -7,7 +7,6 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
-import ActionMenu from "@/components/common/action-menu";
 import { isLeaveSchedule } from "./workspace-data";
 import InspectionDueDate from "./inspection-due-date";
 import PmDateEditor from "./pm-date-editor";
@@ -543,15 +542,13 @@ export default function OverviewPage() {
                     }
                     meta={scheduleTimeLabel(s.startAt, s.endAt)}
                   />
-                  <ActionMenu label={`${s.title} 일정 메뉴`} items={[
-                    ...(s.authorId === session?.id || isAdmin ? [{
-                      label: "수정",
-                      disabled: deletingSchedule !== null,
-                      onSelect: () => router.push(`/schedule?date=${selected}&edit=${s.id}`),
-                    }] : []),
-                    ...(!isLeaveSchedule(s) ? [{ label: "업무기록 작성", disabled: deletingSchedule !== null, onSelect: () => router.push(`/work/new?schedule=${s.id}`) }] : []),
-                    ...(s.authorId === session?.id || isAdmin ? [{ label: "삭제", danger: true, disabled: deletingSchedule !== null, onSelect: () => void removeSchedule(s.id) }] : []),
-                  ]} />
+                  <div className="work-form-actions detail-bottom-actions">
+                    {!isLeaveSchedule(s) && <Link className="work-secondary" href={`/work/new?schedule=${s.id}`}>업무기록 작성</Link>}
+                    {(s.authorId === session?.id || isAdmin) && <>
+                      <Link className="work-secondary" href={`/schedule?date=${selected}&edit=${s.id}`}>수정</Link>
+                      <button type="button" className="action-danger" disabled={deletingSchedule !== null} onClick={() => void removeSchedule(s.id)}>삭제</button>
+                    </>}
+                  </div>
                   {s.serviceType === "PM" && s.siteId && <PmDateEditor siteId={s.siteId} date={s.startAt.slice(0,10)} schedule={s} />}
                   </div>
                 ))}
