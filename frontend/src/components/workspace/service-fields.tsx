@@ -129,7 +129,7 @@ export default function ServiceFields({
       {type === "COLDHEAD" && (
         <>
           <ChoiceGroup
-            legend="Cold Head 위치"
+            legend="Cold Head 모델"
             value={d.coldheadPosition}
             onChange={(v) => set("coldheadPosition", v)}
             options={[
