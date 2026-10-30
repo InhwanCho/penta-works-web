@@ -49,6 +49,31 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus({ preventScroll: true });
     };
   }, []);
+  // iOS pans the visual viewport when the keyboard opens. Keep the header
+  // within that viewport and let only the content area scroll to the field.
+  useEffect(() => {
+    const dialog = ref.current;
+    const viewport = window.visualViewport;
+    if (!mobile || !dialog || !viewport) return;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        dialog.style.setProperty("--drawer-viewport-top", `${viewport.offsetTop + 8}px`);
+        dialog.style.setProperty("--drawer-viewport-height", `${Math.max(0, viewport.height - 16)}px`);
+      });
+    };
+    measure();
+    viewport.addEventListener("resize", measure);
+    viewport.addEventListener("scroll", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("resize", measure);
+      viewport.removeEventListener("scroll", measure);
+      dialog.style.removeProperty("--drawer-viewport-top");
+      dialog.style.removeProperty("--drawer-viewport-height");
+    };
+  }, [mobile]);
   useEffect(() => {
     const content = contentRef.current;
     if (!mobile || !content) return;

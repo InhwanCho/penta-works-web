@@ -704,7 +704,7 @@ export function SchedulePage() {
         <h2>{dateLabel(selected)}</h2>
         <span>{rows.length}건</span>
       </div>}
-      {schedules.error ? (
+      {!open && (schedules.error ? (
         <ErrorState
           error={schedules.error}
           retry={() => void schedules.refetch()}
@@ -816,7 +816,7 @@ export function SchedulePage() {
             schedules.isPending ? <PageLoader /> : <Empty>등록된 일정이 없습니다.</Empty>
           )}
         </div>
-      )}
+      ))}
     </main>
   );
 }

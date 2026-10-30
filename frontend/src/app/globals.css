@@ -3807,3 +3807,45 @@ html.dark {
  .work-overview .overview-fold-body :is(.work-due-row,.recent-work-record) { padding: 10px; }
  .overview-due-meta { gap: 4px 7px; font-size: 11px; }
 }
+
+/* Stable stacked overlays: headers stay visible; only the body scrolls. */
+.work-day-dialog:is(.workspace-desktop-dialog,.workspace-drawer) {
+ min-height: min(420px, 80dvh); overflow: hidden;
+}
+.work-day-dialog.workspace-desktop-dialog[open] { display: flex; flex-direction: column; }
+.work-day-dialog.workspace-desktop-dialog > header { flex-shrink: 0; }
+.workspace-dialog-content { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+.work-day-dialog:is(.workspace-route-overlay,.overview-detail-drawer) { height: min(760px, 88dvh); }
+.work-day-dialog .page-loading-region { min-height: 280px; height: auto; }
+.work-day-dialog :is(.workspace-dialog-content,.workspace-drawer-content) { flex: 1; scrollbar-gutter: stable; }
+.workspace-frame .work-overview .overview-fold > summary {
+ position: relative; display: grid; grid-template-columns: 116px 28px minmax(0,1fr);
+ gap: 8px; padding-right: 42px; -webkit-tap-highlight-color: transparent;
+}
+.work-overview .overview-fold > summary::after { display: none; }
+.work-overview .overview-fold > summary > small { justify-self: end; text-align: right; }
+.overview-fold-chevron { position: absolute; right: 14px; top: 50%; width: 18px; height: 18px; transform: translateY(-50%) rotate(90deg); color: var(--work-muted); pointer-events: none; }
+.overview-fold[open] > summary > .overview-fold-chevron { transform: translateY(-50%) rotate(-90deg); }
+.workspace-frame .work-overview .overview-fold { isolation: isolate; }
+.workspace-frame .work-overview .overview-fold[open] > summary { border-bottom: 0; box-shadow: inset 0 -1px var(--work-line); }
+.workspace-frame .work-overview .overview-fold > summary:active { background: var(--work-soft); }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar { background: var(--work-soft); color: var(--work-ink); padding: 5px 12px; min-height: 46px; gap: 6px; }
+.workspace-frame .work-overview .work-calendar-toolbar > .overview-month-picker { min-height: 36px; }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > button[aria-label$=" 달"] { min-height: 36px; color: var(--work-muted) !important; }
+.workspace-frame .overview-month-picker:focus-within { outline-color: var(--work-focus); }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { height: 36px !important; min-height: 36px; }
+@media (max-width:1023px) {
+ .work-day-dialog.workspace-drawer {
+  top: var(--drawer-viewport-top, 8px); bottom: auto;
+  height: min(760px, var(--drawer-viewport-height, 88dvh));
+  min-height: 0; max-height: var(--drawer-viewport-height, 88dvh);
+  margin-top: max(0px, calc(var(--drawer-viewport-height, 88dvh) - 760px));
+ }
+ .workspace-drawer-content { overflow-anchor: none; -webkit-overflow-scrolling: touch; }
+ .work-day-dialog :is(input.work-input:not([type=checkbox]):not([type=radio]),select.work-input),
+ .workspace-frame .work-form :is(input.work-input:not([type=checkbox]):not([type=radio]),select.work-input) {
+  height: 44px; min-height: 44px; padding: 9px 11px; font-size: 16px; line-height: 24px;
+ }
+ .work-day-dialog textarea.work-input { font-size: 16px; scroll-margin-block: 16px; }
+ .workspace-frame .work-overview .overview-fold > summary { grid-template-columns: 106px 28px minmax(0,1fr); gap: 6px; }
+}
