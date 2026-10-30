@@ -618,7 +618,7 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
               ["GENERAL", "병원 외 일정"],
             ]}
             onChange={(targetKind) =>
-              setForm({ ...form, targetKind, siteId: "" })
+              setForm({ ...form, targetKind, siteId: "", endDate: form.date })
             }
           />
           {form.targetKind === "GENERAL" ? (
@@ -626,7 +626,7 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
               legend="분류"
               value={form.personalKind}
               options={Object.entries(personalScheduleLabels)}
-              onChange={(personalKind) => setForm({ ...form, personalKind })}
+              onChange={(personalKind) => setForm({ ...form, personalKind, endDate: form.date })}
             />
           ) : (
             <>
@@ -653,11 +653,9 @@ export function SchedulePage({ onSaved }: { onSaved?: () => void } = {}) {
             }} /></label>
 
           </div>
-          <details className="schedule-date-range" open={form.endDate > form.date || undefined}>
-            <summary>{form.endDate > form.date ? `여러 날 일정 · ${form.date} ~ ${form.endDate}` : "＋ 여러 날 일정으로 설정"}</summary>
-            <label>종료 날짜<input className="work-input" type="date" min={form.date} value={form.endDate} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
-            <button type="button" className="work-text-button" onClick={event=>{setForm({...form,endDate:form.date});event.currentTarget.closest("details")?.removeAttribute("open");}}>하루 일정으로</button>
-          </details>
+          {form.targetKind === "GENERAL" && form.personalKind === "leave" && (
+            <label>종료 날짜<input className="work-input" required type="date" min={form.date} value={form.endDate} onChange={event=>setForm({...form,endDate:event.target.value})} /></label>
+          )}
           <label>
             메모
             <textarea

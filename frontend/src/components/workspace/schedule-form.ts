@@ -14,7 +14,8 @@ export function newScheduleForm(date: string) {
 }
 export type ScheduleForm = ReturnType<typeof newScheduleForm>;
 export function scheduleTimes(form: ScheduleForm) {
-  return {startAt:`${form.date}T00:00`,endAt:`${form.endDate || form.date}T23:59`};
+  const endDate = form.targetKind === "GENERAL" && form.personalKind === "leave" ? form.endDate || form.date : form.date;
+  return {startAt:`${form.date}T00:00`,endAt:`${endDate}T23:59`};
 }
 export function substantialScheduleChange(form: ScheduleForm, previous?: WorkSchedule | null) {
   const old = previous ? scheduleEditForm(previous) : newScheduleForm(form.date);

@@ -74,7 +74,7 @@ export function initialDetails(): WorkDetails {
     assetIds: [],
     model: "",
     engineer: "",
-    personalKind: "office",
+    personalKind: "etc",
     contractType: "C",
     acrKind: "doc",
     coldheadPosition: "A2",

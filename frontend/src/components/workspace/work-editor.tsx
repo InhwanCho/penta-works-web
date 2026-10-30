@@ -42,10 +42,8 @@ import {
 } from "./work-photos";
 import { AssetSelection, AssetRecordSummary, HospitalEquipmentSelection } from "./hospital-assets";
 const generalTypes: [string, string][] = [
-  ["office", "사무실 업무"],
-  ["education", "교육 · 세미나"],
-  ["leave", "휴가"],
-  ["etc", "기타 일정"],
+  ["repair", "고장수리"],
+  ["etc", "기타"],
 ];
 export default function WorkEditor({ id }: { id?: string }) {
   const attachmentApi = useRef<PhotoAttachmentApi>(null);
@@ -182,6 +180,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         throw Error("병원을 선택해주세요.");
       const computed = computedDetails({
         ...details,
+        personalKind: form.kind === "GENERAL" ? (details.personalKind === "repair" ? "repair" : "etc") : details.personalKind,
         engineer: details.engineer || session?.name || "",
         assetIds: form.kind === "FIELD" ? details.assetIds : [],
       });
@@ -459,7 +458,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           ) : (
             <ChoiceGroup
               legend="업무 분류"
-              value={details.personalKind}
+              value={details.personalKind === "repair" ? "repair" : "etc"}
               onChange={(personalKind) =>
                 setDetails({ ...details, personalKind })
               }

@@ -9,7 +9,7 @@ const times=form=>JSON.parse(JSON.stringify(out.scheduleTimes(form)));
 test('new hospital and general schedules default to all-day',()=>{
  const f=out.newScheduleForm('2026-10-27');assert.equal(f.allDay,true);
  assert.deepEqual(times(f),{startAt:'2026-10-27T00:00',endAt:'2026-10-27T23:59'});
- f.targetKind='HOSPITAL';f.endDate='2026-10-29';assert.equal(times(f).endAt,'2026-10-29T23:59');
+ f.targetKind='HOSPITAL';f.endDate='2026-10-29';assert.equal(times(f).endAt,'2026-10-27T23:59');
 });
 test('schedule saves always use whole days while retaining date ranges',()=>{
  const record={siteId:'001',title:'방문',body:'',startAt:'2026-10-27T09:00:00',endAt:'2026-10-27T10:00:00'};
@@ -44,4 +44,12 @@ test('memo supplies the calendar/search title without requiring another input',(
  const old={siteId:null,title:'기존 제목',body:'',startAt:'2026-10-27T00:00:00',endAt:'2026-10-27T23:59:00'};
  assert.equal(out.scheduleEditForm(old).body,'기존 제목');
  assert.equal(out.normalizeScheduleForm({date:'2026-10-27',title:'이전 임시저장'},'2026-10-27').body,'이전 임시저장');
+});
+
+test('only vacation schedules retain an end date, including when switching away from vacation',()=>{
+ const f=out.newScheduleForm('2026-10-27');f.endDate='2026-10-30';
+ assert.equal(times(f).endAt,'2026-10-27T23:59');
+ f.personalKind='leave';assert.equal(times(f).endAt,'2026-10-30T23:59');
+ f.targetKind='HOSPITAL';assert.equal(times(f).endAt,'2026-10-27T23:59');
+ f.targetKind='GENERAL';f.personalKind='etc';assert.equal(times(f).endAt,'2026-10-27T23:59');
 });
