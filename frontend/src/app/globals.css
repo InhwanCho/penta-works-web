@@ -3968,3 +3968,19 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 
 :is(.workspace-dialog-content,.workspace-drawer-content):has(.page-loading-region[data-overlay="true"]) { position: relative; }
 .work-day-dialog :is(.workspace-dialog-content,.workspace-drawer-content) .page-loading-region[data-overlay="true"] { position: absolute; inset: 0; height: 100%; min-height: 0; }
+.inspection-due-heading { margin:0 0 16px!important; font-size:15px; color:var(--work-muted); }
+.inspection-due-row { padding:18px 0; }
+.inspection-due-row + .inspection-due-row { border-top:1px solid var(--work-line); }
+.inspection-due-top { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.inspection-due-name { display:flex; align-items:center; flex-wrap:wrap; gap:8px; min-width:0; }
+.inspection-due-name strong { font-size:17px; font-weight:600; overflow-wrap:anywhere; }
+.inspection-due-badge { border-radius:24px; padding:5px 10px; background:var(--work-soft); color:var(--control-active-text); font-size:13px; font-weight:700; }
+.inspection-due-links { display:flex; align-items:center; gap:8px; flex-shrink:0; }
+.inspection-due-links a { display:inline-flex; text-decoration:none; }
+.inspection-due-meta { margin:12px 0; color:var(--work-muted); font-size:13px; }
+.inspection-due-date { display:flex; align-items:center; flex-wrap:wrap; gap:10px; }
+.inspection-due-date label { color:var(--work-muted); font-size:13px; }
+.inspection-due-date input { flex:1; min-width:130px; min-height:44px; border:1px solid var(--work-line); border-radius:8px; padding:8px 12px; font-size:16px; background:var(--work-paper); color:var(--work-ink); }
+.inspection-due-auto { padding:8px 0; min-height:44px; background:transparent; border:0; color:var(--control-active-text); text-decoration:underline; text-underline-offset:3px; }
+.inspection-due-date .work-error { flex-basis:100%; }
+@media(max-width:600px) { .inspection-due-name { flex-basis:100%; } .inspection-due-links { margin-left:auto; } .inspection-due-name strong { font-size:16px; } }

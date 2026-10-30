@@ -132,6 +132,7 @@ export function errorText(error: unknown) {
   return error instanceof Error ? error.message : "불러오지 못했습니다.";
 }
 export type HospitalPlan = {
+  lastVisitDate?: string | null;
   siteId: string;
   pmIntervalMonths: number;
   lastPmDate?: string | null;
