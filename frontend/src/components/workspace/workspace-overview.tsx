@@ -72,6 +72,7 @@ export default function OverviewPage() {
   const today = dayString();
   const mobile = useMobileWorkspace();
   const [searchOpen, setSearchOpen] = useState(false);
+  const [listHelp, setListHelp] = useState<{ title: string; body: string } | null>(null);
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
   const suppressCalendarClick = useRef(false);
@@ -312,10 +313,10 @@ export default function OverviewPage() {
           >
             ›
           </button>
-          <button type="button" className="overview-search-trigger" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
+          <button type="button" className="overview-search-trigger calendar-toolbar-action" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
           </button>
-          {!mobile && <button type="button" className="work-calendar-today" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}>오늘</button>}
+          {!mobile && <button type="button" className="work-calendar-today calendar-toolbar-action" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg><span>오늘</span></button>}
         </div>
         <CalendarLoadState
           label="업무기록"
@@ -603,6 +604,7 @@ export default function OverviewPage() {
         >
           <summary>
             <span>다가오는 점검</span>
+            <button type="button" className="overview-list-help" aria-label="다가오는 점검 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "다가오는 점검 안내", body: "PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료 기록과 병원별 지정일로 계산합니다. 45일 이내 점검을 표시하며, 방문 확정 일정과는 다릅니다." }); }}>?</button>
             <small>
               45일 이내
               {!planningLoading && !planningFailed
@@ -611,10 +613,6 @@ export default function OverviewPage() {
             </small>
           </summary>
           <div className="overview-fold-body">
-            <p className="work-hint">
-              PM 기본 2개월 · ACR 서류 12개월 · 정밀 36개월. 유형이 확인된 완료
-              기록과 병원별 지정일로 계산합니다.
-            </p>
             <div className="work-panel">
               <CalendarLoadState
                 label="점검 기한"
@@ -629,14 +627,15 @@ export default function OverviewPage() {
                   key={d.siteId + d.type}
                   onNavigate={mobile ? (event) => { event.preventDefault(); setDetailHref(`/sites/${d.siteId}`); } : undefined}
                 >
-                  <div>
+                  <div className="overview-due-content">
                     <strong>{d.siteName}</strong>
-                    <p>
-                      {d.type} · 예정 {d.date}
-                    </p>
-                    {d.type === "PM" && <small>최근 PM {d.lastPmDate || "기록 없음"}</small>}
+                    <div className="overview-due-meta">
+                      <span className="overview-due-type">{d.type === "PM" ? "정기점검(PM)" : d.type}</span>
+                      <span>예정일 {d.date.replaceAll("-", ". ")}</span>
+                      {d.type === "PM" && <span>최근 PM {d.lastPmDate?.replaceAll("-", ". ") || "기록 없음"}</span>}
+                    </div>
                   </div>
-                  <span className={`work-badge ${d.days < 0 ? "overdue" : ""}`}>
+                  <span className={`work-badge overview-due-count ${d.days < 0 ? "overdue" : d.days <= 14 ? "soon" : ""}`}>
                     {d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}
                   </span>
                 </Link>
@@ -653,6 +652,7 @@ export default function OverviewPage() {
         >
           <summary>
             <span>방문 전 확인사항</span>
+            <button type="button" className="overview-list-help" aria-label="방문 전 확인사항 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "방문 전 확인사항 안내", body: "업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." }); }}>?</button>
             <small>{preparations.filter((p) => !p.done).length}건 남음</small>
           </summary>
           <div className="overview-fold-body">
@@ -687,7 +687,7 @@ export default function OverviewPage() {
                 ))}
                 {!preparations.length && (
                   <Empty>
-                    업무기록에 방문 전 확인사항을 적으면 여기에 표시됩니다.
+                    등록된 확인사항이 없습니다.
                   </Empty>
                 )}
               </div>
@@ -697,6 +697,7 @@ export default function OverviewPage() {
         <details className="overview-fold">
           <summary>
             <span>최근 업무기록</span>
+            <button type="button" className="overview-list-help" aria-label="최근 업무기록 안내" onClick={event => { event.preventDefault(); event.stopPropagation(); setListHelp({ title: "최근 업무기록 안내", body: "이번 주와 이전 4주의 업무기록을 표시합니다." }); }}>?</button>
             <small>
               {recent.isPending
                 ? <CircleLoader size="xs" inline />
@@ -712,7 +713,7 @@ export default function OverviewPage() {
             >
               업무기록 전체 보기 →
             </Link>
-            <p className="work-hint">이번 주 · 이전 4주 ({recentRange.from} ~ {recentRange.to})</p>
+
             {recent.isError ? (
               <ErrorState
                 error={recent.error}
@@ -771,6 +772,7 @@ export default function OverviewPage() {
           </div>
         </details>
       </div>
+      {listHelp && <WorkspaceDrawer title={listHelp.title} onClose={() => setListHelp(null)}><p className="overview-list-help-copy">{listHelp.body}</p></WorkspaceDrawer>}
       {detailHref && <OverviewDetail href={detailHref} onClose={() => setDetailHref(null)} />}
       <Link className="work-secondary hospital-register overview-write-mobile" href={`/schedule?date=${selected}&new=1`} aria-label="일정 등록">＋ 작성</Link>
     </main>

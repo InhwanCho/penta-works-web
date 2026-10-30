@@ -545,13 +545,7 @@ export function SchedulePage() {
   }
   return (
     <main className={`work-page schedule-page${open ? " schedule-editing" : ""}`}>
-      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} disabled={saving} onBack={()=>draft.back(()=>router.replace("/overview"))} /> : <>
-      <Link
-        className="work-back"
-        href="/overview"
-      >
-        ← 업무현황 달력
-      </Link>
+      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} /> : <>
       <PageHeading
         title="일정"
         description="방문·점검과 팀의 일정을 함께 확인하세요."
