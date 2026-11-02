@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
@@ -488,7 +489,7 @@ export default function WorkEditor({ id }: { id?: string }) {
             </p>
             <label>
               연결할 일정
-              <select
+              <Select
                 className="work-input"
                 value={details.scheduleId || ""}
                 onChange={(e) =>
@@ -522,7 +523,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                       기존 연결 일정 (삭제되었거나 조회 불가)
                     </option>
                   )}
-              </select>
+              </Select>
             </label>
           </details>
           <label>

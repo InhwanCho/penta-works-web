@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
@@ -66,7 +67,7 @@ function HospitalForm({profile,options,onClose}:{profile?: Profile;options: Opti
     <div className="work-form-row">{field("contactName","병원 연락 담당자",80)}{field("contactPhone","연락처",30)}</div>
     <label>메모<textarea className="work-input" rows={3} maxLength={10000} value={form.notes} onChange={e=>setForm({...form,notes:e.target.value})}/></label>
     {!profile && <div className="work-form-row">{field("model","MRI 모델 (선택)",200)}{field("serialNumber","MRI 시리얼 번호 (선택)",200)}</div>}
-    <label>모니터링 연결{profile?.monitoringConnected ? <p className="work-hint">연결됨 · {profile.monitoringSiteId}</p> : <><select className="work-input" value={form.monitoringSiteId} onChange={e=>setForm({...form,monitoringSiteId:e.target.value})}><option value="">연결하지 않음 · 서비스 업무만 사용</option>{options.monitoringSites.map(s=><option key={s.siteId} value={s.siteId}>{s.name || s.siteId} · {s.siteId}</option>)}</select><span className="work-hint">수집 사이트가 준비되면 나중에 연결할 수 있습니다. 대시보드 표시 여부는 관리 설정에서 별도로 정합니다.</span></>}</label>
+    <label>모니터링 연결{profile?.monitoringConnected ? <p className="work-hint">연결됨 · {profile.monitoringSiteId}</p> : <><Select className="work-input" value={form.monitoringSiteId} onChange={e=>setForm({...form,monitoringSiteId:e.target.value})}><option value="">연결하지 않음 · 서비스 업무만 사용</option>{options.monitoringSites.map(s=><option key={s.siteId} value={s.siteId}>{s.name || s.siteId} · {s.siteId}</option>)}</Select><span className="work-hint">수집 사이트가 준비되면 나중에 연결할 수 있습니다. 대시보드 표시 여부는 관리 설정에서 별도로 정합니다.</span></>}</label>
     <fieldset className="hospital-access-members"><legend>접근할 직원</legend><p className="work-hint">회사 관리자는 항상 접근할 수 있습니다.</p>{options.members.length ? options.members.map(m=><label className="work-check" key={m.id}><input type="checkbox" checked={form.userIds.includes(m.id)} onChange={e=>setForm({...form,userIds:e.target.checked?[...form.userIds,m.id]:form.userIds.filter(id=>id!==m.id)})}/><span>{m.name}<small>{m.email}</small></span></label>) : <p className="work-hint">등록된 일반 직원이 없습니다.</p>}</fieldset>
     {error && <p className="work-error" role="alert">{error}</p>}
     <div className="work-form-actions"><button type="button" className="action-cancel work-secondary" onClick={onClose}>취소</button><button className="action-save work-primary" disabled={busy}>{busy?<CircleLoader size="xs" inline />:"저장"}</button></div>

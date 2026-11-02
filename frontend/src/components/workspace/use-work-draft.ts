@@ -66,6 +66,11 @@ export function useWorkDraft<T>({
     }
     setReadyKey(storageKey);
   }, [storageKey]);
+  useEffect(() => {
+    if (!enabled || !pending) return;
+    const timer = window.setTimeout(() => setPending(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [enabled, pending]);
   const ready = readyKey === storageKey;
   useEffect(() => {
     if (enabled && ready && baseline.current === null) {

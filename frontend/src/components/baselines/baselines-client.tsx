@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
@@ -288,11 +289,11 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
         <summary>상세 검색{(query || siteId || fromDate || toDate || kind !== "all" || filter === "failed" || filter === "skipped") ? " · 적용 중" : ""}</summary>
         <div className="alert-inbox-filter-fields">
           <label>알림 내용<input type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="검색어 입력" /></label>
-          <label>병원<select value={siteId} onChange={event => setSiteId(event.target.value)}><option value="">모든 병원</option>{sites.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</select></label>
-          <label>문제 유형<select value={kind} onChange={event => setKind(event.target.value)}><option value="all">모든 유형</option><option value="range">수치 이상</option><option value="site">데이터 수집 중단</option><option value="missing">측정항목 누락</option><option value="chiller">냉각장치 정지 의심</option></select></label>
+          <label>병원<Select value={siteId} onChange={event => setSiteId(event.target.value)}><option value="">모든 병원</option>{sites.map(([id,name]) => <option key={id} value={id}>{name}</option>)}</Select></label>
+          <label>문제 유형<Select value={kind} onChange={event => setKind(event.target.value)}><option value="all">모든 유형</option><option value="range">수치 이상</option><option value="site">데이터 수집 중단</option><option value="missing">측정항목 누락</option><option value="chiller">냉각장치 정지 의심</option></Select></label>
           <label>시작일<input type="date" value={fromDate} onChange={event => setFromDate(event.target.value)} /></label>
           <label>종료일<input type="date" value={toDate} onChange={event => setToDate(event.target.value)} /></label>
-          <label>조회 범위<select value={filter} onChange={event => setFilter(event.target.value as AlertEventFilter)}><option value="unacknowledged">확인 필요</option><option value="open">진행 중</option><option value="all">전체 기록</option><option value="failed">발송 확인 필요</option><option value="skipped">발송 안 됨</option></select></label>
+          <label>조회 범위<Select value={filter} onChange={event => setFilter(event.target.value as AlertEventFilter)}><option value="unacknowledged">확인 필요</option><option value="open">진행 중</option><option value="all">전체 기록</option><option value="failed">발송 확인 필요</option><option value="skipped">발송 안 됨</option></Select></label>
           <button type="button" className="work-secondary" onClick={() => { setQuery(""); setSiteId(""); setKind("all"); setFromDate(""); setToDate(""); if(filter === "failed" || filter === "skipped") setFilter("all"); }}>검색 조건 초기화</button>
         </div>
       </details>

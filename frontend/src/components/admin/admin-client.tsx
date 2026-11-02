@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
@@ -315,7 +316,7 @@ export default function AdminClient() {
       ) : (
         <div className="management-task-switch">
           <label htmlFor="admin-task-switch">다른 작업</label>
-          <select
+          <Select
             id="admin-task-switch"
             value={tab}
             onChange={(event) => selectTask(event.target.value as AdminTask)}
@@ -328,7 +329,7 @@ export default function AdminClient() {
                 {item.label}
               </option>
             ))}
-          </select>
+          </Select>
           {tab === "users" && (
             <button
               type="button"

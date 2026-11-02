@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import HelpButton from "@/components/common/context-help";
 import { ALERT_HELP } from "@/lib/alert-help";
 import { NotificationPreferencesSummary } from "./notification-preferences";
@@ -40,7 +41,7 @@ export default function AlertSettingsTable({ entries, metrics, onOpen, onToggle,
   return <><div className="hidden lg:block"><NotificationPreferencesSummary/></div><section aria-label="병원별 내 알림값 설정" className="rounded-xl border border-slate-200 bg-white dark:border-white/15 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-2 lg:p-4 dark:border-white/10">
       <div><div className="flex items-center gap-1"><h2 className="text-base lg:text-lg font-extrabold">알림 기준값</h2><HelpButton title="기준값 바꾸기" message="병원과 측정항목을 찾은 뒤 기준값을 누르면 수정할 수 있습니다. 옆으로 밀면 다른 측정항목을 볼 수 있습니다."/></div><p className="mt-1 hidden text-base leading-5 text-text-secondary lg:block">측정항목이나 설정 버튼을 눌러 변경하세요.</p></div>
-      <label className="text-xs lg:text-base font-bold">측정항목<select value={metricKey} onChange={e=>setMetricKey(e.target.value)} className="ml-2 min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-background-dark-primary"><option value="all">전체 항목</option>{available.map(m=><option key={m.key} value={m.key}>{label(m.key,m.label)}</option>)}</select></label>
+      <label className="text-xs lg:text-base font-bold">측정항목<Select value={metricKey} onChange={e=>setMetricKey(e.target.value)} className="ml-2 min-h-11 max-w-full rounded-lg border border-slate-300 bg-white px-3 text-base dark:border-white/20 dark:bg-background-dark-primary"><option value="all">전체 항목</option>{available.map(m=><option key={m.key} value={m.key}>{label(m.key,m.label)}</option>)}</Select></label>
     </div>
     <PageScrollTable columnWidths={["var(--hospital-column)",...shown.map(()=>"var(--metric-column)"),"var(--policy-column)","var(--policy-column)","var(--action-column)"]} name="병원별 내 알림값 표" labels={["병원명", ...shown.map(m=>label(m.key,m.label)), "병원 전체 수집 중단", "콜드칠러 정지", "병원 설정"]} heading={(
         <thead className="sticky top-0 z-20 bg-slate-100 dark:bg-slate-800"><tr><th scope="col" className="sticky left-0 z-30 border-r border-slate-200/60 dark:border-white/10 bg-slate-100 p-2 lg:p-3 text-left dark:bg-slate-800">병원명</th>{shown.map(m=><th scope="col" key={m.key} className="p-2 lg:p-3"><span title={label(m.key,m.label)} className="block break-keep leading-6 [overflow-wrap:anywhere]">{label(m.key,m.label)}</span></th>)}{["병원 전체 수집 중단","콜드칠러 정지","병원 설정"].map(label=><th scope="col" key={label} className="p-2 lg:p-3"><span className="flex items-center justify-center gap-1 whitespace-nowrap"><span>{label==="병원 전체 수집 중단"?"전체 수집 중단":label}</span>{ALERT_HELP[label]&&<HelpButton title={label} message={ALERT_HELP[label]}/>}</span></th>)}</tr></thead>)} body={(

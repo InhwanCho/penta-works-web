@@ -494,6 +494,8 @@ export default function OverviewPage() {
                   ? ` (${dayRecords.length})`
                   : ""}
               </h3>
+              <a className="work-secondary calendar-work-create" href={`/work/create?date=${selected}`}>업무기록 작성</a>
+
 
             </div>
             <CalendarLoadState
@@ -540,7 +542,6 @@ export default function OverviewPage() {
                   ? `(${daySchedules.length})`
                   : ""}
               </h3>
-              <a className="work-secondary calendar-work-create" href={`/work/create?date=${selected}`}>업무기록 작성</a>
 
 
             </div>

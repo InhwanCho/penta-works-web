@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 
 import { useState, type FormEvent } from "react";
@@ -479,7 +480,7 @@ export function HospitalEquipmentSelection({ siteId, value, model, onChange }: {
   const available = equipment.filter(asset => asset.status === "ACTIVE" || value.includes(asset.id));
   return <label>
     장비 (모델)
-    <select className="work-input" disabled={!siteId || query.isPending || !!query.error}
+    <Select className="work-input" disabled={!siteId || query.isPending || !!query.error}
       value={selected ? String(selected.id) : model ? "legacy" : ""}
       onChange={event => {
         const asset = available.find(item => String(item.id) === event.target.value);
@@ -488,7 +489,7 @@ export function HospitalEquipmentSelection({ siteId, value, model, onChange }: {
       <option value="">{!siteId ? "병원을 먼저 선택해주세요" : query.isPending ? "장비 불러오는 중…" : "병원 장비 선택"}</option>
       {!selected && model && <option value="legacy">{model} (기존 기록)</option>}
       {available.map(asset => <option key={asset.id} value={asset.id}>{[asset.name, asset.model, asset.serialNumber && `S/N ${asset.serialNumber}`].filter(Boolean).join(" · ")}</option>)}
-    </select>
+    </Select>
     {query.error ? <span role="alert">장비를 불러오지 못했습니다. <button type="button" onClick={() => void query.refetch()}>다시 시도</button></span> : siteId && !query.isPending && !available.length && <span className="work-hint">등록된 장비가 없습니다. <Link href={`/sites/${siteId}`}>병원 상세에서 장비 등록 →</Link></span>}
   </label>;
 }

@@ -4138,3 +4138,15 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @media (max-width:1023px) {
  .work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { width: 48px; min-width: 48px; flex-basis: 48px; height: 44px; min-height: 44px; padding: 5px; }
 }
+
+.select-control { position: relative; display: inline-block; min-width: 0; max-width: 100%; vertical-align: middle; }
+.select-control:has(> .work-input) { display: block; width: 100%; }
+.select-control > select { appearance: none; -webkit-appearance: none; width: 100%; padding-right: 34px !important; }
+.select-control-icon { position: absolute; right: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; color: var(--work-muted,#64748b); }
+.workspace-frame :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=month]),select) { box-sizing: border-box; height: 44px; min-height: 44px; }
+.workspace-frame .work-form .work-pm-item .pm-measurements-grid input.work-input { height: 44px; min-height: 44px; }
+.work-schedule-link > summary::after { color: var(--work-muted); }
+@media (max-width:1023px) {
+ .work-day-dialog :is(button,a.work-primary,a.work-secondary,a.hospital-register,a.day-section-action) { height: 40px; min-height: 40px; box-sizing: border-box; }
+ .work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { height: 40px; min-height: 40px; }
+}

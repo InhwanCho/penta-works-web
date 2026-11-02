@@ -1,5 +1,6 @@
 "use client";
 
+import Select from "@/components/common/select";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
@@ -384,7 +385,7 @@ function SiteAssignmentRow({
           </p>
         </div>
         <div className="flex gap-2">
-          <select
+          <Select
             aria-label={`${site.id} 배정 회사`}
             className="dark:bg-background-dark-card rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs dark:border-white/10"
             value={target}
@@ -401,7 +402,7 @@ function SiteAssignmentRow({
                   {item.name}
                 </option>
               ))}
-          </select>
+          </Select>
           <button
             type="button"
             disabled={busy || !target || target === String(site.companyId)}
