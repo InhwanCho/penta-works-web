@@ -4166,3 +4166,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { width: 36px !important; min-width: 36px; max-width: 36px; height: 36px !important; min-height: 36px !important; max-height: 36px; flex: 0 0 36px; padding: 0 !important; aspect-ratio: 1; }
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger span { display: none !important; }
+
+.calendar-month-enter { animation-duration: 200ms; }
+@keyframes calendar-month-enter { from { opacity: .4; transform: translateX(25%); } to { opacity: 1; transform: translateX(0); } }
+@keyframes calendar-month-back { from { opacity: .4; transform: translateX(-25%); } to { opacity: 1; transform: translateX(0); } }

@@ -83,6 +83,7 @@ export default function OverviewPage() {
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
   const suppressCalendarClick = useRef(false);
+  const calendarTransitioning = useRef(false);
   const [month, setMonthValue] = useState(today.slice(0, 7)),
     [selected, setSelected] = useState(today),
     [dayOpen, setDayOpen] = useState(false),
@@ -367,12 +368,30 @@ export default function OverviewPage() {
         />
         <div key={month} className={`overview-calendar-inner calendar-month-enter${monthDirection < 0 ? " calendar-month-back" : ""}`}
           onTouchStart={(event) => {
+            if (calendarTransitioning.current) return;
             suppressCalendarClick.current = false;
             if (event.touches.length !== 1) { calendarGesture.current = null; return; }
             const touch = event.touches[0];
             calendarGesture.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
           }}
-          onTouchEnd={(event) => {
+          onTouchMove={(event) => {
+            const start = calendarGesture.current;
+            if (!start || event.touches.length !== 1) return;
+            const dx = event.touches[0].clientX - start.x;
+            const dy = event.touches[0].clientY - start.y;
+            if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+              calendarGesture.current = null;
+              event.currentTarget.style.transform = "";
+              event.currentTarget.style.opacity = "";
+              return;
+            }
+            if (Math.abs(dx) <= 8 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+            suppressCalendarClick.current = true;
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+            event.currentTarget.style.transform = `translateX(${dx * 0.55}px)`;
+            event.currentTarget.style.opacity = String(Math.max(0.35, 1 - Math.abs(dx * 0.55) / event.currentTarget.clientWidth));
+          }}
+          onTouchEnd={async (event) => {
             const start = calendarGesture.current;
             calendarGesture.current = null;
             if (!start) return;
@@ -380,12 +399,32 @@ export default function OverviewPage() {
             if (!touch) return;
             const dx = touch.clientX - start.x;
             const dy = touch.clientY - start.y;
-            if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.4) {
-              suppressCalendarClick.current = true;
-              setMonth(current => addCalendarMonths(current + "-01", dx < 0 ? 1 : -1).slice(0, 7));
+            const node = event.currentTarget;
+            const commit = Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5;
+            const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+            if (!commit) {
+              if (!reduce) node.animate([{ transform: node.style.transform || "translateX(0)", opacity: node.style.opacity || "1" }, { transform: "translateX(0)", opacity: 1 }], { duration: 150, easing: "ease-out" });
+              node.style.transform = "";
+              node.style.opacity = "";
+              return;
             }
+            suppressCalendarClick.current = true;
+            calendarTransitioning.current = true;
+            if (!reduce) {
+              const exit = node.animate([
+                { transform: node.style.transform || "translateX(0)", opacity: node.style.opacity || "1" },
+                { transform: `translateX(${node.clientWidth * (dx < 0 ? -0.5 : 0.5)}px)`, opacity: 0 },
+              ], { duration: 135, easing: "ease-out", fill: "forwards" });
+              try { await exit.finished; } catch { calendarTransitioning.current = false; return; }
+            }
+            setMonth(current => addCalendarMonths(current + "-01", dx < 0 ? 1 : -1).slice(0, 7));
+            calendarTransitioning.current = false;
           }}
-          onTouchCancel={() => { calendarGesture.current = null; }}
+          onTouchCancel={event => {
+            calendarGesture.current = null;
+            event.currentTarget.style.transform = "";
+            event.currentTarget.style.opacity = "";
+          }}
           onPointerDown={(event) => {
             if (event.pointerType === "touch") return;
             if (!event.isPrimary || event.button !== 0) return;
