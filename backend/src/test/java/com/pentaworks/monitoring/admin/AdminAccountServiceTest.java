@@ -24,6 +24,35 @@ import static org.mockito.Mockito.when;
 
 class AdminAccountServiceTest {
     @Test
+    @SuppressWarnings("unchecked")
+    void highestAdminsCanSendResetToPeersWhileCompanyAdminCannot() throws Exception {
+        for (String role : List.of("SUPER_ADMIN", "PLATFORM_ADMIN")) {
+            JdbcTemplate jdbc = mock(JdbcTemplate.class);
+            SecureTokens tokens = mock(SecureTokens.class);
+            AccountMailService mail = mock(AccountMailService.class);
+            when(tokens.create()).thenReturn("reset-token");
+            when(mail.sendPasswordReset("peer@example.com", "Peer", "reset-token")).thenReturn(AccountMailService.DeliveryStatus.SENT);
+            AdminAccountService service = new AdminAccountService(jdbc, tokens, mock(AuditService.class),
+                mock(DashboardService.class), mail, mock(SessionRegistry.class), mock(com.pentaworks.monitoring.alert.AlertEventService.class));
+            when(jdbc.query(anyString(), any(ResultSetExtractor.class), eq(2L), eq(1L))).thenAnswer(invocation -> {
+                ResultSet rs = mock(ResultSet.class);
+                when(rs.next()).thenReturn(true);
+                when(rs.getLong("id")).thenReturn(2L);
+                when(rs.getLong("company_id")).thenReturn(1L);
+                when(rs.getString("email")).thenReturn("peer@example.com");
+                when(rs.getString("name")).thenReturn("Peer");
+                when(rs.getString("role")).thenReturn(role);
+                when(rs.getString("status")).thenReturn("ACTIVE");
+                return ((ResultSetExtractor<?>) invocation.getArgument(1)).extractData(rs);
+            });
+            CurrentUser actor = new CurrentUser(1, 1, "root@example.com", "Root", role, "ACTIVE");
+            org.junit.jupiter.api.Assertions.assertEquals("SENT", service.createPasswordReset(actor, 2L).deliveryStatus());
+            CurrentUser admin = new CurrentUser(3, 1, "admin@example.com", "Admin", "ADMIN", "ACTIVE");
+            assertThrows(ForbiddenException.class, () -> service.createPasswordReset(admin, 2L));
+        }
+    }
+
+    @Test
     void validatesAndNormalizesInvitationMobileNumber() {
         org.junit.jupiter.api.Assertions.assertEquals("01012345678", AdminAccountService.normalizeInvitationPhone("010-1234-5678"));
         org.junit.jupiter.api.Assertions.assertEquals("01012345678", AdminAccountService.normalizeInvitationPhone(" 010 1234 5678 "));

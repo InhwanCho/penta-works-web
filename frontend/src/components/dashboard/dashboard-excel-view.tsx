@@ -234,7 +234,6 @@ export default function DashboardExcelView({
         <div
           ref={bodyScrollRef}
           onScroll={event => syncScroll(event.currentTarget, headerScrollRef.current)}
-          data-ptr-ignore
           data-dashboard-scroll
           data-dashboard-layout-ready={columnWidths.length === columns.length + 1 && !operatingHours.isPending ? "true" : "false"}
           tabIndex={0}

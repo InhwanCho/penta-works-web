@@ -372,10 +372,10 @@ public class AdminAccountService {
                 rs.getString("email"), rs.getString("name"), rs.getString("phone"), rs.getString("role"),
                 rs.getString("status")) : null, userId, actor.companyId());
         if (target == null || target.email() == null) throw new NotFoundException("사용자를 찾을 수 없습니다.");
-        if ("PLATFORM_ADMIN".equals(target.role()) && target.id() != actor.id()) {
+        if ("PLATFORM_ADMIN".equals(target.role()) && target.id() != actor.id() && !actor.isPlatformAdmin()) {
             throw new ForbiddenException("다른 플랫폼 관리자의 비밀번호를 초기화할 수 없습니다.");
         }
-        if ("SUPER_ADMIN".equals(target.role()) && target.id() != actor.id()) {
+        if ("SUPER_ADMIN".equals(target.role()) && target.id() != actor.id() && !actor.isSuperAdmin()) {
             throw new ForbiddenException("다른 최고관리자의 비밀번호를 초기화할 수 없습니다.");
         }
         if (!actor.isSuperAdmin() && "ADMIN".equals(target.role())) {

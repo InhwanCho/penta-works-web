@@ -11,12 +11,12 @@ type Props = {
 };
 
 // 당김 임계값 / 최대 이동 거리 (px)
-const THRESHOLD = 80;
+const THRESHOLD = 60;
 const MAX_PULL = 120;
 // 당김 저항 (1.0 = 손가락 이동 그대로, 작을수록 둔해짐)
-const RESISTANCE = 0.25;
+const RESISTANCE = 0.4;
 // 화면 맨 최상단 판정 허용 오차(px). iOS 바운스 등 미세한 양수값 흡수
-const TOP_TOLERANCE = 0;
+const TOP_TOLERANCE = 2;
 
 /** 현재 문서의 scrollTop 을 여러 소스에서 안전하게 가져옵니다. */
 function getDocumentScrollTop() {
@@ -60,6 +60,7 @@ export default function PullToRefresh({
     if (disabled) return;
 
     let startY: number | null = null;
+    let startX = 0;
     let active = false;
     let distance = 0;
     let refreshing = false;
@@ -97,7 +98,7 @@ export default function PullToRefresh({
       }
       // 3) 모달 등 내부 스크롤 컨텐츠 내부에서 시작한 터치는 무시
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-ptr-ignore], a[href], button, input, select, textarea, summary, [role=button]")) {
+      if (target?.closest("[data-ptr-ignore], input, select, textarea, summary")) {
         active = false;
         return;
       }
@@ -112,6 +113,7 @@ export default function PullToRefresh({
         return;
       }
       startY = e.touches[0]?.clientY ?? null;
+      startX = e.touches[0]?.clientX ?? 0;
       active = startY != null;
       distance = 0;
     };
@@ -134,6 +136,11 @@ export default function PullToRefresh({
       }
       const y = e.touches[0]?.clientY ?? startY;
       const delta = y - startY;
+      if (Math.abs(e.touches[0].clientX - startX) > Math.max(8, Math.abs(delta))) {
+        active = false;
+        setPullDistance(0);
+        return;
+      }
       if (delta <= 0) {
         distance = 0;
         setPullDistance(0);
@@ -171,13 +178,14 @@ export default function PullToRefresh({
     window.addEventListener("touchstart", onTouchStart, { passive: true });
     window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("touchend", finishPull, { passive: true });
-    window.addEventListener("touchcancel", finishPull, { passive: true });
+    const cancelPull = () => { active = false; distance = 0; setPullDistance(0); };
+    window.addEventListener("touchcancel", cancelPull, { passive: true });
 
     return () => {
       window.removeEventListener("touchstart", onTouchStart);
       window.removeEventListener("touchmove", onTouchMove as EventListener);
       window.removeEventListener("touchend", finishPull);
-      window.removeEventListener("touchcancel", finishPull);
+      window.removeEventListener("touchcancel", cancelPull);
     };
   }, [disabled]);
 

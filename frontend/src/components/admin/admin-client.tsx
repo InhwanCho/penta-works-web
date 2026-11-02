@@ -654,6 +654,7 @@ function UserEditor({
   const [siteIds, setSiteIds] = useState(user.siteIds);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
   const [resetLink, setResetLink] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const immutable =
@@ -716,7 +717,7 @@ function UserEditor({
   }
 
   async function createPasswordReset() {
-    setSaving(true);
+    setResetting(true);
     setMessage(null);
     try {
       const result = await apiFetch<PasswordResetCreated>(
@@ -741,7 +742,7 @@ function UserEditor({
           : "재설정 링크를 만들지 못했습니다.",
       );
     } finally {
-      setSaving(false);
+      setResetting(false);
     }
   }
 
@@ -845,22 +846,22 @@ function UserEditor({
           onChange={setSiteIds}
         />
       )}
-      {!immutable && (
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">
+      {(
+        <div className="management-user-actions mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">
           {message && (
             <span className="text-text-secondary text-xs">{message}</span>
           )}
           <button
             type="button"
-            disabled={saving}
+            disabled={saving || resetting}
             onClick={createPasswordReset}
             className="dark:text-text-dark-primary/75 cursor-pointer rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
           >
-            비밀번호 재설정 안내
+            {resetting ? <><CircleLoader size="xs" inline /> 이메일 발송 중</> : "비밀번호 재설정 안내"}
           </button>
-          <button
+          {!immutable && <button
             type="button"
-            disabled={saving}
+            disabled={saving || resetting}
             onClick={save}
             className="action-save bg-button-primary hover:bg-button-primary-hover cursor-pointer rounded-xl px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50"
           >
@@ -873,31 +874,17 @@ function UserEditor({
               "변경 저장"
             )}
           </button>
+          }
           {canDelete && (
             <button
               type="button"
-              disabled={saving}
+              disabled={saving || resetting}
               onClick={() => setConfirmDelete(true)}
               className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
             >
               계정 삭제
             </button>
           )}
-        </div>
-      )}
-      {immutable && canDelete && (
-        <div className="mt-4 flex items-center justify-end gap-2 border-t border-slate-100 pt-4 dark:border-white/7">
-          {message && (
-            <span className="text-text-secondary text-xs">{message}</span>
-          )}
-          <button
-            type="button"
-            disabled={saving}
-            onClick={() => setConfirmDelete(true)}
-            className="cursor-pointer rounded-xl px-3.5 py-2.5 text-sm font-bold text-rose-600 transition hover:bg-rose-50 dark:text-rose-300 dark:hover:bg-rose-950/30"
-          >
-            {user.role === "SUPER_ADMIN" ? "최고관리자 삭제" : "계정 삭제"}
-          </button>
         </div>
       )}
       {confirmDelete && canDelete && (

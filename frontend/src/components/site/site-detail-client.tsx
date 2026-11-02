@@ -1,6 +1,7 @@
 "use client";
 import { HospitalProfile, useHospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
+import PullToRefresh from "@/components/common/pull-to-refresh";
 import HospitalDetailTabs from "./hospital-detail-tabs";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
 import HospitalEquipmentPanel from "./hospital-equipment-panel";
@@ -94,7 +95,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   }, [from, to]);
   const takeRaw = Number(sp.get("take") ?? 50);
   const take = clampTake(takeRaw);
-  const { data, isLoading, isError, error, refetch, isFetching } = useSiteDetailQuery(
+  const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useSiteDetailQuery(
     slug,
     take,
     from,
@@ -239,6 +240,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const lastAtLabel = data.lastAt ? fmtDate(new Date(data.lastAt)) : "-";
 
   return (
+    <PullToRefresh onRefresh={() => refetch()}>
     <main className="site-detail-page mobile-safe-inline mx-auto w-full max-w-7xl overflow-x-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       <div className="hospital-dashboard-back mb-2 sm:mb-3">
         <Link
@@ -250,10 +252,11 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </div>
 
       <div className="hospital-detail-card">
-        <div className="min-w-0">
+        <div className="site-title-row min-w-0">
           <h1 className="text-text-major dark:text-text-dark-primary text-2xl font-extrabold tracking-tight break-words">
             {data.site.name || "-"}
           </h1>
+          <small className="site-last-queried">최신 조회 {dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString("ko-KR", { hour12: false, timeZone: "Asia/Seoul" }) : "-"}</small>
         </div>
       </div>
 
@@ -538,6 +541,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </section>}
       </HospitalDetailTabs>
     </main>
+    </PullToRefresh>
   );
 }
 
