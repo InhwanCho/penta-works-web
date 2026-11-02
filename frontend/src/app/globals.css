@@ -4102,3 +4102,23 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-month-picker strong { font-size: 12px; }
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding-inline: 4px !important; font-size: 11px; }
 }
+
+.calendar-month-navigation { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+.calendar-month-navigation > button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 36px; padding: 0; border: 0; border-radius: 7px; color: var(--work-muted); font-size: 24px; background: transparent; cursor: pointer; }
+.calendar-month-navigation .overview-month-picker { flex: none; min-width: 0; }
+.calendar-month-navigation .overview-month-picker strong { white-space: nowrap; font-size: 15px; }
+@media (hover:hover) { .calendar-month-navigation > button:hover { background: var(--work-hover); } }
+@media (max-width:1023px) {
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { gap: 5px; padding: 6px; }
+ .calendar-month-navigation { gap: 0; }
+ .calendar-month-navigation > button { width: 24px; }
+ .calendar-month-navigation .overview-month-picker strong { font-size: 13px; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { margin-left: auto; width: 32px; flex-basis: 32px; border: 0; background: transparent; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding: 4px 8px !important; height: 36px !important; border-radius: 7px; font-size: 12px; }
+}
+@media (max-width:359px) {
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { gap: 3px; padding-inline: 4px; }
+ .calendar-month-navigation > button { width: 20px; }
+ .calendar-month-navigation .overview-month-picker strong { font-size: 12px; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding-inline: 6px !important; font-size: 11px; }
+}

@@ -308,6 +308,7 @@ export default function OverviewPage() {
       </div>
       <section className="work-panel work-calendar" aria-busy={records.isFetching || schedules.isFetching || legacy.isFetching}>
         <div className="work-calendar-toolbar">
+          <div className="calendar-month-navigation">
           <button
             type="button"
             aria-label="이전 달"
@@ -337,6 +338,7 @@ export default function OverviewPage() {
           >
             ›
           </button>
+          </div>
           <button type="button" className="overview-search-trigger calendar-toolbar-action" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="4" /><path d="m14 14 6 6M6 9h6M9 6v6" /></svg><span>검색</span>
           </button>

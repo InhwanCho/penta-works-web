@@ -257,7 +257,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
       </div>
 
-      <HospitalDetailTabs key={slug} monitoringConnected={monitoringConnected} management={<>
+      <HospitalDetailTabs key={slug} monitoringConnected={monitoringConnected} history={<section className="hospital-detail-card" id="hospital-history" aria-label="병원 정비이력"><HospitalWork siteId={data.site.siteDb} /></section>} management={<>
       <HospitalSection key={`${slug}-info`} title="병원 정보" anchor="hospital-info" allScreens defaultOpen>
         <div className="hospital-detail-card">
         {monitoringConnected && <div className="text-text-secondary dark:text-text-dark-primary/60 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
@@ -282,9 +282,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       <HospitalSection key={`${slug}-plan`} title="점검 주기·지정일" anchor="inspection-plan" allScreens>
         <HospitalPlanning siteId={data.site.siteDb} />
       </HospitalSection>
-      <HospitalSection key={`${slug}-history`} title="병원 정비이력" anchor="hospital-history" allScreens>
-        <HospitalWork siteId={data.site.siteDb} />
-      </HospitalSection>
+
       </>}>
 
       {monitoringConnected && <section className="hospital-detail-card site-chart-workspace" aria-label="측정값 그래프">

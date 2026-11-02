@@ -22,7 +22,7 @@ function harness(hash = '') {
   return {
     refs, window, listeners,
     render(monitoringConnected = true) {
-      const tree = exports.default({ monitoringConnected, management: 'hospital information', children: 'graphs' });
+      const tree = exports.default({ monitoringConnected, management: 'hospital information', history: 'history', children: 'graphs' });
       effects.splice(0).forEach(fn => fn());
       mounted = true;
       return tree;
@@ -30,7 +30,7 @@ function harness(hash = '') {
   };
 }
 
-test('graphs are the default; selecting management preserves a single visible panel', () => {
+test('graphs are the default; selecting history preserves a single visible panel', () => {
   const h = harness();
   let tree = h.render();
   assert.equal(tree.props.children[1].props.hidden, false);
@@ -46,11 +46,11 @@ test('graphs are the default; selecting management preserves a single visible pa
 test('inspection deep links and later section links reveal management', () => {
   const h = harness('#inspection-plan');
   h.render();
-  assert.equal(h.render().props.children[2].props.hidden, false);
+  assert.equal(h.render().props.children[3].props.hidden, false);
   h.render().props.children[0].props.children[0].props.onClick();
   h.window.location.hash = '#hospital-equipment';
   h.listeners.get('hashchange')();
-  assert.equal(h.render().props.children[2].props.hidden, false);
+  assert.equal(h.render().props.children[3].props.hidden, false);
 });
 
 test('keyboard navigation changes the selected tab and focuses its button', () => {
@@ -62,5 +62,5 @@ test('keyboard navigation changes the selected tab and focuses its button', () =
 });
 
 test('hospitals without monitoring show management directly', () => {
-  assert.equal(harness().render(false).props.children, 'hospital information');
+  assert.deepEqual(Array.from(harness().render(false).props.children), ['history', 'hospital information']);
 });
