@@ -4052,7 +4052,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-editor-editing .work-pm-item:has(.pm-measurements-grid) > :is(strong,.work-hint) { display: inline; margin: 0 6px 0 0; }
 .work-editor-editing .work-pm-item > .pm-measurements-grid { display: grid; grid-template-columns: minmax(100px,1.5fr) repeat(3,minmax(48px,1fr)); gap: 8px; max-width: 480px; margin: 6px 0 0; }
 .work-editor-editing .pm-measurements-grid label { min-width: 0; font-size: 12px; }
-.work-editor-editing .pm-measurements-grid input.work-input:not([type]) { box-sizing: border-box; width: 100%; height: 32px; min-height: 32px; margin-top: 2px; padding: 3px 6px; }
+.work-page.work-editor-editing .work-form .work-pm-item .pm-measurements-grid input.work-input:not([type]) { box-sizing: border-box; width: 100%; height: 32px; min-height: 32px; margin-top: 2px; padding: 3px 6px; }
 @media (max-width: 520px) { .work-editor-editing .work-pm-item > .pm-measurements-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 
 .work-table-scroll.acr-pulse-grid { padding: 0; border: 1px solid var(--work-line); border-radius: 7px; }
@@ -4060,6 +4060,6 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .acr-pulse-grid :is(th,td) { min-width: 0; padding: 2px; text-align: center; border: 1px solid var(--work-line); }
 .acr-pulse-grid th { background: var(--work-soft); }
 .acr-pulse-grid th:first-child { min-width: 0; width: 92px; padding-inline: 6px; text-align: left; }
-.acr-pulse-grid input.acr-pulse-input { display: block; width: 100%; min-width: 0; height: 34px; padding: 2px; border: 0; border-radius: 4px; background: transparent; color: inherit; text-align: center; box-sizing: border-box; }
-.acr-pulse-grid input.acr-pulse-input:focus { outline: 2px solid var(--work-focus); outline-offset: -2px; }
+.acr-pulse-grid input.acr-pulse-input { display: block; width: 100%; min-width: 0; height: 34px; padding: 2px; border: 0 !important; border-radius: 4px !important; background-color: transparent !important; color: inherit; text-align: center; box-sizing: border-box; }
+.acr-pulse-grid input.acr-pulse-input:focus { outline: 2px solid var(--work-focus) !important; outline-offset: -2px; }
 @media (max-width: 767px) { .acr-pulse-grid input.acr-pulse-input { font-size: 16px; } }
