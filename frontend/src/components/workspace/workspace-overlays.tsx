@@ -15,6 +15,7 @@ export default function WorkspaceOverlays() {
  useEffect(() => {
   let key = Date.now();
   if (isWorkspaceOverlay(pathname)) setStack([{ key: ++key, href: window.location.pathname + window.location.search + window.location.hash }]);
+  else setStack([]);
   const open = (event: Event) => { const href = (event as CustomEvent<string>).detail; if (isWorkspaceOverlay(href)) setStack(s => [...s, { key: ++key, href }]); };
   window.addEventListener("workspace-overlay", open);
   return () => window.removeEventListener("workspace-overlay", open);

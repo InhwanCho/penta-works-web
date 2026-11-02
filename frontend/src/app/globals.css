@@ -4122,3 +4122,8 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .calendar-month-navigation .overview-month-picker strong { font-size: 12px; }
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding-inline: 6px !important; font-size: 11px; }
 }
+
+.workspace-page-content > .work-page.work-editor-editing { max-width: 1120px; margin-inline: auto; padding: 28px 32px 60px; }
+@media (max-width:767px) {
+ .workspace-page-content > .work-page.work-editor-editing { padding: 16px 16px 32px; }
+}
