@@ -4063,3 +4063,26 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .acr-pulse-grid input.acr-pulse-input { display: block; width: 100%; min-width: 0; height: 34px; padding: 2px; border: 0 !important; border-radius: 4px !important; background-color: transparent !important; color: inherit; text-align: center; box-sizing: border-box; }
 .acr-pulse-grid input.acr-pulse-input:focus { outline: 2px solid var(--work-focus) !important; outline-offset: -2px; }
 @media (max-width: 767px) { .acr-pulse-grid input.acr-pulse-input { font-size: 16px; } }
+
+/* Calculated values have a distinct edge and a read-only pointer. */
+.work-form input.work-input.acr-calculated { border-color: #8b83bc !important; border-style: dashed !important; cursor: default; }
+.dark .work-form input.work-input.acr-calculated { border-color: #b6a9e0 !important; }
+
+/* Actions share the top row with each calendar entry. */
+.work-day-dialog .day-schedule-row { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: start; }
+.work-day-dialog .day-schedule-row > .day-entry { min-width: 0; }
+.work-day-dialog .day-schedule-row > .detail-bottom-actions { grid-column: 2; grid-row: 1; padding: 12px; margin: 0; gap: 6px; }
+.work-day-dialog .day-schedule-row > .pm-quick-date { grid-column: 1 / -1; }
+.work-overview .work-calendar .work-calendar-day { height: auto; }
+@media (max-width:1023px) {
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { display: flex; flex-wrap: wrap; overflow: visible; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-month-picker { flex: 1 1 calc(100% - 88px); order: 0; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { order: 1; flex: 0 0 auto; min-width: 0; height: 34px !important; min-height: 34px; padding: 4px 9px !important; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { width: 34px; margin-left: auto; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .work-calendar-today { display: inline-flex !important; align-items: center; gap: 4px; }
+ .work-calendar-today svg { width: 17px; height: 17px; }
+ .work-day-dialog .day-schedule-row > .day-entry { grid-template-columns: minmax(0,1fr); padding: 10px; gap: 4px; }
+ .work-day-dialog .day-schedule-row > .detail-bottom-actions { padding: 8px; gap: 4px; }
+ .work-day-dialog .day-schedule-row > .detail-bottom-actions > :is(a,button) { min-width: 44px; padding: 5px 8px; font-size: 12px; }
+ .work-day-dialog .day-schedule-row > .detail-bottom-actions > a[href^="/work/new"] { display: none; }
+}

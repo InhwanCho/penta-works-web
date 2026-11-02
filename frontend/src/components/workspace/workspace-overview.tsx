@@ -341,7 +341,7 @@ export default function OverviewPage() {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
           </button>
           <Link className="calendar-toolbar-action calendar-records-link" href="/work">업무기록</Link>
-          {!mobile && <button type="button" className="work-calendar-today calendar-toolbar-action" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg><span>오늘</span></button>}
+          {<button type="button" className="work-calendar-today calendar-toolbar-action" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg><span>오늘</span></button>}
         </div>
         <CalendarLoadState
           label="업무기록"
@@ -448,7 +448,7 @@ export default function OverviewPage() {
               >
                 <span>{Number(day.slice(8))}</span>
                 <div className="work-calendar-tags">
-                  {tags.slice(0, 3).map((t, i) => (
+                  {tags.map((t, i) => (
                     <span
                       className={t.type}
                       title={t.title}
@@ -457,7 +457,7 @@ export default function OverviewPage() {
                       {t.title}
                     </span>
                   ))}
-                  {tags.length > 3 && <small>+{tags.length - 3}</small>}
+
                 </div>
               </button>
             );
@@ -538,6 +538,8 @@ export default function OverviewPage() {
                   ? `(${daySchedules.length})`
                   : ""}
               </h3>
+              <a className="work-secondary calendar-work-create" href={`/work/create?date=${selected}`}>업무기록 작성</a>
+
 
             </div>
             <CalendarLoadState

@@ -50,7 +50,7 @@ function MeasurementFields({ section, details, onChange }: { section: AcrSection
     const setting = ["geoww", "geowl", "t1wl", "t2wl", "t1peakhalf", "t2peakhalf", "sighalf"].includes(key) && !!values[key];
     const input = <label className="acr-measurement" htmlFor={`${id}-${key}`}>
       <span>{label}</span>
-      <input id={`${id}-${key}`} className={`work-input ${verdict ? `measurement-${verdict}` : setting ? "measurement-setting" : ""}`} type="text" inputMode="decimal" readOnly={kind === "calc"} value={values[key] || ""}
+      <input id={`${id}-${key}`} className={`work-input ${kind === "calc" ? "acr-calculated" : ""} ${verdict ? `measurement-${verdict}` : setting ? "measurement-setting" : ""}`} type="text" inputMode="decimal" readOnly={kind === "calc"} value={values[key] || ""}
         aria-invalid={invalid || undefined} aria-describedby={verdict ? `${id}-${key}-result` : undefined}
         placeholder={kind === "calc" ? "자동 계산" : hint || "측정값 입력"} onChange={event => update(key, event.target.value)} />
       {verdict && <small id={`${id}-${key}-result`} className={`measurement-result measurement-result-${verdict}`}>{verdict === "pass" ? "✓ 기준 이내" : verdict === "fail" ? "! 기준 범위 밖" : "! 숫자를 확인하세요"}</small>}
