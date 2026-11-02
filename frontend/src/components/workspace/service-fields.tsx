@@ -44,21 +44,7 @@ export default function ServiceFields({
           <section className="work-pm">
             <div className="work-section">
               <h2>PM 점검표</h2>
-              <button
-                type="button"
-                className="work-secondary"
-                onClick={() =>
-                  onChange({
-                    ...d,
-                    pm: d.pm.map((item) => ({
-                      ...item,
-                      result: item.noCheck ? "" : item.options[0].v,
-                    })),
-                  })
-                }
-              >
-                점검 항목 모두 적합
-              </button>
+
             </div>
             <p className="work-hint">
               각 항목의 실제 점검 결과와 측정값을 입력하세요.

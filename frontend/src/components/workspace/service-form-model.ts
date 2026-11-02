@@ -68,7 +68,7 @@ export type AcrSection = {
 export const acrSections = definitions.acr as AcrSection[];
 export const pulseRows = definitions.pulseRows,
   pulseCols = definitions.pulseCols;
-export function initialDetails(): WorkDetails {
+export function initialDetails({ defaultPmPass = true } = {}): WorkDetails {
   return {
     scheduleId: null,
     assetIds: [],
@@ -93,7 +93,7 @@ export function initialDetails(): WorkDetails {
         section,
         name,
         purpose,
-        result: "",
+        result: defaultPmPass && !opts?.noCheck && !opts?.checkOptions ? "pass" : "",
         comment: "",
         noCheck: !!opts?.noCheck,
         options: opts?.checkOptions || [
@@ -133,7 +133,7 @@ function asText(value: unknown): string {
       : "";
 }
 export function parseDetails(value?: string | null): WorkDetails {
-  const fallback = initialDetails();
+  const fallback = initialDetails({ defaultPmPass: false });
   if (!value) return fallback;
   try {
     const raw = JSON.parse(value);

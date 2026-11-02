@@ -75,8 +75,8 @@ export default function AcrFields({ details: d, onChange }: { details: WorkDetai
       <h3>촬영 준비 · Pulse Sequence</h3>
       <ol className="service-method">{acrPreparation.method.map(text => <li key={text}>{text}</li>)}</ol>
       <GuideFigures figures={acrPreparation.figs} title="촬영 준비" />
-      <div className="work-table-scroll"><table><thead><tr><th>영상</th>{pulseCols.map(column => <th key={column}>{column}</th>)}</tr></thead>
-        <tbody>{pulseRows.map(row => <tr key={row}><th>{row}</th>{pulseCols.map((column, index) => <td key={column}><input aria-label={`${row} ${column}`} className="work-input" value={d.acrPulse[row]?.[index] || ""} onChange={event => {
+      <div className="work-table-scroll acr-pulse-grid"><table><thead><tr><th>구분</th>{pulseCols.map(column => <th key={column}>{column}</th>)}</tr></thead>
+        <tbody>{pulseRows.map(row => <tr key={row}><th>{row}</th>{pulseCols.map((column, index) => <td key={column}><input aria-label={`${row} ${column}`} className="acr-pulse-input" value={d.acrPulse[row]?.[index] || ""} onChange={event => {
           const next = [...(d.acrPulse[row] || Array(pulseCols.length).fill(""))]; next[index] = event.target.value;
           onChange({ ...d, acrPulse: { ...d.acrPulse, [row]: next } });
         }} /></td>)}</tr>)}</tbody></table></div>
