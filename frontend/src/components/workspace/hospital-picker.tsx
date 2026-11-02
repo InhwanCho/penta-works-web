@@ -1,4 +1,5 @@
 "use client";
+import ChevronDownIcon from "@/components/icons/chevron-down-icon";
 import { useEffect, useId, useRef, useState } from "react";
 import type { Hospital } from "./workspace-data";
 export default function HospitalPicker({
@@ -61,9 +62,9 @@ export default function HospitalPicker({
           setActive(-1);
         }}
       >
-        {sites.find((s) => s.siteDb === value)?.name ||
-          (optional ? "병원과 관계없는 업무·일정" : "병원을 선택해주세요")}
-        <span aria-hidden="true">⌄</span>
+        <span className="work-picker-label">{sites.find((s) => s.siteDb === value)?.name ||
+          (optional ? "병원과 관계없는 업무·일정" : "병원을 선택해주세요")}</span>
+        <ChevronDownIcon className="work-picker-chevron" />
       </button>
       <dialog id={`${id}-dialog`} ref={dialog} tabIndex={-1} className="work-picker-panel work-picker-dialog" aria-label="병원 선택" data-ptr-ignore
         onCancel={(e) => { e.preventDefault(); close(); }}

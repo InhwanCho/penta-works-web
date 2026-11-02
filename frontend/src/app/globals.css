@@ -4181,3 +4181,15 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .select-control { min-width: 0; }
 .select-control > select { box-sizing: border-box; min-width: 0; max-width: 100%; padding-inline-end: 38px !important; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; }
 .select-control-icon { right: 12px; flex-shrink: 0; }
+
+/* Reserve icon space even when shared mobile button padding is applied. */
+.workspace-frame :is(.dropdown-trigger,.work-picker-trigger,.hospital-section-toggle,.management-expand),
+.work-day-dialog :is(.dropdown-trigger,.work-picker-trigger,.hospital-section-toggle,.management-expand) {
+ position: relative; box-sizing: border-box; padding-inline-end: 40px !important; min-width: 0; max-width: 100%;
+}
+.workspace-frame .dropdown-trigger, .work-day-dialog .dropdown-trigger { flex-shrink: 0; gap: 6px; }
+.dropdown-trigger > span { white-space: nowrap; flex-shrink: 0; }
+.work-picker-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.work-picker-chevron,.dropdown-trigger .dropdown-arrow { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; margin: 0; pointer-events: none; }
+.hospital-section-toggle > span:first-child,.management-expand > span:not([aria-hidden]) { min-width: 0; overflow-wrap: anywhere; }
+.select-control > select { margin-inline: 0 !important; margin-block: 0 !important; padding-inline-end: 40px !important; }

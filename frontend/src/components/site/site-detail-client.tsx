@@ -1,6 +1,7 @@
 "use client";
 import { HospitalProfile, useHospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
+import ChevronDownIcon from "@/components/icons/chevron-down-icon";
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import HospitalDetailTabs from "./hospital-detail-tabs";
 import HospitalPlanning from "@/components/workspace/hospital-planning";
@@ -405,12 +406,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             <span className="text-text-secondary dark:text-text-dark-primary/70 text-xs font-semibold">
               {pickerOpen ? "닫기" : "열기"}
             </span>
-            <span
-              aria-hidden="true"
-              className="dropdown-arrow"
-            >
-              ▾
-            </span>
+            <ChevronDownIcon className="dropdown-arrow" />
           </button>
         </div>
         {pickerOpen && (
