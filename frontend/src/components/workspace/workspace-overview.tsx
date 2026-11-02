@@ -561,10 +561,8 @@ export default function OverviewPage() {
                     href={`/schedule?date=${selected}#schedule-${s.id}`}
                     category={s.serviceType || "GENERAL"}
                     type={s.serviceType === "PM" ? "PM" : scheduleCategory(s)}
-                    title={s.body?.trim() || s.title}
-                    description={
-                      s.siteName || undefined
-                    }
+                    title={s.siteName || s.body?.trim() || s.title}
+                    description={s.siteName ? s.body?.trim() || s.title : undefined}
                     meta={scheduleTimeLabel(s.startAt, s.endAt)}
                   />
                   <div className="work-form-actions detail-bottom-actions">
@@ -810,9 +808,12 @@ function DayEntry({
       className={`day-entry day-category-${category.toLowerCase()}`}
     >
       <div className="day-entry-content">
-        <strong>{title}</strong>
+        <div className="day-entry-heading">
+          <strong>{title}</strong>
+          <span className="day-type">{type}</span>
+          {meta && <span className={`day-entry-status${completed ? " is-completed" : ""}`}>{meta}</span>}
+        </div>
         {description && <p>{description}</p>}
-        <span className="day-type">{type}</span>
       </div>
       <div className="day-entry-aside">
         {date && (
@@ -826,9 +827,7 @@ function DayEntry({
             })}
           </time>
         )}
-        <span className={`day-entry-status${completed ? "is-completed" : ""}`}>
-          {meta}
-        </span>
+
       </div>
     </Link>
   );

@@ -4127,3 +4127,14 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @media (max-width:767px) {
  .workspace-page-content > .work-page.work-editor-editing { padding: 16px 16px 32px; }
 }
+
+.work-day-dialog .day-entry-content { display: block; }
+.work-day-dialog .day-entry-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.work-day-dialog .day-entry-heading > strong { display: inline; }
+.work-day-dialog .day-entry-heading > .day-type { margin: 0; min-width: 0; min-height: 22px; padding: 2px 7px; font-size: 11px; }
+.work-day-dialog .day-entry-heading > .day-entry-status { margin: 0; padding: 2px 7px; border-radius: 12px; font-size: 11px; line-height: 18px; color: var(--day-secondary); background: var(--work-soft); }
+.work-day-dialog .day-entry-heading > .day-entry-status.is-completed { color: #17633e; background: #ddf2e6; }
+.work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { width: 64px; min-width: 64px; flex: 0 0 64px; height: 40px; min-height: 40px; padding: 8px; }
+@media (max-width:1023px) {
+ .work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { width: 48px; min-width: 48px; flex-basis: 48px; height: 44px; min-height: 44px; padding: 5px; }
+}
