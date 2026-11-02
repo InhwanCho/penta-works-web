@@ -897,7 +897,7 @@ function UserEditor({
         />
       )}
       {resetLink && (
-        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+        <div className="password-reset-link mt-4 rounded-xl border border-amber-200 bg-amber-50/70 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
           <p className="mb-2 text-xs font-semibold">
             1시간 동안 유효한 비밀번호 재설정 링크
           </p>
@@ -908,7 +908,7 @@ function UserEditor({
           />
           <button
             type="button"
-            className="mt-2 text-sm font-semibold underline"
+            className="work-secondary reset-copy-button"
             onClick={() => navigator.clipboard.writeText(resetLink)}
           >
             링크 복사
@@ -1254,7 +1254,7 @@ function InvitationSection({
             />
             <button
               type="button"
-              className="mt-2 text-sm font-semibold underline"
+              className="work-secondary reset-copy-button"
               onClick={() => navigator.clipboard.writeText(link)}
             >
               링크 복사
