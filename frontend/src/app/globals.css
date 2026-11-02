@@ -4163,3 +4163,6 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-schedule-link:not([open]) { box-sizing: border-box; height: 44px; }
 .work-schedule-link > summary { box-sizing: border-box; min-height: 42px; height: 42px; }
 .work-day-dialog .day-schedule-row > .detail-bottom-actions { flex-direction: column; align-items: flex-end; }
+
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { width: 36px !important; min-width: 36px; max-width: 36px; height: 36px !important; min-height: 36px; flex: 0 0 36px; padding: 0 !important; aspect-ratio: 1; }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger span { display: none !important; }
