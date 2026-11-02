@@ -717,6 +717,7 @@ function UserEditor({
   }
 
   async function createPasswordReset() {
+    if (resetting || !window.confirm(`${user.email}로 비밀번호 재설정 이메일을 발송할까요?`)) return;
     setResetting(true);
     setMessage(null);
     try {
@@ -857,7 +858,7 @@ function UserEditor({
             onClick={createPasswordReset}
             className="dark:text-text-dark-primary/75 cursor-pointer rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"
           >
-            {resetting ? <><CircleLoader size="xs" inline /> 이메일 발송 중</> : "비밀번호 재설정 안내"}
+            {resetting ? <><CircleLoader size="xs" inline /> 이메일 발송 중</> : "비밀번호 재설정 요청"}
           </button>
           {!immutable && <button
             type="button"
