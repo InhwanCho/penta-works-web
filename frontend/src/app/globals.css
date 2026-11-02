@@ -4150,3 +4150,16 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .work-day-dialog :is(button,a.work-primary,a.work-secondary,a.hospital-register,a.day-section-action) { height: 40px; min-height: 40px; box-sizing: border-box; }
  .work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { height: 40px; min-height: 40px; }
 }
+
+/* The shared SVG replaces the former select background arrow. */
+.select-control > select,
+.dark .select-control > select { background-image: none !important; font-size: 14px; font-weight: 400; }
+.select-control > select:has(> option[value=""]:checked) { color: var(--work-muted,#64748b); }
+.select-control > select:disabled { opacity: 1; color: var(--work-muted,#64748b); }
+.workspace-frame :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=month]),select),
+.work-day-dialog :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=file]):not([type=hidden]):not([type=month]),select) { box-sizing: border-box; height: 44px !important; min-height: 44px !important; max-height: 44px; }
+.workspace-frame .work-picker-trigger,
+.work-day-dialog .work-picker-trigger { box-sizing: border-box; height: 44px !important; min-height: 44px !important; }
+.work-schedule-link:not([open]) { box-sizing: border-box; height: 44px; }
+.work-schedule-link > summary { box-sizing: border-box; min-height: 42px; height: 42px; }
+.work-day-dialog .day-schedule-row > .detail-bottom-actions { flex-direction: column; align-items: flex-end; }
