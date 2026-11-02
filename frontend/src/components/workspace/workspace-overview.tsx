@@ -546,7 +546,7 @@ export default function OverviewPage() {
           <span className="gcal-pm">● PM</span>
           <span className="gcal-acr">● ACR</span>
           <span className="gcal-leave">● 휴가</span>
-          <span className="gcal-repair">● 수리·교체·설치</span>
+          <span className="gcal-repair">● 교체·설치</span>
           <span className="gcal-call">● 콜</span>
           <span className="gcal-office">● 사무실</span>
           <span className="gcal-edu">● 교육·세미나</span>
