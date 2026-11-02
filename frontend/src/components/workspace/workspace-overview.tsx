@@ -366,12 +366,34 @@ export default function OverviewPage() {
           retry={retryPlanning}
         />
         <div key={month} className={`overview-calendar-inner calendar-month-enter${monthDirection < 0 ? " calendar-month-back" : ""}`}
+          onTouchStart={(event) => {
+            suppressCalendarClick.current = false;
+            if (event.touches.length !== 1) { calendarGesture.current = null; return; }
+            const touch = event.touches[0];
+            calendarGesture.current = { id: touch.identifier, x: touch.clientX, y: touch.clientY };
+          }}
+          onTouchEnd={(event) => {
+            const start = calendarGesture.current;
+            calendarGesture.current = null;
+            if (!start) return;
+            const touch = Array.from(event.changedTouches).find(touch => touch.identifier === start.id);
+            if (!touch) return;
+            const dx = touch.clientX - start.x;
+            const dy = touch.clientY - start.y;
+            if (Math.abs(dx) >= 50 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+              suppressCalendarClick.current = true;
+              setMonth(current => addCalendarMonths(current + "-01", dx < 0 ? 1 : -1).slice(0, 7));
+            }
+          }}
+          onTouchCancel={() => { calendarGesture.current = null; }}
           onPointerDown={(event) => {
+            if (event.pointerType === "touch") return;
             if (!event.isPrimary || event.button !== 0) return;
             suppressCalendarClick.current = false;
             calendarGesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY };
           }}
           onPointerMove={(event) => {
+            if (event.pointerType === "touch") return;
             const start = calendarGesture.current;
             if (!start || start.id !== event.pointerId) return;
             const dx = event.clientX - start.x;
@@ -386,6 +408,7 @@ export default function OverviewPage() {
             }
           }}
           onPointerUp={(event) => {
+            if (event.pointerType === "touch") return;
             const start = calendarGesture.current;
             calendarGesture.current = null;
             if (!start || start.id !== event.pointerId) return;
@@ -396,7 +419,7 @@ export default function OverviewPage() {
               setMonth((current) => addCalendarMonths(current + "-01", dx < 0 ? 1 : -1).slice(0, 7));
             }
           }}
-          onPointerCancel={() => { calendarGesture.current = null; }}
+          onPointerCancel={event => { if (event.pointerType !== "touch") calendarGesture.current = null; }}
           onClickCapture={(event) => {
             if (suppressCalendarClick.current) {
               event.preventDefault();
@@ -470,7 +493,7 @@ export default function OverviewPage() {
           <span className="gcal-pm">● PM</span>
           <span className="gcal-acr">● ACR</span>
           <span className="gcal-leave">● 휴가</span>
-          <span className="gcal-repair">● 고장수리·부품교체·설치</span>
+          <span className="gcal-repair">● 수리·교체·설치</span>
           <span className="gcal-call">● 콜</span>
           <span className="gcal-office">● 사무실</span>
           <span className="gcal-edu">● 교육·세미나</span>
