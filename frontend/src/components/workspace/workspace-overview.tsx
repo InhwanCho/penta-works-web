@@ -338,7 +338,7 @@ export default function OverviewPage() {
             ›
           </button>
           <button type="button" className="overview-search-trigger calendar-toolbar-action" aria-label="업무기록·일정 검색" aria-haspopup="dialog" onClick={() => setSearchOpen(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 5 5" /></svg><span>검색</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><rect x="3" y="3" width="12" height="12" rx="4" /><path d="m14 14 6 6M6 9h6M9 6v6" /></svg><span>검색</span>
           </button>
           <Link className="calendar-toolbar-action calendar-records-link" href="/work">업무기록</Link>
           {<button type="button" className="work-calendar-today calendar-toolbar-action" onClick={() => { setMonth(today.slice(0, 7)); setSelected(today); }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="16" rx="3" /><path d="M8 3v4m8-4v4M4 11h16" /><circle cx="12" cy="16" r="1" fill="currentColor" stroke="none" /></svg><span>오늘</span></button>}
