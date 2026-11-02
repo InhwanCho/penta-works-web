@@ -168,7 +168,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
       if (!href || link?.target === "_blank") return;
       if (isWorkspaceOverlay(href)) { event.preventDefault(); event.stopPropagation(); openWorkspaceOverlay(href); return; }
       if (!onOpenDetail) return;
-      if (/^\/work\/\d+$/.test(href) || /^\/sites\/[^/?#]+(?:#inspection-plan)?$/.test(href) || (/^\/schedule\?/.test(href) && !/[?&](new|edit)=/.test(href))) {
+      if (/^\/work\/\d+$/.test(href) || (/^\/schedule\?/.test(href) && !/[?&](new|edit)=/.test(href))) {
         event.preventDefault();
         event.stopPropagation();
         onOpenDetail(href);
