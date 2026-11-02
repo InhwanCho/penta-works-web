@@ -4105,7 +4105,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 
 .calendar-month-navigation { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
 .calendar-month-navigation > button { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 36px; padding: 0; border: 0; border-radius: 7px; color: var(--work-muted); font-size: 24px; background: transparent; cursor: pointer; }
-.calendar-month-navigation .overview-month-picker { flex: none; min-width: 0; }
+.calendar-month-navigation .overview-month-picker { position: relative; display: inline-flex; align-items: center; flex: none; min-width: 0; min-height: 36px; cursor: pointer; }
 .calendar-month-navigation .overview-month-picker strong { white-space: nowrap; font-size: 15px; }
 @media (hover:hover) { .calendar-month-navigation > button:hover { background: var(--work-hover); } }
 @media (max-width:1023px) {
