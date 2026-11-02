@@ -4201,3 +4201,21 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .password-reset-link { display: flex; flex-direction: column; align-items: stretch; gap: 10px; min-width: 0; }
 .password-reset-link > textarea { display: block; box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: 80px; resize: vertical; overflow-wrap: anywhere; }
 .password-reset-link > .reset-copy-button { display: inline-flex; align-items: center; justify-content: center; align-self: flex-end; flex-shrink: 0; width: auto; min-width: 90px; height: 40px; padding: 8px 14px; margin: 0; border: 1px solid var(--work-line); border-radius: 8px; text-decoration: none; white-space: nowrap; }
+
+/* Calendar mobile actions share one geometry instead of inherited button sizes. */
+@media (max-width:1023px) {
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action {
+  display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box;
+  height: 36px !important; min-height: 36px !important; max-height: 36px;
+  min-width: 0; padding: 0 10px !important; border: 1px solid var(--work-line) !important;
+  border-radius: 8px !important; background: var(--work-paper) !important; color: var(--work-ink) !important;
+  font-size: 12px !important; font-weight: 600 !important; line-height: 18px !important;
+  text-decoration: none; box-shadow: none !important; vertical-align: middle;
+ }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { padding: 0 !important; width: 36px !important; min-width: 36px; flex: 0 0 36px; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger svg { width: 17px; height: 17px; }
+}
+@media (max-width:374px) {
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding-inline: 7px !important; font-size: 11px !important; }
+ .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { padding: 0 !important; }
+}
