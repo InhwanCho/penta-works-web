@@ -16,7 +16,7 @@ import WorkspaceDrawer from "./workspace-drawer";
 import OverviewDetail from "./overview-detail";
 import { useMobileWorkspace } from "@/hooks/use-mobile-workspace";
 import { useRouter } from "./overlay-navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
@@ -82,6 +82,21 @@ export default function OverviewPage() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [detailHref, setDetailHref] = useState<string | null>(null);
   const calendarGesture = useRef<{ id: number; x: number; y: number } | null>(null);
+  const calendarAxis = useRef<"horizontal" | "vertical" | null>(null);
+  useEffect(() => {
+    const lockHorizontalScroll = (event: TouchEvent) => {
+      const start = calendarGesture.current;
+      if (!start || event.touches.length !== 1 || !(event.target instanceof Element) || !event.target.closest(".overview-calendar-inner")) return;
+      const dx = Math.abs(event.touches[0].clientX - start.x);
+      const dy = Math.abs(event.touches[0].clientY - start.y);
+      if (!calendarAxis.current && Math.max(dx, dy) >= 5) {
+        calendarAxis.current = dx > dy * 1.2 ? "horizontal" : "vertical";
+      }
+      if (calendarAxis.current === "horizontal" && event.cancelable) event.preventDefault();
+    };
+    document.addEventListener("touchmove", lockHorizontalScroll, { passive: false, capture: true });
+    return () => document.removeEventListener("touchmove", lockHorizontalScroll, true);
+  }, []);
   const suppressCalendarClick = useRef(false);
   const calendarTransitioning = useRef(false);
   const [month, setMonthValue] = useState(today.slice(0, 7)),
@@ -369,6 +384,7 @@ export default function OverviewPage() {
         <div key={month} className={`overview-calendar-inner calendar-month-enter${monthDirection < 0 ? " calendar-month-back" : ""}`}
           onTouchStart={(event) => {
             if (calendarTransitioning.current) return;
+            calendarAxis.current = null;
             suppressCalendarClick.current = false;
             if (event.touches.length !== 1) { calendarGesture.current = null; return; }
             const touch = event.touches[0];
@@ -378,14 +394,13 @@ export default function OverviewPage() {
             const start = calendarGesture.current;
             if (!start || event.touches.length !== 1) return;
             const dx = event.touches[0].clientX - start.x;
-            const dy = event.touches[0].clientY - start.y;
-            if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) {
+            if (calendarAxis.current === "vertical") {
               calendarGesture.current = null;
               event.currentTarget.style.transform = "";
               event.currentTarget.style.opacity = "";
               return;
             }
-            if (Math.abs(dx) <= 8 || Math.abs(dx) < Math.abs(dy) * 1.3) return;
+            if (calendarAxis.current !== "horizontal") return;
             suppressCalendarClick.current = true;
             if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
             event.currentTarget.style.transform = `translateX(${dx * 0.55}px)`;
@@ -398,9 +413,8 @@ export default function OverviewPage() {
             const touch = Array.from(event.changedTouches).find(touch => touch.identifier === start.id);
             if (!touch) return;
             const dx = touch.clientX - start.x;
-            const dy = touch.clientY - start.y;
             const node = event.currentTarget;
-            const commit = Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5;
+            const commit = calendarAxis.current === "horizontal" && Math.abs(dx) > 45;
             const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
             if (!commit) {
               if (!reduce) node.animate([{ transform: node.style.transform || "translateX(0)", opacity: node.style.opacity || "1" }, { transform: "translateX(0)", opacity: 1 }], { duration: 150, easing: "ease-out" });
