@@ -4372,3 +4372,6 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .about-image > .photo-skeleton { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; }
 .about-image img { display: block; width: 100%; height: auto; transition: opacity .18s ease; }
 @media (prefers-reduced-motion: reduce) { .about-image img { transition: none; } }
+
+.hospital-history-tabs { margin-bottom: 18px; flex-wrap: wrap; }
+.hospital-history-tabs button { min-height: 40px; }

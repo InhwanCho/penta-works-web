@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import CircleLoader from "@/components/icons/circle-loader";
 
 import Link from "@/components/common/app-link";
@@ -10,10 +11,10 @@ import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
 import type { WorkRecord } from "./workspace-data";
 import { MaintenanceRow } from "@/components/site/office-assets-panel";
 import { RecordList, ErrorState } from "./workspace-pages";
-export function useHospitalHistory(siteId: string) {
+export function useHospitalHistory(siteId: string, category: "all" | "general" | "coldhead" = "all") {
   const { session } = useAuth();
   return useInfiniteQuery({
-    queryKey: ["workspace-records", "hospital-history", session?.id, siteId],
+    queryKey: ["workspace-records", "hospital-history", session?.id, siteId, category],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
       apiFetch<{
@@ -25,7 +26,7 @@ export function useHospitalHistory(siteId: string) {
         total: number;
         failedSites: string[];
       }>(
-        `/workspace/hospital-history/${encodeURIComponent(siteId)}?page=${pageParam}&size=10`,
+        `/workspace/hospital-history/${encodeURIComponent(siteId)}?page=${pageParam}&size=10&category=${category}`,
       ),
     getNextPageParam: (last, pages) =>
       pages.reduce((n, p) => n + p.items.length, 0) < last.total
@@ -36,7 +37,8 @@ export function useHospitalHistory(siteId: string) {
 }
 export default function HospitalWork({ siteId }: { siteId: string }) {
   const { session } = useAuth();
-  const history = useHospitalHistory(siteId);
+  const [category, setCategory] = useState<"general" | "coldhead">("general");
+  const history = useHospitalHistory(siteId, category);
   if (!session) return null;
   const rows = history.data?.pages.flatMap((p) => p.items) || [];
   const partial = history.data?.pages.some((p) => p.failedSites.length);
@@ -69,6 +71,10 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
           </svg>
           업무기록 작성
         </Link>
+      </div>
+      <div className="work-pills hospital-history-tabs" role="group" aria-label="정비이력 종류">
+        <button type="button" className={category === "general" ? "active" : ""} aria-pressed={category === "general"} onClick={() => setCategory("general")}>일반 정비이력</button>
+        <button type="button" className={category === "coldhead" ? "active" : ""} aria-pressed={category === "coldhead"} onClick={() => setCategory("coldhead")}>Cold Head 교체 이력</button>
       </div>
       {history.error && (
         <ErrorState
@@ -113,7 +119,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
         ))}
       </div>
       {!rows.length && !history.isPending && !history.error && !partial && (
-        <p className="work-empty">아직 등록된 정비이력이 없습니다.</p>
+        <p className="work-empty">{category === "coldhead" ? "등록된 Cold Head 교체 이력이 없습니다." : "등록된 일반 정비이력이 없습니다."}</p>
       )}
       {history.hasNextPage && (
         <button

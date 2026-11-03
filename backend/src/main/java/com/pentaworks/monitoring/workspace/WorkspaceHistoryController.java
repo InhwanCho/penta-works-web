@@ -60,14 +60,23 @@ public class WorkspaceHistoryController {
         return Map.of("items",legacy(u.companyId(),users.allowedSiteIds(u),from,to,failures),"failedSites",failures);
     }
     @GetMapping("/hospital-history/{siteId}")
-    public Map<String,Object> hospital(@PathVariable String siteId,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,Authentication auth) {
+    public Map<String,Object> hospital(@PathVariable String siteId,@RequestParam(defaultValue="1") int page,@RequestParam(defaultValue="10") int size,@RequestParam(defaultValue="all") String category,Authentication auth) {
         var u=users.require(auth);String site=SiteService.normalizeSiteId(siteId);users.requireSiteAccess(u,site);
         page=Math.max(1,page);size=Math.max(1,Math.min(50,size));long offset=(long)(page-1)*size;
         var failures=new ArrayList<String>();var items=legacy(u.companyId(),Set.of(site),null,null,failures);
-        Long count=db.queryForObject("SELECT COUNT(*) FROM workspace_record WHERE company_id=? AND site_id=? AND deleted_at IS NULL",Long.class,u.companyId(),site);
+        if(!Set.of("all","general","coldhead").contains(category))throw new BadRequestException("이력 분류를 확인해주세요.");
+        if(!category.equals("all"))items.removeIf(item->{
+            var node=mapper.valueToTree(item.get("maintenance"));
+            String type=node.path("serviceType").asText("").replaceAll("[\\s_-]", "").toUpperCase(Locale.ROOT);
+            String title=node.path("serviceTitle").asText("").replaceAll("[\\s_-]", "").toUpperCase(Locale.ROOT);
+            boolean cold=type.equals("COLDHEAD")||title.startsWith("COLDHEAD")||title.startsWith("콜드헤드");
+            return category.equals("coldhead")!=cold;
+        });
+        String filter=category.equals("all")?"":category.equals("coldhead")?" AND service_type='COLDHEAD'":" AND (service_type IS NULL OR service_type<>'COLDHEAD')";
+        Long count=db.queryForObject("SELECT COUNT(*) FROM workspace_record WHERE company_id=? AND site_id=? AND deleted_at IS NULL"+filter,Long.class,u.companyId(),site);
         long total=(count==null?0:count)+items.size();
         // Fetch only the prefix needed for this combined page; individual records retain normal authorization.
-        String sql=WorkspaceController.RECORDS.replace("WHERE w.company_id=?", "WHERE w.site_id=? AND w.company_id=?")+" LIMIT ?";
+        String sql=WorkspaceController.RECORDS.replace("WHERE w.company_id=?", "WHERE w.site_id=? AND w.company_id=?"+filter.replace("service_type","w.service_type"))+" LIMIT ?";
         for(var record:db.queryForList(sql,site,u.companyId(),Math.min(total,offset+size))){var item=new LinkedHashMap<String,Object>();item.put("key","new-"+record.get("id"));item.put("date",record.get("workDate"));item.put("record",record);items.add(item);}
         items.sort(Comparator.<Map<String,Object>,String>comparing(r->Objects.toString(r.get("date"),"")).reversed().thenComparing(r->r.containsKey("record")?0:1).thenComparing(Comparator.<Map<String,Object>,Long>comparing(r->r.containsKey("record")?((Number)((Map<?,?>)r.get("record")).get("id")).longValue():0L).reversed()).thenComparing(r->r.get("key").toString()));
         int start=(int)Math.min(offset,items.size()),end=(int)Math.min(offset+size,items.size());

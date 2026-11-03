@@ -90,10 +90,15 @@ class WorkspaceDatabaseTest {
   for(int id=1;id<=25;id++)record(id,"001");
   var seen=new HashSet<Object>();
   for(int page=1;page<=3;page++) {
-   var result=history.hospital("1",page,10,auth);assertEquals(26L,result.get("total"));
+   var result=history.hospital("1",page,10,"all",auth);assertEquals(26L,result.get("total"));
    for(Object item:(List<?>)result.get("items"))assertTrue(seen.add(((Map<?,?>)item).get("key")));
   }
   assertEquals(26,seen.size());verifyNoInteractions(office);
+  db.update("UPDATE workspace_record SET service_type='COLDHEAD',work_date='2025-01-01' WHERE id=1");
+  var cold=history.hospital("1",1,10,"coldhead",auth);
+  assertEquals(1L,cold.get("total"));assertEquals("new-1",((Map<?,?>)((List<?>)cold.get("items")).get(0)).get("key"));
+  assertEquals(25L,history.hospital("1",1,10,"general",auth).get("total"));
+  db.update("UPDATE workspace_record SET service_type='CALL',work_date='2026-10-20' WHERE id=1");
   var calendar=history.calendar(LocalDate.of(2026,10,1),LocalDate.of(2026,10,31),auth);assertEquals(1,((List<?>)calendar.get("items")).size());
   assertTrue(((List<?>)history.calendar(LocalDate.of(2027,1,1),LocalDate.of(2027,12,31),auth).get("items")).isEmpty());
   db.update("UPDATE workspace_record SET source_id='office:001:maintenance:99' WHERE id=1");assertTrue(((List<?>)history.calendar(LocalDate.of(2026,10,1),LocalDate.of(2026,10,31),auth).get("items")).isEmpty());
