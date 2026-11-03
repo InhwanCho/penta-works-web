@@ -127,6 +127,18 @@ export default function AboutPage() {
             </div>
           </div>
         </section>
+        <section className="service-container service-showcase service-showcase-reverse">
+          <div className="service-showcase-copy">
+            <p className="service-eyebrow">모니터링</p>
+            <h2>장비 상태 확인도,<br />휴대폰에서 한눈에.</h2>
+            <p>병원별 측정값과 수집 상태를 확인하고, 필요한 병원을 선택해 상세 측정값과 변화 추이를 살펴보세요.</p>
+            <ul><li>병원별 장비 측정값과 수집 상태 확인</li><li>상태별 필터와 병원 검색</li><li>아래로 당겨 최신 정보 새로고침</li></ul>
+          </div>
+          <figure className="service-phone-shot">
+            <Image src="/images/about/monitoring-mobile-hd.png" alt="MReyes 모바일 모니터링 화면: 병원별 측정값과 장비 상태. 병원명과 수치는 예시입니다." width={390} height={844} unoptimized sizes="(max-width: 767px) 78vw, 320px" />
+            <figcaption>모바일 모니터링 · 예시 측정값</figcaption>
+          </figure>
+        </section>
         <section className="service-container service-showcase">
           <div className="service-showcase-copy">
             <p className="service-eyebrow">업무 현황</p>
