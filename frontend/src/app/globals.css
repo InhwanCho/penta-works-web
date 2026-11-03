@@ -4252,3 +4252,19 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-record-meta > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .work-record-meta > :not(:first-child)::before { content: "·"; margin-right: 8px; }
 .work-record-meta > .work-record-hospital { flex: 0 1 auto; max-width: 45%; }
+
+.work-list-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+.work-list-toolbar > .work-pills { margin: 0; min-width: 0; }
+.work-list-toolbar > a { flex: 0 0 auto; white-space: nowrap; }
+.work-record-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; }
+.work-record-heading > strong { font-size: 15px; font-weight: 700; line-height: 1.5; overflow-wrap: anywhere; }
+.work-record-heading > .work-status { margin-left: auto; }
+.workspace-frame .work-record .work-badge { background: #fbefcf; color: #8c5c11; border-radius: 16px; }
+.workspace-frame .work-record .work-badge.service-pm { background: #e2f1e7; color: #28633a; }
+.workspace-frame .work-record .work-badge.service-acr { background: #eee6f7; color: #684388; }
+.workspace-frame .work-record :is(.work-badge.service-general,.work-badge.service-etc) { background: #f0f2f6; color: #4c5c72; }
+.dark .workspace-frame .work-record .work-badge { background: #483d23; color: #ffe6a0; }
+.dark .workspace-frame .work-record .work-badge.service-pm { background: #274638; color: #bfe9cb; }
+.dark .workspace-frame .work-record .work-badge.service-acr { background: #41314f; color: #e4ccff; }
+.dark .workspace-frame .work-record :is(.work-badge.service-general,.work-badge.service-etc) { background: #30434d; color: #c8e1ef; }
+@media (max-width:420px) { .work-list-toolbar .work-pills { gap: 4px; } .work-list-toolbar .work-pills button { padding-inline: 8px; font-size: 12px; } .work-list-toolbar > a { padding-inline: 10px !important; font-size: 12px !important; } }

@@ -83,7 +83,8 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
             href={`/work/${r.id}`}
             key={r.id}
           >
-            <div>
+            <div className="work-record-heading">
+              <strong>{r.title}</strong>
               <span
                 className={`work-badge service-${r.serviceType?.toLowerCase() || "general"}`}
               >
@@ -97,7 +98,6 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
                 {statusLabels[r.status]}
               </span>
             </div>
-            <strong>{r.title}</strong>
             <div className="work-record-meta">
               {r.siteName && <span className="work-record-hospital">{r.siteName}</span>}
               <time dateTime={r.workDate}>{r.workDate}</time>
@@ -365,9 +365,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   const rows = records.data?.records || [];
   return (
     <main className="work-page">
-      <div className="work-list-actions">
-        <Link href="/work/new" className="work-secondary hospital-register">＋ 작성</Link>
-      </div>
+      <div className="work-list-toolbar">
       <div className="work-pills">
         {[
           ["ALL", "전체"],
@@ -382,6 +380,8 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
             {label}
           </button>
         ))}
+      </div>
+      <Link href="/work/new" className="work-secondary hospital-register">＋ 작성</Link>
       </div>
       <label className="work-check mb-4">
         <input
