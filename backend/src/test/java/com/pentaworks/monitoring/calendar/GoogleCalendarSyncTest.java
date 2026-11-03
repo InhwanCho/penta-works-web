@@ -14,7 +14,7 @@ class GoogleCalendarSyncTest {
  }
  @Test void timedEventUsesKoreaOffsetAndEscapesDescription(){
   var e=GoogleCalendarSync.event(schedule("2026-10-27 09:00:00","2026-10-27 10:00:00"),"https://app.example.com/");
-  assertEquals(Map.of("dateTime","2026-10-27T09:00+09:00","timeZone","Asia/Seoul"),e.get("start"));
+  assertEquals(Map.of("dateTime","2026-10-27T09:00:00+09:00","timeZone","Asia/Seoul"),e.get("start"));
   assertTrue(e.get("description").toString().contains("&lt;확인&gt;"));assertTrue(e.get("description").toString().contains("https://app.example.com/schedule?date=2026-10-27"));
  }
  @Test void vacationAndAnnualLeaveStaySeparate(){

@@ -149,7 +149,7 @@ public class GoogleCalendarSync {
   var event=new LinkedHashMap<String,Object>();event.put("summary",summary);event.put("colorId",eventColor(label));
   boolean allDay=start.toLocalTime().equals(LocalTime.MIDNIGHT)&&end.toLocalTime().compareTo(LocalTime.of(23,59))>=0;
   if(allDay){event.put("start",Map.of("date",start.toLocalDate().toString()));event.put("end",Map.of("date",end.toLocalDate().plusDays(1).toString()));}
-  else{event.put("start",Map.of("dateTime",start.atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().toString(),"timeZone","Asia/Seoul"));event.put("end",Map.of("dateTime",(end.isAfter(start)?end:start.plusMinutes(1)).atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().toString(),"timeZone","Asia/Seoul"));}
+  else{event.put("start",Map.of("dateTime",start.atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME),"timeZone","Asia/Seoul"));event.put("end",Map.of("dateTime",(end.isAfter(start)?end:start.plusMinutes(1)).atZone(ZoneId.of("Asia/Seoul")).toOffsetDateTime().format(java.time.format.DateTimeFormatter.ISO_OFFSET_DATE_TIME),"timeZone","Asia/Seoul"));}
   String link=base.replaceAll("/$","")+"/schedule?date="+start.toLocalDate()+"#schedule-"+s.get("id");
   event.put("description",escape(Objects.toString(s.get("body"),""))+"\n\nMReyes에서 일정 관리: "+link);
   if(s.get("hospital_address")!=null)event.put("location",s.get("hospital_address"));
