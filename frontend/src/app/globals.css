@@ -4292,3 +4292,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .dark .workspace-frame .admin-invitation-card:has(button:hover) { background: #ffffff08 !important; }
 }
 .work-day-dialog .day-schedule-row:has(.detail-bottom-actions > :focus-visible) { background: var(--card-rest); }
+
+.work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary { border-color: #91a7bb !important; }
+.dark .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary { border-color: #8199af !important; }
+@media (hover:hover) {
+ .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary:hover { border-color: #5c7e9c !important; }
+ .dark .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary:hover { border-color: #afc6da !important; }
+}
