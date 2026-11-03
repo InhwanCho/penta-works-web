@@ -1,5 +1,6 @@
 "use client";
 
+import ChevronDownIcon from "@/components/icons/chevron-down-icon";
 import AutoTextarea from "@/components/common/auto-textarea";
 import Pagination from "@/components/common/pagination";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
@@ -258,6 +259,7 @@ export default function AdminClient() {
             ← 관리설정
           </button>
         )}
+        <div className="management-heading-row"><div className="management-heading-copy">
         <h1>{task?.label ?? "관리설정"}</h1>
         <p>
           {task?.description ??
@@ -268,6 +270,9 @@ export default function AdminClient() {
             {company.data.name} · {company.data.code}
           </small>
         )}
+        </div>
+        {tab === "users" && <button type="button" className="management-primary" onClick={() => selectTask("invitations")}>직원 초대</button>}
+        </div>
       </header>
       {tab === "home" ? (
         <>
@@ -313,10 +318,6 @@ export default function AdminClient() {
             ))}
           </div>
         </>
-      ) : tab === "users" ? (
-        <div className="management-detail-actions">
-          <button type="button" className="management-primary" onClick={() => selectTask("invitations")}>직원 초대</button>
-        </div>
       ) : null}
       {(users.isError ||
         sites.isError ||
@@ -1352,7 +1353,7 @@ function SiteSection({
     <section>
       <details className="management-disclosure mb-4">
         <summary>
-          병원 추가 <span>새 모니터링 병원을 등록할 때</span>
+          병원 추가 <span>새 모니터링 병원을 등록할 때</span><ChevronDownIcon className="management-disclosure-chevron" />
         </summary>
         <form
           onSubmit={create}
@@ -1672,7 +1673,7 @@ function AuditRows({
           data-label="대상"
           className="p-3"
         >
-          {row.targetType} {row.targetId ?? ""}
+          {auditTargetLabel(row.targetType)}{row.targetId ? ` · ${row.targetType === "SITE" ? "병원 코드" : "번호"} ${row.targetId}` : ""}
         </td>
         <td
           data-label="상세"
@@ -1867,6 +1868,17 @@ function formatDate(value: string | null) {
 function formatDateTime(value: string) {
   return new Date(value).toLocaleString("ko-KR");
 }
+function auditTargetLabel(value: string) {
+  return ({
+    ACCOUNT_INVITATION: "직원 초대",
+    ALERT_EVENT: "알림",
+    APP_USER: "사용자 계정",
+    COMPANY: "회사 정보",
+    MEETING: "회의록",
+    SITE: "병원",
+    WORKSPACE: "업무 데이터",
+  } as Record<string, string>)[value] || "기타 항목";
+}
 function actionLabel(value: string) {
   return (
     (
@@ -1884,7 +1896,7 @@ function actionLabel(value: string) {
         PRIVACY_REQUEST_REVIEWED: "개인정보 요청 처리",
         PASSWORD_CHANGED: "비밀번호 변경",
         ACCOUNT_PROFILE_UPDATED: "내 정보 변경",
-        PASSWORD_RESET_CREATED: "초기화 링크 생성",
+        PASSWORD_RESET_CREATED: "비밀번호 재설정 요청",
         PASSWORD_RESET_COMPLETED: "비밀번호 초기화 완료",
         PSI_THRESHOLD_UPDATED: "hePsi 기준값 변경",
         ALERT_THRESHOLDS_UPDATED: "알림 기준값 변경",
@@ -1894,8 +1906,19 @@ function actionLabel(value: string) {
         ALERT_RECIPIENT_DELETED: "알림 수신자 삭제",
         SITE_CREATED: "병원 추가",
         SITE_UPDATED: "병원 정보 변경",
+        CREATE: "새 항목 등록",
+        UPDATE: "내용 수정",
+        DELETE: "항목 삭제",
+        ALERT_SNOOZE_UPDATED: "알림 일시 중지 변경",
+        BUSINESS_REGISTRATION_UPLOADED: "사업자등록증 등록",
+        PERSONAL_ALERT_PATTERN_UPDATED: "개인 알림 수신 설정 변경",
+        SITE_ALERT_POLICY_UPDATED: "병원 알림 설정 변경",
+        SITE_COOLING_TYPE_UPDATED: "냉각 방식 변경",
+        SITE_OPERATING_HOURS_UPDATED: "병원 운영시간 변경",
+        SITE_VISIBILITY_UPDATED: "병원 표시·숨김 변경",
+        FIREBASE_IMPORT: "기존 서비스 데이터 가져오기",
       } as Record<string, string>
-    )[value] ?? value
+    )[value] ?? "기타 변경"
   );
 }
 function StatusPill({ status }: { status: "ACTIVE" | "SUSPENDED" }) {

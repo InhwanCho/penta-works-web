@@ -4334,7 +4334,6 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .dark .workspace-frame .overview-help-wrap > .work-help-button:hover { background: #31556e; color: #e1f0ff; }
 }
 
-.management-detail-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
 
 .meeting-detail-drawer .meeting-detail { padding-top: 4px; }
 .meeting-detail-toolbar > p { margin: 0; }
@@ -4344,3 +4343,14 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark .meeting-detail-actions > .action-danger { color: #f6a6ae !important; border-color: #b86672 !important; }
 @media (hover:hover) { .meeting-detail-actions > .action-danger:hover { background: #fff0f2 !important; } .dark .meeting-detail-actions > .action-danger:hover { background: #482b35 !important; } }
 @media (max-width:520px) { .meeting-detail-actions > button { width: 48px; } .meeting-detail-toolbar { align-items: center; } }
+
+.management-heading-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-width: 0; }
+.management-heading-copy { min-width: 0; }
+.management-heading-copy > p { margin-top: 8px; color: var(--work-muted); font-size: 14px; line-height: 1.6; }
+.management-heading-copy > small { display: block; margin-top: 10px; color: var(--work-muted); font-size: 12px; }
+.management-heading-row > button { flex: 0 0 auto; white-space: nowrap; }
+.workspace-frame .management-disclosure > summary:has(.management-disclosure-chevron) { padding-inline-end: 44px !important; }
+.management-disclosure > summary:has(.management-disclosure-chevron)::after { display: none; }
+.management-disclosure-chevron { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--work-muted); pointer-events: none; }
+.management-disclosure[open] > summary > .management-disclosure-chevron { transform: translateY(-50%) rotate(180deg); }
+@media(max-width:520px) { .management-heading-row { gap: 10px; } .management-heading-row > button { padding-inline: 12px !important; } }
