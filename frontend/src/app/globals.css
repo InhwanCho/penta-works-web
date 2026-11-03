@@ -4362,8 +4362,8 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .management-disclosure[open] > summary > .management-disclosure-chevron { transform: translateY(-50%) rotate(180deg); }
 @media(max-width:520px) { .management-heading-row { gap: 10px; } .management-heading-row > button { padding-inline: 12px !important; } }
 
-/* Shared Outfit wordmark for navigation and service branding. */
-.brand-wordmark { font-family: var(--font-brand), sans-serif; font-weight: 600; letter-spacing: 0; }
+/* Shared Nunito wordmark for navigation and service branding. */
+.brand-wordmark { font-family: var(--font-navbar-brand), sans-serif; font-weight: 700; letter-spacing: 0; }
 .service-eyebrow.brand-wordmark { text-transform: none; }
 
 .navbar-wordmark { font-family: var(--font-navbar-brand), sans-serif; font-weight: 700; letter-spacing: 0; }
