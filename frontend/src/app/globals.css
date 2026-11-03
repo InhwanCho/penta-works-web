@@ -4324,3 +4324,9 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @keyframes photo-shimmer { to { transform: translateX(100%); } }
 @media (max-width:767px) { .work-photo > .photo-skeleton { height: 125px; } }
 @media (prefers-reduced-motion:reduce) { .photo-skeleton::after { animation: none; } }
+
+.workspace-frame .work-overview .overview-fold > summary { grid-template-columns: minmax(0,1fr) auto; column-gap: 12px; align-items: center; }
+.overview-fold-title { display: inline-flex; align-items: center; justify-self: start; gap: 5px; min-width: 0; }
+.overview-fold-title > span:first-child { white-space: nowrap; }
+.overview-fold-title .overview-help-wrap { flex: 0 0 28px; align-items: center; justify-content: center; width: 28px; height: 28px; }
+.overview-fold-title .work-help-button { width: 28px; min-width: 28px; height: 28px; min-height: 28px; margin: 0; }
