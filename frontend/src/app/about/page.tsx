@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Image from "next/image";
+import AboutImage from "@/components/common/about-image";
 
 export const metadata: Metadata = {
   title: "서비스 소개",
@@ -73,15 +73,9 @@ export default function AboutPage() {
               <i />
               <span><span className="brand-wordmark">MReyes</span> · 업무 현황</span>
             </div>
-            <picture>
-              <source
-                media="(max-width: 767px)"
-                srcSet="/images/about/overview-mobile.png"
-                width={390}
-                height={844}
-              />
-              <Image
+              <AboutImage
                 src="/images/about/overview.png"
+                mobileSrc="/images/about/overview-mobile.png"
                 alt="MReyes 업무 현황 실제 화면: 최신 navbar와 업무 달력에서 일정과 점검을 확인하는 모습. 일정은 예시입니다."
                 width={1200}
                 height={820}
@@ -89,7 +83,6 @@ export default function AboutPage() {
                 unoptimized
               sizes="(max-width: 1100px) 94vw, 1100px"
               />
-            </picture>
           </div>
           <p className="service-image-note">
             실제 서비스 화면입니다. 병원명·주소·측정값·일정 내용은 예시로
@@ -135,7 +128,7 @@ export default function AboutPage() {
             <ul><li>병원별 장비 측정값과 수집 상태 확인</li><li>상태별 필터와 병원 검색</li><li>아래로 당겨 최신 정보 새로고침</li></ul>
           </div>
           <figure className="service-phone-shot">
-            <Image src="/images/about/monitoring-mobile-hd.png" alt="MReyes 모바일 모니터링 화면: 병원별 측정값과 장비 상태. 병원명과 수치는 예시입니다." width={390} height={844} unoptimized sizes="(max-width: 767px) 78vw, 320px" />
+            <AboutImage src="/images/about/monitoring-mobile-hd.png" alt="MReyes 모바일 모니터링 화면: 병원별 측정값과 장비 상태. 병원명과 수치는 예시입니다." width={390} height={844} unoptimized sizes="(max-width: 767px) 78vw, 320px" />
             <figcaption>모바일 모니터링 · 예시 측정값</figcaption>
           </figure>
         </section>
@@ -158,7 +151,7 @@ export default function AboutPage() {
             </ul>
           </div>
           <figure className="service-calendar-shot">
-            <Image
+            <AboutImage
               src="/images/about/calendar.png"
               alt="MReyes 업무 달력 실제 화면: 업무기록, PM과 휴가 일정을 유형별 색상으로 구분한 모습. 일정은 예시입니다."
               width={780}
@@ -189,7 +182,7 @@ export default function AboutPage() {
               </ul>
             </div>
             <figure className="service-phone-shot">
-              <Image
+              <AboutImage
                 src="/images/about/hospitals.png"
                 alt="MReyes 모바일 병원 목록 실제 화면: 검색창과 병원별 장비, 주소, 모니터링 여부. 병원 정보는 예시입니다."
                 width={390}
