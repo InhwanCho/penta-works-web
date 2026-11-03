@@ -159,6 +159,8 @@ export function usePlanning() {
         "/workspace/planning",
       ),
     enabled: !!session,
+    refetchInterval: 60_000,
+    refetchIntervalInBackground: false,
   });
 }
 
