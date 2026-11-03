@@ -3243,7 +3243,14 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .schedule-date-fields > label { display: grid; gap: 6px; }
 
 /* Company meeting minutes: reuse the intranet weekly date/content hierarchy. */
-.meeting-search { display: grid; gap: 6px; margin: 14px 0; font-size: .8125rem; font-weight: 650; }
+.meeting-directory-heading { align-items: center; gap: 12px; margin-bottom: 10px; }
+.meeting-directory-heading > div { flex: 1; }
+.meeting-directory-heading > .work-search { flex: 1; min-width: 0; max-width: 420px; width: 100%; margin: 0; min-height: 40px; padding: 9px 12px; font-size: .8125rem; }
+@media (max-width: 767px) {
+ .meeting-directory-heading { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+ .meeting-directory-heading > div { flex-basis: 100%; }
+ .meeting-directory-heading > .work-search { max-width: none; }
+}
 .meeting-list { display: grid; gap: 10px; }
 .meeting-card { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; padding: 18px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); color: var(--work-ink); text-align: left; }
 .meeting-card-main { min-width: 0; flex: 1; }

@@ -30,8 +30,7 @@ export default function MeetingsPage() {
     catch(e){setError(errorText(e));}
   }
   return <main className="work-page meetings-page">
-    <header className="work-heading"><div><h1>회의록</h1></div><button type="button" className="work-secondary hospital-register" aria-label="회의록 작성" onClick={()=>setEditing("new")}>＋ 작성</button></header>
-    <label className="meeting-search">회의록 검색<input type="search" className="work-input" placeholder="제목·내용·작성자 검색" value={search} onChange={event=>setSearch(event.target.value)} /></label>
+    <header className="work-heading meeting-directory-heading"><div><h1>회의록</h1></div><input type="search" className="work-input work-search" aria-label="회의록 검색" placeholder="제목 · 내용 · 작성자 검색" value={search} onChange={event=>setSearch(event.target.value)} /><button type="button" className="work-secondary hospital-register" aria-label="회의록 작성" onClick={()=>setEditing("new")}>＋ 작성</button></header>
     {error&&<p role="alert" className="work-error">{error}</p>}
     {query.isPending?<PageLoader />:query.error?<div className="work-panel"><p className="work-error">{errorText(query.error)}</p><button className="work-secondary" onClick={()=>void query.refetch()}>다시 시도</button></div>:<div className="meeting-list">
       {filtered.map(row=><button type="button" className="meeting-card" key={row.id} onClick={()=>{setSelected(row.id);setError("");}} aria-haspopup="dialog">
