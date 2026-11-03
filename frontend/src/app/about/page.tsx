@@ -46,7 +46,7 @@ export default function AboutPage() {
     <div className="service-about">
       <main>
         <section className="service-hero service-container">
-          <p className="service-eyebrow">MReyes · 엠알아이즈</p>
+          <p className="service-eyebrow"><span className="brand-wordmark">MReyes</span> · 엠알아이즈</p>
           <h1>
             장비를 살피고,
             <br />
@@ -71,18 +71,18 @@ export default function AboutPage() {
               <i />
               <i />
               <i />
-              <span>MReyes · 모니터링</span>
+              <span><span className="brand-wordmark">MReyes</span> · 업무 현황</span>
             </div>
             <picture>
               <source
                 media="(max-width: 767px)"
-                srcSet="/images/about/monitoring-mobile.jpg"
+                srcSet="/images/about/overview-mobile.jpg"
                 width={390}
                 height={844}
               />
               <Image
-                src="/images/about/monitoring.jpg"
-                alt="MReyes 모니터링 실제 화면: 병원별 장비 측정값과 수집 상태를 표로 확인하는 모습. 표시된 값은 예시입니다."
+                src="/images/about/overview.jpg"
+                alt="MReyes 업무 현황 실제 화면: 최신 navbar와 업무 달력에서 일정과 점검을 확인하는 모습. 일정은 예시입니다."
                 width={1200}
                 height={820}
                 priority
@@ -244,7 +244,7 @@ export default function AboutPage() {
         </section>
         <section className="service-closing">
           <div className="service-container">
-            <p className="service-eyebrow">MReyes</p>
+            <p className="service-eyebrow brand-wordmark">MReyes</p>
             <h2>
               장비 관리와 현장 업무를
               <br />더 자연스럽게 연결하세요.

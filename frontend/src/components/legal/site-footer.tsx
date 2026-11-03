@@ -1,7 +1,7 @@
 import PolicyLinks from "./policy-links";
 export default function SiteFooter() {
   return <footer className="site-footer">
-    <div className="site-footer-heading"><strong>MReyes</strong><PolicyLinks /></div>
+    <div className="site-footer-heading"><strong className="brand-wordmark">MReyes</strong><PolicyLinks /></div>
     <address className="site-footer-company">
       <span>운영사: 주식회사 펜타웍스</span>
       <span>사업자등록번호: 675-87-00483</span>

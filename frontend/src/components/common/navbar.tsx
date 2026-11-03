@@ -127,7 +127,7 @@ export default function Navbar() {
               priority
               className="h-8 w-8 rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
             />
-            <span className={`text-[15px] font-bold tracking-[-0.02em] ${hospitalSlug ? "hidden lg:inline" : ""}`}>
+            <span className={`brand-wordmark text-[16px] ${hospitalSlug ? "hidden lg:inline" : ""}`}>
               MReyes
             </span>
             {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && (

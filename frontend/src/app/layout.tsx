@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/provider/theme-provider";
 import PwaProvider from "@/components/provider/pwa-provider";
 import ToastViewport from "@/components/provider/toast-viewport";
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -21,6 +22,8 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: dark)", color: "#243a4c" },
   ],
 };
+
+const brandFont = localFont({ src: "./fonts/Outfit-SemiBold.ttf", variable: "--font-brand", weight: "600", style: "normal", display: "swap" });
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -91,6 +94,7 @@ export default function RootLayout({
       <body
         className={[
           geistSans.variable,
+          brandFont.variable,
           geistMono.variable,
           "antialiased",
           // 추가: 라이트/다크 배경
