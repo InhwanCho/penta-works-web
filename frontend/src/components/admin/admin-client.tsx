@@ -1,7 +1,6 @@
 "use client";
 
 import AutoTextarea from "@/components/common/auto-textarea";
-import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
@@ -314,34 +313,11 @@ export default function AdminClient() {
             ))}
           </div>
         </>
-      ) : (
-        <div className="management-task-switch">
-          <label htmlFor="admin-task-switch">다른 작업</label>
-          <Select
-            id="admin-task-switch"
-            value={tab}
-            onChange={(event) => selectTask(event.target.value as AdminTask)}
-          >
-            {ADMIN_TASKS.map((item) => (
-              <option
-                key={item.value}
-                value={item.value}
-              >
-                {item.label}
-              </option>
-            ))}
-          </Select>
-          {tab === "users" && (
-            <button
-              type="button"
-              className="management-primary"
-              onClick={() => selectTask("invitations")}
-            >
-              직원 초대
-            </button>
-          )}
+      ) : tab === "users" ? (
+        <div className="management-detail-actions">
+          <button type="button" className="management-primary" onClick={() => selectTask("invitations")}>직원 초대</button>
         </div>
-      )}
+      ) : null}
       {(users.isError ||
         sites.isError ||
         company.isError ||
