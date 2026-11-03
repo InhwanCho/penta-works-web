@@ -415,7 +415,7 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
     </main>
   );
 }
-export function SchedulePage({ onSaved, inline = false }: { onSaved?: () => void; inline?: boolean } = {}) {
+export function SchedulePage({ onSaved, inline = false, hideHeading = false }: { onSaved?: () => void; inline?: boolean; hideHeading?: boolean } = {}) {
   const search = useSearchParams();
   const requestedEdit = search.get("edit");
   const openedEdit = useRef<string | null>(null);
@@ -533,12 +533,12 @@ export function SchedulePage({ onSaved, inline = false }: { onSaved?: () => void
   }
   return (
     <main className={`work-page schedule-page${open ? " schedule-editing" : ""}`}>
-      {open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} /> : <>
+      {!hideHeading && (open ? <AuthoringHeader title={editingSchedule ? "일정 수정" : "일정 등록"} /> : <>
       <PageHeading
         title="일정"
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
-      </>}
+      </>)}
       {open && !editingSchedule && !inline && <AuthoringKind value="schedule" date={form.date} disabled={saving} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
       {!open && <label className="work-date-picker">
         일정 날짜
