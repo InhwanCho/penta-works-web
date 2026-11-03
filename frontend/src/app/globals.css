@@ -4273,3 +4273,22 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark .work-acr-section.service-section-pass,.dark .acr-overall.service-section-pass { background: #203c2d; border-color: #54896a; }
 .workspace-frame .work-form input.work-input.acr-calculated { background-color: #fff2c6 !important; color: #765a12; }
 .dark .workspace-frame .work-form input.work-input.acr-calculated { background-color: #493e20 !important; color: #ffe7a3; }
+
+/* Card hover and nested actions use separate, coordinated surfaces. */
+.work-day-dialog .day-schedule-row { --card-rest: var(--work-paper); --card-hover: color-mix(in srgb,var(--work-focus) 4%,var(--work-paper)); background: var(--card-rest); }
+.work-day-dialog .day-schedule-row .detail-bottom-actions > :is(.work-secondary,.action-danger) { background: transparent !important; box-shadow: none !important; }
+.work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary { border-color: var(--work-line) !important; color: var(--work-ink) !important; }
+.work-day-dialog .day-schedule-row .detail-bottom-actions > .action-danger { border-color: #d97983 !important; color: #b42332 !important; }
+.dark .work-day-dialog .day-schedule-row .detail-bottom-actions > .action-danger { border-color: #b86672 !important; color: #f6a6ae !important; }
+@media (hover:hover) {
+ .work-day-dialog .day-schedule-row:hover { background: var(--card-hover); }
+ .work-day-dialog .day-schedule-row:has(.detail-bottom-actions > :is(a,button):hover,.pm-quick-date :is(button,input):hover) { background: var(--card-rest); }
+ .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary:hover { background: var(--work-soft) !important; border-color: var(--work-muted) !important; }
+ .work-day-dialog .day-schedule-row .detail-bottom-actions > .action-danger:hover { background: #fff0f2 !important; border-color: #b42332 !important; }
+ .dark .work-day-dialog .day-schedule-row .detail-bottom-actions > .action-danger:hover { background: #482b35 !important; border-color: #ef99a4 !important; }
+ .workspace-frame .overview-fold > summary:has(.work-help-button:hover) { background: var(--work-paper); }
+ .workspace-frame .admin-user-hover-row:has(button:hover) { background: transparent !important; }
+ .workspace-frame .admin-invitation-card:has(button:hover) { background: #f8fafc80 !important; }
+ .dark .workspace-frame .admin-invitation-card:has(button:hover) { background: #ffffff08 !important; }
+}
+.work-day-dialog .day-schedule-row:has(.detail-bottom-actions > :focus-visible) { background: var(--card-rest); }

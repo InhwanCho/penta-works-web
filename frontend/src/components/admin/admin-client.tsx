@@ -548,7 +548,7 @@ function UserSection({
           <tbody className="divide-y divide-slate-100 dark:divide-white/7">
             {pageUsers.map((user) => (
               <Fragment key={user.id}>
-                <tr className="hover:bg-slate-50/70 dark:hover:bg-white/5">
+                <tr className="admin-user-hover-row hover:bg-slate-50/70 dark:hover:bg-white/5">
                   <td
                     data-label="이름"
                     className="px-3 py-3 font-bold"
@@ -1273,7 +1273,7 @@ function InvitationSection({
           {invitations.map((invitation) => (
             <div
               key={invitation.id}
-              className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 dark:border-white/8 dark:bg-white/3 dark:hover:bg-white/5"
+              className="admin-invitation-card flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 dark:border-white/8 dark:bg-white/3 dark:hover:bg-white/5"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">
