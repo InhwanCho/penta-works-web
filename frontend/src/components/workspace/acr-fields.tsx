@@ -7,7 +7,7 @@ import { useId, useState, type ReactNode } from "react";
 import { ChoiceGroup } from "./choice-group";
 import WorkspaceDrawer from "./workspace-drawer";
 import {
-  acrSections, acrPreparation, pulseCols, pulseRows, computedDetails,
+  setAcrSectionVerdict, acrSections, acrPreparation, pulseCols, pulseRows, computedDetails,
   acrFieldVerdict, acrAutoVerdict, acrEffectiveVerdicts, acrOverallVerdict,
   type WorkDetails, type AcrSection,
 } from "./service-form-model";
@@ -93,7 +93,7 @@ export default function AcrFields({ details: d, onChange }: { details: WorkDetai
           <p className="acr-criteria">{section.crit}</p>
           <MeasurementFields section={section} details={d} onChange={onChange} />
           {hasOutOfRange && d.acrVerdicts[section.k] === "pass" && <p className="measurement-result-fail" role="status">범위 밖인 측정값이 있습니다. 수동 합격 판정을 확인하세요.</p>}
-          <div className="acr-verdict-controls"><ChoiceGroup legend={`${section.t} 판정`} value={verdict} onChange={value => onChange({ ...d, acrVerdicts: { ...d.acrVerdicts, [section.k]: value } })} options={verdictOptions} />
+          <div className="acr-verdict-controls"><ChoiceGroup legend={`${section.t} 판정`} value={verdict} onChange={value => onChange(setAcrSectionVerdict(d, section, value))} options={verdictOptions} />
             {d.acrVerdicts[section.k] && <button type="button" className="work-text-button" onClick={() => onChange({ ...d, acrVerdicts: { ...d.acrVerdicts, [section.k]: "" } })}>자동 판정으로{automatic ? ` (${verdictLabels[automatic]})` : ""}</button>}
           </div>
         </div>

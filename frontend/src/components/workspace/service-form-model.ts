@@ -208,8 +208,14 @@ export function parseDetails(value?: string | null): WorkDetails {
         for (const [key] of section.inputs)
           fallback.acr[section.k][key] = asText(fields[key]);
       const verdict = raw.acrVerdicts?.[section.k];
-      if (["pass", "fail", "na"].includes(verdict))
+      if (["pass", "fail", "na"].includes(verdict)) {
         fallback.acrVerdicts[section.k] = verdict;
+        if (["hcsr", "lcod"].includes(section.k)) {
+          for (const [key, , kind] of section.inputs) {
+            if (kind === "check") fallback.acr[section.k][key] = verdict === "pass" ? "Y" : "";
+          }
+        }
+      }
     }
     for (const row of pulseRows)
       if (Array.isArray(raw.acrPulse?.[row]))
@@ -340,6 +346,20 @@ export function acrAutoVerdict(section: string, values: Record<string, string>, 
   }
   return "";
 }
+export function setAcrSectionVerdict(details: WorkDetails, section: AcrSection, verdict: string): WorkDetails {
+  const values = { ...details.acr[section.k] };
+  if (["hcsr", "lcod"].includes(section.k)) {
+    for (const [key, , kind] of section.inputs) {
+      if (kind === "check") values[key] = verdict === "pass" ? "Y" : "";
+    }
+  }
+  return {
+    ...details,
+    acr: { ...details.acr, [section.k]: values },
+    acrVerdicts: { ...details.acrVerdicts, [section.k]: verdict },
+  };
+}
+
 export function acrEffectiveVerdicts(details: WorkDetails) {
   const computed = computedDetails(details);
   return Object.fromEntries(acrSections.map(section => [section.k, details.acrVerdicts[section.k] || acrAutoVerdict(section.k, computed.acr[section.k], details.magneticFieldTesla)]));
