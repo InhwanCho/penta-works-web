@@ -4268,3 +4268,8 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark .workspace-frame .work-record .work-badge.service-acr { background: #41314f; color: #e4ccff; }
 .dark .workspace-frame .work-record :is(.work-badge.service-general,.work-badge.service-etc) { background: #30434d; color: #c8e1ef; }
 @media (max-width:420px) { .work-list-toolbar .work-pills { gap: 4px; } .work-list-toolbar .work-pills button { padding-inline: 8px; font-size: 12px; } .work-list-toolbar > a { padding-inline: 10px !important; font-size: 12px !important; } }
+
+.work-acr-section.service-section-pass,.acr-overall.service-section-pass { background: #edf8f0; border-color: #83b596; }
+.dark .work-acr-section.service-section-pass,.dark .acr-overall.service-section-pass { background: #203c2d; border-color: #54896a; }
+.workspace-frame .work-form input.work-input.acr-calculated { background-color: #fff2c6 !important; color: #765a12; }
+.dark .workspace-frame .work-form input.work-input.acr-calculated { background-color: #493e20 !important; color: #ffe7a3; }

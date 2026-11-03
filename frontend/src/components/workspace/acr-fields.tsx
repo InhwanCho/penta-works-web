@@ -84,8 +84,8 @@ export default function AcrFields({ details: d, onChange }: { details: WorkDetai
     {acrSections.map(section => {
       const verdict = effective[section.k];
       const automatic = acrAutoVerdict(section.k, computed.acr[section.k], d.magneticFieldTesla);
-      const hasOutOfRange = section.inputs.some(([key]) => ["fail", "invalid"].includes(acrFieldVerdict(section.k, key, computed.acr[section.k], d.magneticFieldTesla)));
-      return <details className={`work-acr-section ${hasOutOfRange || verdict === "fail" ? "service-section-fail" : ""}`} key={section.k} open>
+      const hasOutOfRange = section.inputs.some(([key, , kind]) => kind !== "check" && ["fail", "invalid"].includes(acrFieldVerdict(section.k, key, computed.acr[section.k], d.magneticFieldTesla)));
+      return <details className={`work-acr-section ${verdict === "pass" ? "service-section-pass" : hasOutOfRange || verdict === "fail" ? "service-section-fail" : ""}`} key={section.k} open>
         <summary><span className="acr-section-title">{section.t}</span><span className={`service-verdict verdict-${verdict || "empty"}`}>{verdictLabels[verdict] || "미입력"}{verdict ? d.acrVerdicts[section.k] ? " · 수동" : " · 자동" : ""}</span></summary>
         <div className="work-acr-body">
           <ol className="service-method">{section.method.map(text => <li key={text}>{text}</li>)}</ol>
@@ -99,7 +99,7 @@ export default function AcrFields({ details: d, onChange }: { details: WorkDetai
         </div>
       </details>;
     })}
-    <section className={`acr-overall ${overall === "fail" ? "service-section-fail" : ""}`}>
+    <section className={`acr-overall ${overall === "pass" ? "service-section-pass" : overall === "fail" ? "service-section-fail" : ""}`}>
       <div><h3>입력된 항목 종합 판정</h3><p className="work-hint">{evaluated} / {acrSections.length}개 항목 판정 · {d.acrOverall ? "수동" : "자동"}</p></div>
       <ChoiceGroup legend="ACR 종합 판정" value={overall} options={verdictOptions} onChange={value => onChange({ ...d, acrOverall: value })} />
       {d.acrOverall && <button type="button" className="work-text-button" onClick={() => onChange({ ...d, acrOverall: "" })}>자동 판정으로</button>}
