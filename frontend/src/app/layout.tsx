@@ -23,6 +23,8 @@ export const viewport: Viewport = {
   ],
 };
 
+const navbarFont = localFont({ src: "./fonts/Nunito-Bold.ttf", variable: "--font-navbar-brand", weight: "700", style: "normal", display: "swap" });
+
 const brandFont = localFont({ src: "./fonts/Outfit-SemiBold.ttf", variable: "--font-brand", weight: "600", style: "normal", display: "swap" });
 
 const geistSans = Geist({
@@ -95,6 +97,7 @@ export default function RootLayout({
         className={[
           geistSans.variable,
           brandFont.variable,
+          navbarFont.variable,
           geistMono.variable,
           "antialiased",
           // 추가: 라이트/다크 배경
