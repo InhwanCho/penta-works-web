@@ -4229,3 +4229,12 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .settings-page .settings-account-hint { margin-top: 6px; }
 .settings-page .settings-section .work-radio-group { margin-bottom: 4px; }
 .settings-page .settings-section .work-radio-group legend { margin-bottom: 6px; }
+
+/* Calendar card actions form a compact horizontal pair centered beside content. */
+.work-day-dialog .day-schedule-row { align-items: center; }
+.work-day-dialog .day-schedule-row > .detail-bottom-actions { flex-direction: row; flex-wrap: nowrap; align-items: center; align-self: center; justify-content: flex-end; }
+.work-day-dialog .day-schedule-row > .detail-bottom-actions > :is(a,button) { flex: 0 0 auto; width: 64px; min-width: 64px; max-width: 64px; height: 40px; min-height: 40px; max-height: 40px; }
+.work-day-dialog .day-schedule-row .day-entry-aside:empty { display: none; }
+@media (max-width:1023px) {
+ .work-day-dialog .day-schedule-row > .detail-bottom-actions > :is(a,button) { width: 48px; min-width: 48px; max-width: 48px; }
+}
