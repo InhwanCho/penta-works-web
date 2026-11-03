@@ -76,17 +76,18 @@ export default function AboutPage() {
             <picture>
               <source
                 media="(max-width: 767px)"
-                srcSet="/images/about/overview-mobile.jpg"
+                srcSet="/images/about/overview-mobile.png"
                 width={390}
                 height={844}
               />
               <Image
-                src="/images/about/overview.jpg"
+                src="/images/about/overview.png"
                 alt="MReyes 업무 현황 실제 화면: 최신 navbar와 업무 달력에서 일정과 점검을 확인하는 모습. 일정은 예시입니다."
                 width={1200}
                 height={820}
                 priority
-                sizes="(max-width: 1100px) 94vw, 1100px"
+                unoptimized
+              sizes="(max-width: 1100px) 94vw, 1100px"
               />
             </picture>
           </div>
@@ -146,10 +147,11 @@ export default function AboutPage() {
           </div>
           <figure className="service-calendar-shot">
             <Image
-              src="/images/about/calendar.jpg"
+              src="/images/about/calendar.png"
               alt="MReyes 업무 달력 실제 화면: 업무기록, PM과 휴가 일정을 유형별 색상으로 구분한 모습. 일정은 예시입니다."
               width={780}
               height={730}
+              unoptimized
               sizes="(max-width: 767px) 92vw, 580px"
             />
             <figcaption>업무 현황 · 좌우로 이동하는 달력과 예시 일정</figcaption>
@@ -176,11 +178,12 @@ export default function AboutPage() {
             </div>
             <figure className="service-phone-shot">
               <Image
-                src="/images/about/hospitals.jpg"
+                src="/images/about/hospitals.png"
                 alt="MReyes 모바일 병원 목록 실제 화면: 검색창과 병원별 장비, 주소, 모니터링 여부. 병원 정보는 예시입니다."
                 width={390}
                 height={844}
-                sizes="(max-width: 767px) 78vw, 320px"
+                unoptimized
+              sizes="(max-width: 767px) 78vw, 320px"
               />
               <figcaption>모바일 병원 목록 · 예시 정보</figcaption>
             </figure>
