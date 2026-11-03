@@ -1,4 +1,5 @@
 "use client";
+import AutoTextarea from "@/components/common/auto-textarea";
 import AcrFields from "./acr-fields";
 import { ChoiceGroup } from "./choice-group";
 import {
@@ -132,7 +133,7 @@ export default function ServiceFields({
       {type === "REPAIR" && (
         <label>
           증상 / 요청사항
-          <textarea
+          <AutoTextarea
             className="work-input"
             rows={4}
             value={d.symptom}
@@ -145,7 +146,7 @@ export default function ServiceFields({
       {["PM", "REPAIR", "COLDHEAD", "ETC", "INSTALL"].includes(type) && (
         <label>
           교체 부품
-          <textarea
+          <AutoTextarea
             className="work-input"
             value={d.parts}
             onChange={(e) => set("parts", e.target.value)}

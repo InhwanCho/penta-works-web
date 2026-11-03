@@ -1,4 +1,5 @@
 "use client";
+import AutoTextarea from "@/components/common/auto-textarea";
 import { useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "@/components/common/app-link";
@@ -73,7 +74,7 @@ function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>P
     <label>제목<input className="work-input" maxLength={200} value={title} placeholder="비우면 회의 날짜로 제목을 만듭니다" disabled={busy} onChange={event=>setTitle(event.target.value)} /></label>
     <label>회의 일시<input className="work-input" type="datetime-local" required value={date} disabled={busy} onChange={event=>setDate(event.target.value)} /></label>
     <p className="work-hint">지난주 보고 · {meetingReportPeriod(date)}</p>
-    {meetingHeadings.map((heading,i)=><label key={heading}>{heading}<textarea className="work-input" rows={i===0?7:4} value={sections[i]} disabled={busy} placeholder={["방문·점검·수리 내용과 결과","계속 진행 중인 작업, 병원별 이슈","이번 주 방문·PM·수리 계획"][i]} onChange={event=>setSections(value=>value.map((text,index)=>index===i?event.target.value:text) as MeetingSections)} /></label>)}
+    {meetingHeadings.map((heading,i)=><label key={heading}>{heading}<AutoTextarea className="work-input" rows={i===0?7:4} value={sections[i]} disabled={busy} placeholder={["방문·점검·수리 내용과 결과","계속 진행 중인 작업, 병원별 이슈","이번 주 방문·PM·수리 계획"][i]} onChange={event=>setSections(value=>value.map((text,index)=>index===i?event.target.value:text) as MeetingSections)} /></label>)}
     {error&&<p className="work-error" role="alert">{error}</p>}
     <div className="work-form-actions"><button type="button" className="action-cancel work-secondary" disabled={busy} onClick={onCancel}>취소</button><button type="submit" className="action-save work-primary" disabled={busy||!meaningful}>{busy?"저장 중…":"저장"}</button></div>
   </form>;

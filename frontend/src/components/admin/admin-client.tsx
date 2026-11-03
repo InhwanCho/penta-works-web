@@ -1,5 +1,6 @@
 "use client";
 
+import AutoTextarea from "@/components/common/auto-textarea";
 import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import { ChoiceGroup } from "@/components/workspace/choice-group";
@@ -901,7 +902,7 @@ function UserEditor({
           <p className="mb-2 text-xs font-semibold">
             1시간 동안 유효한 비밀번호 재설정 링크
           </p>
-          <textarea
+          <AutoTextarea
             className={`${INPUT} min-h-20`}
             readOnly
             value={resetLink}
@@ -1247,7 +1248,7 @@ function InvitationSection({
         {link && (
           <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4 text-sm dark:border-emerald-900/50 dark:bg-emerald-950/20">
             <p className="mb-2 font-semibold">초대 링크가 생성되었습니다.</p>
-            <textarea
+            <AutoTextarea
               className={`${INPUT} min-h-20`}
               readOnly
               value={link}

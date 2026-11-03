@@ -4299,3 +4299,9 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary:hover { border-color: #5c7e9c !important; }
  .dark .work-day-dialog .day-schedule-row .detail-bottom-actions > .work-secondary:hover { border-color: #afc6da !important; }
 }
+
+.photo-modal-nav { position: fixed; top: 50%; transform: translateY(-50%); z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid #ffffff80; border-radius: 50%; color: white; background: #152638bb; cursor: pointer; }
+.photo-modal-prev { left: 12px; }
+.photo-modal-next { right: 12px; }
+.photo-modal-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.photo-modal-nav:hover { background: #29445bea; }

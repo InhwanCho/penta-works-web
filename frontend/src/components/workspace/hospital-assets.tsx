@@ -1,5 +1,6 @@
 "use client";
 
+import AutoTextarea from "@/components/common/auto-textarea";
 import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 
@@ -246,7 +247,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
           />
           <label>
             관리 메모
-            <textarea
+            <AutoTextarea
               className="work-input"
               maxLength={10000}
               value={form.notes}
@@ -255,7 +256,7 @@ export default function HospitalAssets({ siteId }: { siteId: string }) {
           </label>
           <label>
             변경·정비 내용 *
-            <textarea
+            <AutoTextarea
               required
               className="work-input"
               rows={3}

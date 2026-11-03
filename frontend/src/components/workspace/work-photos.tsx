@@ -25,14 +25,17 @@ export type PhotoMeta = {
 };
 function Photo({
   photo,
+  photos,
   onRemove,
 }: {
   photo: PhotoMeta;
+  photos: PhotoMeta[];
   onRemove?: () => void;
 }) {
   const frame = useRef<HTMLDivElement>(null);
   const [visible, setVisible] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [index, setIndex] = useState(0);
   useEffect(() => {
     if (!frame.current) return;
     if (!("IntersectionObserver" in window)) {
@@ -78,7 +81,7 @@ function Photo({
       {url ? (
         <PhotoPreviewLink
           href={url}
-          onOpen={() => setExpanded(true)}
+          onOpen={() => { setIndex(photos.findIndex(item => item.id === photo.id)); setExpanded(true); }}
           label="업무 사진"
         >
           <Image
@@ -94,7 +97,7 @@ function Photo({
           {error || <CircleLoader size="xs" />}
         </span>
       )}
-      {expanded && <PhotoModal onClose={() => setExpanded(false)}><FullPhoto photo={photo} /></PhotoModal>}
+      {expanded && <PhotoModal onClose={() => setExpanded(false)} onPrevious={photos.length > 1 ? () => setIndex(i => (i - 1 + photos.length) % photos.length) : undefined} onNext={photos.length > 1 ? () => setIndex(i => (i + 1) % photos.length) : undefined}><FullPhoto key={photos[index]?.id} photo={photos[index] || photo} /></PhotoModal>}
       {onRemove && <button className="work-photo-remove" type="button" aria-label="사진 제거" onClick={onRemove}>×</button>}
     </div>
   );
@@ -366,6 +369,7 @@ export function PhotoAttachments({
           <Photo
             key={p.id}
             photo={p}
+            photos={photos}
             onRemove={() => remove(p.id)}
           />
         ))}
@@ -396,6 +400,7 @@ export function PhotoGallery({ recordId }: { recordId: number }) {
             <Photo
               key={p.id}
               photo={p}
+              photos={query.data || []}
             />
           ))}
         </div>

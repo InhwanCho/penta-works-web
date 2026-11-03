@@ -1,5 +1,6 @@
 "use client";
 
+import AutoTextarea from "@/components/common/auto-textarea";
 import Select from "@/components/common/select";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -1106,7 +1107,7 @@ function CompanyCard({
             )}
           {link && (
             <div className="mt-3 rounded-lg bg-emerald-50/60 p-3 text-xs dark:bg-emerald-950/20">
-              <textarea
+              <AutoTextarea
                 className={`${INPUT} min-h-16`}
                 readOnly
                 value={link}

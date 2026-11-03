@@ -320,6 +320,7 @@ function PhotoGrid({
             siteId={siteId}
             maintenanceId={maintenanceId}
             photo={photo}
+            photos={photos}
           />
         ))}
       </div>
@@ -330,13 +331,17 @@ function PhotoGrid({
 function OfficePhotoThumbnail({
   siteId,
   maintenanceId,
-  photo,
+  photo: initialPhoto,
+  photos,
 }: {
   siteId: string;
   maintenanceId: number;
   photo: OfficePhoto;
+  photos: OfficePhoto[];
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [index, setIndex] = useState(photos.findIndex(item => item.id === initialPhoto.id));
+  const photo = photos[index] || initialPhoto;
   const [source, setSource] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -391,7 +396,7 @@ function OfficePhotoThumbnail({
         className="object-cover transition-transform group-hover/photo:scale-[1.02]"
       />
     </PhotoPreviewLink>
-    {expanded && <PhotoModal onClose={() => setExpanded(false)}><section className="photo-modal-content"><Image src={source} alt="정비 작업 사진" width={1600} height={1200} unoptimized onClick={event => event.stopPropagation()} /></section></PhotoModal>}
+    {expanded && <PhotoModal onClose={() => setExpanded(false)} onPrevious={photos.length > 1 ? () => setIndex(i => (i - 1 + photos.length) % photos.length) : undefined} onNext={photos.length > 1 ? () => setIndex(i => (i + 1) % photos.length) : undefined}><section className="photo-modal-content"><Image src={source} alt="정비 작업 사진" width={1600} height={1200} unoptimized onClick={event => event.stopPropagation()} /></section></PhotoModal>}
     </>
   );
 }

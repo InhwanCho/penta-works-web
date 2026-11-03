@@ -2,10 +2,10 @@
 
 import Image from "next/image";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
-import { createPortal } from "react-dom";
+
 import { useId, useState, type ReactNode } from "react";
 import { ChoiceGroup } from "./choice-group";
-import WorkspaceDrawer from "./workspace-drawer";
+import PhotoModal from "@/components/common/photo-modal";
 import {
   setAcrSectionVerdict, acrSections, acrPreparation, pulseCols, pulseRows, computedDetails,
   acrFieldVerdict, acrAutoVerdict, acrEffectiveVerdicts, acrOverallVerdict,
@@ -15,7 +15,7 @@ import {
 const verdictOptions: [string, string][] = [["pass", "합격"], ["fail", "불합격"], ["na", "해당없음"]];
 const verdictLabels: Record<string, string> = { pass: "합격", fail: "불합격", na: "해당없음", invalid: "숫자 확인" };
 
-export function GuideFigures({ figures, title }: { figures?: string[]; title: string }) {
+export function GuideFigures({ figures = [], title }: { figures?: string[]; title: string }) {
   const [expanded, setExpanded] = useState<string | null>(null);
   return <>
     <div className="service-guide-figures">
@@ -26,9 +26,11 @@ export function GuideFigures({ figures, title }: { figures?: string[]; title: st
         <figcaption>참고 그림 {index + 1} · 눌러서 확대</figcaption>
       </figure>)}
     </div>
-    {expanded && createPortal(<WorkspaceDrawer title={`${title} 참고 그림`} onClose={() => setExpanded(null)} className="service-guide-viewer">
-      <Image src={`/service-guide/acr/${expanded}.jpg`} alt={`${title} 확대 그림`} width={1200} height={900} unoptimized className="service-guide-expanded" />
-    </WorkspaceDrawer>, document.querySelector(".workspace-frame") || document.body)}
+    {expanded && <PhotoModal onClose={() => setExpanded(null)}
+      onPrevious={figures.length > 1 ? () => setExpanded(figures[(figures.indexOf(expanded) - 1 + figures.length) % figures.length]) : undefined}
+      onNext={figures.length > 1 ? () => setExpanded(figures[(figures.indexOf(expanded) + 1) % figures.length]) : undefined}>
+      <section className="photo-modal-content"><Image src={`/service-guide/acr/${expanded}.jpg`} alt={`${title} 확대 그림`} width={1200} height={900} unoptimized onClick={event => event.stopPropagation()} /></section>
+    </PhotoModal>}
   </>;
 }
 function MeasurementFields({ section, details, onChange }: { section: AcrSection; details: WorkDetails; onChange: (next: WorkDetails) => void }) {

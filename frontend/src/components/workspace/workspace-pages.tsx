@@ -1,5 +1,6 @@
 "use client";
 
+import AutoTextarea from "@/components/common/auto-textarea";
 import Pagination from "@/components/common/pagination";
 import { scheduleMemoTitle, newScheduleForm, scheduleEditForm, scheduleTimes, substantialScheduleChange, normalizeScheduleForm } from "./schedule-form";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -641,7 +642,7 @@ export function SchedulePage({ onSaved, inline = false }: { onSaved?: () => void
           )}
           <label>
             메모
-            <textarea
+            <AutoTextarea
               required
               className="work-input"
               maxLength={10000}

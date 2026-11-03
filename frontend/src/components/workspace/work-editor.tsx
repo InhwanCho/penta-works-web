@@ -1,5 +1,6 @@
 "use client";
 
+import AutoTextarea from "@/components/common/auto-textarea";
 import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
@@ -570,7 +571,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                   ? "점검 내용 / 특이사항"
                   : "조치 내용 / 특이사항"
               : "업무 내용"}
-            <textarea
+            <AutoTextarea
               className="work-input"
               rows={6}
               required={!field || !["PM", "ACR"].includes(type)}
@@ -595,7 +596,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           {form.status !== "COMPLETED" && (
             <label>
               후속 조치 / 재방문 계획
-              <textarea
+              <AutoTextarea
                 className="work-input"
                 value={details.followUp}
                 onChange={(e) =>
@@ -614,7 +615,7 @@ export default function WorkEditor({ id }: { id?: string }) {
           />
           <label>
             방문 전 확인사항
-            <textarea
+            <AutoTextarea
               className="work-input"
               maxLength={10000}
               rows={3}
