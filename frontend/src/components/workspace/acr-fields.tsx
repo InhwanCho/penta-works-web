@@ -1,6 +1,6 @@
 "use client";
 
-import Image from "next/image";
+import Image from "@/components/common/loading-photo";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
 
 import { useId, useState, type ReactNode } from "react";

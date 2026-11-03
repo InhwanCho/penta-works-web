@@ -1,4 +1,5 @@
 "use client";
+import PhotoSkeleton from "@/components/common/photo-skeleton";
 
 import CircleLoader from "@/components/icons/circle-loader";
 
@@ -9,7 +10,7 @@ import {
 } from "@/hooks/use-office-assets-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetchBlob } from "@/lib/api";
-import Image from "next/image";
+import Image from "@/components/common/loading-photo";
 import PhotoModal from "@/components/common/photo-modal";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import Link from "@/components/common/app-link";
@@ -375,7 +376,7 @@ function OfficePhotoThumbnail({
 
   if (!source) {
     return (
-      <div className="flex aspect-[4/3] items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800"><CircleLoader /></div>
+      <PhotoSkeleton />
     );
   }
 

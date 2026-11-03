@@ -4305,3 +4305,22 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .photo-modal-next { right: 12px; }
 .photo-modal-nav svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .photo-modal-nav:hover { background: #29445bea; }
+
+.photo-skeleton { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; color: #9aabba; background: #e7edf3; }
+.photo-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg,transparent,#ffffff70,transparent); animation: photo-shimmer 1.4s ease-in-out infinite; }
+.photo-skeleton svg { width: 32px; height: 32px; opacity: .65; }
+.dark .photo-skeleton { background: #293b4a; color: #8195a7; }
+.dark .photo-skeleton::after { background: linear-gradient(90deg,transparent,#ffffff12,transparent); }
+.work-photo > .photo-skeleton { height: 145px; aspect-ratio: auto; }
+.photo-skeleton-large { width: min(900px,calc(100vw - 48px)); height: min(650px,calc(100dvh - 128px)); aspect-ratio: auto; }
+.photo-skeleton-large svg { width: 60px; height: 60px; }
+.loading-photo { position: relative; display: inline-block; max-width: 100%; }
+.loading-photo > .photo-skeleton,.loading-photo > .photo-load-error { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.loading-photo-fill { position: absolute; inset: 0; }
+.work-photo .loading-photo { display: block; width: 100%; height: 100%; }
+.photo-modal-content > .loading-photo { display: flex; align-items: center; justify-content: center; max-height: calc(100dvh - 128px); }
+.photo-modal-content > .loading-photo:not([data-ready="true"]) { width: min(900px,calc(100vw - 48px)); height: min(650px,calc(100dvh - 128px)); }
+.photo-load-error { display: grid; place-items: center; color: var(--work-muted); font-size: 13px; }
+@keyframes photo-shimmer { to { transform: translateX(100%); } }
+@media (max-width:767px) { .work-photo > .photo-skeleton { height: 125px; } }
+@media (prefers-reduced-motion:reduce) { .photo-skeleton::after { animation: none; } }

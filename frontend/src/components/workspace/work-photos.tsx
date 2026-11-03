@@ -1,4 +1,5 @@
 "use client";
+import PhotoSkeleton from "@/components/common/photo-skeleton";
 
 import CircleLoader from "@/components/icons/circle-loader";
 
@@ -9,7 +10,7 @@ import {
   useImperativeHandle,
   type Ref,
 } from "react";
-import Image from "next/image";
+import Image from "@/components/common/loading-photo";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import PhotoModal from "@/components/common/photo-modal";
 import { useQuery } from "@tanstack/react-query";
@@ -93,9 +94,7 @@ function Photo({
           />
         </PhotoPreviewLink>
       ) : (
-        <span role={error ? "alert" : undefined}>
-          {error || <CircleLoader size="xs" />}
-        </span>
+        error ? <span role="alert">{error}</span> : <PhotoSkeleton />
       )}
       {expanded && <PhotoModal onClose={() => setExpanded(false)} onPrevious={photos.length > 1 ? () => setIndex(i => (i - 1 + photos.length) % photos.length) : undefined} onNext={photos.length > 1 ? () => setIndex(i => (i + 1) % photos.length) : undefined}><FullPhoto key={photos[index]?.id} photo={photos[index] || photo} /></PhotoModal>}
       {onRemove && <button className="work-photo-remove" type="button" aria-label="사진 제거" onClick={onRemove}>×</button>}
@@ -126,7 +125,7 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
       {error ? <p role="alert">{error}</p> : url ? (
         <Image src={url} alt="업무 사진" width={photo.width} height={photo.height} unoptimized
           onClick={event => event.stopPropagation()} />
-      ) : <CircleLoader size="m" inline />}
+      ) : <PhotoSkeleton large />}
     </section>
   );
 }
