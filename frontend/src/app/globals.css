@@ -4335,3 +4335,12 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 }
 
 .management-detail-actions { display: flex; justify-content: flex-end; margin-bottom: 16px; }
+
+.meeting-detail-drawer .meeting-detail { padding-top: 4px; }
+.meeting-detail-toolbar > p { margin: 0; }
+.meeting-detail-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.meeting-detail-actions > button { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 64px; height: 40px; min-height: 40px !important; padding: 8px !important; }
+.meeting-detail-actions > .action-danger { color: #b42332 !important; border-color: #d97983 !important; background: transparent !important; }
+.dark .meeting-detail-actions > .action-danger { color: #f6a6ae !important; border-color: #b86672 !important; }
+@media (hover:hover) { .meeting-detail-actions > .action-danger:hover { background: #fff0f2 !important; } .dark .meeting-detail-actions > .action-danger:hover { background: #482b35 !important; } }
+@media (max-width:520px) { .meeting-detail-actions > button { width: 48px; } .meeting-detail-toolbar { align-items: center; } }

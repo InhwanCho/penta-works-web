@@ -3,7 +3,6 @@ import AutoTextarea from "@/components/common/auto-textarea";
 import { useMemo, useState, type FormEvent } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "@/components/common/app-link";
-import ActionMenu from "@/components/common/action-menu";
 import PageLoader from "@/components/common/page-loader";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch } from "@/lib/api";
@@ -43,7 +42,7 @@ export default function MeetingsPage() {
     {current&&!editing&&<WorkspaceDrawer title={current.title} onClose={()=>setSelected(null)} className="meeting-detail-drawer">
       <div className="meeting-detail">
         {error&&<p role="alert" className="work-error">{error}</p>}
-        <div className="meeting-detail-toolbar"><p>{current.meetingAt.replace("T"," ")} · 작성 {current.authorName}</p><ActionMenu label="회의록 메뉴" items={[{label:"수정",onSelect:()=>setEditing(current)},...(isAdmin||current.authorId===session.id?[{label:"삭제",danger:true,onSelect:()=>void remove(current)}]:[])]} /></div>
+        <div className="meeting-detail-toolbar"><p>{current.meetingAt.replace("T"," ")} · 작성 {current.authorName}</p><div className="meeting-detail-actions"><button type="button" className="work-secondary" onClick={() => setEditing(current)}>수정</button>{(isAdmin || current.authorId === session.id) && <button type="button" className="work-secondary action-danger" onClick={() => void remove(current)}>삭제</button>}</div></div>
         <p className="meeting-period">지난주 보고 · {meetingReportPeriod(current.meetingAt)}</p>
         <article className="meeting-content" dangerouslySetInnerHTML={{__html:meetingHtml(current.contentMarkdown)}} />
         <p className="work-hint meeting-updated">최근 수정 {current.updatedByName} · {current.updatedAt}</p>
