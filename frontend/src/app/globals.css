@@ -4244,3 +4244,11 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { box-sizing: border-box; height: var(--calendar-action-size) !important; min-height: var(--calendar-action-size) !important; max-height: var(--calendar-action-size); }
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { width: var(--calendar-action-size) !important; min-width: var(--calendar-action-size); max-width: var(--calendar-action-size); flex: 0 0 var(--calendar-action-size); padding: 0 !important; aspect-ratio: 1; }
 @media (max-width:1023px) { .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { --calendar-action-size: 36px; } }
+
+.work-list-actions { display: flex; justify-content: flex-end; margin-bottom: 12px; }
+.work-record-meta { display: flex; align-items: center; flex-wrap: nowrap; gap: 8px; min-width: 0; color: var(--work-muted); font-size: 12px; line-height: 1.5; }
+.work-record-meta > * { min-width: 0; }
+.work-record-meta > time { flex: 0 0 auto; white-space: nowrap; }
+.work-record-meta > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.work-record-meta > :not(:first-child)::before { content: "·"; margin-right: 8px; }
+.work-record-meta > .work-record-hospital { flex: 0 1 auto; max-width: 45%; }

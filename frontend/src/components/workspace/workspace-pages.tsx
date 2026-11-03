@@ -98,13 +98,11 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
               </span>
             </div>
             <strong>{r.title}</strong>
-            {r.siteName && <p>{r.siteName}</p>}
-            <small>
-              {r.workDate} ·{" "}
-              {r.engineerName
-                ? `담당 ${r.engineerName}`
-                : `작성자 ${r.authorName}`}
-            </small>
+            <div className="work-record-meta">
+              {r.siteName && <span className="work-record-hospital">{r.siteName}</span>}
+              <time dateTime={r.workDate}>{r.workDate}</time>
+              <span>{r.engineerName ? `담당 ${r.engineerName}` : `작성자 ${r.authorName}`}</span>
+            </div>
           </Link>
         ))
       ) : (
@@ -367,18 +365,9 @@ export function WorkPage({ onlyOpen = false }: { onlyOpen?: boolean }) {
   const rows = records.data?.records || [];
   return (
     <main className="work-page">
-      <PageHeading
-        title="업무기록"
-        description="현장 서비스와 일반 업무를 함께 기록하세요."
-        action={
-          <Link
-            href="/work/new"
-            className="work-secondary hospital-register"
-          >
-            ＋ 작성
-          </Link>
-        }
-      />
+      <div className="work-list-actions">
+        <Link href="/work/new" className="work-secondary hospital-register">＋ 작성</Link>
+      </div>
       <div className="work-pills">
         {[
           ["ALL", "전체"],
