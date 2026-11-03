@@ -101,10 +101,11 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
         {rows.map((r) => (
           <div key={r.key}>
             {r.record ? (
-              <RecordList rows={[r.record]} />
+              <RecordList rows={[r.record]} showRelativeDate />
             ) : r.maintenance ? (
               <MaintenanceRow
                 item={r.maintenance}
+                showRelativeDate
                 siteId={siteId}
               />
             ) : null}

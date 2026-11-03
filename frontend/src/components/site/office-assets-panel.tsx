@@ -1,4 +1,5 @@
 "use client";
+import { relativeDayLabel } from "@/lib/relative-day";
 import PhotoSkeleton from "@/components/common/photo-skeleton";
 
 import CircleLoader from "@/components/icons/circle-loader";
@@ -219,7 +220,9 @@ export default function OfficeAssetsPanel({
 export function MaintenanceRow({
   item,
   siteId,
+  showRelativeDate = false,
 }: {
+  showRelativeDate?: boolean;
   item: OfficeMaintenance;
   siteId: string;
 }) {
@@ -243,7 +246,7 @@ export function MaintenanceRow({
           <strong className="block break-words">{title}</strong>
           <span className="text-text-secondary dark:text-text-dark-primary/65 mt-1 block text-xs sm:text-sm">
             {join([
-              item.workDate ? date(item.workDate) : null,
+              item.workDate ? `${date(item.workDate)}${showRelativeDate ? ` ${relativeDayLabel(item.workDate)}` : ""}` : null,
               item.equipmentName,
               item.modelName,
               item.engineerName ? `담당 ${item.engineerName}` : null,

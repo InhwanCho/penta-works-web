@@ -1,4 +1,5 @@
 "use client";
+import { relativeDayLabel } from "@/lib/relative-day";
 
 import AutoTextarea from "@/components/common/auto-textarea";
 import Pagination from "@/components/common/pagination";
@@ -74,7 +75,7 @@ export function ErrorState({
 export function Empty({ children }: { children: React.ReactNode }) {
   return <p className="work-empty">{children}</p>;
 }
-export function RecordList({ rows }: { rows: WorkRecord[] }) {
+export function RecordList({ rows, showRelativeDate = false }: { rows: WorkRecord[]; showRelativeDate?: boolean }) {
   return (
     <div className="work-panel">
       {rows.length ? (
@@ -101,7 +102,7 @@ export function RecordList({ rows }: { rows: WorkRecord[] }) {
             </div>
             <div className="work-record-meta">
               {r.siteName && <span className="work-record-hospital">{r.siteName}</span>}
-              <time dateTime={r.workDate}>{r.workDate}</time>
+              <time dateTime={r.workDate}>{r.workDate}{showRelativeDate && <> <span className="hospital-history-age">{relativeDayLabel(r.workDate)}</span></>}</time>
               <span>{r.engineerName ? `담당 ${r.engineerName}` : `작성자 ${r.authorName}`}</span>
             </div>
           </Link>
