@@ -4219,3 +4219,13 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { padding-inline: 7px !important; font-size: 11px !important; }
  .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { padding: 0 !important; }
 }
+
+/* Compact settings card interiors without shrinking the selectable rows. */
+.settings-page .settings-section { padding: 16px; }
+.settings-page .settings-section h2 { margin-bottom: 8px; }
+.settings-page .settings-section :is(.settings-link,.settings-switch) { padding-block: 10px; min-height: 56px; }
+.settings-page .settings-section :is(.settings-link,.settings-switch) small { margin-top: 3px; }
+.settings-page .settings-account-section .settings-account { padding-block: 4px; }
+.settings-page .settings-account-hint { margin-top: 6px; }
+.settings-page .settings-section .work-radio-group { margin-bottom: 4px; }
+.settings-page .settings-section .work-radio-group legend { margin-bottom: 6px; }

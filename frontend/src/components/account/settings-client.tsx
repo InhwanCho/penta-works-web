@@ -49,6 +49,23 @@ export default function SettingsClient() {
         </Link>
         <p className="settings-account-hint">내 정보 · 비밀번호 관리</p>
       </section>
+      {isAdmin && (
+        <section className="work-panel settings-section">
+          <h2>관리</h2>
+          <SettingsLink
+            href="/admin"
+            title="관리 설정"
+            description="사용자·초대·병원·측정항목·활동 기록"
+          />
+          {session.role === "PLATFORM_ADMIN" && (
+            <SettingsLink
+              href="/companies"
+              title="회사 관리"
+              description="고객 회사 등록과 소속 관리"
+            />
+          )}
+        </section>
+      )}
       {meetingAccess.data?.allowed && <section className="work-panel settings-section">
         <h2>사내 업무</h2>
         <SettingsLink href="/meetings" title="회의록" description="지난주 진행 내용 · 이슈 · 이번 주 계획" />
@@ -97,23 +114,7 @@ export default function SettingsClient() {
           description="병원별 기준 · 받는 시간 · 반복"
         />
       </section>
-      {isAdmin && (
-        <section className="work-panel settings-section">
-          <h2>관리</h2>
-          <SettingsLink
-            href="/admin"
-            title="관리 설정"
-            description="사용자·초대·병원·측정항목·활동 기록"
-          />
-          {session.role === "PLATFORM_ADMIN" && (
-            <SettingsLink
-              href="/companies"
-              title="회사 관리"
-              description="고객 회사 등록과 소속 관리"
-            />
-          )}
-        </section>
-      )}
+
       <section className="work-panel settings-section">
         <h2>서비스 안내</h2>
         <SettingsLink href="/about" title="MReyes 소개" description="모니터링과 현장 서비스 관리" />
