@@ -4238,3 +4238,9 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @media (max-width:1023px) {
  .work-day-dialog .day-schedule-row > .detail-bottom-actions > :is(a,button) { width: 48px; min-width: 48px; max-width: 48px; }
 }
+
+/* Search uses the same height as its neighboring calendar actions at each breakpoint. */
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar { --calendar-action-size: 40px; }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .calendar-toolbar-action { box-sizing: border-box; height: var(--calendar-action-size) !important; min-height: var(--calendar-action-size) !important; max-height: var(--calendar-action-size); }
+.workspace-frame .work-overview .work-calendar .work-calendar-toolbar > .overview-search-trigger { width: var(--calendar-action-size) !important; min-width: var(--calendar-action-size); max-width: var(--calendar-action-size); flex: 0 0 var(--calendar-action-size); padding: 0 !important; aspect-ratio: 1; }
+@media (max-width:1023px) { .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { --calendar-action-size: 36px; } }
