@@ -1,6 +1,7 @@
 "use client";
 import { HospitalProfile, useHospitalProfile } from "@/components/workspace/hospital-profile";
 import HospitalSection from "./hospital-section";
+import PeriodDateTimePicker from "./period-date-time-picker";
 import ChevronDownIcon from "@/components/icons/chevron-down-icon";
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import HospitalDetailTabs from "./hospital-detail-tabs";
@@ -341,7 +342,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         </div>
         <form className="site-period-form mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
           event.preventDefault();
-          // Read the actual inputs: native date pickers can update their value before React state.
+          // Both calendar fields submit their complete date and time in Korean local time.
           const inputs = new FormData(event.currentTarget);
           const start = new Date(`${inputs.get("periodStart")}+09:00`);
           const end = new Date(`${inputs.get("periodEnd")}+09:00`);
@@ -355,8 +356,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           if (from === nextFrom && to === nextTo) void refetch();
           else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo, take:String(take)})}`, {scroll:false});
         }}>
-          <label className="text-xs font-bold">시작 일시<input type="datetime-local" name="periodStart" required value={periodStart} onInput={event => setPeriodStart(event.currentTarget.value)} onChange={event => setPeriodStart(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
-          <label className="text-xs font-bold">종료 일시<input type="datetime-local" name="periodEnd" required value={periodEnd} onInput={event => setPeriodEnd(event.currentTarget.value)} onChange={event => setPeriodEnd(event.target.value)} className="mt-1 min-h-11 w-full min-w-0 rounded-lg border bg-transparent px-2 dark:border-white/15 dark:text-white" /></label>
+          <PeriodDateTimePicker label="시작 일시" name="periodStart" value={periodStart} onChange={setPeriodStart} />
+          <PeriodDateTimePicker label="종료 일시" name="periodEnd" value={periodEnd} onChange={setPeriodEnd} />
           <button type="submit" disabled={isFetching} className="min-h-11 whitespace-nowrap rounded-lg bg-sky-700 px-4 text-sm font-bold text-white disabled:opacity-50">{isFetching ? <CircleLoader size="xs" inline /> : "기간 조회"}</button>
         </form>
         {periodError && <p role="alert" className="mt-2 text-xs text-rose-600 dark:text-rose-300">{periodError}</p>}
