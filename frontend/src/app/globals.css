@@ -4405,3 +4405,8 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark .period-calendar-weekday { color: #94a3b8; }
 .period-date-time-picker select option { background: #fff; color: #172b3a; }
 @media(hover:hover) { .period-calendar-panel button:hover { background: #e0f2fe; color: #075985; } }
+
+.inspection-source-record { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 8px; text-align: left; color: var(--work-focus); min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
+.inspection-source-record span { font-size: .75rem; color: var(--work-muted); }
+.work-due-row > .inspection-due-date { flex-shrink: 0; }
+@media(max-width:639px) { .work-due-row { flex-wrap: wrap; } .work-due-row > .overview-due-content { flex-basis: 100%; } }

@@ -8,6 +8,7 @@ import PageLoader from "@/components/common/page-loader";
 
 import Link from "@/components/common/app-link";
 import InspectionDueDate from "./inspection-due-date";
+import InspectionSourceRecord from "./inspection-source-record";
 import PmDateEditor from "./pm-date-editor";
 import WorkspaceSearch from "./workspace-search";
 import { groupRecentWorkByWeek, recentWorkWindow } from "./recent-work-weeks";
@@ -669,7 +670,7 @@ export default function OverviewPage() {
                 const override = type === "PM" ? plan?.pmOverride : type === "ACR_FULL" ? plan?.acrFullOverride : plan?.acrDocOverride;
                 return <article key={`${d.siteId}-${type}`} className="inspection-due-row">
                   <div className="inspection-due-top"><div className="inspection-due-name"><span className="inspection-due-badge">{type === "PM" ? "정기점검(PM)" : d.type}</span><strong>{d.siteName}</strong></div><div className="inspection-due-links"><Link className="work-secondary" href={`/sites/${d.siteId}#inspection-plan`}>병원 보기</Link><Link className="work-primary" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${type === "PM" ? "PM" : "ACR"}&acrKind=${type === "ACR_FULL" ? "full" : "doc"}`}>일지 작성</Link></div></div>
-                  <p className="inspection-due-meta">최근 PM {d.lastPmDate || "기록 없음"} · 최근 방문 {d.lastVisitDate || "기록 없음"}</p>
+                  <InspectionSourceRecord siteId={d.siteId} type={d.type} onOpen={setDetailHref} />
                   <InspectionDueDate siteId={d.siteId} type={type} date={d.date} overridden={!!override} automaticDate={d.automaticDate || null} />
                 </article>;
               })}</div>
@@ -702,24 +703,15 @@ export default function OverviewPage() {
                 retry={retryPlanning}
               />
               {upcomingDue.map((d) => (
-                <Link
-                  className="work-due-row"
-                  href={`/sites/${d.siteId}`}
-                  key={d.siteId + d.type}
-                  onNavigate={mobile ? (event) => { event.preventDefault(); setDetailHref(`/sites/${d.siteId}`); } : undefined}
-                >
+                <div className="work-due-row" key={d.siteId + d.type}>
                   <div className="overview-due-content">
-                    <strong>{d.siteName}</strong>
-                    <div className="overview-due-meta">
-                      <span className="overview-due-type">{d.type === "PM" ? "정기점검(PM)" : d.type}</span>
-                      <span>예정일 {d.date.replaceAll("-", ". ")}</span>
-                      {d.type === "PM" && <span>최근 PM {d.lastPmDate?.replaceAll("-", ". ") || "기록 없음"}</span>}
-                    </div>
+                    <Link href={`/sites/${d.siteId}`}><strong>{d.siteName}</strong></Link>
+                    <div className="overview-due-meta"><span className="overview-due-type">{d.type === "PM" ? "정기점검(PM)" : d.type}</span><span>예정일 {d.date.replaceAll("-", ". ")}</span></div>
+                    <InspectionSourceRecord siteId={d.siteId} type={d.type} onOpen={setDetailHref} />
                   </div>
-                  <span className={`work-badge overview-due-count ${d.days < 0 ? "overdue" : d.days <= 14 ? "soon" : ""}`}>
-                    {d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}
-                  </span>
-                </Link>
+                  {d.type === "PM" && <InspectionDueDate siteId={d.siteId} type="PM" date={d.date} overridden={!!planning.data?.plans.find(p=>p.siteId===d.siteId)?.pmOverride} automaticDate={d.automaticDate||null} />}
+                  <span className={`work-badge overview-due-count ${d.days < 0 ? "overdue" : d.days <= 14 ? "soon" : ""}`}>{d.days < 0 ? `${-d.days}일 지남` : `D-${d.days}`}</span>
+                </div>
               ))}
               {!upcomingDue.length && !planningLoading && !planningFailed && (
                 <Empty>45일 이내 예정된 점검이 없습니다.</Empty>
