@@ -3251,13 +3251,18 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
  .meeting-directory-heading > div { flex-basis: 100%; }
  .meeting-directory-heading > .work-search { max-width: none; }
 }
-.meeting-list { display: grid; gap: 10px; }
-.meeting-card { display: flex; align-items: stretch; gap: 18px; width: 100%; min-width: 0; padding: 18px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); color: var(--work-ink); text-align: left; }
+.meeting-list { display: grid; gap: 16px; }
+.meeting-card { display: flex; align-items: stretch; gap: 28px; width: 100%; min-width: 0; padding: 26px; border: 1px solid var(--work-line); border-radius: 12px; background: var(--work-paper); color: var(--work-ink); text-align: left; cursor: pointer; }
+.meeting-card-date { display: flex; flex: 0 0 168px; flex-direction: column; align-items: flex-start; gap: 10px; padding-right: 24px; border-right: 1px solid var(--work-line); color: var(--work-muted); font-size: .8125rem; }
+.meeting-card-date-label { font-weight: 650; }
+.meeting-card-date strong { color: var(--work-ink); font-size: 1.125rem; font-weight: 750; line-height: 1.5; white-space: nowrap; }
+.meeting-card-author { margin-top: 8px; overflow-wrap: anywhere; }
 .meeting-card-main { min-width: 0; flex: 1; }
-.meeting-card-main h2 { font-size: 1rem; font-weight: 750; overflow-wrap: anywhere; }
+.meeting-card-main h2 { margin: 0; font-size: 1.1875rem; font-weight: 750; line-height: 1.5; overflow-wrap: anywhere; }
 .meeting-period { margin-top: 4px; color: var(--work-focus); font-size: .75rem; }
-.meeting-preview { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 8px 0 0; color: var(--work-muted); font-size: .875rem; line-height: 1.6; }
-.meeting-card-arrow { align-self: center; color: var(--work-muted); font-size: 1.5rem; }
+.meeting-card-period { margin: 12px 0 0; color: var(--work-focus); font-size: .875rem; font-weight: 600; line-height: 1.6; }
+.meeting-preview { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; margin: 16px 0 0; color: var(--work-ink); font-size: .9375rem; line-height: 1.85; overflow-wrap: anywhere; }
+.meeting-card:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 3px; }
 .meeting-empty { padding: 32px 16px; text-align: center; color: var(--work-muted); }
 .work-day-dialog.meeting-detail-drawer { width: min(900px,calc(100% - 32px)); }
 .meeting-detail, .meeting-form { min-width: 0; padding: 18px 20px; }
@@ -3277,8 +3282,9 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-form textarea { line-height: 1.65; resize: vertical; font-weight: 400; }
 @media(hover:hover) { .meeting-card:hover { border-color: var(--work-focus); } }
 @media(max-width:1023px) {
- .meeting-card { gap: 8px; padding: 12px; }
- .meeting-preview { margin: 5px 0 0; font-size: .8125rem; }
+ .meeting-card { gap: 18px; padding: 20px; }
+ .meeting-card-date { flex-basis: 144px; padding-right: 18px; }
+ .meeting-preview { font-size: .875rem; }
  .work-day-dialog.meeting-detail-drawer.workspace-drawer { width: 100%; }
  .meeting-detail, .meeting-form { padding: 12px 14px; }
  .meeting-form input[type="datetime-local"] { width: 100%; min-width: 0; }
@@ -4375,3 +4381,15 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 
 .hospital-history-tabs { margin-bottom: 18px; flex-wrap: wrap; }
 .hospital-history-tabs button { min-height: 40px; }
+
+@media(max-width:639px) {
+ .meeting-list { gap: 12px; }
+ .meeting-card { flex-direction: column; gap: 16px; padding: 18px; }
+ .meeting-card-date { flex: none; flex-direction: row; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 0 0 12px; border-right: 0; border-bottom: 1px solid var(--work-line); }
+ .meeting-card-date-label { flex-basis: 100%; font-size: .75rem; }
+ .meeting-card-date strong { font-size: 1rem; }
+ .meeting-card-author { margin: 0 0 0 auto; }
+ .meeting-card-main h2 { font-size: 1.0625rem; }
+ .meeting-card-period { margin-top: 8px; font-size: .8125rem; }
+ .meeting-preview { margin-top: 12px; }
+}
