@@ -4386,3 +4386,5 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .meeting-card-meta { margin-top: 8px; gap: 4px 14px; }
  .meeting-preview { margin-top: 12px; }
 }
+
+.meeting-directory-heading > :is(.work-search, .hospital-register) { box-sizing: border-box; height: 44px; min-height: 44px !important; }
