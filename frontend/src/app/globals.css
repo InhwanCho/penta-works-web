@@ -3803,7 +3803,7 @@ html.dark {
 @media (hover: hover) {
  .overview-list-help:hover { color: #174b7a; background: #c9e2fa; border-color: #80afd8; }
  .dark .overview-list-help:hover { color: #e1f0ff; background: #315d80; border-color: #6b9dc2; }
- .work-overview .overview-preparation-group .work-preparation:hover { background: var(--work-hover); }
+ .work-overview .overview-preparation-group .work-preparation:hover { background: var(--surface-hover); }
 }
 @media (max-width: 767px) {
  .workspace-frame .work-overview .overview-fold > summary { padding-left: 12px; gap: 6px; font-size: 13px; }
