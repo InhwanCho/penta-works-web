@@ -4406,7 +4406,9 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .period-date-time-picker select option { background: #fff; color: #172b3a; }
 @media(hover:hover) { .period-calendar-panel button:hover { background: #e0f2fe; color: #075985; } }
 
-.inspection-source-record { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 8px; text-align: left; color: var(--work-focus); min-width: 0; overflow-wrap: anywhere; cursor: pointer; }
-.inspection-source-record span { font-size: .75rem; color: var(--work-muted); }
+.inspection-source-record { display: flex; align-items: center; gap: 6px; width: 100%; max-width: 100%; min-width: 0; margin-top: 8px; padding: 4px 0; text-align: left; color: var(--work-muted); font-size: .8125rem; font-weight: 400; line-height: 1.6; cursor: pointer; }
+.inspection-source-copy { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.inspection-source-arrow { flex: 0 0 auto; }
+@media(hover:hover) { .inspection-source-record:hover { color: var(--work-ink); } }
 .work-due-row > .inspection-due-date { flex-shrink: 0; }
 @media(max-width:639px) { .work-due-row { flex-wrap: wrap; } .work-due-row > .overview-due-content { flex-basis: 100%; } }

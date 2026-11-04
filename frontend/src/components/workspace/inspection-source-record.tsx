@@ -14,5 +14,6 @@ export default function InspectionSourceRecord({siteId,type,onOpen}:{siteId:stri
  if(query.isPending)return <p className="work-hint">기준 업무 불러오는 중…</p>;
  if(query.error)return <button type="button" className="inspection-source-record" onClick={()=>void query.refetch()}>기준 업무 다시 불러오기</button>;
  if(!record)return <p className="work-hint">연결된 완료 업무기록 없음</p>;
- return <button type="button" className="inspection-source-record" onClick={()=>onOpen(`/work/${record.id}`)}><strong>{record.title}</strong><span>{serviceLabels[record.serviceType||""]||record.serviceType||"업무"} · {record.workDate} · 상세 보기 ›</span></button>;
+ const description=`${record.workDate} · ${serviceLabels[record.serviceType||""]||record.serviceType||"업무"} · ${record.title}`;
+ return <button type="button" className="inspection-source-record" title={description} aria-label={`${description} 업무기록 상세 보기`} onClick={()=>onOpen(`/work/${record.id}`)}><span className="inspection-source-copy">{description}</span><span className="inspection-source-arrow" aria-hidden="true">›</span></button>;
 }
