@@ -4416,3 +4416,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @media(hover:hover) { .inspection-source-record:hover { color: var(--work-ink); } }
 .work-due-row > .inspection-due-date { flex-shrink: 0; }
 @media(max-width:639px) { .work-due-row { flex-wrap: wrap; } .work-due-row > .overview-due-content { flex-basis: 100%; } }
+
+/* Keep the inspection row subtle around its individual controls. */
+.work-overview .work-due-row:hover { background: transparent; }
+@media (hover: hover) {
+ .work-overview .work-due-row:hover { background: #f5f5f5; }
+ .dark .work-overview .work-due-row:hover { background: #ffffff06; }
+}
