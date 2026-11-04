@@ -31,7 +31,7 @@ const Z_FIXED = "z-20";
 const CELL_BORDER = "dark:border-background-dark-secondary border-b border-r";
 
 /** sticky 셀은 반드시 불투명 배경이어야 아래 셀이 비치지 않습니다. */
-const HEAD_BG = "bg-background-primary dark:bg-background-dark-secondary";
+const HEAD_BG = "bg-[#dce9f2] dark:bg-[#294454]";
 const FIXED_BG =
   "bg-white group-hover:bg-background-primary dark:bg-background-dark-card dark:group-hover:bg-background-dark-secondary";
 
