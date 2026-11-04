@@ -34,15 +34,9 @@ export default function MeetingsPage() {
     {error&&<p role="alert" className="work-error">{error}</p>}
     {query.isPending?<PageLoader />:query.error?<div className="work-panel"><p className="work-error">{errorText(query.error)}</p><button className="work-secondary" onClick={()=>void query.refetch()}>다시 시도</button></div>:<div className="meeting-list">
       {filtered.map(row=><button type="button" className="meeting-card" key={row.id} onClick={()=>{setSelected(row.id);setError("");}} aria-haspopup="dialog">
-        <div className="meeting-card-date">
-          <span className="meeting-card-date-label">회의일</span>
-          <strong>{meetingDateLabel(row.meetingAt)}</strong>
-          <span>{row.meetingAt.slice(0,4)}년</span>
-          <span className="meeting-card-author">작성 {row.authorName}</span>
-        </div>
         <div className="meeting-card-main">
           <h2>{row.title}</h2>
-          <p className="meeting-card-period">지난주 보고 · {meetingReportPeriod(row.meetingAt)}</p>
+          <div className="meeting-card-meta"><span className="meeting-card-author">작성 {row.authorName}</span><span className="meeting-card-period">지난주 보고 · {meetingReportPeriod(row.meetingAt)}</span></div>
           <p className="meeting-preview">{meetingText(splitMeeting(row.contentMarkdown)[0])||"지난주 진행 내용이 없습니다."}</p>
         </div>
       </button>)}
@@ -61,12 +55,6 @@ export default function MeetingsPage() {
       <MeetingForm key={editing==="new"?"new":`${editing.id}-${editing.revision}`} row={editing==="new"?undefined:editing} onCancel={()=>setEditing(null)} onSaved={async id=>{await qc.invalidateQueries({queryKey:["workspace-meetings"]});setSelected(id);setEditing(null);}} />
     </WorkspaceDrawer>}
   </main>;
-}
-
-function meetingDateLabel(value:string) {
-  const date=new Date(`${value.slice(0,10)}T12:00:00Z`);
-  if(!Number.isFinite(date.getTime()))return value.slice(0,10);
-  return `${date.getUTCMonth()+1}월 ${date.getUTCDate()}일 (${"일월화수목금토"[date.getUTCDay()]})`;
 }
 
 function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>Promise<void>;onCancel:()=>void}) {
