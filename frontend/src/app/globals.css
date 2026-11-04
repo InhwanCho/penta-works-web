@@ -1823,7 +1823,7 @@ h4,
 /* Highlight the whole settings row without changing its text hierarchy. */
 @media (min-width: 1024px) {
  .settings-page :is(.settings-link, .settings-switch) { padding-inline: 12px; border-radius: 10px; cursor: pointer; transition: background-color .15s; }
- .settings-page :is(.settings-link, .settings-switch):focus-visible { background: var(--work-hover); }
+ .settings-page :is(.settings-link, .settings-switch):focus-visible { background: var(--surface-hover); }
 }
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
  .workspace-frame .settings-page :is(.settings-link, .settings-switch):hover { background: var(--work-hover); color: var(--work-ink); }
@@ -2033,7 +2033,7 @@ h4,
  .work-day-dialog .day-write:hover { background: #1254b3; color: white; }
  .work-day-dialog .day-close:hover { background: var(--work-hover); }
 }
-.work-day-dialog .day-entry:active { background: var(--work-soft); }
+.work-day-dialog .day-entry:active { background: var(--surface-hover); }
 .work-day-dialog .day-entry:focus-visible { outline: 2px solid var(--work-focus); outline-offset: -3px; }
 .dark .work-day-dialog .day-entry { --day-accent: #bd934a; --day-badge-bg: #493d25; --day-badge-ink: #f5d590; }
 .dark .work-day-dialog .day-category-pm { --day-accent: #7db98b; --day-badge-bg: #274638; --day-badge-ink: #bfe9cb; }
@@ -2126,7 +2126,7 @@ h4,
  .dark .work-calendar .work-calendar-day.selected:hover { box-shadow: inset 0 0 0 3px #88b6ec; }
  .work-calendar .work-calendar-toolbar button:hover { background: var(--work-paper); color: var(--work-ink); }
  .work-day-dialog .day-close:hover { background: transparent; color: var(--day-secondary); }
- .work-day-dialog .day-close:active { background: var(--work-hover); }
+ .work-day-dialog .day-close:active { background: var(--surface-hover); }
 }
 .work-day-dialog:focus { outline: none; }
 
@@ -2267,7 +2267,7 @@ h4,
  .workspace-bottom > a { transition: color 100ms ease; }
  .workspace-bottom > a:not(.selected):hover { background: transparent; color: var(--work-muted); }
  .workspace-bottom > a.selected:hover { background: var(--work-soft); }
- .workspace-bottom > a:active { background: var(--work-soft); }
+ .workspace-bottom > a:active { background: var(--surface-hover); }
 }
 
 .work-picker-field { min-width: 0; font-size: 0.8125rem; font-weight: 600; }
@@ -2610,7 +2610,7 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
  .work-hospitals .work-hospital-grid .work-hospital { padding: 12px 14px; border-radius: 12px; }
 }
 @media(hover:none) { .work-hospitals .work-hospital:hover { background: var(--work-paper); } }
-.work-hospitals .work-hospital:active { background: var(--work-soft); }
+.work-hospitals .work-hospital:active { background: var(--surface-hover); }
 
 .work-hospitals .hospital-directory-heading { align-items: center; margin-bottom: 10px; }
 .work-hospitals .hospital-directory-heading > .work-heading { flex: 1; }
@@ -2627,7 +2627,7 @@ body:has(.legal-document-surface) .policy-links a[aria-current="page"] { color: 
 .workspace-frame .hospital-register { box-shadow: none; font-weight: 600; border-radius: 10px; }
 @media(hover:hover) { .workspace-frame .hospital-register:hover { background: var(--work-soft); color: var(--work-focus); } }
 @media(hover:none) { .workspace-frame .hospital-register:hover { background: var(--work-paper); } }
-.workspace-frame .hospital-register:active { background: var(--work-soft); }
+.workspace-frame .hospital-register:active { background: var(--surface-hover); }
 
 .alert-inbox-heading { margin: 4px 0 18px; }
 .alert-inbox-heading h1 { margin-top: 4px; color: var(--work-ink); font-size: 1.25rem; font-weight: 750; }
@@ -3285,9 +3285,9 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
  /* Gentle press feedback; a thin selected-date border stays above its labels. */
  .work-overview .work-calendar .work-calendar-day { position: relative; isolation: isolate; transition: background-color 100ms ease; -webkit-tap-highlight-color: transparent; }
  .work-overview .work-calendar .work-calendar-day:is(:hover,:active,:focus,.selected) { box-shadow: none !important; }
- .work-overview .work-calendar .work-calendar-day:not(.outside):is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,var(--work-paper)); }
- .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,#f5f6f8); }
- .dark .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: color-mix(in srgb,var(--work-focus) 6%,#17242f); }
+ .work-overview .work-calendar .work-calendar-day:not(.outside):is(:hover,:active) { background: var(--surface-hover); }
+ .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: var(--surface-hover); }
+ .dark .work-overview .work-calendar .work-calendar-day.outside:is(:hover,:active) { background: var(--surface-hover); }
  .work-overview .work-calendar .work-calendar-day.selected { z-index: 1; }
  .work-overview .work-calendar .work-calendar-day.selected::after { content: ''; position: absolute; inset: 0; z-index: 3; border: 1.5px solid var(--work-focus); pointer-events: none; }
  .work-overview .work-calendar .work-calendar-day > :is(span,.work-calendar-tags) { position: relative; z-index: 0; }
@@ -3832,7 +3832,7 @@ html.dark {
 .overview-fold[open] > summary > .overview-fold-chevron { transform: translateY(-50%) rotate(-90deg); }
 .workspace-frame .work-overview .overview-fold { isolation: isolate; }
 .workspace-frame .work-overview .overview-fold[open] > summary { border-bottom: 0; box-shadow: inset 0 -1px var(--work-line); }
-.workspace-frame .work-overview .overview-fold > summary:active { background: var(--work-soft); }
+.workspace-frame .work-overview .overview-fold > summary:active { background: var(--surface-hover); }
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar { background: var(--work-soft); color: var(--work-ink); padding: 5px 12px; min-height: 46px; gap: 6px; }
 .workspace-frame .work-overview .work-calendar-toolbar > .overview-month-picker { min-height: 36px; }
 .workspace-frame .work-overview .work-calendar .work-calendar-toolbar > button[aria-label$=" 달"] { min-height: 36px; color: var(--work-muted) !important; }
@@ -3939,10 +3939,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 /* Selected C3: touch feedback exists only while pressing, never as sticky hover. */
 @media (hover:none) {
  :is(.action-menu > summary,.action-menu-items > button:not(:disabled),.pm-date-trigger):active {
-  background: #e2e9ef;
+  background: var(--surface-hover);
  }
  .dark :is(.action-menu > summary,.action-menu-items > button:not(:disabled),.pm-date-trigger):active {
-  background: #2d4b60;
+  background: var(--surface-hover);
  }
 }
 
@@ -4052,7 +4052,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-day-dialog .day-schedule-row > .day-entry:active { background: transparent; border-radius: 0; }
 .work-day-dialog .day-schedule-row > .detail-bottom-actions { background: transparent; }
 @media (hover:hover) { .work-day-dialog .day-schedule-row:hover { background: var(--work-hover); } }
-.work-day-dialog .day-schedule-row:focus-within { background: var(--work-hover); }
+.work-day-dialog .day-schedule-row:focus-within { background: var(--surface-hover); }
 
 .work-editor-editing .work-pm-item:has(.pm-measurements-grid) > :is(strong,.work-hint) { display: inline; margin: 0 6px 0 0; }
 .work-editor-editing .work-pm-item > .pm-measurements-grid { display: grid; grid-template-columns: minmax(100px,1.5fr) repeat(3,minmax(48px,1fr)); gap: 8px; max-width: 480px; margin: 6px 0 0; }
@@ -4445,3 +4445,19 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .workspace-frame .work-acr-section > summary:hover,
  .workspace-frame .work-stats > a:hover { background: var(--work-paper); }
 }
+
+/* Press and keyboard-focus fills match hover on the same cards and rows. */
+ .workspace-frame :is(.work-hospital,.work-record,.work-task,.work-overview-record,.work-due-row,.recent-work-record,.work-preparation,.management-task-card,.meeting-card):is(:active,:focus-visible),
+ .workspace-frame .overview-fold > summary:is(:active,:focus-visible),
+ .workspace-frame .work-acr-section > summary:is(:active,:focus-visible),
+ .workspace-frame .work-stats > a:is(:active,:focus-visible),
+ .workspace-frame .settings-page :is(.settings-link,.settings-switch):is(:active,:focus-visible),
+ .workspace-sidebar a:not(.selected):is(:active,:focus-visible),
+ .workspace-bottom a:not(.selected):is(:active,:focus-visible),
+ .action-menu-items > button:not(:disabled):is(:active,:focus-visible),
+ .work-picker-panel li:not(.active) button:is(:active,:focus-visible),
+ .work-day-dialog .day-entry:is(:active,:focus-visible),
+ .work-day-dialog .day-schedule-row:is(:active,:focus-visible),
+ .neutral-row-hover:is(:active,:focus-visible) { background: var(--surface-hover); }
+.workspace-frame :is(.admin-user-hover-row,.admin-invitation-card):active { background: var(--surface-hover); }
+:is(.action-menu > summary,.pm-date-trigger):is(:active,:focus-visible) { background: var(--surface-hover); }
