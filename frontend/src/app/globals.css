@@ -4417,9 +4417,31 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-due-row > .inspection-due-date { flex-shrink: 0; }
 @media(max-width:639px) { .work-due-row { flex-wrap: wrap; } .work-due-row > .overview-due-content { flex-basis: 100%; } }
 
-/* Keep the inspection row subtle around its individual controls. */
-.work-overview .work-due-row:hover { background: transparent; }
+/* Shared neutral feedback for navigable cards, rows and disclosure headers. */
+:root { --surface-hover: #f5f5f5; }
+.dark { --surface-hover: #24313b; }
 @media (hover: hover) {
- .work-overview .work-due-row:hover { background: #f5f5f5; }
- .dark .work-overview .work-due-row:hover { background: #ffffff06; }
+ .workspace-frame :is(.work-hospital,.work-record,.work-task,.work-overview-record,.work-due-row,.recent-work-record,.work-preparation,.management-task-card,.meeting-card):hover,
+ .workspace-frame .overview-fold > summary:hover,
+ .workspace-frame .work-acr-section > summary:hover,
+ .workspace-frame .work-stats > a:hover,
+ .workspace-frame .settings-page :is(.settings-link,.settings-switch):hover,
+ .workspace-sidebar a:not(.selected):hover,
+ .workspace-bottom a:not(.selected):hover,
+ .action-menu-items > button:not(:disabled):hover,
+ .work-picker-panel li:not(.active) button:hover,
+ .work-day-dialog .day-entry:hover,
+ .work-day-dialog .day-schedule-row:hover,
+ .neutral-row-hover:hover { background: var(--surface-hover); }
+ .workspace-frame :is(.management-task-card,.meeting-card):hover { border-color: var(--work-line); }
+ .workspace-frame .admin-user-hover-row:hover,
+ .workspace-frame .admin-invitation-card:hover { background: var(--surface-hover); }
+}
+.work-day-dialog .day-schedule-row { --card-hover: var(--surface-hover); }
+/* Touch devices must not retain a desktop hover fill after tapping a row. */
+@media (hover: none) {
+ .workspace-frame :is(.work-hospital,.work-record,.work-task,.work-overview-record,.work-due-row,.recent-work-record,.work-preparation,.management-task-card,.meeting-card):hover,
+ .workspace-frame .overview-fold > summary:hover,
+ .workspace-frame .work-acr-section > summary:hover,
+ .workspace-frame .work-stats > a:hover { background: var(--work-paper); }
 }

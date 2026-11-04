@@ -33,7 +33,7 @@ const CELL_BORDER = "dark:border-background-dark-secondary border-b border-r";
 /** sticky 셀은 반드시 불투명 배경이어야 아래 셀이 비치지 않습니다. */
 const HEAD_BG = "bg-[#dce9f2] lg:bg-[#eaf0f4] dark:bg-[#294454] dark:lg:bg-[#253b48]";
 const FIXED_BG =
-  "bg-white group-hover:bg-background-primary dark:bg-background-dark-card dark:group-hover:bg-background-dark-secondary";
+  "bg-white group-hover:bg-[var(--surface-hover)] dark:bg-background-dark-card dark:group-hover:bg-[var(--surface-hover)]";
 
 function parseIso(iso: string | null) {
   if (!iso) return null;
@@ -259,7 +259,7 @@ export default function DashboardExcelView({
                     // 고정열은 불투명 배경이라 알파 hover 를 쓸 수 없습니다.
                     // 행 전체와 고정열의 hover 색이 어긋나지 않도록 양쪽 모두
                     // 알파 없는 같은 색(FIXED_BG 의 group-hover)을 사용합니다.
-                    className={`group transition-colors ${collectionMissing(row) ? "bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50" : "hover:bg-background-primary dark:hover:bg-background-dark-secondary"}`}
+                    className={`group transition-colors ${collectionMissing(row) ? "bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-950/50" : "hover:bg-[var(--surface-hover)]"}`}
                   >
                     {/* 고정열 1 — 병원명 */}
                     <td

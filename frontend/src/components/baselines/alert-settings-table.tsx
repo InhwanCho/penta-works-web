@@ -37,7 +37,7 @@ export default function AlertSettingsTable({ entries, metrics, onOpen, onToggle,
     return [...columns.values()].sort((a,b)=>DEFAULT_COLUMN_ORDER.indexOf(a.key)-DEFAULT_COLUMN_ORDER.indexOf(b.key));
   },[entries,metrics]);
   const shown=available.filter(m=>metricKey==="all" || m.key===metricKey);
-  const cell="flex min-h-11 w-full flex-col items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1.5 py-1 lg:px-3 lg:py-2 text-sm lg:text-base font-bold leading-tight transition hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-sky-600 dark:hover:bg-sky-950/40";
+  const cell="flex min-h-11 w-full flex-col items-center justify-center gap-1 whitespace-nowrap rounded-lg px-1.5 py-1 lg:px-3 lg:py-2 text-sm lg:text-base font-bold leading-tight transition neutral-row-hover focus-visible:outline-2 focus-visible:outline-sky-600";
   return <><div className="hidden lg:block"><NotificationPreferencesSummary/></div><section aria-label="병원별 내 알림값 설정" className="rounded-xl border border-slate-200 bg-white dark:border-white/15 dark:bg-background-dark-card">
     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 p-2 lg:p-4 dark:border-white/10">
       <div><div className="flex items-center gap-1"><h2 className="text-base lg:text-lg font-extrabold">알림 기준값</h2><HelpButton title="기준값 바꾸기" message="병원과 측정항목을 찾은 뒤 기준값을 누르면 수정할 수 있습니다. 옆으로 밀면 다른 측정항목을 볼 수 있습니다."/></div><p className="mt-1 hidden text-base leading-5 text-text-secondary lg:block">측정항목이나 설정 버튼을 눌러 변경하세요.</p></div>

@@ -286,7 +286,7 @@ function MenuLink({
       role="menuitem"
       href={href}
       onClick={onSelect}
-      className="text-text-major dark:text-text-dark-primary flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-slate-100/80 dark:hover:bg-white/7"
+      className="text-text-major dark:text-text-dark-primary flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition neutral-row-hover"
     >
       <span className="text-brand-primary flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 dark:bg-sky-950/35 dark:text-sky-300">
         {icon}

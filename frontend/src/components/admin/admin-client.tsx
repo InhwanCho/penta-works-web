@@ -526,7 +526,7 @@ function UserSection({
           <tbody className="divide-y divide-slate-100 dark:divide-white/7">
             {pageUsers.map((user) => (
               <Fragment key={user.id}>
-                <tr className="admin-user-hover-row hover:bg-slate-50/70 dark:hover:bg-white/5">
+                <tr className="admin-user-hover-row">
                   <td
                     data-label="이름"
                     className="px-3 py-3 font-bold"
@@ -1251,7 +1251,7 @@ function InvitationSection({
           {invitations.map((invitation) => (
             <div
               key={invitation.id}
-              className="admin-invitation-card flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition hover:bg-slate-50 dark:border-white/8 dark:bg-white/3 dark:hover:bg-white/5"
+              className="admin-invitation-card flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/80 bg-slate-50/50 p-3.5 transition dark:border-white/8 dark:bg-white/3"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">
@@ -1781,7 +1781,7 @@ function SiteChecks({
               {group.sites.map((site) => (
                 <label
                   key={site.id}
-                  className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition ${selectedSet.has(site.id) ? "bg-sky-100/70 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200" : "hover:bg-white dark:hover:bg-white/5"}`}
+                  className={`flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition ${selectedSet.has(site.id) ? "bg-sky-100/70 text-sky-800 dark:bg-sky-950/50 dark:text-sky-200" : "neutral-row-hover"}`}
                 >
                   <input
                     type="checkbox"

@@ -74,7 +74,7 @@ export default function ManagementTabs<T extends string>({
                 event.currentTarget.parentElement?.children[next] as HTMLElement
               )?.focus();
             }}
-            className={`flex min-h-12 min-w-max flex-1 items-center justify-center gap-1 rounded-lg px-2 sm:px-4 ${large ? "text-base" : "text-sm"} font-bold whitespace-nowrap transition ${value === item.value ? "bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300" : "text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/5"}`}
+            className={`flex min-h-12 min-w-max flex-1 items-center justify-center gap-1 rounded-lg px-2 sm:px-4 ${large ? "text-base" : "text-sm"} font-bold whitespace-nowrap transition ${value === item.value ? "bg-sky-50 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300" : "text-slate-500 neutral-row-hover dark:text-slate-400"}`}
           >
             {item.label}
             {Boolean(item.badge) && (

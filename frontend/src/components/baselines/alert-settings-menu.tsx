@@ -9,7 +9,7 @@ export default function AlertSettingsMenu({
   onSelect: (view: "thresholds" | "sites") => void;
 }) {
   const card =
-    "flex min-h-24 w-full items-center gap-3 lg:min-h-28 lg:gap-4 rounded-2xl border border-slate-200 bg-white p-3 text-left lg:p-5 shadow-sm transition hover:border-sky-500 hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:bg-background-dark-card dark:hover:border-sky-400 dark:hover:bg-sky-950/30";
+    "flex min-h-24 w-full items-center gap-3 lg:min-h-28 lg:gap-4 rounded-2xl border border-slate-200 bg-white p-3 text-left lg:p-5 shadow-sm transition neutral-row-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 dark:border-slate-600 dark:bg-background-dark-card ";
   return (
     <section
       aria-labelledby="alert-settings-menu-title"

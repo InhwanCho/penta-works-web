@@ -95,7 +95,7 @@ export default function DashboardSearchModal({ items }: { items: Item[] }) {
                   <button
                     type="button"
                     onClick={() => scrollTo(it.siteSlug)}
-                    className="hover:bg-background-tertiary dark:hover:bg-background-dark-secondary w-full px-4 py-3 text-left"
+                    className="neutral-row-hover w-full px-4 py-3 text-left"
                   >
                     <div className="text-text-major dark:text-text-dark-primary text-sm font-semibold">
                       {it.name || "-"}

@@ -169,7 +169,7 @@ export default function SiteSearchModal() {
                   <button
                     type="button"
                     onClick={() => goToDashboardAndScroll(it.siteSlug)}
-                    className="group hover:bg-background-tertiary dark:hover:bg-background-dark-secondary flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors"
+                    className="group neutral-row-hover flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors"
                   >
                     <span className="text-text-major dark:text-text-dark-primary min-w-0 flex-1 truncate text-sm font-medium">
                       {it.name || "-"}
