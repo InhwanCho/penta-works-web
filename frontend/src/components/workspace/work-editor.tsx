@@ -5,8 +5,8 @@ import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 
-import { useEffect, useState, useRef, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "./overlay-navigation";
+import { useEffect, useState, useRef, useContext, type FormEvent } from "react";
+import { OverlayNavigation, useRouter, useSearchParams } from "./overlay-navigation";
 import Link from "@/components/common/app-link";
 import WorkspaceDrawer from "./workspace-drawer";
 import { hasMeaningfulWorkDraft } from "./meaningful-work-draft";
@@ -47,6 +47,7 @@ const generalTypes: [string, string][] = [
   ["etc", "기타"],
 ];
 export default function WorkEditor({ id }: { id?: string }) {
+  const overlay = useContext(OverlayNavigation);
   const attachmentApi = useRef<PhotoAttachmentApi>(null);
   const router = useRouter(),
     search = useSearchParams(),
@@ -268,7 +269,7 @@ export default function WorkEditor({ id }: { id?: string }) {
     type = form.serviceType;
   return (
     <main className={`work-page work-editor${editing ? " work-editor-editing" : ""}`}>
-      {editing ? <AuthoringHeader title={id ? "업무기록 수정" : "업무기록 등록"} /> : <>
+      {editing ? <AuthoringHeader title={id ? "업무기록 수정" : "업무기록 등록"} /> : overlay && id ? <p className="work-hint work-record-detail-meta">{record?.workDate} · 작성자 {record?.authorName}</p> : <>
       <PageHeading
         title={id ? (editing ? "업무기록 수정" : "업무기록") : "새 업무기록"}
         description={

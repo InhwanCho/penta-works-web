@@ -4461,3 +4461,11 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .neutral-row-hover:is(:active,:focus-visible) { background: var(--surface-hover); }
 .workspace-frame :is(.admin-user-hover-row,.admin-invitation-card):active { background: var(--surface-hover); }
 :is(.action-menu > summary,.pm-date-trigger):is(:active,:focus-visible) { background: var(--surface-hover); }
+
+@media(max-width:1023px) {
+ .hospital-assets > .hospital-history-heading { flex-direction:row; align-items:center; justify-content:space-between; gap:8px; }
+ .hospital-history-heading > div { min-width:0; }
+ .hospital-history-heading h2 { font-size:.9375rem; }
+ .hospital-history-heading > .hospital-record-create { flex-shrink:0; white-space:nowrap; gap:4px; padding-inline:10px !important; font-size:.75rem !important; }
+}
+.work-record-detail-meta { margin:0 0 16px; }
