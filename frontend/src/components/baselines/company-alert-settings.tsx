@@ -30,13 +30,13 @@ function AlertCriterion({ title, description, warning, kakao, note, children }: 
   children?: ReactNode;
 }) {
   return <tr className="border-t border-slate-200 align-top dark:border-slate-700">
-    <th scope="row" className="w-[28%] p-3 text-left font-semibold">{title}
+    <th scope="row" className="w-[28%] p-2 text-left font-semibold">{title}
       {description && <p className="mt-1 text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">{description}</p>}
       {note && <details className="mt-2 text-xs font-normal leading-5"><summary className="cursor-pointer text-slate-500">참고 사항</summary><div className="mt-1">{note}</div></details>}
       {Children.toArray(children).length > 0 && <div className="mt-2 space-y-2">{children}</div>}
     </th>
-    <td className="p-3 leading-6">{warning || "—"}</td>
-    <td className="p-3 leading-6">{kakao || "발송 없음"}</td>
+    <td className="p-2 leading-6">{warning || "—"}</td>
+    <td className="p-2 leading-6">{kakao || "발송 없음"}</td>
   </tr>;
 }
 
@@ -47,7 +47,7 @@ function duration(minutes: number) {
   return hours ? `${hours}시간${rest ? ` ${rest}분` : ""}` : `${rest}분`;
 }
 
-export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
+export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: string; metricKey?: string }) {
   const client = useQueryClient();
   const query = useQuery({queryKey:["company-alert-policy"],queryFn:()=>apiFetch<PolicyView>("/alerts/company-policy")});
   const [draft, setDraft] = useState<PolicyView | null>(null);
@@ -82,26 +82,26 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
     {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && <p className="rounded-lg bg-slate-100 p-4 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">개발용 화면 · 실제 카톡은 발송되지 않습니다.</p>}
     <section className={card}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-base font-extrabold">우리 회사 알림 기준</h2><p className="mt-2 text-slate-600 dark:text-slate-300">관리자가 저장하면 회사 전체 사용자에게 함께 적용됩니다.</p></div>
+        <div><h2 className="text-base font-extrabold">{metricKey ? "선택 항목 알림 기준" : "우리 회사 알림 기준"}</h2><p className="mt-2 text-slate-600 dark:text-slate-300">회사 공통 기준 · 관리자만 변경 가능</p></div>
         {canEdit && !editing && <button type="button" onClick={()=>{setEditing(true);setNotice("");}} className="min-h-10 rounded-lg bg-sky-700 px-5 font-bold text-white">설정 변경</button>}
       </div>
       {!canEdit && <p className="mt-3 font-semibold">설정 변경은 회사 관리자에게 요청해주세요.</p>}
       <p className="mt-3">노란색은 표에서만 확인하고, 빨간색은 문제당 카톡을 한 번 받습니다.</p>
-      <p className={`mt-1 ${muted}`}>두 조건이 겹치면 빨간색을 우선합니다. 정상 측정이 2회 연속 확인된 뒤 같은 문제가 다시 발생하면 새로 알립니다.</p>
+      <p className={`mt-1 ${muted}`}>빨간색 우선 · 정상 2회 후 재발하면 다시 알림</p>
       <Link href="/notification-settings?from=baselines" className="mt-2 inline-flex min-h-10 items-center font-bold text-sky-800 underline dark:text-sky-300">내 카톡 수신 시간·주말 설정 →</Link>
       {notice && <p role="status" className="mt-2 rounded-lg bg-emerald-50 p-3 font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
     </section>
     <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
-    <table className="w-full min-w-[540px] border-collapse text-sm">
+    <table className="w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
       <caption className="sr-only">회사 공통 알림 기준</caption>
       <thead className="bg-slate-50 text-left dark:bg-slate-800"><tr>
-        <th scope="col" className="p-3 font-semibold">측정항목</th>
-        <th scope="col" className="p-3 font-semibold text-amber-700 dark:text-amber-300">주의 · 화면 표시만</th>
-        <th scope="col" className="p-3 font-semibold text-red-700 dark:text-red-300">위험 · 카톡 1회</th>
+        <th scope="col" className="p-2 font-semibold">측정항목</th>
+        <th scope="col" className="p-2 font-semibold text-amber-700 dark:text-amber-300">주의 · 화면 표시만</th>
+        <th scope="col" className="p-2 font-semibold text-red-700 dark:text-red-300">위험 · 카톡 1회</th>
       </tr></thead><tbody>
-    <AlertCriterion
+    {(!metricKey || metricKey === "hepres") && <AlertCriterion
       title="헬륨 압력"
-      description="최근 7일 평균과 고정 압력 기준을 함께 확인합니다."
+      description="7일 평균 · 고정 압력 기준"
       warning={<ul className="list-disc space-y-1 pl-5">
         <li><strong>{p.pressureWarning}~{p.pressureCritical} psi</strong> 범위</li>
         <li>7일 평균보다 <strong>{p.tolerancePercent}% 넘게</strong> 높거나 낮음</li>
@@ -117,33 +117,33 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
     >
       {editing && number("노란색 시작 압력","pressureWarning","psi",0.01,100,0.01)}
       {editing && number("카톡을 보내는 초과 기준","pressureCritical","psi",0.01,100,0.01)}
-    </AlertCriterion>
-    <AlertCriterion
+    </AlertCriterion>}
+    {(!metricKey || metricKey === "hepres") && <AlertCriterion
       title="헬륨 압력 측정 누락"
-      description="병원 데이터는 들어오지만 헬륨 압력값만 빠진 경우입니다."
+      description="압력값만 누락된 경우"
       warning={<><strong>{p.missingWarning}~{p.missingCritical - 1}회</strong> 연속 누락</>}
       kakao={<><strong>{p.missingCritical}회</strong> 연속 누락부터</>}
       note="유효한 압력값이 들어오면 화면의 누락 횟수는 0으로 돌아갑니다."
     >
       {editing && number("노란색으로 표시할 연속 누락","missingWarning","회",1,287)}
       {editing && number("카톡을 보낼 연속 누락","missingCritical","회",2,288)}
-    </AlertCriterion>
-    <AlertCriterion
-      title="온도·습도·헬륨 잔량"
-      description="헬륨 잔량, 그래디언트칠러 온도, 실드쿨러 IN·OUT, 항온항습 온도·습도가 해당합니다."
+    </AlertCriterion>}
+    {(!metricKey || ["heleve", "gctemp", "cc-in", "cc-out", "actemp", "achumi"].includes(metricKey)) && <AlertCriterion
+      title={metricKey ? ({heleve:"헬륨 잔량",gctemp:"그래디언트칠러", "cc-in":"실드쿨러 IN","cc-out":"실드쿨러 OUT",actemp:"항온항습 온도",achumi:"항온항습 습도"}[metricKey] ?? "평균 비교") : "온도·습도·헬륨 잔량"}
+      description="24시간 평균 기준"
       warning={<>24시간 평균보다 <strong>{p.tolerancePercent}% 넘게</strong> 높거나 낮음</>}
       note="헬륨 압력의 7일 평균에도 같은 비율을 적용합니다. 미측정 값은 평균에서 제외합니다."
     >
       {editing && number("평균에서 벗어나는 비율","tolerancePercent","%",0.1,100,0.1)}
-    </AlertCriterion>
-    <AlertCriterion
+    </AlertCriterion>}
+    {(!metricKey || metricKey === "gctemp") && <AlertCriterion
       title="그래디언트칠러 고온"
       warning={<><strong>{p.gradientCritical}°C</strong>를 처음 초과</>}
       kakao={<><strong>{p.gradientCritical}°C 초과</strong>가 <strong>2회 연속</strong></>}
     >
       {editing && number("카톡을 보내는 초과 온도","gradientCritical","°C",0.1,100,0.1)}
-    </AlertCriterion>
-    <AlertCriterion
+    </AlertCriterion>}
+    {(!metricKey || ["cc-in", "cc-out"].includes(metricKey)) && <AlertCriterion
       title="콜드칠러 정지 의심"
       description={p.coldChillerEnabled ? "알림 켜짐 · 공냉식 병원은 제외됩니다." : "알림 꺼짐"}
       kakao={p.coldChillerEnabled && <>IN·OUT 온도 차이가 <strong>0.1°C 이하</strong></>}
@@ -152,8 +152,8 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
         <input type="checkbox" className="h-6 w-6" disabled={locked} checked={p.coldChillerEnabled} onChange={e=>change({coldChillerEnabled:e.target.checked})}/>
         정지 의심 알림 사용
       </label>}
-    </AlertCriterion>
-    <AlertCriterion
+    </AlertCriterion>}
+    {(!metricKey) && <AlertCriterion
       title="병원 전체 데이터 수집 지연"
       description="마지막 데이터가 들어온 시점부터 계산합니다. 병원별 수집 주기는 아래에서 확인할 수 있습니다."
       warning={<>수집 주기의 <strong>{p.collectionWarning}배</strong> 동안 미수신</>}
@@ -162,13 +162,13 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
     >
       {editing && number("노란색으로 표시할 지연","collectionWarning","수집 주기의 배수",1,23)}
       {editing && number("카톡을 보낼 지연","collectionCritical","수집 주기의 배수",2,24)}
-    </AlertCriterion>
+    </AlertCriterion>}
     </tbody></table></div>
     <section className={card}>
       <h3 className="text-sm font-extrabold">병원별 알림 켜기·끄기</h3>
       <p className="mt-2">알림을 끄면 회사 전체 사용자의 알림이 중지됩니다. 측정값과 그래프는 계속 볼 수 있습니다.</p>
       {!siteId && <label className="mt-4 block font-bold">병원 찾기<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="병원 이름 입력" className={field}/></label>}
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">{hospitals.map(h=>{
+      <div className="mt-3 grid gap-2">{hospitals.map(h=>{
         const config=p.hospitals[h.siteId]??h.settings;
         const update=(patch:Partial<Hospital>)=>change({hospitals:{...p.hospitals,[h.siteId]:{...config,...patch}}});
         return <div key={h.siteId} className="rounded-lg border border-slate-200 p-4 dark:border-slate-600">
@@ -182,7 +182,7 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
           {editing && <label className="mt-3 block max-w-sm font-semibold">수집 주기 (분)
             <input type="number" required min={5} max={1440} step={1} disabled={locked} value={config.intervalMinutes} onChange={e=>update({intervalMinutes:e.target.valueAsNumber})} className={field}/>
           </label>}
-          {config.enabled ? <dl className="mt-3 grid grid-cols-1 gap-2 min-[360px]:grid-cols-3">
+          {config.enabled ? <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-800/70"><dt className="text-sm">수집 주기</dt><dd className="font-extrabold">{duration(config.intervalMinutes)}</dd></div>
             <div className="rounded-lg bg-amber-50 p-3 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100"><dt className="text-sm">노란색 표시</dt><dd className="font-extrabold">{duration(config.intervalMinutes * p.collectionWarning)} 지연</dd></div>
             <div className="rounded-lg bg-rose-50 p-3 text-rose-950 dark:bg-rose-950/35 dark:text-rose-100"><dt className="text-sm">빨간색 · 카톡 1회</dt><dd className="font-extrabold">{duration(config.intervalMinutes * p.collectionCritical)} 지연</dd></div>

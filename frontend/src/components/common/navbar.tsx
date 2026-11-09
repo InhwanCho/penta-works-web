@@ -127,7 +127,7 @@ export default function Navbar() {
                 <HeaderPreferenceButton label={isLargeText ? "작은 글씨" : "큰 글씨"} onClick={toggleLargeText} active={isLargeText}>
                   <TextSizeIcon />
                 </HeaderPreferenceButton>
-                <HeaderPreferenceButton label={isDark ? "라이트 모드" : "다크 모드"} onClick={toggleTheme} showLabel>
+                <HeaderPreferenceButton label={isDark ? "라이트 모드" : "다크 모드"} onClick={toggleTheme}>
                   {isDark ? <SunIcon /> : <MoonIcon />}
                 </HeaderPreferenceButton>
               </>
