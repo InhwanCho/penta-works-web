@@ -97,12 +97,12 @@ export default function Navbar() {
           className="fixed inset-0 z-[45] bg-slate-900/25 backdrop-blur-sm lg:hidden"
         />
       )}
-      <header className="mobile-safe-header sticky top-0 z-50 h-14 w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
-        <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-7xl items-center justify-between px-3 sm:px-4 lg:px-6">
+      <header className="mobile-safe-header sticky top-0 z-50 h-[56px] w-full border-b border-white/8 bg-[linear-gradient(110deg,#123b5d_0%,#18557b_58%,#1c668a_100%)] shadow-[0_4px_18px_rgba(13,42,63,0.09)] dark:bg-[linear-gradient(110deg,#1d303f_0%,#243f52_100%)]">
+        <div className="mobile-safe-nav mx-auto flex h-full w-full max-w-[1280px] items-center justify-between px-[12px] sm:px-[16px] lg:px-[24px]">
           <Link
             href="/"
             onClick={goToAll}
-            className="group flex shrink-0 cursor-pointer items-center gap-2.5 text-white"
+            className="group flex shrink-0 cursor-pointer items-center gap-[10px] text-white"
           >
             <Image
               src="/favicon/mreyes-header.svg"
@@ -110,7 +110,7 @@ export default function Navbar() {
               width={32}
               height={32}
               priority
-              className="h-8 w-8 rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
+              className="h-[32px] w-[32px] rounded-[4px] shadow-[0_4px_12px_rgba(0,0,0,0.16)] transition-transform group-hover:scale-105 group-hover:-rotate-3"
             />
             <span className={`navbar-wordmark text-[16px] ${hospitalSlug ? "hidden lg:inline" : ""}`}>
               MReyes
@@ -121,13 +121,13 @@ export default function Navbar() {
           </Link>
 
           {hospitalSlug && <Suspense fallback={<span className="mobile-hospital-title">병원 상세</span>}><MobileHospitalTitle slug={decodeURIComponent(hospitalSlug)} /></Suspense>}
-          <nav className="flex shrink-0 items-center gap-1.5">
+          <nav className="flex shrink-0 items-center gap-[6px]">
             {session && (
               <>
-                <HeaderPreferenceButton label={isLargeText ? "작은 글씨" : "큰 글씨"} onClick={toggleLargeText}>
-                  <span className="text-sm font-bold leading-none">가{isLargeText ? "−" : "+"}</span>
+                <HeaderPreferenceButton label={isLargeText ? "작은 글씨" : "큰 글씨"} onClick={toggleLargeText} active={isLargeText}>
+                  <TextSizeIcon />
                 </HeaderPreferenceButton>
-                <HeaderPreferenceButton label={isDark ? "라이트 모드" : "다크 모드"} onClick={toggleTheme}>
+                <HeaderPreferenceButton label={isDark ? "라이트 모드" : "다크 모드"} onClick={toggleTheme} showLabel>
                   {isDark ? <SunIcon /> : <MoonIcon />}
                 </HeaderPreferenceButton>
               </>
@@ -144,21 +144,21 @@ export default function Navbar() {
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                   onClick={() => setMenuOpen((value) => !value)}
-                  className="relative flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-1 text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-2 sm:pr-9"
+                  className="relative flex h-[44px] w-[44px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/15 bg-white/10 p-[4px] text-white transition hover:border-white/25 hover:bg-white/16 sm:w-auto sm:gap-[8px] sm:pr-[36px]"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white text-sm font-extrabold text-[#174d70] shadow-sm">
+                  <span className="flex h-[32px] w-[32px] shrink-0 items-center justify-center rounded-full bg-white text-[14px] font-extrabold text-[#174d70] shadow-sm">
                     {initial}
                   </span>
                   <span className="hidden min-w-0 text-left sm:block">
-                    <span className="block max-w-28 truncate text-xs leading-4 font-bold">
+                    <span className="block max-w-[112px] truncate text-[12px] leading-[16px] font-bold">
                       {session.name}
                     </span>
-                    <span className="block text-[10px] leading-3 text-white/65">
+                    <span className="block text-[10px] leading-[12px] text-white/65">
                       {roleLabel(session.role)}
                     </span>
                   </span>
                   <ChevronIcon
-                    className={`absolute right-3 top-1/2 hidden h-4 w-4 -translate-y-1/2 text-white/70 transition sm:block ${menuOpen ? "rotate-180" : ""}`}
+                    className={`absolute right-[12px] top-1/2 hidden h-[16px] w-[16px] -translate-y-1/2 text-white/70 transition sm:block ${menuOpen ? "rotate-180" : ""}`}
                   />
                 </button>
 
@@ -211,7 +211,7 @@ export default function Navbar() {
             ) : pathname !== "/accept-invite" ? (
               <Link
                 href="/login"
-                className="cursor-pointer rounded-full bg-white px-4 py-2 text-sm font-bold text-[#174d70] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="cursor-pointer rounded-full bg-white px-[16px] py-[8px] text-[14px] font-bold text-[#174d70] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
                 로그인
               </Link>
@@ -249,10 +249,12 @@ function MenuLink({
   );
 }
 
-function HeaderPreferenceButton({ label, onClick, children }: {
+function HeaderPreferenceButton({ label, onClick, children, active, showLabel }: {
   label: string;
   onClick: () => void;
   children: React.ReactNode;
+  active?: boolean;
+  showLabel?: boolean;
 }) {
   return (
     <button
@@ -260,10 +262,10 @@ function HeaderPreferenceButton({ label, onClick, children }: {
       aria-label={`${label}로 전환`}
       title={label}
       onClick={onClick}
-      className="inline-flex h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 text-white/90 transition-colors hover:bg-white/12 active:bg-white/12"
+      className={`inline-flex h-[44px] min-w-[44px] shrink-0 cursor-pointer items-center justify-center gap-[6px] rounded-full px-[10px] text-white/90 transition-colors hover:bg-white/12 active:bg-white/12 ${active ? "bg-white/12" : ""}`}
     >
       <span className="inline-flex items-center" aria-hidden="true">{children}</span>
-      <span className="hidden whitespace-nowrap text-xs font-semibold sm:inline">{label}</span>
+      {showLabel && <span className="hidden whitespace-nowrap text-[12px] font-semibold sm:inline">{label}</span>}
     </button>
   );
 }
@@ -340,10 +342,18 @@ function PersonIcon() {
     </svg>
   );
 }
+function TextSizeIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m2 19 4-10 4 10M3.5 16h5M12 19l5-14 5 14m-8.5-4h7" />
+    </svg>
+  );
+}
 function MoonIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -356,7 +366,8 @@ function MoonIcon() {
 function SunIcon() {
   return (
     <svg
-      className="h-4 w-4"
+      width="16"
+      height="16"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"

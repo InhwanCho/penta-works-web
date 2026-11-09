@@ -14,6 +14,7 @@ import Image from "@/components/common/loading-photo";
 import PhotoPreviewLink from "@/components/common/photo-preview-link";
 import PhotoModal from "@/components/common/photo-modal";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetch, apiFetchBlob } from "@/lib/api";
 import { errorText } from "./workspace-data";
 export type PhotoAttachmentApi = { addFiles: (files: File[]) => void };
@@ -24,6 +25,17 @@ export type PhotoMeta = {
   width: number;
   height: number;
 };
+function usePhotoList(recordId?: number, meetingId?: number, enabled = true) {
+  const { session } = useAuth();
+  return useQuery({
+    queryKey: meetingId ? ["workspace-meeting-photos", meetingId, session?.id] : ["workspace-photos", recordId],
+    queryFn: () => apiFetch<PhotoMeta[]>(meetingId
+      ? `/workspace/meetings/${meetingId}/photos`
+      : `/workspace/photos?recordId=${recordId}`),
+    enabled: enabled && !!session && !!(recordId || meetingId),
+  });
+}
+
 function Photo({
   photo,
   photos,
@@ -63,8 +75,9 @@ function Photo({
       objectUrl = "";
     apiFetchBlob(`/workspace/photos/${photo.id}?preview=true`)
       .then((blob) => {
+        if (disposed) return;
         objectUrl = URL.createObjectURL(blob);
-        if (!disposed) setUrl(objectUrl);
+        setUrl(objectUrl);
       })
       .catch((e) => {
         if (!disposed) setError(errorText(e));
@@ -83,11 +96,11 @@ function Photo({
         <PhotoPreviewLink
           href={url}
           onOpen={() => { setIndex(photos.findIndex(item => item.id === photo.id)); setExpanded(true); }}
-          label="업무 사진"
+          label="첨부 사진"
         >
           <Image
             src={url}
-            alt="업무 사진"
+            alt="첨부 사진"
             width={photo.width}
             height={photo.height}
             unoptimized
@@ -109,8 +122,9 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
       objectUrl = "";
     apiFetchBlob(`/workspace/photos/${photo.id}`)
       .then((blob) => {
+        if (disposed) return;
         objectUrl = URL.createObjectURL(blob);
-        if (!disposed) setUrl(objectUrl);
+        setUrl(objectUrl);
       })
       .catch((e) => {
         if (!disposed) setError(errorText(e));
@@ -123,7 +137,7 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
   return (
     <section className="photo-modal-content">
       {error ? <p role="alert">{error}</p> : url ? (
-        <Image src={url} alt="업무 사진" width={photo.width} height={photo.height} unoptimized
+        <Image src={url} alt="첨부 사진" width={photo.width} height={photo.height} unoptimized
           onClick={event => event.stopPropagation()} />
       ) : <PhotoSkeleton large />}
     </section>
@@ -172,30 +186,30 @@ async function prepare(file: File): Promise<File> {
 }
 export function PhotoAttachments({
   recordId,
+  meetingId,
+  disabled = false,
   restoredIds,
   onChange,
   onBusy,
   attachmentApi,
 }: {
   recordId?: number;
+  meetingId?: number;
+  disabled?: boolean;
   restoredIds?: number[];
   attachmentApi?: Ref<PhotoAttachmentApi>;
   onChange: (ids: number[]) => void;
   onBusy: (busy: boolean) => void;
 }) {
+  const hasParent = !!(recordId || meetingId);
   const [photos, setPhotos] = useState<PhotoMeta[]>([]),
-    [loaded, setLoaded] = useState(!recordId),
+    [loaded, setLoaded] = useState(!hasParent),
     [busy, setBusy] = useState(false),
     [dragging, setDragging] = useState(false),
     [error, setError] = useState("");
   const input = useRef<HTMLInputElement>(null),
     lock = useRef(false);
-  const initial = useQuery({
-    queryKey: ["workspace-photos", recordId],
-    queryFn: () =>
-      apiFetch<PhotoMeta[]>(`/workspace/photos?recordId=${recordId}`),
-    enabled: !!recordId && restoredIds === undefined,
-  });
+  const initial = usePhotoList(recordId, meetingId, restoredIds === undefined);
   useEffect(() => {
     if (initial.data && !loaded && restoredIds === undefined) {
       setPhotos(initial.data);
@@ -235,7 +249,7 @@ export function PhotoAttachments({
     },
   }));
   async function add(files: File[]) {
-    if (lock.current || !loaded || !files.length) return;
+    if (disabled || lock.current || !loaded || !files.length) return;
     setError("");
     if (photos.length + files.length > 40) {
       setError("기록당 최대 40장까지 첨부할 수 있습니다.");
@@ -275,11 +289,11 @@ export function PhotoAttachments({
     if (input.current) input.current.value = "";
   }
   function remove(id: number) {
-    if (busy) return;
+    if (disabled || busy) return;
     const next = photos.filter((p) => p.id !== id);
     setPhotos(next);
     onChange(next.map((p) => p.id));
-    if (!recordId)
+    if (!hasParent)
       void apiFetch(`/workspace/photos/${id}`, { method: "DELETE" }).catch(
         () => {},
       );
@@ -317,7 +331,7 @@ export function PhotoAttachments({
         <button
           type="button"
           className="work-secondary"
-          disabled={busy || !loaded}
+          disabled={disabled || busy || !loaded}
           onClick={() => input.current?.click()}
         >
           ＋ 사진 선택 · 촬영
@@ -369,22 +383,18 @@ export function PhotoAttachments({
             key={p.id}
             photo={p}
             photos={photos}
-            onRemove={() => remove(p.id)}
+            onRemove={disabled ? undefined : () => remove(p.id)}
           />
         ))}
       </div>
     </section>
   );
 }
-export function PhotoGallery({ recordId }: { recordId: number }) {
-  const query = useQuery({
-    queryKey: ["workspace-photos", recordId],
-    queryFn: () =>
-      apiFetch<PhotoMeta[]>(`/workspace/photos?recordId=${recordId}`),
-  });
+export function PhotoGallery({ recordId, meetingId }: { recordId?: number; meetingId?: number }) {
+  const query = usePhotoList(recordId, meetingId);
   if (!query.error && !query.data?.length) return null;
   return (
-    <section>
+    <section className={meetingId ? "work-photo-section meeting-photo-gallery" : undefined}>
       <h2>사진</h2>
       {query.error ? (
         <p

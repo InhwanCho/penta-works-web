@@ -185,7 +185,7 @@
 /* PWA 전체 화면에서 둥근 화면 모서리와 홈 인디케이터 안쪽에 콘텐츠를 둡니다. */
 @media (max-width: 639px) {
   .mobile-safe-header {
-    height: calc(3.5rem + env(safe-area-inset-top, 0px));
+    height: calc(56px + env(safe-area-inset-top, 0px));
     padding-top: env(safe-area-inset-top, 0px);
   }
 
@@ -4469,3 +4469,5 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .hospital-history-heading > .hospital-record-create { flex-shrink:0; white-space:nowrap; gap:4px; padding-inline:10px !important; font-size:.75rem !important; }
 }
 .work-record-detail-meta { margin:0 0 16px; }
+
+.meeting-photo-gallery { margin: 18px 0; }

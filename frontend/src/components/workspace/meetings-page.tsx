@@ -10,6 +10,7 @@ import { meetingHeadings, meetingHtml, meetingText, splitMeeting, joinMeeting, m
 import { errorText, dayString } from "./workspace-data";
 import { useMeetingAccess, type Meeting } from "./meetings-data";
 import WorkspaceDrawer from "./workspace-drawer";
+import { PhotoAttachments, PhotoGallery } from "./work-photos";
 
 export default function MeetingsPage() {
   const { session,isLoading,isAdmin }=useAuth();
@@ -48,11 +49,12 @@ export default function MeetingsPage() {
         <div className="meeting-detail-toolbar"><p>{current.meetingAt.replace("T"," ")} · 작성 {current.authorName}</p><div className="meeting-detail-actions"><button type="button" className="work-secondary" onClick={() => setEditing(current)}>수정</button>{(isAdmin || current.authorId === session.id) && <button type="button" className="work-secondary action-danger" onClick={() => void remove(current)}>삭제</button>}</div></div>
         <p className="meeting-period">지난주 보고 · {meetingReportPeriod(current.meetingAt)}</p>
         <article className="meeting-content" dangerouslySetInnerHTML={{__html:meetingHtml(current.contentMarkdown)}} />
+        <PhotoGallery meetingId={current.id} />
         <p className="work-hint meeting-updated">최근 수정 {current.updatedByName} · {current.updatedAt}</p>
       </div>
     </WorkspaceDrawer>}
     {editing&&<WorkspaceDrawer title={editing==="new"?"회의록 작성":"회의록 수정"} onClose={()=>setEditing(null)} className="meeting-detail-drawer">
-      <MeetingForm key={editing==="new"?"new":`${editing.id}-${editing.revision}`} row={editing==="new"?undefined:editing} onCancel={()=>setEditing(null)} onSaved={async id=>{await qc.invalidateQueries({queryKey:["workspace-meetings"]});setSelected(id);setEditing(null);}} />
+      <MeetingForm key={editing==="new"?"new":`${editing.id}-${editing.revision}`} row={editing==="new"?undefined:editing} onCancel={()=>setEditing(null)} onSaved={async id=>{await Promise.all([qc.invalidateQueries({queryKey:["workspace-meetings"]}),qc.invalidateQueries({queryKey:["workspace-meeting-photos",id]})]);setSelected(id);setEditing(null);}} />
     </WorkspaceDrawer>}
   </main>;
 }
@@ -62,12 +64,14 @@ function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>P
   const [title,setTitle]=useState(row?.title||""),[date,setDate]=useState(row?.meetingAt||`${dayString()}T10:00`);
   const [sections,setSections]=useState<MeetingSections>(()=>originals.map(meetingText) as MeetingSections);
   const [busy,setBusy]=useState(false),[error,setError]=useState("");
+  const [photoIds, setPhotoIds] = useState<number[]>([]);
+  const [photoBusy, setPhotoBusy] = useState(!!row);
   const meaningful=sections.some(value=>meetingText(value).trim());
   async function submit(event:FormEvent) {
-    event.preventDefault();if(!meaningful)return;setBusy(true);setError("");
+    event.preventDefault();if(busy||photoBusy||!meaningful)return;setBusy(true);setError("");
     try {
       const resolvedTitle=title.trim()||`${Number(date.slice(5,7))}월 ${Number(date.slice(8,10))}일 주간 회의록`;
-      const input={title:resolvedTitle,meetingAt:date,participantNames:row?.participantNames||"",contentMarkdown:joinMeeting(sections,originals),revision:row?.revision};
+      const input={title:resolvedTitle,meetingAt:date,participantNames:row?.participantNames||"",contentMarkdown:joinMeeting(sections,originals),revision:row?.revision,photoIds};
       const result=await apiFetch<{id:number}|undefined>(`/workspace/meetings${row?`/${row.id}`:""}`,{method:row?"PUT":"POST",body:JSON.stringify(input)});
       await onSaved(row?.id||result!.id);
     } catch(e){setError(errorText(e));}finally{setBusy(false);}
@@ -77,7 +81,8 @@ function MeetingForm({row,onSaved,onCancel}:{row?:Meeting;onSaved:(id:number)=>P
     <label>회의 일시<input className="work-input" type="datetime-local" required value={date} disabled={busy} onChange={event=>setDate(event.target.value)} /></label>
     <p className="work-hint">지난주 보고 · {meetingReportPeriod(date)}</p>
     {meetingHeadings.map((heading,i)=><label key={heading}>{heading}<AutoTextarea className="work-input" rows={i===0?7:4} value={sections[i]} disabled={busy} placeholder={["방문·점검·수리 내용과 결과","계속 진행 중인 작업, 병원별 이슈","이번 주 방문·PM·수리 계획"][i]} onChange={event=>setSections(value=>value.map((text,index)=>index===i?event.target.value:text) as MeetingSections)} /></label>)}
+    <PhotoAttachments meetingId={row?.id} disabled={busy} onChange={setPhotoIds} onBusy={setPhotoBusy} />
     {error&&<p className="work-error" role="alert">{error}</p>}
-    <div className="work-form-actions"><button type="button" className="action-cancel work-secondary" disabled={busy} onClick={onCancel}>취소</button><button type="submit" className="action-save work-primary" disabled={busy||!meaningful}>{busy?"저장 중…":"저장"}</button></div>
+    <div className="work-form-actions"><button type="button" className="action-cancel work-secondary" disabled={busy} onClick={onCancel}>취소</button><button type="submit" className="action-save work-primary" disabled={busy||photoBusy||!meaningful}>{busy?"저장 중…":"저장"}</button></div>
   </form>;
 }

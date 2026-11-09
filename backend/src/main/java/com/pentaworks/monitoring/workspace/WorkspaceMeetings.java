@@ -22,7 +22,12 @@ public class WorkspaceMeetings {
     private final CurrentUserService users;
     private final AuditService audit;
     public WorkspaceMeetings(JdbcTemplate db,CurrentUserService users,AuditService audit) {this.db=db;this.users=users;this.audit=audit;}
-    public record Input(String title,LocalDateTime meetingAt,String contentMarkdown,String participantNames,Long revision) {}
+    public record Input(String title, LocalDateTime meetingAt, String contentMarkdown, String participantNames,
+                        Long revision, List<Long> photoIds) {
+        public Input(String title, LocalDateTime meetingAt, String contentMarkdown, String participantNames, Long revision) {
+            this(title, meetingAt, contentMarkdown, participantNames, revision, null);
+        }
+    }
     static final String SELECT="""
         SELECT id,title,DATE_FORMAT(meeting_at,'%Y-%m-%dT%H:%i') meetingAt,
           content_markdown contentMarkdown,author_id authorId,author_name authorName,
@@ -30,15 +35,15 @@ public class WorkspaceMeetings {
           DATE_FORMAT(updated_at,'%Y-%m-%d %H:%i') updatedAt
         FROM workspace_meeting WHERE company_id=? AND deleted_at IS NULL
         """;
-    private boolean allowed(CurrentUser user) {
+    static boolean allowed(JdbcTemplate db, CurrentUser user) {
         return Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM company WHERE id=? AND code='PENTAWORKS' AND status='ACTIVE')",Boolean.class,user.companyId()));
     }
     private CurrentUser require(Authentication auth) {
         var user=users.require(auth);
-        if(!allowed(user))throw new ForbiddenException("펜타웍스 사내 회의록입니다.");
+        if(!allowed(db,user))throw new ForbiddenException("펜타웍스 사내 회의록입니다.");
         return user;
     }
-    @GetMapping("/access") public Map<String,Boolean> access(Authentication auth) {return Map.of("allowed",allowed(users.require(auth)));}
+    @GetMapping("/access") public Map<String,Boolean> access(Authentication auth) {return Map.of("allowed",allowed(db,users.require(auth)));}
     @GetMapping public List<Map<String,Object>> list(Authentication auth) {
         var user=require(auth);return db.queryForList(SELECT+" ORDER BY meeting_at DESC,id DESC",user.companyId());
     }
@@ -48,6 +53,15 @@ public class WorkspaceMeetings {
         return rows.get(0);
     }
     @GetMapping("/{id}") public Map<String,Object> get(@PathVariable long id,Authentication auth) {return find(id,require(auth));}
+    @GetMapping("/{id}/photos")
+    public List<Map<String,Object>> photos(@PathVariable long id, Authentication auth) {
+        var user = require(auth);
+        find(id, user);
+        return db.queryForList("""
+            SELECT id, original_name name, byte_size byteSize, width_px width, height_px height
+            FROM workspace_photo WHERE meeting_id=? AND company_id=? ORDER BY id
+            """, id, user.companyId());
+    }
     static void validate(Input input) {
         if(input.meetingAt()==null)throw new BadRequestException("회의 일시를 입력해주세요.");
         if(input.title()==null||input.title().isBlank()||input.title().trim().length()>200)throw new BadRequestException("제목을 200자 이내로 입력해주세요.");
@@ -62,6 +76,7 @@ public class WorkspaceMeetings {
             statement.setLong(1,user.companyId());statement.setString(2,input.title().trim());statement.setObject(3,input.meetingAt());statement.setString(4,input.contentMarkdown());statement.setLong(5,user.id());statement.setString(6,user.name());statement.setLong(7,user.id());statement.setString(8,user.name());statement.setString(9,Objects.toString(input.participantNames(),"").trim());return statement;
         },key);
         long id=Objects.requireNonNull(key.getKey()).longValue();
+        new WorkspacePhotos(db, users).attachMeeting(user, id, input.photoIds());
         audit.record(user,"CREATE","MEETING",String.valueOf(id),Map.of("title",input.title().trim()));
         return Map.of("id",id);
     }
@@ -70,12 +85,14 @@ public class WorkspaceMeetings {
         if(input.revision()==null)throw new ConflictException("최신 회의록을 다시 열어주세요.");
         int changed=db.update("UPDATE workspace_meeting SET title=?,meeting_at=?,content_markdown=?,participant_names=?,updated_by_id=?,updated_by_name=?,updated_at=CURRENT_TIMESTAMP(6),revision=revision+1 WHERE id=? AND company_id=? AND deleted_at IS NULL AND revision=?",input.title().trim(),input.meetingAt(),input.contentMarkdown(),Objects.toString(input.participantNames(),"").trim(),user.id(),user.name(),id,user.companyId(),input.revision());
         if(changed==0)throw new ConflictException("다른 사람이 수정했습니다. 최신 회의록을 다시 열어주세요.");
+        new WorkspacePhotos(db, users).attachMeeting(user, id, input.photoIds());
         audit.record(user,"UPDATE","MEETING",String.valueOf(id),Map.of("title",input.title().trim()));
     }
     @DeleteMapping("/{id}") @Transactional public void delete(@PathVariable long id,@RequestParam long revision,Authentication auth) {
         var user=require(auth);var row=find(id,user);
         if(!user.isAdmin()&&!Objects.equals(((Number)Optional.ofNullable(row.get("authorId")).orElse(-1L)).longValue(),user.id()))throw new ForbiddenException("작성자 또는 관리자만 삭제할 수 있습니다.");
         if(db.update("UPDATE workspace_meeting SET deleted_at=CURRENT_TIMESTAMP(6),revision=revision+1 WHERE id=? AND company_id=? AND deleted_at IS NULL AND revision=?",id,user.companyId(),revision)==0)throw new ConflictException("다른 사람이 수정했습니다. 최신 회의록을 다시 열어주세요.");
+        db.update("DELETE FROM workspace_photo WHERE meeting_id=? AND company_id=?", id, user.companyId());
         audit.record(user,"DELETE","MEETING",String.valueOf(id),Map.of("title",row.get("title")));
     }
 }

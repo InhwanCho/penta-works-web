@@ -30,7 +30,7 @@ public class WorkspacePhotoMaintenance {
   }
  }
  public void cleanup()throws java.io.IOException{
-  db.update("DELETE FROM workspace_photo WHERE record_id IS NULL AND created_at<DATE_SUB(NOW(),INTERVAL 1 DAY)");
+  db.update("DELETE FROM workspace_photo WHERE record_id IS NULL AND meeting_id IS NULL AND created_at<DATE_SUB(NOW(),INTERVAL 1 DAY)");
   var keys=new HashSet<String>();for(var row:db.queryForList("SELECT storage_key,thumbnail_key FROM workspace_photo"))for(Object key:row.values())if(key!=null)keys.add(key.toString());
   storage.cleanup(keys,System.currentTimeMillis()-86400000L);
  }

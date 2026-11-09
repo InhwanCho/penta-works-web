@@ -58,8 +58,8 @@ public class WorkspacePhotos {
         var u=users.require(auth);if(file.isEmpty()||file.getSize()>MAX_BYTES)throw new BadRequestException("사진 한 장은 10MB 이하여야 합니다.");
         db.queryForList("SELECT id FROM app_user WHERE id=? FOR UPDATE",u.id());
         // Unsaved uploads expire after a day; committed record photos are not touched.
-        db.update("DELETE FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL AND created_at<DATE_SUB(NOW(),INTERVAL 1 DAY)",u.companyId(),u.id());
-        Long staged=db.queryForObject("SELECT COALESCE(SUM(byte_size),0) FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL",Long.class,u.companyId(),u.id());
+        db.update("DELETE FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL AND meeting_id IS NULL AND created_at<DATE_SUB(NOW(),INTERVAL 1 DAY)",u.companyId(),u.id());
+        Long staged=db.queryForObject("SELECT COALESCE(SUM(byte_size),0) FROM workspace_photo WHERE company_id=? AND author_id=? AND record_id IS NULL AND meeting_id IS NULL",Long.class,u.companyId(),u.id());
         if(staged+file.getSize()>MAX_TOTAL)throw new BadRequestException("작성 중인 사진 합계는 200MB 이하여야 합니다. 사용하지 않는 사진을 제거해주세요.");
         var image=validateImage(file.getBytes());String name=Objects.toString(file.getOriginalFilename(),"photo").replaceAll("[\\\\/\\p{Cntrl}]","_");if(name.length()>255)name=name.substring(name.length()-255);
         var files=storage.store(u.companyId(),image.bytes(),image.mime());
@@ -67,10 +67,27 @@ public class WorkspacePhotos {
         long id=db.queryForObject("SELECT LAST_INSERT_ID()",Long.class);return Map.of("id",id,"name",name,"byteSize",image.bytes().length,"width",image.width(),"height",image.height());
     }
     private Map<String,Object> photo(CurrentUser u,long id){
-        var rows=db.queryForList("SELECT p.id,p.author_id authorId,p.record_id recordId,p.mime_type mimeType,p.storage_key storageKey,p.thumbnail_key thumbnailKey,r.site_id siteId,r.deleted_at recordDeleted FROM workspace_photo p LEFT JOIN workspace_record r ON r.id=p.record_id WHERE p.id=? AND p.company_id=?",id,u.companyId());
-        if(rows.isEmpty())throw new NotFoundException("사진을 찾을 수 없습니다.");var r=rows.get(0);
-        if(r.get("recordId")==null){if(((Number)r.get("authorId")).longValue()!=u.id())throw new NotFoundException("사진을 찾을 수 없습니다.");}
-        else {if(r.get("recordDeleted")!=null)throw new NotFoundException("사진을 찾을 수 없습니다.");if(r.get("siteId")!=null)users.requireSiteAccess(u,r.get("siteId").toString());}
+        var rows = db.queryForList("""
+            SELECT p.id, p.author_id authorId, p.record_id recordId, p.meeting_id meetingId,
+                   p.mime_type mimeType, p.storage_key storageKey, p.thumbnail_key thumbnailKey,
+                   r.site_id siteId, r.deleted_at recordDeleted, m.deleted_at meetingDeleted
+            FROM workspace_photo p
+            LEFT JOIN workspace_record r ON r.id=p.record_id
+            LEFT JOIN workspace_meeting m ON m.id=p.meeting_id
+            WHERE p.id=? AND p.company_id=?
+            """, id, u.companyId());
+        if (rows.isEmpty()) throw new NotFoundException("사진을 찾을 수 없습니다.");
+        var r = rows.get(0);
+        if (r.get("meetingId") != null) {
+            if (r.get("meetingDeleted") != null || !WorkspaceMeetings.allowed(db, u)) {
+                throw new NotFoundException("사진을 찾을 수 없습니다.");
+            }
+        } else if (r.get("recordId") == null) {
+            if (((Number) r.get("authorId")).longValue() != u.id()) throw new NotFoundException("사진을 찾을 수 없습니다.");
+        } else {
+            if (r.get("recordDeleted") != null) throw new NotFoundException("사진을 찾을 수 없습니다.");
+            if (r.get("siteId") != null) users.requireSiteAccess(u, r.get("siteId").toString());
+        }
         return r;
     }
     @GetMapping
@@ -89,18 +106,56 @@ public class WorkspacePhotos {
         }catch(IOException error){throw new org.springframework.web.server.ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"사진을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.");}
     }
     @DeleteMapping("/{id}")
-    public Map<String,Boolean> remove(@PathVariable long id,Authentication auth){var u=users.require(auth);var r=photo(u,id);if(r.get("recordId")!=null)throw new BadRequestException("저장된 사진은 작업일지 수정 화면에서 제거해주세요.");db.update("DELETE FROM workspace_photo WHERE id=? AND company_id=? AND author_id=? AND record_id IS NULL",id,u.companyId(),u.id());return Map.of("deleted",true);}
-    void attach(CurrentUser u,long recordId,List<Long> requested){
-        if(requested==null)return;
-        if(requested.stream().anyMatch(Objects::isNull)||requested.size()>MAX_COUNT||new HashSet<>(requested).size()!=requested.size())throw new BadRequestException("사진은 중복 없이 최대 40장 첨부할 수 있습니다.");
-        db.queryForList("SELECT id FROM workspace_record WHERE id=? AND company_id=? FOR UPDATE",recordId,u.companyId());
-        long total=0;for(long id:requested.stream().sorted().toList()){
-            var rows=db.queryForList("SELECT record_id,author_id,byte_size FROM workspace_photo WHERE id=? AND company_id=? FOR UPDATE",id,u.companyId());
-            if(rows.isEmpty())throw new BadRequestException("첨부 사진을 찾을 수 없습니다.");var p=rows.get(0);Object parent=p.get("record_id");
-            if(parent==null&&((Number)p.get("author_id")).longValue()!=u.id()||parent!=null&&((Number)parent).longValue()!=recordId)throw new ForbiddenException("다른 기록의 사진을 첨부할 수 없습니다.");total+=((Number)p.get("byte_size")).longValue();
+    public Map<String,Boolean> remove(@PathVariable long id, Authentication auth) {
+        var user = users.require(auth);
+        var row = photo(user, id);
+        if (row.get("recordId") != null || row.get("meetingId") != null) {
+            throw new BadRequestException("저장된 사진은 기록의 수정 화면에서 제거해주세요.");
         }
-        if(total>MAX_TOTAL)throw new BadRequestException("기록당 사진 합계는 200MB 이하여야 합니다.");
-        for(var row:db.queryForList("SELECT id FROM workspace_photo WHERE record_id=? AND company_id=?",recordId,u.companyId())){long id=((Number)row.get("id")).longValue();if(!requested.contains(id))db.update("DELETE FROM workspace_photo WHERE id=? AND record_id=?",id,recordId);}
-        for(long id:requested)db.update("UPDATE workspace_photo SET record_id=? WHERE id=? AND company_id=?",recordId,id,u.companyId());
+        db.update("DELETE FROM workspace_photo WHERE id=? AND company_id=? AND author_id=? AND record_id IS NULL AND meeting_id IS NULL",
+            id, user.companyId(), user.id());
+        return Map.of("deleted", true);
+    }
+
+    void attach(CurrentUser user, long recordId, List<Long> requested) {
+        if (requested == null) return;
+        db.queryForList("SELECT id FROM workspace_record WHERE id=? AND company_id=? FOR UPDATE", recordId, user.companyId());
+        attachTo(user, recordId, requested, "record_id", "meeting_id");
+    }
+
+    // The enclosing meeting save holds the parent row lock and owns the transaction.
+    void attachMeeting(CurrentUser user, long meetingId, List<Long> requested) {
+        if (requested == null) return;
+        attachTo(user, meetingId, requested, "meeting_id", "record_id");
+    }
+
+    private void attachTo(CurrentUser user, long parentId, List<Long> requested, String parentColumn, String otherColumn) {
+        Set<Long> ids = new HashSet<>(requested);
+        if (ids.contains(null) || ids.size() != requested.size() || ids.size() > MAX_COUNT) {
+            throw new BadRequestException("사진은 중복 없이 최대 40장 첨부할 수 있습니다.");
+        }
+        long total = 0;
+        for (long id : requested.stream().sorted().toList()) {
+            var rows = db.queryForList("SELECT record_id,meeting_id,author_id,byte_size FROM workspace_photo WHERE id=? AND company_id=? FOR UPDATE",
+                id, user.companyId());
+            if (rows.isEmpty()) throw new BadRequestException("첨부 사진을 찾을 수 없습니다.");
+            var photo = rows.get(0);
+            Number parent = (Number) photo.get(parentColumn);
+            boolean canAttach = parent == null ? ((Number) photo.get("author_id")).longValue() == user.id() : parent.longValue() == parentId;
+            if (photo.get(otherColumn) != null || !canAttach) {
+                throw new ForbiddenException("다른 기록의 사진을 첨부할 수 없습니다.");
+            }
+            total += ((Number) photo.get("byte_size")).longValue();
+        }
+        if (total > MAX_TOTAL) throw new BadRequestException("기록당 사진 합계는 200MB 이하여야 합니다.");
+        for (long id : db.queryForList("SELECT id FROM workspace_photo WHERE " + parentColumn + "=? AND company_id=?", Long.class,
+            parentId, user.companyId())) {
+            if (!ids.contains(id)) {
+                db.update("DELETE FROM workspace_photo WHERE id=? AND " + parentColumn + "=? AND company_id=?", id, parentId, user.companyId());
+            }
+        }
+        for (long id : requested) {
+            db.update("UPDATE workspace_photo SET " + parentColumn + "=? WHERE id=? AND company_id=?", parentId, id, user.companyId());
+        }
     }
 }
