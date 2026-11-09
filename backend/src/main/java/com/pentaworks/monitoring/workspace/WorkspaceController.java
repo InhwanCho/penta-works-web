@@ -171,7 +171,7 @@ public class WorkspaceController {
             if(!(value instanceof String kind)||!Set.of("","doc","full","pretest").contains(kind))throw new BadRequestException("ACR 구분을 확인해주세요.");
             db.update("UPDATE workspace_record SET acr_kind=? WHERE id=? AND company_id=?",value,id,u.companyId());
         }
-        // A schedule can have multiple work records; never infer linkage by date/title.
+        // Convert only the explicitly linked schedule in the record save transaction.
         if(details.containsKey("scheduleId")) {
             Object raw=details.get("scheduleId");Long schedule=null;
             if(raw!=null) {
@@ -183,6 +183,10 @@ public class WorkspaceController {
                 if(sid!=null)users.requireSiteAccess(u,sid);
             }
             db.update("UPDATE workspace_record SET schedule_id=? WHERE id=? AND company_id=?",schedule,id,u.companyId());
+            if (schedule != null) {
+                db.update("UPDATE workspace_schedule SET deleted_at=CURRENT_TIMESTAMP(6),revision=revision+1 WHERE id=? AND company_id=? AND deleted_at IS NULL",
+                    schedule,u.companyId());
+            }
         } else {
             // Older clients must not leave a hospital-changing edit attached to another hospital.
             if(Boolean.TRUE.equals(db.queryForObject("SELECT EXISTS(SELECT 1 FROM workspace_record r JOIN workspace_schedule s ON s.id=r.schedule_id AND s.company_id=r.company_id WHERE r.id=? AND r.company_id=? AND NOT(s.site_id <=> ?))",Boolean.class,id,u.companyId(),sid)))throw new BadRequestException("연결된 일정과 같은 병원을 선택해주세요.");

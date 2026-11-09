@@ -37,7 +37,7 @@ export function useHospitalHistory(siteId: string, category: "all" | "general" |
 }
 export default function HospitalWork({ siteId }: { siteId: string }) {
   const { session } = useAuth();
-  const [category, setCategory] = useState<"general" | "coldhead">("general");
+  const [category, setCategory] = useState<"all" | "coldhead">("all");
   const history = useHospitalHistory(siteId, category);
   if (!session) return null;
   const rows = history.data?.pages.flatMap((p) => p.items) || [];
@@ -73,7 +73,7 @@ export default function HospitalWork({ siteId }: { siteId: string }) {
         </Link>
       </div>
       <div className="work-pills hospital-history-tabs" role="group" aria-label="정비이력 종류">
-        <button type="button" className={category === "general" ? "active" : ""} aria-pressed={category === "general"} onClick={() => setCategory("general")}>일반 정비이력</button>
+        <button type="button" className={category === "all" ? "active" : ""} aria-pressed={category === "all"} onClick={() => setCategory("all")}>일반 정비이력</button>
         <button type="button" className={category === "coldhead" ? "active" : ""} aria-pressed={category === "coldhead"} onClick={() => setCategory("coldhead")}>Cold Head 교체 이력</button>
       </div>
       {history.error && (

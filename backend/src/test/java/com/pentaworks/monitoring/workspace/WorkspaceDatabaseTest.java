@@ -103,6 +103,35 @@ class WorkspaceDatabaseTest {
   assertTrue(((List<?>)history.calendar(LocalDate.of(2027,1,1),LocalDate.of(2027,12,31),auth).get("items")).isEmpty());
   db.update("UPDATE workspace_record SET source_id='office:001:maintenance:99' WHERE id=1");assertTrue(((List<?>)history.calendar(LocalDate.of(2026,10,1),LocalDate.of(2026,10,31),auth).get("items")).isEmpty());
  }
+ @Test void savingFromScheduleKeepsOnlyTheWorkRecord() {
+  db.update("INSERT INTO workspace_schedule(id,company_id,author_id,title,body,start_at,end_at) VALUES(1,1,1,'일정','','2026-10-21','2026-10-22')");
+  var details=Map.<String,Object>of("scheduleId",1);
+  var work=new WorkspaceController.WorkInput("GENERAL",null,null,"작업","본문",LocalDate.of(2026,10,21),"COMPLETED",details,null,null);
+  assertThrows(IllegalStateException.class,()->tx.executeWithoutResult(status->{
+   controller.create(work,auth);
+   throw new IllegalStateException("Abort save");
+  }));
+  assertEquals(1,controller.schedules(null,null,auth).size());
+  var saved=tx.execute(status->controller.create(work,auth));
+  long id=((Number)saved.get("id")).longValue();
+  assertEquals(1L,((Number)controller.record(id,auth).get("scheduleId")).longValue());
+  assertTrue(controller.schedules(null,null,auth).isEmpty());
+  assertEquals(0L,controller.searchSchedules(1,20,"",auth).get("total"));
+  assertThrows(BadRequestException.class,()->tx.execute(status->controller.create(work,auth)));
+  var edit=new WorkspaceController.WorkInput("GENERAL",null,null,"수정","본문",work.workDate(),"COMPLETED",details,null,1L);
+  tx.execute(status->controller.update(id,edit,auth));
+ }
+ @Test void migrationArchivesOnlySchedulesWithExistingLinkedWork() {
+  db.update("INSERT INTO workspace_schedule(id,company_id,author_id,site_id,title,body,start_at,end_at) VALUES(1,1,1,'001','점검','','2026-10-21','2026-10-22'),(2,1,1,'001','점검','','2026-10-21','2026-10-22')");
+  record(1,"001");
+  db.update("UPDATE workspace_record SET schedule_id=1 WHERE id=1");
+  new org.springframework.jdbc.datasource.init.ResourceDatabasePopulator(
+      new org.springframework.core.io.ClassPathResource("db/migration/V64__archive_schedules_with_work_records.sql")).execute(db.getDataSource());
+  var schedules=controller.schedules(null,null,auth);
+  assertEquals(1,schedules.size());
+  assertEquals(2L,((Number)schedules.get(0).get("id")).longValue());
+  assertEquals(1L,((Number)controller.record(1,auth).get("scheduleId")).longValue());
+ }
  @Test void scheduleReturnsOnlyVisibleLinkedRecordsFromSameCompany() {
   db.update("INSERT INTO workspace_schedule(id,company_id,author_id,title,body,start_at,end_at) VALUES(1,1,1,'일정','','2026-10-21','2026-10-22')");
   record(1,"001");record(2,"002");record(3,"001");

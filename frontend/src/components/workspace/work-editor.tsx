@@ -218,6 +218,7 @@ export default function WorkEditor({ id }: { id?: string }) {
         qc.invalidateQueries({ queryKey: ["workspace-record-history"] }),
         qc.invalidateQueries({ queryKey: ["workspace-records"] }),
         qc.invalidateQueries({ queryKey: ["workspace-schedules"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-search"] }),
         qc.invalidateQueries({ queryKey: ["workspace-planning"] }),
         qc.invalidateQueries({ queryKey: ["workspace-photos"] }),
         qc.invalidateQueries({ queryKey: ["workspace-assets"] }),
@@ -486,8 +487,7 @@ export default function WorkEditor({ id }: { id?: string }) {
               {details.scheduleId ? "연결된 일정" : "예정된 일정과 연결 (선택)"}
             </summary>
             <p className="work-hint">
-              일정에 대한 작업 결과라면 연결해주세요. 일정 없이도 업무기록을
-              작성할 수 있습니다.
+              일정을 연결해 저장하면 일정 목록에서 빠지고 업무기록으로 남습니다.
             </p>
             <label>
               연결할 일정
@@ -522,7 +522,7 @@ export default function WorkEditor({ id }: { id?: string }) {
                 {details.scheduleId &&
                   !schedules.data?.some((s) => s.id === details.scheduleId) && (
                     <option value={details.scheduleId}>
-                      기존 연결 일정 (삭제되었거나 조회 불가)
+                      업무기록으로 전환된 일정
                     </option>
                   )}
               </Select>
@@ -716,12 +716,7 @@ export function ReadRecord({ record: r }: { record: WorkRecord }) {
           ))}
       </dl>
       {r.scheduleId && (
-        <Link
-          className="work-back"
-          href={`/schedule?date=${r.scheduleDate || r.workDate}`}
-        >
-          연결된 일정 보기 →
-        </Link>
+        <p className="work-hint">일정에서 작성{r.scheduleDate ? ` · ${r.scheduleDate}` : ""}</p>
       )}
       {showBody && <p className="work-prewrap">{r.body}</p>}
       {r.serviceType === "PM" && (
