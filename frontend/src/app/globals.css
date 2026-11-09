@@ -4415,7 +4415,34 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .inspection-source-arrow { flex: 0 0 auto; }
 @media(hover:hover) { .inspection-source-record:hover { color: var(--work-ink); } }
 .work-due-row > .inspection-due-date { flex-shrink: 0; }
-@media(max-width:639px) { .work-due-row { flex-wrap: wrap; } .work-due-row > .overview-due-content { flex-basis: 100%; } }
+@media (max-width: 767px) {
+ .workspace-frame .work-overview #work-due > summary {
+  grid-template-columns: max-content 44px minmax(0, 1fr);
+ }
+ #work-due .work-due-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: 8px;
+  row-gap: 8px;
+ }
+ #work-due .overview-due-content { grid-column: 1 / -1; overflow-wrap: anywhere; }
+ #work-due .overview-due-content > a { display: block; padding-inline-end: 84px; }
+ #work-due .overview-due-count { grid-column: 2; grid-row: 1; justify-self: end; }
+ #work-due .inspection-due-date { grid-column: 1 / -1; min-width: 0; gap: 6px 8px; }
+ #work-due .inspection-due-date input { flex: 0 1 155px; min-width: 0; max-width: 100%; }
+ #work-due .overview-due-meta { font-size: 12px; }
+ #work-due .inspection-source-record:has(.inspection-source-copy) {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr) auto;
+  grid-template-areas: "date badge ." "title title arrow";
+  gap: 3px 8px;
+ }
+ #work-due .inspection-source-date { grid-area: date; }
+ #work-due .inspection-source-badge { grid-area: badge; justify-self: start; max-width: 100%; }
+ #work-due .inspection-source-copy { grid-area: title; white-space: normal; overflow-wrap: anywhere; }
+ #work-due .inspection-source-arrow { grid-area: arrow; }
+}
 
 /* Shared neutral feedback for navigable cards, rows and disclosure headers. */
 :root { --surface-hover: #f5f5f5; }
