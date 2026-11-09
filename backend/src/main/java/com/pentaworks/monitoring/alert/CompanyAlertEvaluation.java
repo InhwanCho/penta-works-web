@@ -15,7 +15,7 @@ public final class CompanyAlertEvaluation {
     public static State evaluate(CompanyAlertPolicyService.Policy policy, SiteAlertSettings site, DashboardRow row,
                                  List<MetricSample> history, LocalDate replacement, Instant now, Long effectiveLag,
                                  boolean monitoring) {
-        if (!site.alertsEnabled() || !monitoring)
+        if (!site.alertsEnabled() || !monitoring || row.lastAt() == null)
             return new State(site.alertsEnabled(),"NORMAL",Map.of(),false,List.of());
         int interval = site.collectionIntervalMinutes();
         boolean quiet = CompanyAlertPolicyService.settling(replacement,now);
@@ -28,7 +28,7 @@ public final class CompanyAlertEvaluation {
             (double)(interval * policy.collectionCritical()),stopped,!stopped && received >= 2));
         Map<String,CompanyAlertRules.Reading> readings = new LinkedHashMap<>();
         // A collection gap suppresses individual missing/range incidents until measurements resume.
-        if (stopped || history.isEmpty() || row.lastAt() == null || !history.get(0).at().equals(Instant.parse(row.lastAt())))
+        if (stopped || history.isEmpty() || !history.get(0).at().equals(Instant.parse(row.lastAt())))
             return new State(true,collection,readings,quiet,signals);
         for (var t : site.thresholds()) {
             if (!t.active()) continue;
@@ -42,8 +42,13 @@ public final class CompanyAlertEvaluation {
                 return CompanyAlertRules.measured(v) && v > critical;
             });
             int missing = pressure ? CompanyAlertRules.streak(history,interval,s -> !CompanyAlertRules.measured(s.metrics().get(key))) : 0;
-            readings.put(key,CompanyAlertRules.reading(key,value,t.averageValue(),policy.tolerancePercent(),
-                pressure ? policy.pressureWarning() : null,critical,high,missing,policy.missingWarning(),policy.missingCritical(),pressure && quiet));
+            var reading = CompanyAlertRules.reading(key,value,t.averageValue(),policy.tolerancePercent(),
+                pressure ? policy.pressureWarning() : null,critical,high,missing,policy.missingWarning(),policy.missingCritical(),pressure && quiet);
+            if (pressure && !reading.level().equals("RED")) {
+                int rising = CompanyAlertRules.risingPressureStreak(history,interval,t.averageValue());
+                if (rising >= 5) reading = new CompanyAlertRules.Reading("YELLOW",rising,"평균 위에서 상승",t.averageValue(),7);
+            }
+            readings.put(key,reading);
             if (critical != null) {
                 int normal = CompanyAlertRules.streak(history,interval,s -> {
                     Double v = s.metrics().get(key);

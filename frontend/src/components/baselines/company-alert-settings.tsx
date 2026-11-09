@@ -68,7 +68,7 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
     </section>
     <section className={card}>
       <h3 className="text-lg font-extrabold">헬륨 압력 · He Pressure</h3>
-      <p className="mt-2">최근 7일 평균에서 ±{p.tolerancePercent}% 벗어나거나 {p.pressureWarning}~{p.pressureCritical}이면 노란색입니다.</p>
+      <p className="mt-2">최근 7일 평균에서 ±{p.tolerancePercent}% 벗어나거나 {p.pressureWarning}~{p.pressureCritical}이면 노란색입니다. 7일 평균을 넘는 측정값이 5회 연속 오를 때도 노란색으로 표시합니다.</p>
       <p className="mt-2"><strong>{p.pressureCritical} 초과가 2회 연속</strong>이면 빨간색과 카톡 1회로 알려드립니다.</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">{number("노란색 시작 압력","pressureWarning","psi",0.01,100,0.01)}{number("카톡을 보내는 초과 기준","pressureCritical","psi",0.01,100,0.01)}</div>
       <div className="mt-4 rounded-lg bg-slate-50 p-4 dark:bg-slate-800"><strong>콜드헤드 교체 후 5일</strong><p className="mt-1">완료된 콜드헤드 업무기록의 작업일부터 평균을 새로 계산합니다. 첫 5일은 색상과 연속 횟수만 표시하고 헬륨 압력 카톡은 쉽니다. 5일 후에도 문제가 계속되면 한 번 알립니다.</p><p className="mt-2 text-sm">새 평균은 유효한 측정값 12개부터 표시합니다. 그전에도 압력의 고정 기준과 누락 횟수는 확인합니다.</p></div>
@@ -96,7 +96,7 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
       <h3 className="text-lg font-extrabold">병원 데이터 전체가 들어오지 않을 때</h3>
       <p className="mt-2">병원 수집 주기의 {p.collectionWarning}배가 지나면 노란색, {p.collectionCritical}배가 지나면 빨간색과 카톡 1회입니다.</p>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">{number("노란색으로 표시할 지연","collectionWarning","수집 주기의 배수",1,23)}{number("카톡을 보낼 지연","collectionCritical","수집 주기의 배수",2,24)}</div>
-      <p className="mt-3 text-sm">병원 운영시간을 적용합니다. 전체 수집이 중단된 동안에는 항목별 누락 카톡을 중복 발송하지 않습니다.</p>
+      <p className="mt-3 text-sm">설치 전처럼 수집 기록이 없는 병원은 표에 -로 표시합니다. 병원 운영시간을 적용합니다. 전체 수집이 중단된 동안에는 항목별 누락 카톡을 중복 발송하지 않습니다.</p>
     </section>
     <section className={card}>
       <h3 className="text-lg font-extrabold">병원별 알림 켜기·끄기</h3>

@@ -31,6 +31,24 @@ public final class CompanyAlertRules {
         }
         return count;
     }
+    static int risingPressureStreak(List<DashboardService.MetricSample> samples, int interval, Double average) {
+        if (average == null || !Double.isFinite(average)) return 0;
+        Instant newerAt = null;
+        double newerPressure = Double.POSITIVE_INFINITY;
+        int count = 0;
+        for (var sample : samples) {
+            if (newerAt != null && sample.at().equals(newerAt)) continue;
+            if (newerAt != null && (sample.at().isAfter(newerAt)
+                || Duration.between(sample.at(),newerAt).toSeconds() > interval * 90L)) break;
+            Double pressure = sample.metrics().get("hepres");
+            if (!measured(pressure) || pressure <= average || pressure >= newerPressure) break;
+            count++;
+            newerPressure = pressure;
+            newerAt = sample.at();
+        }
+        return count;
+    }
+
     public static boolean chillerStopped(DashboardService.MetricSample sample) {
         Double inlet = sample.metrics().get("cctemp"), outlet = sample.metrics().get("ccflow");
         return measured(inlet) && measured(outlet) && AlertEventService.coldChillerStopped(inlet, outlet);

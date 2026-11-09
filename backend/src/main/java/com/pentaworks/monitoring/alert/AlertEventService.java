@@ -399,7 +399,7 @@ public class AlertEventService {
         long ruleId = jdbcTemplate.queryForObject(
             "SELECT id FROM alert_rule WHERE user_id=? AND site_id=? AND metric_key=? AND rule_type=? FOR UPDATE",
             Long.class,userId,site.siteid(),signal.key(),ruleType);
-        OpenEvent open = openEvent(ruleId);
+        OpenEvent open = openEvent(ruleId, signal.type());
         if (signal.recovered()) {
             if (open != null) jdbcTemplate.update("UPDATE alert_event SET recovered_at=CURRENT_TIMESTAMP(6) WHERE id=?",open.id());
             return null;

@@ -62,6 +62,30 @@ class CompanyAlertRulesTest {
         assertEquals("NO_DATA",stopped.signals().get(0).type());
         assertTrue(evaluate(samples,60,180L,false,null).signals().isEmpty());
     }
+    @Test void uninstalledHospitalHasNoOutageWarningOrNotification() {
+        var site=new SiteAlertSettings("023","바르다임",true,List.of(),30,true,true,0,30,null,null,false);
+        var row=new DashboardRow("023","23","바르다임",null,null,0,0,null,null,Map.of(),"NORMAL",0,0,List.of());
+        var state=CompanyAlertEvaluation.evaluate(policy,site,row,List.of(),null,now,null,true);
+        assertEquals("NORMAL",state.collectionLevel());
+        assertTrue(state.signals().isEmpty());
+    }
+    @Test void fiveRisingReadingsAboveAverageWarnWithoutKakaoAndYieldToCritical() {
+        var history=List.of(sample(0,2.25),sample(10,2.2),sample(20,2.15),sample(30,2.1),sample(40,2.05));
+        var state=evaluate(history,10,0L,true,null);
+        assertEquals("NORMAL",evaluate(history.subList(0,4),10,0L,true,null).readings().get("hepres").level());
+        assertEquals("YELLOW",state.readings().get("hepres").level());
+        assertEquals(5,state.readings().get("hepres").consecutive());
+        assertTrue(state.signals().stream().noneMatch(CompanyAlertEvaluation.Signal::triggered));
+        var critical=new ArrayList<>(history);
+        critical.set(0,sample(0,2.7));
+        critical.set(1,sample(10,2.6));
+        var red=evaluate(critical,10,0L,true,null);
+        assertEquals("RED",red.readings().get("hepres").level());
+        assertEquals(1,red.signals().stream().filter(CompanyAlertEvaluation.Signal::triggered).count());
+        var gap=new ArrayList<>(history);
+        gap.set(4,sample(50,2.05));
+        assertEquals("NORMAL",evaluate(gap,10,0L,true,null).readings().get("hepres").level());
+    }
     @Test void replacementUsesFiveKoreanCalendarDaysAndStillShowsCriticalColor() {
         var replacement=LocalDate.of(2026,11,5);
         var state=evaluate(List.of(sample(0,3.0),sample(10,3.0)),10,0L,true,replacement);
