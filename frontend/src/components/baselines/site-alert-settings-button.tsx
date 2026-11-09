@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useContext, useEffect, useId, useState } from "react";
 import CustomModal from "@/components/common/custom-modal";
-import { useModal } from "@/components/provider/modal-provider";
+import { ModalContext } from "@/components/provider/modal-provider";
 import Link from "@/components/common/app-link";
 import type { AlertSettingsPane } from "./alert-settings-table";
 import CompanyAlertSettings from "./company-alert-settings";
@@ -16,12 +16,14 @@ export function SiteAlertSettingsDialog({ page=false,siteId,onClose }: {
   page?: boolean; siteId: string; initialMetricKey?: string; initialPane?: AlertSettingsPane; onlyMetricKey?: string; onClose:()=>void;
 }) {
   const id = useId();
-  const { open, close } = useModal(id);
+  const modal = useContext(ModalContext);
+  const open = modal?.open;
+  const close = modal?.close;
   useEffect(() => {
     if (page) return;
-    open();
-    return close;
-  }, [page, open, close]);
+    open?.(id);
+    return () => close?.(id);
+  }, [page, id, open, close]);
   const content = <div className="mx-auto max-w-4xl p-3">
     <div className="mx-auto max-w-4xl"><div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-xl font-bold">알림 설정</h2><button autoFocus type="button" onClick={onClose} className="min-h-12 rounded-lg border px-5 font-bold">닫기</button></div>
     <CompanyAlertSettings siteId={siteId}/><Link href="/baselines?view=settings" className="my-4 inline-flex min-h-12 items-center underline">전체 병원 알림 설정 보기</Link></div>
