@@ -16,8 +16,8 @@ type PolicyView = {
   revision: number; canEdit: boolean; policy: Policy;
   hospitals: {siteId: string; name: string; settings: Hospital; coldHeadReplacedAt: string | null; quietUntil: string | null}[];
 };
-const field = "mt-2 min-h-12 w-full rounded-lg border border-slate-300 bg-white px-3 text-lg font-bold dark:border-slate-600 dark:bg-slate-900 disabled:opacity-70";
-const card = "rounded-xl border border-slate-200 bg-white p-4 sm:p-5 dark:border-slate-700 dark:bg-background-dark-card";
+const field = "mt-2 min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold dark:border-slate-600 dark:bg-slate-900 disabled:opacity-70";
+const card = "rounded-xl border border-slate-200 bg-white p-3 sm:p-4 dark:border-slate-700 dark:bg-background-dark-card";
 
 const muted = "text-sm leading-6 text-slate-600 dark:text-slate-300";
 
@@ -29,22 +29,15 @@ function AlertCriterion({ title, description, warning, kakao, note, children }: 
   note?: ReactNode;
   children?: ReactNode;
 }) {
-  return <section className={card}>
-    <h3 className="text-lg font-extrabold">{title}</h3>
-    {description && <p className={`mt-1 ${muted}`}>{description}</p>}
-    <dl className="mt-3 grid gap-2 sm:grid-cols-2">
-      <div className={`min-w-0 rounded-lg p-3 ${warning ? "bg-amber-50 text-amber-950 dark:bg-amber-950/35 dark:text-amber-100" : "bg-slate-50 dark:bg-slate-800/70"}`}>
-        <dt className="mb-1 text-sm font-extrabold">노란색 · 화면 표시</dt>
-        <dd>{warning ?? "별도 기준 없음"}</dd>
-      </div>
-      <div className={`min-w-0 rounded-lg p-3 ${kakao ? "bg-rose-50 text-rose-950 dark:bg-rose-950/35 dark:text-rose-100" : "bg-slate-50 dark:bg-slate-800/70"}`}>
-        <dt className="mb-1 text-sm font-extrabold">{kakao ? "빨간색 · 카톡 1회" : "카톡"}</dt>
-        <dd>{kakao ?? "카톡 발송 없음"}</dd>
-      </div>
-    </dl>
-    {note && <div className={`mt-3 ${muted}`}>{note}</div>}
-    {Children.toArray(children).length > 0 && <div className="mt-4 grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2 dark:border-slate-700">{children}</div>}
-  </section>;
+  return <tr className="border-t border-slate-200 align-top dark:border-slate-700">
+    <th scope="row" className="w-[28%] p-3 text-left font-semibold">{title}
+      {description && <p className="mt-1 text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">{description}</p>}
+      {note && <details className="mt-2 text-xs font-normal leading-5"><summary className="cursor-pointer text-slate-500">참고 사항</summary><div className="mt-1">{note}</div></details>}
+      {Children.toArray(children).length > 0 && <div className="mt-2 space-y-2">{children}</div>}
+    </th>
+    <td className="p-3 leading-6">{warning || "—"}</td>
+    <td className="p-3 leading-6">{kakao || "발송 없음"}</td>
+  </tr>;
 }
 
 function duration(minutes: number) {
@@ -65,7 +58,7 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
   const [notice, setNotice] = useState("");
   useEffect(() => { if (query.data && !editing) setDraft(query.data); }, [query.data, editing]);
   if (query.isPending || !draft && !query.isError) return <div className="p-6"><CircleLoader size="xs" /></div>;
-  if (query.isError || !draft) return <div role="alert" className={card}>설정을 불러오지 못했습니다.<button className="ml-3 min-h-12 underline" onClick={()=>query.refetch()}>다시 시도</button></div>;
+  if (query.isError || !draft) return <div role="alert" className={card}>설정을 불러오지 못했습니다.<button className="ml-3 min-h-10 underline" onClick={()=>query.refetch()}>다시 시도</button></div>;
   const p = draft.policy;
   const canEdit = draft.canEdit;
   const locked = !canEdit || !editing || saving;
@@ -83,21 +76,29 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
     finally { setSaving(false); }
   }
   const number = (label: string, key: keyof Omit<Policy,"hospitals"|"coldChillerEnabled">, unit: string, min: number, max: number, step = 1) =>
-    <label className="block min-w-0 text-base font-semibold">{label} ({unit})<input type="number" required min={min} max={max} step={step} disabled={locked} className={field} value={p[key]} onChange={e=>change({[key]:e.target.valueAsNumber})}/></label>;
+    <label className="block min-w-0 text-sm font-semibold">{label} ({unit})<input type="number" required min={min} max={max} step={step} disabled={locked} className={field} value={p[key]} onChange={e=>change({[key]:e.target.valueAsNumber})}/></label>;
   const hospitals = draft.hospitals.filter(h=>(!siteId || h.siteId===siteId) && (!search || h.name.includes(search)));
-  return <form onSubmit={save} className="space-y-5 text-base leading-relaxed">
+  return <form onSubmit={save} className="space-y-3 text-sm leading-relaxed">
     {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && <p className="rounded-lg bg-slate-100 p-4 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">개발용 화면 · 실제 카톡은 발송되지 않습니다.</p>}
     <section className={card}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div><h2 className="text-xl font-extrabold">우리 회사 알림 기준</h2><p className="mt-2 text-slate-600 dark:text-slate-300">관리자가 저장하면 회사 전체 사용자에게 함께 적용됩니다.</p></div>
-        {canEdit && !editing && <button type="button" onClick={()=>{setEditing(true);setNotice("");}} className="min-h-12 rounded-lg bg-sky-700 px-5 font-bold text-white">설정 변경</button>}
+        <div><h2 className="text-base font-extrabold">우리 회사 알림 기준</h2><p className="mt-2 text-slate-600 dark:text-slate-300">관리자가 저장하면 회사 전체 사용자에게 함께 적용됩니다.</p></div>
+        {canEdit && !editing && <button type="button" onClick={()=>{setEditing(true);setNotice("");}} className="min-h-10 rounded-lg bg-sky-700 px-5 font-bold text-white">설정 변경</button>}
       </div>
       {!canEdit && <p className="mt-3 font-semibold">설정 변경은 회사 관리자에게 요청해주세요.</p>}
       <p className="mt-3">노란색은 표에서만 확인하고, 빨간색은 문제당 카톡을 한 번 받습니다.</p>
       <p className={`mt-1 ${muted}`}>두 조건이 겹치면 빨간색을 우선합니다. 정상 측정이 2회 연속 확인된 뒤 같은 문제가 다시 발생하면 새로 알립니다.</p>
-      <Link href="/notification-settings?from=baselines" className="mt-2 inline-flex min-h-12 items-center font-bold text-sky-800 underline dark:text-sky-300">내 카톡 수신 시간·주말 설정 →</Link>
+      <Link href="/notification-settings?from=baselines" className="mt-2 inline-flex min-h-10 items-center font-bold text-sky-800 underline dark:text-sky-300">내 카톡 수신 시간·주말 설정 →</Link>
       {notice && <p role="status" className="mt-2 rounded-lg bg-emerald-50 p-3 font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
     </section>
+    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <table className="w-full min-w-[540px] border-collapse text-sm">
+      <caption className="sr-only">회사 공통 알림 기준</caption>
+      <thead className="bg-slate-50 text-left dark:bg-slate-800"><tr>
+        <th scope="col" className="p-3 font-semibold">측정항목</th>
+        <th scope="col" className="p-3 font-semibold text-amber-700 dark:text-amber-300">주의 · 화면 표시만</th>
+        <th scope="col" className="p-3 font-semibold text-red-700 dark:text-red-300">위험 · 카톡 1회</th>
+      </tr></thead><tbody>
     <AlertCriterion
       title="헬륨 압력"
       description="최근 7일 평균과 고정 압력 기준을 함께 확인합니다."
@@ -147,7 +148,7 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
       description={p.coldChillerEnabled ? "알림 켜짐 · 공냉식 병원은 제외됩니다." : "알림 꺼짐"}
       kakao={p.coldChillerEnabled && <>IN·OUT 온도 차이가 <strong>0.1°C 이하</strong></>}
     >
-      {editing && <label className="flex min-h-12 items-center gap-3 font-bold">
+      {editing && <label className="flex min-h-10 items-center gap-3 font-bold">
         <input type="checkbox" className="h-6 w-6" disabled={locked} checked={p.coldChillerEnabled} onChange={e=>change({coldChillerEnabled:e.target.checked})}/>
         정지 의심 알림 사용
       </label>}
@@ -162,17 +163,18 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
       {editing && number("노란색으로 표시할 지연","collectionWarning","수집 주기의 배수",1,23)}
       {editing && number("카톡을 보낼 지연","collectionCritical","수집 주기의 배수",2,24)}
     </AlertCriterion>
+    </tbody></table></div>
     <section className={card}>
-      <h3 className="text-lg font-extrabold">병원별 알림 켜기·끄기</h3>
+      <h3 className="text-sm font-extrabold">병원별 알림 켜기·끄기</h3>
       <p className="mt-2">알림을 끄면 회사 전체 사용자의 알림이 중지됩니다. 측정값과 그래프는 계속 볼 수 있습니다.</p>
       {!siteId && <label className="mt-4 block font-bold">병원 찾기<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="병원 이름 입력" className={field}/></label>}
-      <div className="mt-4 space-y-4">{hospitals.map(h=>{
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">{hospitals.map(h=>{
         const config=p.hospitals[h.siteId]??h.settings;
         const update=(patch:Partial<Hospital>)=>change({hospitals:{...p.hospitals,[h.siteId]:{...config,...patch}}});
         return <div key={h.siteId} className="rounded-lg border border-slate-200 p-4 dark:border-slate-600">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h4 className="text-lg font-bold">{h.name}</h4>
-            {editing ? <label className="flex min-h-12 items-center gap-3 font-bold">
+            <h4 className="text-sm font-bold">{h.name}</h4>
+            {editing ? <label className="flex min-h-10 items-center gap-3 font-bold">
               <input type="checkbox" className="h-6 w-6" disabled={locked} checked={config.enabled} onChange={e=>update({enabled:e.target.checked})}/>
               {config.enabled ? "알림 켜짐" : "알림 꺼짐"}
             </label> : <span className={`rounded-full px-3 py-1 text-sm font-bold ${config.enabled ? "bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200" : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200"}`}>{config.enabled ? "알림 켜짐" : "알림 꺼짐"}</span>}
@@ -190,6 +192,6 @@ export default function CompanyAlertSettings({ siteId }: { siteId?: string }) {
       })}{hospitals.length===0 && <p>해당 병원이 없습니다.</p>}</div>
     </section>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-4 font-bold text-rose-800">{error}</p>}
-    {editing && <div className="sticky bottom-2 z-10 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-600 dark:bg-slate-900"><button type="submit" disabled={saving} className="min-h-12 flex-1 rounded-lg bg-sky-700 px-4 font-bold text-white disabled:opacity-50">{saving?"저장 중…":"저장하고 회사 전체에 적용"}</button><button type="button" disabled={saving} className="min-h-12 rounded-lg border px-4 font-bold" onClick={()=>{setEditing(false);setError("");}}>취소</button></div>}
+    {editing && <div className="sticky bottom-2 z-10 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-600 dark:bg-slate-900"><button type="submit" disabled={saving} className="min-h-10 flex-1 rounded-lg bg-sky-700 px-4 font-bold text-white disabled:opacity-50">{saving?"저장 중…":"저장하고 회사 전체에 적용"}</button><button type="button" disabled={saving} className="min-h-10 rounded-lg border px-4 font-bold" onClick={()=>{setEditing(false);setError("");}}>취소</button></div>}
   </form>;
 }
