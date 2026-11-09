@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/components/common/app-link";
 import CircleLoader from "@/components/icons/circle-loader";
 
 
@@ -39,6 +40,14 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     {threshold && <p className="mt-1 text-xs text-slate-300">{!site?.alertsEnabled ? "내 병원 알림 꺼짐" : !threshold.active ? "이 항목 알림 꺼짐" : "이 항목 알림 켜짐"} · {threshold.averageApplied ? threshold.historicalAverage ? "과거 24시간 평균 적용" : "24시간 평균 적용" : threshold.useAverage ? "평균 대기 · 대체 범위 적용" : "수동 범위 적용"}</p>}
     {threshold?.useAverage && threshold.historicalAverage && <p className="mt-2 text-xs leading-5 text-amber-200">최근 평균을 사용할 수 없어 마지막 정상 평균을 사용합니다.<br />{averagePeriodMessage(threshold)}</p>}
     {threshold?.useAverage && !threshold.averageApplied && <p className="mt-2 text-xs leading-5 text-amber-200">{averageUnavailableMessage(threshold)} 조건 충족 전까지 대체 범위를 사용합니다.</p>}
-    {threshold && <button type="button" onClick={onEdit} className="mt-3 min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-sky-900">이 알림 수정하기</button>}
+    <div className="mt-3 flex flex-wrap gap-2">
+      {threshold && <button type="button" onClick={onEdit} className="min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-sky-900">이 알림 수정하기</button>}
+      <Link
+        href={`/sites/${encodeURIComponent(selection.siteId)}?${new URLSearchParams({ metric: selection.metricKey })}#measurement-chart`}
+        scroll={false}
+        onNavigate={onClose}
+        className="inline-flex min-h-11 items-center rounded-lg border border-white/40 px-4 text-sm font-bold text-white"
+      >자세히</Link>
+    </div>
   </div>;
 }

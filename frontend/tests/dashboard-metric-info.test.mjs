@@ -21,9 +21,12 @@ function harness() {
   };
   const exports={};
   vm.runInNewContext(source,{
+    URLSearchParams,
     exports,require:name=>({react,'react/jsx-runtime':{jsx:()=>null,jsxs:()=>null},
       '@tanstack/react-query':{useQuery:()=>({isPending:pending,data:[]})},
-      '@/lib/api':{apiFetch(){}},'@/lib/alert-range':{}}[name]),
+      '@/lib/api':{apiFetch(){}},'@/lib/alert-range':{},
+      '@/components/common/app-link':{default:()=>null},
+      '@/components/icons/circle-loader':{default:()=>null}}[name]),
     window:{addEventListener(){},removeEventListener(){}},
     setTimeout:(callback,delay)=>{const id={};timers.set(id,{callback,at:now+delay});return id;},
     clearTimeout:id=>timers.delete(id)

@@ -122,6 +122,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const [mode, setMode] = useState<ViewMode>("single");
   const [focused, setFocused] = useState<MetricKey>("hepres");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const pickerTrigger = useRef<HTMLButtonElement>(null);
   const [preferencesReady, setPreferencesReady] = useState(false);
   useEffect(() => {
     try {
@@ -177,6 +178,32 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     }
     if (focused !== currentFocus) setFocused(currentFocus);
   }, [currentFocus, data, focused, metrics.length, selected, selection]);
+
+  const requestedMetric = sp.get("metric");
+  const chartTarget = useRef<HTMLDivElement>(null);
+  const openedMetric = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (!requestedMetric) {
+      openedMetric.current = null;
+      return;
+    }
+    if (!preferencesReady || isLoading || detailLoading || !data || data.monitoringConnected === false) return;
+    const metric = metrics.find((item) => item.key === requestedMetric);
+    const target = `${slug}:${requestedMetric}`;
+    if (!metric || openedMetric.current === target) return;
+    if (mode !== "single" || currentFocus !== metric.key) {
+      setSelected((keys) => [metric.key, ...keys.filter((key) => key !== metric.key)].slice(0, 4));
+      setFocused(metric.key);
+      setMode("single");
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      if (!chartTarget.current) return;
+      chartTarget.current.scrollIntoView({ block: "start" });
+      openedMetric.current = target;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [requestedMetric, slug, preferencesReady, isLoading, detailLoading, data, metrics, mode, currentFocus]);
 
   const toggleMetric = (key: MetricKey) => {
     if (selection.includes(key)) {
@@ -359,85 +386,87 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             ))}
           </div>
           <button
+            ref={pickerTrigger}
             type="button"
-            onClick={() => setPickerOpen(!pickerOpen)}
+            onClick={() => setPickerOpen((open) => !open)}
             aria-expanded={pickerOpen}
             aria-controls="metric-picker"
-            className="dropdown-trigger border-border dark:border-background-dark-secondary dark:bg-background-dark-secondary bg-background-primary inline-flex min-h-11 items-center gap-2 rounded-lg border px-3 text-sm font-bold shadow-sm"
+            className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-bold text-text-major transition-colors hover:bg-slate-50 active:bg-slate-100 aria-expanded:border-slate-300 aria-expanded:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-text-dark-primary dark:hover:bg-slate-800 dark:active:bg-slate-800 dark:aria-expanded:bg-slate-800"
           >
-            <span>
-              측정항목{" "}
-              <span className="text-brand-primary dark:text-brand-dark-primary">
-                {selection.length}/4
-              </span>
+            <span>측정항목</span>
+            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs tabular-nums text-slate-600 dark:bg-slate-700 dark:text-slate-200">
+              {selection.length}/4
             </span>
-            <span className="text-text-secondary dark:text-text-dark-primary/70 text-xs font-semibold">
-              {pickerOpen ? "닫기" : "열기"}
-            </span>
-            <ChevronDownIcon className="dropdown-arrow" />
+            <ChevronDownIcon className={`h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 motion-reduce:transition-none dark:text-slate-300 ${pickerOpen ? "rotate-180" : ""}`} />
           </button>
         </div>
-        {pickerOpen && (
-          <div
-            id="metric-picker"
-            className="mt-3 border-t pt-3"
-          >
-            <div className="mb-2 flex flex-wrap gap-2">
-              {(
-                [
-                  ["헬륨", ["hepres", "heleve"]],
-                  ["온도", ["actemp", "gctemp", "cctemp", "ccflow"]],
-                  ["냉각", ["gctemp", "gcflow", "cctemp", "ccflow"]],
-                ] as [string, MetricKey[]][]
-              ).filter(([, keys]) => keys.some((key) => metrics.some((metric) => metric.key === key))).map(([label, keys]) => (
-                <button
-                  key={label}
-                  type="button"
-                  className="min-h-11 rounded-lg border px-3 text-sm"
-                  onClick={() => {
-                    const visible = keys.filter((key) => metrics.some((metric) => metric.key === key));
-                    setSelected(visible);
-                    setFocused(visible[0]);
-                  }}
-                >
-                  {label} 묶음
-                </button>
-              ))}
-            </div>
-            <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-sm">
-              {selection.length === 4
-                ? "4개 선택 완료 · 다른 항목을 추가하려면 선택한 항목 하나를 해제하세요."
-                : "최소 1개, 최대 4개 항목을 선택하세요."}
-            </p>
-            <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
-              {metrics.map((metric) => {
-                const active = selection.includes(metric.key);
-                return (
+        <div
+          id="metric-picker"
+          inert={!pickerOpen}
+          className={`grid transition-[grid-template-rows,opacity] duration-200 ease-in-out motion-reduce:transition-none ${pickerOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="mt-3 border-t pt-3">
+              <div className="mb-2 flex flex-wrap gap-2">
+                {(
+                  [
+                    ["헬륨", ["hepres", "heleve"]],
+                    ["온도", ["actemp", "gctemp", "cctemp", "ccflow"]],
+                    ["냉각", ["gctemp", "gcflow", "cctemp", "ccflow"]],
+                  ] as [string, MetricKey[]][]
+                ).filter(([, keys]) => keys.some((key) => metrics.some((metric) => metric.key === key))).map(([label, keys]) => (
                   <button
-                    key={metric.key}
+                    key={label}
                     type="button"
-                    aria-pressed={active}
-                    disabled={
-                      active ? selection.length === 1 : selection.length === 4
-                    }
-                    onClick={() => toggleMetric(metric.key)}
-                    className={`min-h-11 min-w-0 rounded-lg border px-3 py-2 text-left text-sm break-words disabled:opacity-50 ${active ? "border-brand-primary bg-brand-primary text-white" : "dark:bg-background-dark-secondary"}`}
+                    className="min-h-11 rounded-lg border px-3 text-sm"
+                    onClick={() => {
+                      const visible = keys.filter((key) => metrics.some((metric) => metric.key === key));
+                      setSelected(visible);
+                      setFocused(visible[0]);
+                    }}
                   >
-                    {active ? "✓ " : "+ "}
-                    {metricTitle(metric)}
+                    {label} 묶음
                   </button>
-                );
-              })}
+                ))}
+              </div>
+              <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-sm">
+                {selection.length === 4
+                  ? "4개 선택 완료 · 다른 항목을 추가하려면 선택한 항목 하나를 해제하세요."
+                  : "최소 1개, 최대 4개 항목을 선택하세요."}
+              </p>
+              <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+                {metrics.map((metric) => {
+                  const active = selection.includes(metric.key);
+                  return (
+                    <button
+                      key={metric.key}
+                      type="button"
+                      aria-pressed={active}
+                      disabled={
+                        active ? selection.length === 1 : selection.length === 4
+                      }
+                      onClick={() => toggleMetric(metric.key)}
+                      className={`min-h-11 min-w-0 rounded-lg border px-3 py-2 text-left text-sm break-words disabled:opacity-50 ${active ? "border-brand-primary bg-brand-primary text-white" : "dark:bg-background-dark-secondary"}`}
+                    >
+                      {active ? "✓ " : "+ "}
+                      {metricTitle(metric)}
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  pickerTrigger.current?.focus({ preventScroll: true });
+                  setPickerOpen(false);
+                }}
+                className="bg-brand-primary mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold text-white"
+              >
+                선택 완료 · 차트 보기
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setPickerOpen(false)}
-              className="bg-brand-primary mt-3 min-h-11 w-full rounded-lg px-3 text-sm font-bold text-white"
-            >
-              선택 완료 · 차트 보기
-            </button>
           </div>
-        )}
+        </div>
         <p className="site-chart-mode-hint">{mode === "single" ? "아래에서 선택한 항목 하나를 큰 그래프로 봅니다." : mode === "grid" ? "선택한 항목을 작은 그래프로 나란히 봅니다." : "선택한 항목을 큰 그래프로 위에서 아래로 봅니다."}</p>
         {mode === "single" && <div
           className="site-chart-focus-items"
@@ -465,6 +494,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </div>
 
       <div
+        id="measurement-chart"
+        ref={chartTarget}
+        style={{ scrollMarginTop: "calc(68px + env(safe-area-inset-top, 0px))" }}
         className={
           mode === "grid"
             ? "grid min-w-0 grid-cols-1 gap-3 min-[360px]:grid-cols-2"

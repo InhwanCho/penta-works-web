@@ -15,8 +15,12 @@ export default function HospitalDetailTabs({ monitoringConnected, management, hi
   const id = useId();
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
   useLayoutEffect(() => {
-    // Inspection links must reveal the management panel before its section opens.
-    const reveal = () => { if (window.location.hash === "#hospital-history") setActive("history"); else if (MANAGEMENT_ANCHORS.has(window.location.hash)) setActive("management"); };
+    const reveal = () => {
+      const hash = window.location.hash;
+      if (hash === "#hospital-history") setActive("history");
+      else if (MANAGEMENT_ANCHORS.has(hash)) setActive("management");
+      else if (hash === "#measurement-chart") setActive("measurements");
+    };
     reveal();
     window.addEventListener("hashchange", reveal);
     return () => window.removeEventListener("hashchange", reveal);
