@@ -30,6 +30,15 @@ const Z_FIXED = "z-20";
 /** 셀 공통 보더. border-collapse 대신 border-separate 를 쓰므로 셀마다 지정합니다. */
 const CELL_BORDER = "dark:border-background-dark-secondary border-b border-r";
 
+// Status text follows the measured column width without contributing to it.
+const METRIC_STATUS = "block truncate text-[9px] leading-tight [contain:inline-size] lg:text-[10px]";
+const SHORT_METRIC_STATUS: Record<string, string> = {
+  "기준 초과": "초과",
+  "측정 누락": "누락",
+  "평균 위에서 상승": "상승",
+  "교체 후 안정화 중": "안정화",
+};
+
 /** sticky 셀은 반드시 불투명 배경이어야 아래 셀이 비치지 않습니다. */
 const HEAD_BG = "bg-[#dce9f2] lg:bg-[#eaf0f4] dark:bg-[#294454] dark:lg:bg-[#253b48]";
 const FIXED_BG =
@@ -295,15 +304,21 @@ export default function DashboardExcelView({
                       const reading = row.companyAlertState?.readings[m.key];
                       const alert = row.companyAlertState ? reading?.level === "RED" : isMetricOutOfRange(value, m.bound, range);
                       const warning = reading?.level === "YELLOW";
+                      const status = reading && (alert || warning) ? reading : undefined;
+                      const quiet = m.key === "hepres" && row.companyAlertState?.pressureQuiet;
+                      const statusDetail = [
+                        status && `${status.message}${status.consecutive > 0 ? ` · 연속 ${status.consecutive}회` : ""}`,
+                        quiet && "콜드헤드 교체 후 카톡 쉬는 중",
+                      ].filter(Boolean).join(" · ");
 
                       return (
                         <td
                           key={m.key}
                           onClick={() => selectCell(row, m.code, m)}
                           onContextMenu={(event) => { event.preventDefault(); event.stopPropagation(); onOpenAlertSettings(row.siteDb, m.key); }}
-                          title="우클릭하여 알림값 확인·설정"
+                          title={statusDetail || "우클릭하여 알림값 확인·설정"}
                           tabIndex={0}
-                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${row.lastAt != null && (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) ? "측정 안됨" : formatMetricMeasurement(value, null, row.lastAt != null)}`}
+                          aria-label={`${row.name ?? "병원명 없음"}, ${metricSubLabel(m.label, m.unit) ?? m.code}, ${row.lastAt != null && (value == null || !Number.isFinite(value) || isUnmeasuredMetricValue(value)) ? "측정 안됨" : formatMetricMeasurement(value, null, row.lastAt != null)}${statusDetail ? `, ${statusDetail}` : ""}`}
                           onKeyDown={(event) => {
                             if (event.key === "ContextMenu" || (event.shiftKey && event.key === "F10")) {
                               event.preventDefault();
@@ -325,8 +340,8 @@ export default function DashboardExcelView({
                           ].join(" ")}
                         >
                           {formatMetricMeasurement(value, null, row.lastAt != null, "-")}
-                          {reading && reading.level !== "NORMAL" && <span className="block text-[9px] font-medium leading-tight lg:text-[10px]">{reading.message}{reading.consecutive > 0 ? ` · 연속 ${reading.consecutive}회` : ""}</span>}
-                          {m.key === "hepres" && row.companyAlertState?.pressureQuiet && <span className="block text-[9px] leading-tight lg:text-[10px]">교체 후 카톡 쉬는 중</span>}
+                          {status && <span className={`${METRIC_STATUS} font-medium`}>{SHORT_METRIC_STATUS[status.message] ?? status.message}{status.consecutive > 0 ? ` ${status.consecutive}회` : ""}</span>}
+                          {quiet && <span className={METRIC_STATUS}>카톡 중지</span>}
                         </td>
                       );
                     })}
