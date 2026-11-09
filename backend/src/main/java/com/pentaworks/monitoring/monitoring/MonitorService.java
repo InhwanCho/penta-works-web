@@ -54,6 +54,10 @@ public class MonitorService {
     @org.springframework.beans.factory.annotation.Autowired
     public void setOperatingHours(com.pentaworks.monitoring.alert.SiteOperatingHoursService value){this.operatingHours=value;}
 
+    private com.pentaworks.monitoring.alert.CompanyAlertPolicyService companyPolicies;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setCompanyPolicies(com.pentaworks.monitoring.alert.CompanyAlertPolicyService value) { this.companyPolicies=value; }
+
     public Map<String, Object> run() {
         var base=alertService.alertSettings();
         var states=averages.states();
@@ -62,13 +66,15 @@ public class MonitorService {
         Map<String,com.pentaworks.monitoring.alert.SiteOperatingHours.Status> hours=new LinkedHashMap<>();
         if(operatingHours!=null)for(var row:rows) {
             var state=operatingHours.status(row.siteDb(),clock);hours.put(row.siteDb(),state);
-            operatingHours.resetSession(row.siteDb(),state);
+            // Company incidents are rearmed by two normal measurements, including across overnight closures.
         }
         List<Transition> all=new ArrayList<>();
         Map<String,List<DashboardService.MetricSample>> samples=new LinkedHashMap<>();
         for(CurrentUser user:personal.activeUsers()) {
             Map<String,SiteAlertSettings> settings=new LinkedHashMap<>();
             personal.settings(user,base,states).forEach(value->settings.put(value.siteid(),value));
+            var companyPolicy=companyPolicies.saved(user.companyId()).policy();
+            var replacements=companyPolicies.replacements(user.companyId());
             List<Transition> transitions=new ArrayList<>();
             for(var row:rows) {
                 SiteAlertSettings site=settings.get(row.siteDb());
@@ -76,23 +82,12 @@ public class MonitorService {
                 var operating=hours.get(row.siteDb());
                 if(operating!=null && !operating.monitoring())continue;
                 Long effectiveLag=monitoringLag(row.lagMin(),operating,clock.toInstant());
-                Transition noData=alertEvents.evaluateNoData(user.id(),site,effectiveLag);
-                if(noData!=null)transitions.add(noData);
-                if(com.pentaworks.monitoring.alert.CollectionHealth.isMissing(row.lagMin(),site.collectionIntervalMinutes(),site.missingCollectionThreshold()))continue;
-                if(operating!=null && operating.sessionStart()!=null && (row.lastAt()==null || java.time.Instant.parse(row.lastAt()).isBefore(operating.sessionStart())))continue;
-                Transition chiller=alertEvents.evaluateColdChiller(user.id(),site,row.metrics().get("cctemp"),row.metrics().get("ccflow"));
-                if(chiller!=null)transitions.add(chiller);
-                for(AlertThreshold threshold:site.thresholds()) {
-                    if(threshold.missingActive()) {
-                        var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576).stream().filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList());
-                        Transition missing=alertEvents.evaluateMetricMissing(user.id(),site,threshold,
-                            consecutiveMissing(history,threshold.key(),site.collectionIntervalMinutes(),row.lastAt()));
-                        if(missing!=null)transitions.add(missing);
-                    }
-                    if(!threshold.active())continue;
-                    var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576).stream().filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList());
-                    int consecutive=com.pentaworks.monitoring.alert.RangeExcursions.count(history,threshold,site.collectionIntervalMinutes(),row.lastAt());
-                    Transition event=alertEvents.evaluate(user.id(),site,threshold,row.metrics().get(threshold.key()),consecutive);
+                var history=samples.computeIfAbsent(row.siteDb(),id->dashboardService.recentMetricSamples(id,576).stream()
+                    .filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList());
+                var state=com.pentaworks.monitoring.alert.CompanyAlertEvaluation.evaluate(companyPolicy,site,row,history,
+                    replacements.get(row.siteDb()),clock.toInstant(),effectiveLag,true);
+                for (var signal:state.signals()) {
+                    Transition event=alertEvents.evaluateCompanyIncident(user.id(),site,signal);
                     if(event!=null)transitions.add(event);
                 }
             }
@@ -135,6 +130,15 @@ public class MonitorService {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Seoul"));
         for (Map.Entry<String, List<Transition>> entry : bySite.entrySet()) {
             List<Transition> siteAlerts = entry.getValue().stream().filter(alert -> !"__cold_chiller__".equals(alert.metricKey()) || !alertEvents.airCooled(alert.siteId())).toList();
+            if(companyPolicies != null) {
+                Long company=personal.companyId(userId);
+                if(company != null && companyPolicies.pressureQuiet(company,entry.getKey(),now.toInstant())) {
+                    var muted=siteAlerts.stream().filter(a->a.metricKey().equals("hepres")).toList();
+                    if(manual && !muted.isEmpty())throw new BadRequestException("콜드헤드 교체 후 5일 동안 헬륨 압력 카톡은 쉽니다.");
+                    alertEvents.markDelivery(muted.stream().map(Transition::eventId).toList(),"SKIPPED","콜드헤드 교체 후 5일 안정화 기간",0);
+                    siteAlerts=siteAlerts.stream().filter(a->!a.metricKey().equals("hepres")).toList();
+                }
+            }
             if(siteAlerts.isEmpty()) continue;
             if(operatingHours!=null && !operatingHours.status(entry.getKey(),now).monitoring()) {
                 if(manual)throw new BadRequestException("병원 운영시간 외이거나 감시 유예 시간입니다.");

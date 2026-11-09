@@ -1,94 +1,32 @@
 "use client";
 
-import CircleLoader from "@/components/icons/circle-loader";
-import PageLoader from "@/components/common/page-loader";
-
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, type SiteAlertSettings } from "@/lib/api";
-import dynamic from "next/dynamic";
-import { useRouter } from "next/navigation";
-import { alertSettingsPageUrl } from "@/lib/alert-settings-navigation";
+import Link from "@/components/common/app-link";
 import type { AlertSettingsPane } from "./alert-settings-table";
+import CompanyAlertSettings from "./company-alert-settings";
 
-const SiteThresholdEditor = dynamic(() => import("./baselines-client").then(module => module.SiteThresholdEditor), {
-  loading: () => <div role="status" className="p-6 text-center"><CircleLoader size="xs" /></div>,
-});
-
-/** All entry points share the editor, authorization and query cache. */
 export default function SiteAlertSettingsButton({ siteId }: { siteId: string }) {
-  const [open, setOpen] = useState(false);
-  return <>
-    <button type="button" onClick={() => setOpen(true)} className="work-secondary hospital-section-action">알림값 설정</button>
-    {open && <SiteAlertSettingsDialog siteId={siteId} onClose={() => setOpen(false)} />}
-  </>;
+  const [open,setOpen]=useState(false);
+  return <><button type="button" onClick={()=>setOpen(true)} className="work-secondary hospital-section-action">알림 설정</button>{open && <SiteAlertSettingsDialog siteId={siteId} onClose={()=>setOpen(false)}/>}</>;
 }
 
-export function SiteAlertSettingsDialog({ page = false, siteId, initialMetricKey, initialPane, onlyMetricKey, onClose }: {
-  page?: boolean;
-  siteId: string;
-  initialMetricKey?: string;
-  initialPane?: AlertSettingsPane;
-  onlyMetricKey?: string;
-  onClose: () => void;
+export function SiteAlertSettingsDialog({ page=false,siteId,onClose }: {
+  page?: boolean; siteId: string; initialMetricKey?: string; initialPane?: AlertSettingsPane; onlyMetricKey?: string; onClose:()=>void;
 }) {
-  const router = useRouter();
-  const mobilePage = !page && typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches;
+  const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
-    if (mobilePage) router.push(alertSettingsPageUrl(siteId, window.location.pathname, {metric:initialMetricKey, pane:initialPane, only:onlyMetricKey}));
-  }, [mobilePage, router, siteId, initialMetricKey, initialPane, onlyMetricKey]);
-  const client = useQueryClient();
-  const settings = useQuery({
-    queryKey: ["alert-thresholds"],
-    queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"),
-    enabled: true,
-    staleTime: 60_000,
-    refetchInterval: 60_000,
-  });
-  const entry = settings.data?.find(site => site.siteid === siteId);
-  async function save(value: SiteAlertSettings) {
-    const metric = value.thresholds.find(item => item.key === onlyMetricKey);
-    if (onlyMetricKey && !metric) throw new Error("선택한 항목을 찾을 수 없습니다.");
-    const saved = await apiFetch<SiteAlertSettings>(onlyMetricKey
-      ? `/alerts/thresholds/${encodeURIComponent(siteId)}/metrics/${encodeURIComponent(onlyMetricKey)}`
-      : `/alerts/thresholds/${encodeURIComponent(siteId)}`, {
-      method: "PATCH",
-      body: JSON.stringify(onlyMetricKey && metric ? {
-        min: metric.min, max: metric.max, active: metric.active,
-        useAverage: metric.useAverage, tolerancePercent: metric.tolerancePercent, missingActive: metric.missingActive, missingThreshold: metric.missingThreshold,
-      } : {
-        thresholds: value.thresholds.map(({key,min,max,active,useAverage,tolerancePercent,missingActive,missingThreshold}) =>
-          ({key,min,max,active,useAverage,tolerancePercent,missingActive,missingThreshold})),
-        noDataMinutes: value.noDataMinutes,
-        noDataActive: value.noDataActive,
-        alertsEnabled: value.alertsEnabled,
-        triggerAfterMinutes: value.triggerAfterMinutes,
-        repeatMinutes: value.repeatMinutes,
-        quietStart: value.quietStart,
-        quietEnd: value.quietEnd,
-        suppressWeekends: value.suppressWeekends,
-        holidayDates: value.holidayDates,
-        coldChillerActive: value.coldChillerActive,
-        collectionIntervalMinutes: value.collectionIntervalMinutes,
-        missingCollectionThreshold: value.missingCollectionThreshold,
-      }),
-    });
-    client.setQueryData<SiteAlertSettings[]>(["alert-thresholds"], (current = []) =>
-      current.map(site => site.siteid === saved.siteid ? saved : site));
-    await Promise.all([
-      client.invalidateQueries({queryKey:["dashboard"]}),
-      client.invalidateQueries({queryKey:["siteDetail"]}),
-      client.invalidateQueries({queryKey:["alert-events"]}),
-    ]);
-    return saved;
-  }
-  if (page && settings.isPending) return <PageLoader />;
-  if (mobilePage) return <PageLoader />;
-  const content = (<>
-      {entry && !settings.isError && <SiteThresholdEditor page={page} entry={entry} canEdit={true} initialMetricKey={initialMetricKey} initialPane={initialPane} onlyMetricKey={onlyMetricKey} onClose={onClose} onSave={save} />}
-      {(!entry || settings.isError) && <div role={page ? undefined : "dialog"} aria-modal={page ? undefined : true} aria-label="알림값 설정 불러오기" className={page ? "mx-auto max-w-lg p-4" : "fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/45 p-4"}><div className="w-full max-w-sm rounded-xl bg-white p-5 dark:bg-background-dark-card"><p role="status">{settings.isPending ? <CircleLoader size="xs" /> : settings.isError ? "알림 설정을 불러오지 못했습니다." : "이 병원의 알림 설정에 접근할 수 없습니다."}</p><div className="mt-4 flex gap-3">{settings.isError && <button type="button" onClick={() => settings.refetch()} className="min-h-11 font-bold">다시 시도</button>}<button type="button" onClick={onClose} className="min-h-11 font-bold">닫기</button></div></div></div>}
-    </>);
-  return page ? content : createPortal(content, document.body);
+    if (page) return;
+    const node=dialog.current;
+    const previous=document.body.style.overflow;
+    document.body.style.overflow="hidden";
+    node?.showModal();
+    return ()=>{node?.close();document.body.style.overflow=previous;};
+  },[page]);
+  const content = <div className="mx-auto max-w-4xl p-3">
+    <div className="mx-auto max-w-4xl"><div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-xl font-bold">알림 설정</h2><button autoFocus type="button" onClick={onClose} className="min-h-12 rounded-lg border px-5 font-bold">닫기</button></div>
+    <CompanyAlertSettings siteId={siteId}/><Link href="/baselines?view=settings" className="my-4 inline-flex min-h-12 items-center underline">전체 병원 알림 설정 보기</Link></div>
+  </div>;
+  return page ? content : createPortal(<dialog ref={dialog} onCancel={onClose} aria-label="회사 공통 알림 설정"
+    className="fixed inset-0 m-auto max-h-[95dvh] w-full max-w-5xl overflow-y-auto rounded-xl bg-white p-0 text-slate-900 backdrop:bg-black/50 dark:bg-slate-950 dark:text-white">{content}</dialog>,document.body);
 }

@@ -390,6 +390,43 @@ public class AlertEventService {
         return new Transition(eventId,site.siteid(),site.name(),threshold.key(),threshold.label()+" 측정 누락","회","METRIC_MISSING",(double)count,null,(double)threshold.missingThreshold(),message);
     }
 
+    /** The rule row serializes concurrent workers, preserving one incident until two good measurements. */
+    @Transactional
+    public Transition evaluateCompanyIncident(long userId, SiteAlertSettings site, CompanyAlertEvaluation.Signal signal) {
+        if (!site.alertsEnabled() || !site.dashboardVisible()) return null;
+        String ruleType = signal.type().equals("HIGH") ? "RANGE" : signal.type();
+        dbCompanyRule(userId,site.siteid(),signal,ruleType);
+        long ruleId = jdbcTemplate.queryForObject(
+            "SELECT id FROM alert_rule WHERE user_id=? AND site_id=? AND metric_key=? AND rule_type=? FOR UPDATE",
+            Long.class,userId,site.siteid(),signal.key(),ruleType);
+        OpenEvent open = openEvent(ruleId);
+        if (signal.recovered()) {
+            if (open != null) jdbcTemplate.update("UPDATE alert_event SET recovered_at=CURRENT_TIMESTAMP(6) WHERE id=?",open.id());
+            return null;
+        }
+        if (!signal.triggered()) return null;
+        String message = site.name() + " · " + signal.label() + " · " +
+            (signal.type().equals("METRIC_MISSING") ? signal.value().intValue() + "회 연속 누락" :
+             signal.type().equals("NO_DATA") ? "수집 주기 " + site.collectionIntervalMinutes() + "분 · 데이터 수집 중단" :
+             signal.key().equals("__cold_chiller__") ? "IN·OUT 온도 차이 0.1°C 이하" : signal.limit() + " " + signal.unit() + " 초과 2회 이상 연속");
+        long eventId;
+        if (open == null) {
+            eventId = insertEvent(ruleId,site.siteid(),signal.type(),signal.value(),message,Instant.now(),null);
+        } else {
+            jdbcTemplate.update("UPDATE alert_event SET measured_value=?,threshold_max=?,message=? WHERE id=?",signal.value(),signal.limit(),message,open.id());
+            if (!repeatDue(open,0)) return null;
+            eventId = open.id();
+        }
+        return new Transition(eventId,site.siteid(),site.name(),signal.key(),signal.label(),signal.unit(),signal.type(),signal.value(),null,signal.limit(),message);
+    }
+    private void dbCompanyRule(long userId,String siteId,CompanyAlertEvaluation.Signal signal,String ruleType) {
+        jdbcTemplate.update("""
+            INSERT INTO alert_rule(user_id,site_id,metric_key,rule_type,max_value,no_data_minutes,severity,is_enabled,created_at,updated_at)
+            VALUES(?,?,?,?,?,?,'WARNING',TRUE,CURRENT_TIMESTAMP(6),CURRENT_TIMESTAMP(6))
+            ON DUPLICATE KEY UPDATE min_value=NULL,max_value=VALUES(max_value),no_data_minutes=VALUES(no_data_minutes),is_enabled=TRUE
+            """,userId,siteId,signal.key(),ruleType,signal.limit(),signal.type().equals("NO_DATA") ? signal.limit().intValue() : null);
+    }
+
     public void markDelivery(List<Long> eventIds, String status, String error) {
         markDelivery(eventIds, status, error, 0);
     }

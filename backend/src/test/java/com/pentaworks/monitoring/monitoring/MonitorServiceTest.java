@@ -33,7 +33,13 @@ class MonitorServiceTest {
         when(personal.settings(org.mockito.ArgumentMatchers.eq(actor),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.anyMap())).thenAnswer(i->i.getArgument(1));
         when(personal.settings(org.mockito.ArgumentMatchers.any())).thenAnswer(i->alerts.alertSettings());
         when(events.owner(org.mockito.ArgumentMatchers.anyLong())).thenReturn(1L);
-        return new MonitorService(dashboard,alerts,events,recipients,deliveries,kakao,personal,averages);
+        return shared(new MonitorService(dashboard,alerts,events,recipients,deliveries,kakao,personal,averages));
+    }
+
+    private MonitorService shared(MonitorService monitor) {
+        var company=mock(com.pentaworks.monitoring.alert.CompanyAlertPolicyService.class);
+        when(company.saved(org.mockito.ArgumentMatchers.anyLong())).thenReturn(new com.pentaworks.monitoring.alert.CompanyAlertPolicyService.Saved(0,com.pentaworks.monitoring.alert.CompanyAlertPolicyService.Policy.defaults()));
+        monitor.setCompanyPolicies(company);return monitor;
     }
 
     @Test
@@ -90,8 +96,8 @@ class MonitorServiceTest {
             List.of(threshold), 30, false, true, 0, 0, null, null, false)));
         var transition = new AlertEventService.Transition(10, "001", "병원", "hepres", "He Pressure",
             "psi", "HIGH", 3.25, 0.5, 2.0, "이상");
-        when(alertEvents.evaluate(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.eq(3.25), org.mockito.ArgumentMatchers.eq(2))).thenReturn(transition);
+        when(alertEvents.evaluateCompanyIncident(org.mockito.ArgumentMatchers.eq(1L),org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.argThat(signal->signal.key().equals("hepres") && signal.type().equals("HIGH") && signal.triggered()))).thenReturn(transition);
         when(recipients.personalPhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.isNull()))
             .thenReturn(List.of("01012345678"));
         when(recipients.personalPhones(org.mockito.ArgumentMatchers.eq("001"), org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.eq(10L)))
@@ -138,40 +144,16 @@ class MonitorServiceTest {
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    void evaluatesEveryEnabledMetric() {
-        DashboardService dashboard = mock(DashboardService.class);
-        AlertService alerts = mock(AlertService.class);
-        AlertEventService alertEvents = mock(AlertEventService.class);
-        AlertRecipientService recipients = mock(AlertRecipientService.class);
-        DashboardResponse.DashboardRow row = new DashboardResponse.DashboardRow(
-            "001", "1", "병원", "2026-09-28T00:00:00Z", 0L, 1, 1, 1.0, 70.0,
-            Map.of("actemp", 31.0, "hepres", 1.0), "NORMAL", 0, 0, List.of());
-        when(dashboard.getDashboard()).thenReturn(new DashboardResponse(
-            new DashboardResponse.Meta(1, 1, 1), new DashboardResponse.Stats(1, 1, 0, 1, 1, 0, 0, 0),
-            List.of(row), Map.of(), null));
-        when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001", "병원", true, List.of(
-            new AlertThreshold("actemp", "AC Temp", "°C", 15.0, 25.0, true),
-            new AlertThreshold("hepres", "He Pressure", "psi", 0.8, 1.3, true)
-        ), 30, false, true, 0, 0, null, null, false)));
-        when(recipients.hasConfiguredPhones("001")).thenReturn(true);
-        AlertEventService.Transition transition = new AlertEventService.Transition(
-            10, "001", "병원", "actemp", "AC Temp", "°C", "HIGH", 31.0, 15.0, 25.0,
-            "병원 · AC Temp 값이 최대값보다 높습니다.");
-        when(alertEvents.evaluate(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any(),
-            org.mockito.ArgumentMatchers.argThat(threshold -> "actemp".equals(threshold.key())),
-            org.mockito.ArgumentMatchers.eq(31.0), org.mockito.ArgumentMatchers.anyInt())).thenReturn(transition);
-
-        Map<String, Object> result = monitor(dashboard, alerts, alertEvents, recipients,
-            mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),
-            mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run();
-
-        assertEquals(1, result.get("count"));
-        List<AlertEventService.Transition> rows = (List<AlertEventService.Transition>) result.get("alerts");
-        assertEquals("actemp", rows.get(0).metricKey());
-        assertEquals("HIGH", rows.get(0).eventType());
-        verify(alertEvents).markDelivery(List.of(10L), "SKIPPED",
-            "내 계정의 휴대폰 번호와 병원 표시 설정을 확인해주세요. 숨긴 병원은 알림이 중지됩니다.", 0);
+    void averageOnlyMetricsNeverCreateKakaoIncidents() {
+        var dashboard=mock(DashboardService.class);var alerts=mock(AlertService.class);var events=mock(AlertEventService.class);
+        var at=java.time.Instant.parse("2026-11-09T00:00:00Z");
+        var values=Map.of("actemp",31.0,"hepres",2.0);
+        var row=new DashboardResponse.DashboardRow("001","1","병원",at.toString(),0L,1,1,2.0,70.0,values,"NORMAL",0,0,List.of());
+        when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,1,0,1,1,0,0,0),List.of(row),Map.of(),null));
+        when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(new DashboardService.MetricSample(at,values)));
+        when(alerts.alertSettings()).thenReturn(List.of(new SiteAlertSettings("001","병원",true,List.of(new AlertThreshold("actemp","온도","°C",15.0,25.0,true)),30,true,true,0,30,null,null,false)));
+        monitor(dashboard,alerts,events,mock(AlertRecipientService.class),mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run();
+        verify(events,org.mockito.Mockito.never()).evaluateCompanyIncident(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.argThat(signal->signal.key().equals("actemp")));
     }
 
     @Test
@@ -214,18 +196,22 @@ class MonitorServiceTest {
         when(personal.activeUsers()).thenReturn(List.of(first,second));
         when(personal.settings(org.mockito.ArgumentMatchers.eq(first),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.anyMap())).thenReturn(List.of(a));
         when(personal.settings(org.mockito.ArgumentMatchers.eq(second),org.mockito.ArgumentMatchers.anyList(),org.mockito.ArgumentMatchers.anyMap())).thenReturn(List.of(b));
-        var row=new DashboardResponse.DashboardRow("001","1","병원",null,0L,1,1,3.0,70.0,Map.of("hepres",3.0),"NORMAL",0,0,List.of());
+        var row=new DashboardResponse.DashboardRow("001","1","병원","2026-11-09T00:00:00Z",0L,1,1,3.0,70.0,Map.of("hepres",3.0),"NORMAL",0,0,List.of());
         when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,1,0,1,1,0,0,0),List.of(row),Map.of(),null));
         var firstEvent=new AlertEventService.Transition(10,"001","병원","hepres","He Pressure","psi","HIGH",3.0,0.5,2.0,"이상");
         var secondEvent=new AlertEventService.Transition(11,"001","병원","hepres","He Pressure","psi","HIGH",3.0,0.5,2.0,"이상");
-        when(events.evaluate(1,a,threshold,3.0, 0)).thenReturn(firstEvent);when(events.evaluate(2,b,threshold,3.0, 0)).thenReturn(secondEvent);
+        when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(
+            new DashboardService.MetricSample(java.time.Instant.parse("2026-11-09T00:00:00Z"),Map.of("hepres",3.0)),
+            new DashboardService.MetricSample(java.time.Instant.parse("2026-11-08T23:50:00Z"),Map.of("hepres",3.0))));
+        when(events.evaluateCompanyIncident(org.mockito.ArgumentMatchers.eq(1L),org.mockito.ArgumentMatchers.eq(a),org.mockito.ArgumentMatchers.argThat(signal->signal.key().equals("hepres")&&signal.type().equals("HIGH")&&signal.triggered()))).thenReturn(firstEvent);
+        when(events.evaluateCompanyIncident(org.mockito.ArgumentMatchers.eq(2L),org.mockito.ArgumentMatchers.eq(b),org.mockito.ArgumentMatchers.argThat(signal->signal.key().equals("hepres")&&signal.type().equals("HIGH")&&signal.triggered()))).thenReturn(secondEvent);
         when(recipients.personalPhones("001",1,null)).thenReturn(List.of("01011112222"));
         when(recipients.personalPhones("001",1,10L)).thenReturn(List.of("01011112222"));
         var batch=new com.pentaworks.monitoring.alert.AlertDeliveryService.Batch(10,"batch");
         when(deliveries.begin(10,List.of("KAKAO_ALIMTALK:01011112222"),false)).thenReturn(batch);
         when(deliveries.claim(batch,"KAKAO_ALIMTALK:01011112222")).thenReturn(true);
         when(kakao.send("01011112222",firstEvent)).thenReturn("receipt");
-        new MonitorService(dashboard,defaults,events,recipients,deliveries,kakao,personal,averages).run();
+        shared(new MonitorService(dashboard,defaults,events,recipients,deliveries,kakao,personal,averages)).run();
         verify(kakao).send("01011112222",firstEvent);
         verify(events).markDelivery(List.of(11L),"SKIPPED","알림 제외 시간",0);
         verify(recipients,org.mockito.Mockito.never()).personalPhones(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.eq(2L),org.mockito.ArgumentMatchers.any());
@@ -235,19 +221,19 @@ class MonitorServiceTest {
     void missingMetricUsesCollectionHistoryAndPausesWhenWholeHospitalStops() {
         var dashboard=mock(DashboardService.class);var defaults=mock(AlertService.class);var events=mock(AlertEventService.class);
         var recipients=mock(AlertRecipientService.class);
-        var threshold=new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,false,0.5,2.0,false,40,null,0,0,null,false,"NO_AVERAGE",false,true,3);
+        var threshold=new AlertThreshold("hepres","He Pressure","psi",0.5,2.0,true,0.5,2.0,false,40,null,0,0,null,false,"NO_AVERAGE",false,true,3);
         var policy=new SiteAlertSettings("001","병원",true,List.of(threshold),20,false,true,0,0,null,null,false,List.of(),true,false,10,2);
         when(defaults.alertSettings()).thenReturn(List.of(policy));
         var at=java.time.Instant.parse("2026-10-07T03:00:00Z");
         var values=new java.util.HashMap<String,Double>();values.put("hepres",null);
         when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(new DashboardService.MetricSample(at,values),new DashboardService.MetricSample(at.minusSeconds(600),values),new DashboardService.MetricSample(at.minusSeconds(1200),values)));
-        for(long lag:List.of(0L,20L)) {
+        for(long lag:List.of(0L,30L)) {
             var row=new DashboardResponse.DashboardRow("001","1","병원",at.toString(),lag,3,3,null,null,values,"NORMAL",0,0,List.of());
             when(dashboard.getDashboard()).thenReturn(new DashboardResponse(new DashboardResponse.Meta(1,1,1),new DashboardResponse.Stats(1,1,0,3,1,0,0,0),List.of(row),Map.of(),null));
             monitor(dashboard,defaults,events,recipients,mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),mock(com.pentaworks.monitoring.alert.BaroKakaoService.class)).run();
         }
-        verify(events).evaluateMetricMissing(1,policy,threshold,3); // exactly once, including when site-wide alarm is disabled
-        verify(dashboard).recentMetricSamples("001",576);
+        verify(events).evaluateCompanyIncident(org.mockito.ArgumentMatchers.eq(1L),org.mockito.ArgumentMatchers.eq(policy),org.mockito.ArgumentMatchers.argThat(signal->signal.type().equals("METRIC_MISSING") && signal.value()==3 && !signal.triggered()));
+        verify(dashboard,org.mockito.Mockito.times(2)).recentMetricSamples("001",576);
         verify(events,org.mockito.Mockito.never()).evaluate(org.mockito.ArgumentMatchers.anyLong(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any(),org.mockito.ArgumentMatchers.any());
     }
 

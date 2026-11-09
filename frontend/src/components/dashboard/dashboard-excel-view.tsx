@@ -292,7 +292,9 @@ export default function DashboardExcelView({
                         {column.key === "lastAt" ? <><span className="text-[10px] tracking-tight lg:block lg:text-xs">{fmtYmd(lastAtDate)}</span><span className="lg:hidden"> </span><span className="text-[10px] tracking-tight opacity-70 lg:block lg:text-xs">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
                       </td>;
                       const value = row.metrics?.[m.key] ?? null;
-                      const alert = isMetricOutOfRange(value, m.bound, range);
+                      const reading = row.companyAlertState?.readings[m.key];
+                      const alert = row.companyAlertState ? reading?.level === "RED" : isMetricOutOfRange(value, m.bound, range);
+                      const warning = reading?.level === "YELLOW";
 
                       return (
                         <td
@@ -319,11 +321,12 @@ export default function DashboardExcelView({
                               : "",
                             alert
                               ? "bg-red-50 font-semibold text-red-600 dark:bg-red-950/30 dark:text-red-400"
-                              : "text-text-major dark:text-text-dark-primary/90",
+                              : warning ? "bg-amber-50 font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200" : "text-text-major dark:text-text-dark-primary/90",
                           ].join(" ")}
                         >
                           {formatMetricMeasurement(value, null, row.lastAt != null, "-")}
-                          {alert && (row.rangeExcursionCounts?.[m.key] ?? 0) > 0 && <span className="block text-[9px] font-medium leading-tight lg:text-[10px]" title="실제 수집 데이터 기준입니다. 정상·항목 누락·수집 공백이면 초기화됩니다. 2회 연속 이탈 시 알림이 발생하며, 최근 576건까지 확인합니다.">연속 {row.rangeExcursionCounts?.[m.key]}{(row.rangeExcursionCounts?.[m.key] ?? 0) >= 576 ? "+" : ""}회</span>}
+                          {reading && reading.level !== "NORMAL" && <span className="block text-[9px] font-medium leading-tight lg:text-[10px]">{reading.message}{reading.consecutive > 0 ? ` · 연속 ${reading.consecutive}회` : ""}</span>}
+                          {m.key === "hepres" && row.companyAlertState?.pressureQuiet && <span className="block text-[9px] leading-tight lg:text-[10px]">교체 후 카톡 쉬는 중</span>}
                         </td>
                       );
                     })}
@@ -342,7 +345,7 @@ export default function DashboardExcelView({
           <span className="font-semibold text-red-600 dark:text-red-400">
             빨간 값
           </span>
-          은 허용 범위를 벗어난 값입니다.
+          은 확인이 필요한 상태입니다. 노란 값은 주의 상태이며 카톡을 보내지 않습니다.
         </p>
       </div>
 

@@ -24,7 +24,7 @@ public class AlertDeliveryService {
         Event event = jdbc.query("SELECT delivery_status,delivery_batch_id,last_notified_at FROM alert_event WHERE id=? AND recovered_at IS NULL AND NOT EXISTS (SELECT 1 FROM alert_snooze z WHERE z.rule_id=alert_event.rule_id AND z.event_type=alert_event.event_type AND z.until_at>CURRENT_TIMESTAMP(6)) FOR UPDATE",
             rs -> rs.next() ? new Event(rs.getString(1), rs.getString(2), rs.getTimestamp(3) == null ? null : rs.getTimestamp(3).toInstant()) : null, eventId);
         if (event == null || "SENDING".equals(event.status()) || "UNKNOWN".equals(event.status())) return null;
-        if (!retry && event.lastNotifiedAt() != null && event.lastNotifiedAt().plusSeconds(60).isAfter(Instant.now())) return null;
+        if (!retry && event.lastNotifiedAt() != null) return null;
         if (retry && !List.of("FAILED", "PARTIAL", "SKIPPED").contains(event.status())) return null;
         List<String> priorKeys = retry && event.batchId() != null ? jdbc.query("""
             SELECT recipient_key FROM alert_delivery_result

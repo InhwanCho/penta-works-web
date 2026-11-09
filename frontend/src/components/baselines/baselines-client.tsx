@@ -1,5 +1,6 @@
 "use client";
 
+import CompanyAlertSettings from "./company-alert-settings";
 import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -139,6 +140,11 @@ export default function BaselinesClient({
     finally { setRestoringSite(null); }
   }
 
+  if (["settings", "thresholds"].includes(view)) return <main className="mx-auto w-full max-w-4xl px-3 py-4 sm:px-6">
+    <button type="button" onClick={()=>navigateView("events")} className="mb-3 min-h-12 font-bold">← 알림 목록</button>
+    <h1 className="mb-4 text-2xl font-extrabold">알림 설정</h1>
+    <CompanyAlertSettings />
+  </main>;
   return (
     <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
       {view === "events" ? <header className="alert-inbox-heading flex items-start justify-between gap-3">

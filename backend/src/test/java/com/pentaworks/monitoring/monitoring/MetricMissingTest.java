@@ -33,7 +33,7 @@ class MetricMissingTest {
         var averages=mock(com.pentaworks.monitoring.alert.RollingAverageService.class);
         var user=mock(com.pentaworks.monitoring.auth.CurrentUserService.CurrentUser.class);
         when(user.id()).thenReturn(1L);
-        var threshold=new com.pentaworks.monitoring.alert.AlertThreshold("hepres","He Pressure","psi",0.5,2.0,false);
+        var threshold=new com.pentaworks.monitoring.alert.AlertThreshold("hepres","He Pressure","psi",0.5,2.0,true);
         var site=new com.pentaworks.monitoring.alert.SiteAlertSettings("001","병원",true,List.of(threshold),20,true,true,0,30,null,null,false);
         var base=List.of(site);
         Map<String,Map<String,com.pentaworks.monitoring.alert.RollingAverageService.AverageState>> states=Map.of();
@@ -46,13 +46,16 @@ class MetricMissingTest {
         when(response.rows()).thenReturn(List.of(row));when(dashboard.getDashboard()).thenReturn(response);
         var monitor=new MonitorService(dashboard,defaults,events,mock(com.pentaworks.monitoring.alert.AlertRecipientService.class),
             mock(com.pentaworks.monitoring.alert.AlertDeliveryService.class),mock(com.pentaworks.monitoring.alert.BaroKakaoService.class),personal,averages);
+        var company=mock(com.pentaworks.monitoring.alert.CompanyAlertPolicyService.class);
+        when(company.saved(anyLong())).thenReturn(new com.pentaworks.monitoring.alert.CompanyAlertPolicyService.Saved(0,com.pentaworks.monitoring.alert.CompanyAlertPolicyService.Policy.defaults()));
+        monitor.setCompanyPolicies(company);
         monitor.run();
         verify(events,never()).evaluateMetricMissing(anyLong(),any(),any(),anyInt());
-        verify(dashboard,never()).recentMetricSamples(anyString(),anyInt());
+        verify(events,never()).evaluateCompanyIncident(anyLong(),any(),argThat(signal->signal.type().equals("METRIC_MISSING")));
         when(row.lagMin()).thenReturn(0L);
         when(dashboard.recentMetricSamples("001",576)).thenReturn(List.of(sample(0,null),sample(10,null),sample(20,null),sample(30,null),sample(40,null)));
         monitor.run();
-        verify(events).evaluateMetricMissing(1L,site,threshold,5);
+        verify(events).evaluateCompanyIncident(eq(1L),eq(site),argThat(signal->signal.type().equals("METRIC_MISSING") && signal.value()==5 && !signal.triggered()));
     }
     @Test void fiveReceivedRowsWithOnlyPressureMissingDoNotCountHospitalGaps() {
         var rows=List.of(sample(0,null),sample(10,null),sample(20,null),sample(30,null),sample(40,null));

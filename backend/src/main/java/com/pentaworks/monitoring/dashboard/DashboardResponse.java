@@ -20,7 +20,16 @@ public record DashboardResponse(Meta meta, Stats stats, List<DashboardRow> rows,
                                Map<String, Double> metrics, String alertStatus, int openAlertCount,
                                int unacknowledgedAlertCount, List<AlertIssue> alertIssues,
                                int collectionIntervalMinutes, int missingCollectionThreshold,
-                               Long missedCollectionCount, Map<String,Integer> rangeExcursionCounts) {
+                               Long missedCollectionCount, Map<String,Integer> rangeExcursionCounts,
+                               com.pentaworks.monitoring.alert.CompanyAlertEvaluation.State companyAlertState) {
+        public DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
+                            int count1h, int count24h, Double hePsi, Double hePct, Map<String,Double> metrics,
+                            String alertStatus, int openAlertCount, int unacknowledgedAlertCount, List<AlertIssue> alertIssues,
+                            int collectionIntervalMinutes, int missingCollectionThreshold, Long missedCollectionCount,
+                            Map<String,Integer> rangeExcursionCounts) {
+            this(siteDb,siteSlug,name,lastAt,lagMin,count1h,count24h,hePsi,hePct,metrics,alertStatus,openAlertCount,
+                unacknowledgedAlertCount,alertIssues,collectionIntervalMinutes,missingCollectionThreshold,missedCollectionCount,rangeExcursionCounts,null);
+        }
         public DashboardRow(String siteDb, String siteSlug, String name, String lastAt, Long lagMin,
                             int count1h, int count24h, Double hePsi, Double hePct, Map<String,Double> metrics,
                             String alertStatus, int openAlertCount, int unacknowledgedAlertCount, List<AlertIssue> alertIssues,

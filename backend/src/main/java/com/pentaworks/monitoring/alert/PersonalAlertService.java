@@ -13,7 +13,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Personal patterns are snapshots: another engineer's edits never change this user's rules. */
+/** Preserves personal delivery schedules while company policy supplies measurement rules. */
 @Service
 public class PersonalAlertService {
     private final JdbcTemplate jdbc;
@@ -27,6 +27,14 @@ public class PersonalAlertService {
         this.jdbc=jdbc; this.users=users; this.defaults=defaults; this.averages=averages; this.json=json; this.audit=audit;
     }
 
+    private CompanyAlertPolicyService companyPolicies;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setCompanyPolicies(CompanyAlertPolicyService value) { this.companyPolicies = value; }
+
+    private SiteOperatingHoursService operatingHours;
+    @org.springframework.beans.factory.annotation.Autowired
+    public void setOperatingHours(SiteOperatingHoursService value) { this.operatingHours=value; }
+    public Long companyId(long userId) { return jdbc.queryForObject("SELECT company_id FROM app_user WHERE id=?",Long.class,userId); }
     public List<CurrentUser> activeUsers() {
         return jdbc.query("""
             SELECT u.id,u.company_id,u.email,u.name,u.role,u.status FROM app_user u
@@ -61,7 +69,7 @@ public class PersonalAlertService {
             jdbc.batchUpdate("INSERT IGNORE INTO user_site_alert_settings(user_id,site_id,settings_json) VALUES(?,?,?)",snapshots);
             saved=stored(actor.id());
             // Recipient switches move into personal policy; preserve old all-disabled state above first.
-            jdbc.update("UPDATE site_alert_recipient r JOIN user_site_alert_settings p ON p.user_id=r.user_id AND p.site_id=r.site_id SET r.is_enabled=TRUE WHERE r.user_id=? AND r.is_enabled=FALSE",actor.id());
+            jdbc.update("UPDATE site_alert_recipient r JOIN user_site_alert_settings p ON p.user_id=r.user_id AND p.site_id COLLATE utf8mb4_unicode_ci=r.site_id COLLATE utf8mb4_unicode_ci SET r.is_enabled=TRUE WHERE r.user_id=? AND r.is_enabled=FALSE",actor.id());
         }
         List<SiteAlertSettings> result=new ArrayList<>();
         for(var site:base) {
@@ -73,7 +81,8 @@ public class PersonalAlertService {
         Set<String> airCooled = new HashSet<>(jdbc.query("SELECT site_id FROM site_cooling_config WHERE air_cooled=TRUE",(rs,n)->rs.getString(1)));
         result.replaceAll(value -> !airCooled.contains(value.siteid()) ? value : new SiteAlertSettings(value.siteid(),value.name(),value.configured(),value.thresholds(),value.noDataMinutes(),value.noDataActive(),value.alertsEnabled(),value.triggerAfterMinutes(),value.repeatMinutes(),value.quietStart(),value.quietEnd(),value.suppressWeekends(),value.holidayDates(),value.dashboardVisible(),false,value.collectionIntervalMinutes(),value.missingCollectionThreshold()));
         NotificationPreferences preferences=commonPreferences(actor.id(),result);
-        return preferences==null?result:result.stream().map(preferences::apply).toList();
+        var personal = preferences==null?result:result.stream().map(preferences::apply).toList();
+        return companyPolicies == null ? personal : companyPolicies.apply(actor,personal);
     }
 
     public record PreferenceChoice(String siteId, String name, NotificationPreferences preferences) {}
@@ -161,6 +170,7 @@ public class PersonalAlertService {
 
     @Transactional
     public SiteAlertSettings save(CurrentUser actor,String siteId,AlertController.UpdateAlertThresholdsRequest request) {
+        if (companyPolicies != null) throw new BadRequestException("회사 공통 알림 설정 화면에서 변경해주세요.");
         SiteAlertSettings current=currentForUpdate(actor,siteId);
         Map<String,AlertController.ThresholdUpdateRequest> updates=new HashMap<>();
         for(var item:request.thresholds()) {
@@ -183,11 +193,24 @@ public class PersonalAlertService {
     }
     @Transactional
     public SiteAlertSettings metric(CurrentUser actor,String siteId,String key,AlertController.ThresholdRequest r) {
+        if (companyPolicies != null) throw new BadRequestException("회사 공통 알림 설정 화면에서 변경해주세요.");
         SiteAlertSettings s=currentForUpdate(actor,siteId);
         return save(actor,siteId,new AlertController.UpdateAlertThresholdsRequest(List.of(new AlertController.ThresholdUpdateRequest(key,r.min(),r.max(),r.active(),r.useAverage(),r.tolerancePercent(),r.missingActive(),r.missingThreshold())),s.noDataMinutes(),s.noDataActive(),s.alertsEnabled(),s.triggerAfterMinutes(),s.repeatMinutes(),s.quietStart(),s.quietEnd(),s.suppressWeekends(),s.holidayDates(),s.coldChillerActive(),s.collectionIntervalMinutes(),s.missingCollectionThreshold()));
     }
     @Transactional
     public SiteAlertSettings enabled(CurrentUser actor,String siteId,boolean enabled) {
+        if (companyPolicies != null) {
+            CompanyAlertPolicyService.requireAdmin(actor);
+            users.requireSiteAccess(actor,siteId);
+            var saved = companyPolicies.saved(actor.companyId());
+            var p = saved.policy();
+            var hospitals = new HashMap<>(p.hospitals());
+            hospitals.put(siteId,new CompanyAlertPolicyService.Hospital(enabled,p.hospital(siteId).intervalMinutes()));
+            companyPolicies.save(actor,new CompanyAlertPolicyService.Saved(saved.revision(),new CompanyAlertPolicyService.Policy(
+                p.tolerancePercent(),p.pressureWarning(),p.pressureCritical(),p.gradientCritical(),p.missingWarning(),p.missingCritical(),
+                p.collectionWarning(),p.collectionCritical(),p.coldChillerEnabled(),hospitals)));
+            return settings(actor,siteId);
+        }
         SiteAlertSettings s=currentForUpdate(actor,siteId);
         if(enabled&&!s.dashboardVisible())throw new BadRequestException("대시보드에서 숨긴 병원은 알림을 켤 수 없습니다.");
         persist(actor,copy(s,s.thresholds(),enabled,s.quietStart(),s.quietEnd()));
@@ -195,6 +218,7 @@ public class PersonalAlertService {
     }
     @Transactional
     public SiteAlertSettings reset(CurrentUser actor,String siteId) {
+        if (companyPolicies != null) throw new BadRequestException("회사 공통 알림 설정 화면에서 변경해주세요.");
         users.requireSiteAccess(actor,siteId);
         SiteAlertSettings base=defaults.alertSettings().stream().filter(s->s.siteid().equals(siteId)).findFirst().orElseThrow(()->new NotFoundException("병원을 찾을 수 없습니다."));
         persist(actor,NotificationPreferences.from(settings(actor,siteId)).apply(base));
@@ -252,20 +276,32 @@ public class PersonalAlertService {
             WHERE r.user_id=? AND e.recovered_at IS NULL AND e.event_type IN ('LOW','HIGH','NO_DATA','METRIC_MISSING')
             ORDER BY e.occurred_at DESC,e.id DESC
             """,(org.springframework.jdbc.core.RowCallbackHandler) rs->bySite.computeIfAbsent(rs.getString(2),ignored->new ArrayList<>()).add(new com.pentaworks.monitoring.dashboard.DashboardResponse.AlertIssue(rs.getLong(1),rs.getString(3),rs.getString(4),rs.getString(5),rs.getTimestamp(6).toInstant().toString(),rs.getTimestamp(7)!=null)),actor.id(),actor.id());
+        var shared = companyPolicies == null ? null : companyPolicies.saved(actor.companyId()).policy();
+        var replacements = companyPolicies == null ? Map.<String,java.time.LocalDate>of() : companyPolicies.replacements(actor.companyId());
+        var now = java.time.ZonedDateTime.now(java.time.ZoneId.of("Asia/Seoul"));
         var rows=data.rows().stream().map(row->{
             var config=configs.get(row.siteDb());
             var issues=bySite.getOrDefault(row.siteDb(),List.of());
             Map<String,Integer> counts=new LinkedHashMap<>();
-            if(config!=null) {
-                var out=config.thresholds().stream().filter(t->t.active() && RangeExcursions.outside(row.metrics().get(t.key()),t)).toList();
-                if(!out.isEmpty()) {
-                    var history=com.pentaworks.monitoring.dashboard.DashboardService.readRecentSamples(jdbc,row.siteDb(),576);
-                    for(var threshold:out) counts.put(threshold.key(),RangeExcursions.count(history,threshold,config.collectionIntervalMinutes(),row.lastAt()));
+            CompanyAlertEvaluation.State state=null;
+            if(config!=null && shared!=null) {
+                var operating=operatingHours==null ? null : operatingHours.status(row.siteDb(),now);
+                var history=com.pentaworks.monitoring.dashboard.DashboardService.readRecentSamples(jdbc,row.siteDb(),576).stream()
+                    .filter(sample->operating==null || operating.sessionStart()==null || !sample.at().isBefore(operating.sessionStart())).toList();
+                Long lag=row.lagMin();
+                if(operating!=null && operating.monitoringStart()!=null) {
+                    long elapsed=Math.max(0,java.time.Duration.between(operating.monitoringStart(),now.toInstant()).toMinutes());
+                    lag=lag==null?elapsed:Math.min(elapsed,lag);
                 }
+                state=CompanyAlertEvaluation.evaluate(shared,config,row,history,replacements.get(row.siteDb()),now.toInstant(),lag,
+                    operating==null || operating.monitoring());
+                state.readings().forEach((key,value)->counts.put(key,value.consecutive()));
+                if(!state.enabled())issues=List.of();
             }
-            String status=issues.stream().anyMatch(i->i.eventType().equals("NO_DATA"))?"NO_DATA":issues.isEmpty()?"NORMAL":"WARNING";
-            int interval=config==null?10:config.collectionIntervalMinutes(), missing=config==null?2:config.missingCollectionThreshold();
-            return new com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow(row.siteDb(),row.siteSlug(),row.name(),row.lastAt(),row.lagMin(),row.count1h(),row.count24h(),row.hePsi(),row.hePct(),row.metrics(),status,issues.size(),(int)issues.stream().filter(i->!i.acknowledged()).count(),issues,interval,missing,CollectionHealth.missedCount(row.lagMin(),interval),counts);
+            String status=state==null ? "NORMAL" : state.collectionLevel().equals("RED") ? "NO_DATA" :
+                state.collectionLevel().equals("YELLOW") || state.readings().values().stream().anyMatch(r->!r.level().equals("NORMAL")) ? "WARNING" : "NORMAL";
+            int interval=config==null?10:config.collectionIntervalMinutes(), missing=config==null?3:config.missingCollectionThreshold();
+            return new com.pentaworks.monitoring.dashboard.DashboardResponse.DashboardRow(row.siteDb(),row.siteSlug(),row.name(),row.lastAt(),row.lagMin(),row.count1h(),row.count24h(),row.hePsi(),row.hePct(),row.metrics(),status,issues.size(),(int)issues.stream().filter(i->!i.acknowledged()).count(),issues,interval,missing,CollectionHealth.missedCount(row.lagMin(),interval),counts,state);
         }).toList();
         Map<String,com.pentaworks.monitoring.dashboard.DashboardResponse.CtrlRange> ranges=new LinkedHashMap<>();
         for(var row:rows) {var config=configs.get(row.siteDb());if(config!=null)ranges.put(row.siteDb(),ctrl(config));}
