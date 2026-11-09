@@ -110,6 +110,7 @@ export function TimeSeriesLines({
   series,
   height = 280,
   interactive = true,
+  zoomControls = false,
   periodLabel,
   headerExtra,
 }: {
@@ -118,6 +119,7 @@ export function TimeSeriesLines({
   series: Series[];
   height?: number;
   interactive?: boolean;
+  zoomControls?: boolean;
   periodLabel?: string;
   headerExtra?: React.ReactNode;
 }) {
@@ -128,9 +130,17 @@ export function TimeSeriesLines({
   const { grid, border } = gridColors(dark);
 
   const [zoomReady, setZoomReady] = React.useState(false);
+  const [zoomRange, setZoomRange] = React.useState<{ min: number; max: number } | null>(null);
+  const showZoomButton = zoomControls && labels.length > 2;
+  const zoomed = showZoomButton && zoomRange !== null;
+  const loadZoom = interactive || showZoomButton;
+
+  function toggleZoom() {
+    setZoomRange(zoomed ? null : { min: Math.floor(labels.length / 2), max: labels.length - 1 });
+  }
 
   React.useEffect(() => {
-    if (!interactive) return;
+    if (!loadZoom) return;
     let alive = true;
 
     (async () => {
@@ -150,7 +160,7 @@ export function TimeSeriesLines({
     return () => {
       alive = false;
     };
-  }, [interactive]);
+  }, [loadZoom]);
 
   const maxTicksLimit = Math.min(labels.length, dark ? 18 : 22);
 
@@ -203,18 +213,21 @@ export function TimeSeriesLines({
       },
 
       // zoom 플러그인은 준비된 이후에만 옵션을 넣는 것이 안전합니다.
-      ...(zoomReady && interactive
+      ...(zoomReady && loadZoom
         ? {
             zoom: {
               zoom: {
-                wheel: { enabled: true },
-                pinch: { enabled: true },
+                wheel: { enabled: interactive },
+                pinch: { enabled: interactive },
                 mode: "x",
               },
               pan: {
-                enabled: true,
+                enabled: interactive || zoomed,
                 mode: "x",
-                modifierKey: "shift",
+                modifierKey: interactive ? "shift" : undefined,
+                onPanComplete: ({ chart }) => {
+                  if (zoomed) setZoomRange({ min: chart.scales.x.min, max: chart.scales.x.max });
+                },
               },
               limits: {
                 x: { min: 0, max: Math.max(0, labels.length - 1) },
@@ -225,6 +238,11 @@ export function TimeSeriesLines({
     },
     scales: {
       x: {
+        // Retain the viewport when the chart refreshes its data or options.
+        ...(zoomed && zoomRange ? {
+          min: Math.min(zoomRange.min, labels.length - 2),
+          max: Math.min(zoomRange.max, labels.length - 1),
+        } : {}),
         ticks: {
           color: cssVar(
             dark ? "--color-text-dark-primary" : "--color-text-secondary",
@@ -264,9 +282,17 @@ export function TimeSeriesLines({
             <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
               {title}
             </strong>
+            {showZoomButton && <button
+              type="button"
+              className="min-h-11 rounded-lg border border-border px-3 text-xs font-semibold text-text-secondary transition-colors hover:bg-[var(--surface-hover)] active:bg-[var(--surface-hover)] disabled:opacity-50 dark:text-text-dark-primary"
+              disabled={!zoomReady}
+              aria-label={`${title} 그래프 ${zoomed ? "축소" : "확대"}`}
+              onClick={toggleZoom}
+            >{zoomed ? "− 축소" : "+ 확대"}</button>}
             {periodLabel && <span className="rounded-md bg-sky-50 px-2 py-1 text-xs font-bold text-sky-800 dark:bg-sky-950/50 dark:text-sky-200">기간 조회</span>}
           </div>
           {headerExtra}
+          {zoomed && <span className="text-text-secondary dark:text-text-dark-primary/70 text-xs">좌우로 밀어 이동</span>}
           {interactive && <span className="text-text-secondary dark:text-text-dark-primary/50 hidden text-[11px] font-medium sm:inline">
             휠/핀치 확대 · Shift + 드래그 이동
           </span>}

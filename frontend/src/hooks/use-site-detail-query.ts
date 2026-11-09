@@ -24,19 +24,19 @@ export type SiteDetailResponse = {
   totalCount?: number;
 };
 
-/** take 값을 10~100 사이로 클램프 */
-export function clampTake(raw: number) {
-  return Math.min(Math.max(Number.isFinite(raw) ? raw : 50, 10), 100);
+const MEASUREMENT_LIMIT = 100;
+
+export function siteDetailQueryKey(slug: string, from: string | null, to: string | null) {
+  return ["siteDetail", slug, MEASUREMENT_LIMIT, from, to] as const;
 }
 
 async function fetchSiteDetail(
   slug: string,
-  take: number,
   from: string | null,
   to: string | null,
 ): Promise<SiteDetailResponse> {
   return apiFetch<SiteDetailResponse>(
-    `/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from, to, take: String(take)} : {take: String(take)})}`,
+    `/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from, to, take: String(MEASUREMENT_LIMIT)} : {take: String(MEASUREMENT_LIMIT)})}`,
     { cache: "no-store" },
   );
 }
@@ -45,10 +45,10 @@ async function fetchSiteDetail(
  * 사이트 상세 시계열 조회 훅.
  * - staleTime 10초 — 짧은 시간 내 재방문 시 캐시 히트
  */
-export function useSiteDetailQuery(slug: string, take: number, from: string | null = null, to: string | null = null) {
+export function useSiteDetailQuery(slug: string, from: string | null = null, to: string | null = null) {
   return useQuery({
-    queryKey: ["siteDetail", slug, take, from, to] as const,
-    queryFn: () => fetchSiteDetail(slug, take, from, to),
+    queryKey: siteDetailQueryKey(slug, from, to),
+    queryFn: () => fetchSiteDetail(slug, from, to),
     staleTime: 10_000,
     refetchInterval: 60_000,
     refetchIntervalInBackground: false,

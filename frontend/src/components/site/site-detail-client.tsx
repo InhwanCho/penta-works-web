@@ -21,7 +21,7 @@ import CircleLoader from "@/components/icons/circle-loader";
 import PageLoader from "@/components/common/page-loader";
 import { scrollPageToTop } from "@/components/common/route-scroll-reset";
 import SiteAlertSummary from "@/components/site/site-alert-summary";
-import { clampTake, useSiteDetailQuery } from "@/hooks/use-site-detail-query";
+import { useSiteDetailQuery } from "@/hooks/use-site-detail-query";
 import { fmtDate, fmtTime } from "@/lib/format";
 import { formatMetricMeasurement, isUnmeasuredMetricValue, METRICS, type MetricDef, type MetricKey } from "@/lib/metrics";
 import dynamic from "next/dynamic";
@@ -95,11 +95,8 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     }
     setPeriodError("");
   }, [from, to]);
-  const takeRaw = Number(sp.get("take") ?? 50);
-  const take = clampTake(takeRaw);
   const { data, isLoading, isError, error, refetch, isFetching, dataUpdatedAt } = useSiteDetailQuery(
     slug,
-    take,
     from,
     to,
   );
@@ -206,7 +203,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       <main className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-4 lg:px-6">
         <div className="rounded-lg border border-red-200 bg-red-50/60 p-4 text-sm font-medium text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
           {error instanceof Error ? error.message : "데이터를 불러오지 못했습니다. 다시 시도해주세요."}
-          <Link href={`/sites/${encodeURIComponent(slug)}?take=50`} className="ml-2 inline-flex min-h-11 items-center underline">최신 50건 보기</Link>
+          <Link href={`/sites/${encodeURIComponent(slug)}`} className="ml-2 inline-flex min-h-11 items-center underline">최신 기록 보기</Link>
           <button
             type="button"
             onClick={() => refetch()}
@@ -297,47 +294,16 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         {rowsDesc.length > 0 && !periodActive && <small>{fmtDate(rowsDesc[rowsDesc.length - 1].date)} ~ {fmtDate(rowsDesc[0].date)}</small>}
       </header>
       <details className="site-chart-query">
-        <summary><span>조회 조건 변경</span><span>{periodActive ? "기간 지정" : "최신 기록"} · {take}개</span></summary>
+        <summary><span>조회 조건 변경</span><span>{periodActive ? "기간 지정" : "최신 기록"} · 최대 100건</span></summary>
       <fieldset className="site-chart-query-body">
         <legend className="sr-only">그래프 조회 조건</legend>
-        <p className="site-chart-field-label">그래프에 표시할 측정값 개수</p>
-        <div className="site-query-grid grid min-h-11 w-full grid-cols-4 gap-2">
-          <TakeLink
-            slug={slug}
-            from={from}
-            to={to}
-            take={10}
-            active={take === 10}
-          />
-          <TakeLink
-            slug={slug}
-            from={from}
-            to={to}
-            take={20}
-            active={take === 20}
-          />
-          <TakeLink
-            slug={slug}
-            from={from}
-            to={to}
-            take={50}
-            active={take === 50}
-          />
-          <TakeLink
-            slug={slug}
-            from={from}
-            to={to}
-            take={100}
-            active={take === 100}
-          />
-        </div>
-        <p className="site-chart-field-label mt-4">조회 기간</p>
+        <p className="site-chart-field-label">조회 기간</p>
         <div role="group" aria-label="빠른 기간 조회" className="site-query-grid mt-3 grid grid-cols-4 gap-2">
           {QUICK_PERIODS.map(period=><button key={period.label} type="button" aria-pressed={activePeriod === period.label} disabled={isFetching} onClick={()=>{
             const end = new Date();
             const start = quickPeriodStart(end, period.months);
             setPeriodError("");
-            router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:start.toISOString(),to:end.toISOString(),take:String(take)})}`,{scroll:false});
+            router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:start.toISOString(),to:end.toISOString()})}`,{scroll:false});
           }} className={`min-h-11 whitespace-nowrap rounded-lg border px-2 text-sm font-bold disabled:opacity-50 ${activePeriod === period.label ? "border-brand-primary bg-brand-primary text-white" : "border-slate-300 bg-white text-sky-800 dark:border-slate-600 dark:bg-background-dark-secondary dark:text-sky-200"}`}>{period.label}</button>)}
         </div>
         <form className="site-period-form mt-3 grid gap-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end" onSubmit={event => {
@@ -354,7 +320,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           setPeriodError("");
           const nextFrom = start.toISOString(), nextTo = end.toISOString();
           if (from === nextFrom && to === nextTo) void refetch();
-          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo, take:String(take)})}`, {scroll:false});
+          else router.push(`/sites/${encodeURIComponent(slug)}?${new URLSearchParams({from:nextFrom, to:nextTo})}`, {scroll:false});
         }}>
           <PeriodDateTimePicker label="시작 일시" name="periodStart" value={periodStart} onChange={setPeriodStart} />
           <PeriodDateTimePicker label="종료 일시" name="periodEnd" value={periodEnd} onChange={setPeriodEnd} />
@@ -364,9 +330,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         {periodActive && <div className="mt-3 space-y-2 text-xs">
           <p>조회 기간: {fmtDate(from)} ~ {fmtDate(to)} · 전체 {totalCount.toLocaleString()}건</p>
           <p>{data.rows.length ? `현재 차트: ${fmtDate(data.rows[data.rows.length-1].date)} ~ ${fmtDate(data.rows[0].date)} · ${data.rows.length.toLocaleString()}건` : "해당 기간에 수집된 기록이 없습니다."}</p>
-          <Link href={`/sites/${encodeURIComponent(slug)}?take=${take}`} scroll={false} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">기간 해제 · 최신 {take}건</Link>
+          <Link href={`/sites/${encodeURIComponent(slug)}`} scroll={false} className="inline-flex min-h-11 items-center rounded-lg border px-3 font-bold dark:border-white/15">기간 해제 · 최신 100건</Link>
         </div>}
-        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준입니다. 기간을 지정하면 해당 기간에서 선택한 개수만큼 고르게 추려 모든 그래프에 동일하게 적용합니다.</p>
+        <p className="text-text-secondary mt-2 text-[11px]">한국 시간 기준입니다. 기간을 지정하면 해당 기간에서 최대 100건을 고르게 추려 모든 그래프에 동일하게 적용합니다.</p>
       </fieldset>
       </details>
 
@@ -518,7 +484,9 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
             >
               {points.some((point) => point[metric.key] != null) ? (
                 <TimeSeriesLines
+                  key={`${slug}:${from}:${to}:${mode}:${metric.key}`}
                   title={metricTitle(metric)}
+                  zoomControls={mode === "single"}
                   headerExtra={<div className="site-chart-reading"><span>{periodActive ? "기간 마지막 값" : "최신 값"} <strong>{formatMetricMeasurement(rowsDesc[0]?.[metric.key], metric.unit)}</strong></span>{mode !== "single" && <button type="button" aria-label={`${metricTitle(metric)} 크게 보기`} onClick={() => { setFocused(metric.key); setMode("single"); }}>크게 보기</button>}</div>}
                   points={points}
                   series={[{ key: metric.key, name: metricTitle(metric) }]}
@@ -539,34 +507,5 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       </HospitalDetailTabs>
     </main>
     </PullToRefresh>
-  );
-}
-
-function TakeLink({
-  from, to,
-  slug,
-  take,
-  active,
-}: {
-  slug: string;
-  from?: string | null;
-  to?: string | null;
-  take: number;
-  active: boolean;
-}) {
-  return (
-    <Link
-      href={`/sites/${encodeURIComponent(slug)}?${new URLSearchParams(from && to ? {from,to,take:String(take)} : {take:String(take)})}`}
-      scroll={false}
-      aria-current={active ? "true" : undefined}
-      className={[
-        "site-take-button inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg border px-2 text-sm font-extrabold tabular-nums transition-colors",
-        active
-          ? "border-brand-primary bg-brand-primary text-white"
-          : "border-slate-300 bg-white text-text-secondary hover:text-text-major dark:border-slate-600 dark:bg-background-dark-secondary dark:text-text-dark-primary/60 dark:hover:text-text-dark-primary",
-      ].join(" ")}
-    >
-      {take}건
-    </Link>
   );
 }

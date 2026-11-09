@@ -11,7 +11,7 @@ import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
 import Link from "@/components/common/app-link";
 import { useQuery } from "@tanstack/react-query";
-import { clampTake, type SiteDetailResponse } from "@/hooks/use-site-detail-query";
+import { siteDetailQueryKey, type SiteDetailResponse } from "@/hooks/use-site-detail-query";
 import { useSearchParams } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -28,7 +28,7 @@ const SiteSearchModal = dynamic(
 function MobileHospitalTitle({ slug }: { slug: string }) {
   const params = useSearchParams();
   const { data } = useQuery<SiteDetailResponse>({
-    queryKey: ["siteDetail", slug, clampTake(Number(params.get("take") ?? 50)), params.get("from"), params.get("to")],
+    queryKey: siteDetailQueryKey(slug, params.get("from"), params.get("to")),
     enabled: false,
   });
   const name = data?.site.name || "병원 상세";
