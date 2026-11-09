@@ -243,11 +243,11 @@ html.dark .select-inset-arrow {
 }
 
 .dashboard-sticky-columns {
-  top: 3.5rem;
+  top: 56px;
 }
 @media (max-width: 639px) {
   .dashboard-sticky-columns {
-    top: calc(3.5rem + env(safe-area-inset-top, 0px));
+    top: calc(56px + env(safe-area-inset-top, 0px));
   }
 }
 
@@ -4498,3 +4498,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-record-detail-meta { margin:0 0 16px; }
 
 .meeting-photo-gallery { margin: 18px 0; }
+
+@media (max-width: 1023px) {
+ .dashboard-layout {
+  padding-inline-start: env(safe-area-inset-left, 0px);
+  padding-inline-end: env(safe-area-inset-right, 0px);
+ }
+}
