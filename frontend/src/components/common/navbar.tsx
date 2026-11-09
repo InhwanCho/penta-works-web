@@ -1,11 +1,6 @@
 "use client";
 
 import LogoutControls from "@/components/account/logout-controls";
-import { useUnreadAlerts } from "@/hooks/use-unread-alerts";
-import UnreadAlertDot from "./unread-alert-dot";
-import dynamic from "next/dynamic";
-import SearchIcon from "@/components/icons/search-icon";
-import { useModal } from "@/components/provider/modal-provider";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useTheme } from "@/components/provider/theme-provider";
 import Image from "next/image";
@@ -15,14 +10,6 @@ import { siteDetailQueryKey, type SiteDetailResponse } from "@/hooks/use-site-de
 import { useSearchParams } from "next/navigation";
 import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
-
-const ICON_BUTTON =
-  "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-white/85 transition hover:bg-white/12 hover:text-white focus-visible:bg-white/12";
-
-const SiteSearchModal = dynamic(
-  () => import("@/components/common/site-search-modal"),
-  { ssr: false },
-);
 
 // Observe the detail query cache without issuing another request or polling timer.
 function MobileHospitalTitle({ slug }: { slug: string }) {
@@ -38,7 +25,6 @@ function MobileHospitalTitle({ slug }: { slug: string }) {
 export default function Navbar() {
   const { isDark, isLargeText, toggleTheme, toggleLargeText } = useTheme();
   const { session, isAdmin } = useAuth();
-  const { open: openSearchModal, isOpen: searchOpen } = useModal("SearchModal");
   const pathname = usePathname();
   const hospitalSlug = pathname.match(/^\/sites\/([^/]+)$/)?.[1];
   const menuRef = useRef<HTMLDivElement>(null);
@@ -92,7 +78,6 @@ export default function Navbar() {
     media.addEventListener("change", close);
     return () => media.removeEventListener("change", close);
   }, []);
-  const unread = useUnreadAlerts();
   const goToAll = () => {
     setMenuOpen(false);
     window.dispatchEvent(new Event("dashboard-show-all"));
@@ -138,29 +123,14 @@ export default function Navbar() {
           {hospitalSlug && <Suspense fallback={<span className="mobile-hospital-title">병원 상세</span>}><MobileHospitalTitle slug={decodeURIComponent(hospitalSlug)} /></Suspense>}
           <nav className="flex shrink-0 items-center gap-1.5">
             {session && (
-              <Link
-                href="/baselines?view=events"
-                aria-label="알림 확인 및 관리"
-                className={`${ICON_BUTTON} hidden lg:inline-flex`}
-              >
-                <span className="notification-icon">
-                  <BellIcon />
-                  {unread && <span className="notification-icon-dot"><UnreadAlertDot /></span>}
-                </span>
-              </Link>
-            )}
-            {session && (
-              <button
-                type="button"
-                className={ICON_BUTTON}
-                onClick={() => {
-                  setMenuOpen(false);
-                  openSearchModal();
-                }}
-                aria-label="병원 검색"
-              >
-                <SearchIcon className="h-5 w-5" />
-              </button>
+              <>
+                <HeaderPreferenceButton label={isLargeText ? "작은 글씨" : "큰 글씨"} onClick={toggleLargeText}>
+                  <span className="text-sm font-bold leading-none">가{isLargeText ? "−" : "+"}</span>
+                </HeaderPreferenceButton>
+                <HeaderPreferenceButton label={isDark ? "라이트 모드" : "다크 모드"} onClick={toggleTheme}>
+                  {isDark ? <SunIcon /> : <MoonIcon />}
+                </HeaderPreferenceButton>
+              </>
             )}
 
             {session ? (
@@ -234,22 +204,6 @@ export default function Navbar() {
                       </MenuLink>
                     </div>
                     <div className="h-px bg-slate-100 dark:bg-white/8" />
-                    <div className="grid grid-cols-2 gap-2 p-2">
-                      <PreferenceButton
-                        active={isLargeText}
-                        onClick={toggleLargeText}
-                        icon={<TextIcon />}
-                      >
-                        큰 글씨
-                      </PreferenceButton>
-                      <PreferenceButton
-                        active={isDark}
-                        onClick={toggleTheme}
-                        icon={isDark ? <SunIcon /> : <MoonIcon />}
-                      >
-                        {isDark ? "밝게" : "어둡게"}
-                      </PreferenceButton>
-                    </div>
                     <LogoutControls compact />
                   </div>
                 )}
@@ -265,7 +219,6 @@ export default function Navbar() {
           </nav>
         </div>
       </header>
-      {searchOpen && <SiteSearchModal />}
     </>
   );
 }
@@ -296,25 +249,21 @@ function MenuLink({
   );
 }
 
-function PreferenceButton({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
+function HeaderPreferenceButton({ label, onClick, children }: {
+  label: string;
   onClick: () => void;
-  icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
     <button
       type="button"
+      aria-label={`${label}로 전환`}
+      title={label}
       onClick={onClick}
-      className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold transition ${active ? "border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-200" : "dark:text-text-dark-primary/70 border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/5"}`}
+      className="inline-flex h-11 min-w-11 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full px-2.5 text-white/90 transition-colors hover:bg-white/12 active:bg-white/12"
     >
-      {icon}
-      {children}
+      <span className="inline-flex items-center" aria-hidden="true">{children}</span>
+      <span className="hidden whitespace-nowrap text-xs font-semibold sm:inline">{label}</span>
     </button>
   );
 }
@@ -342,20 +291,6 @@ function ChevronIcon({ className }: { className?: string }) {
     </svg>
   );
 }
-function BellIcon() {
-  return (
-    <svg
-      className={iconClass}
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
-      <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
-    </svg>
-  );
-}
-
 function UsersIcon() {
   return (
     <svg
@@ -402,19 +337,6 @@ function PersonIcon() {
         r="4"
       />
       <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
-    </svg>
-  );
-}
-function TextIcon() {
-  return (
-    <svg
-      className="h-4 w-4"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
-      <path d="M4 7V4h16v3M9 20h6M12 4v16" />
     </svg>
   );
 }
