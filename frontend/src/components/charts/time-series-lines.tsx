@@ -14,6 +14,7 @@ import {
 } from "chart.js";
 import React from "react";
 import { Line } from "react-chartjs-2";
+import { interpolateChartGaps } from "./chart-interpolation";
 
 ChartJS.register(
   CategoryScale,
@@ -29,6 +30,7 @@ let zoomRegistered = false;
 
 export type TimeSeriesPoint = {
   t: string;
+  timeMs?: number;
   [k: string]: number | string | null | undefined;
 };
 
@@ -163,22 +165,32 @@ export function TimeSeriesLines({
   }, [loadZoom]);
 
   const maxTicksLimit = Math.min(labels.length, dark ? 18 : 22);
+  const times = points.map((point) => point.timeMs);
+  const renderedSeries = series.map((item) => interpolateChartGaps(points.map((point) => toNumber(point[item.key])), times));
+  const estimateColor = dark ? "#fca5a5" : "#b91c1c";
+  const hasEstimates = renderedSeries.some(({ estimated }) => estimated.size > 0);
 
   const data: ChartData<"line"> = {
     labels,
     datasets: series.map((s, idx) => {
       const base = palette[idx % palette.length];
+      const { displayed, estimated } = renderedSeries[idx];
+      const measuredColor = dark ? base : hexToRgba(base, 0.65);
 
       return {
         label: s.name,
-        data: points.map((p) => toNumber(p[s.key])),
+        data: displayed,
         borderWidth: 2,
         pointRadius: 0,
         pointHoverRadius: 4,
         pointHitRadius: 12,
-        tension: 0.25,
+        tension: estimated.size ? 0 : 0.25,
         spanGaps: true,
-        borderColor: dark ? base : hexToRgba(base, 0.65),
+        borderColor: measuredColor,
+        segment: estimated.size ? {
+          borderColor: ({ p0DataIndex, p1DataIndex }) => estimated.has(p0DataIndex) || estimated.has(p1DataIndex) ? estimateColor : measuredColor,
+          borderDash: ({ p0DataIndex, p1DataIndex }) => estimated.has(p0DataIndex) || estimated.has(p1DataIndex) ? [5, 4] : [],
+        } : undefined,
         backgroundColor: "transparent",
       };
     }),
@@ -208,7 +220,12 @@ export function TimeSeriesLines({
         enabled: true,
         callbacks: {
           title: items => String(points[items[0]?.dataIndex]?.at ?? items[0]?.label ?? ""),
-          label: item => `${item.dataset.label}: ${item.parsed.y == null ? "측정 안됨" : item.parsed.y.toLocaleString("ko-KR", {maximumFractionDigits: 6})}`,
+          label: item => {
+            if (item.parsed.y == null) return `${item.dataset.label}: 측정 안됨`;
+            const value = item.parsed.y.toLocaleString("ko-KR", { maximumFractionDigits: 6 });
+            const estimated = renderedSeries[item.datasetIndex].estimated.has(item.dataIndex);
+            return `${item.dataset.label}: ${value}${estimated ? " (추정값 · 측정 누락)" : ""}`;
+          },
         },
       },
 
@@ -297,6 +314,10 @@ export function TimeSeriesLines({
             휠/핀치 확대 · Shift + 드래그 이동
           </span>}
         </div>
+        {hasEstimates && <p className="mt-2 flex items-center gap-2 text-xs text-text-secondary dark:text-text-dark-primary/70">
+          <span aria-hidden="true" className="w-5 border-t-2 border-dashed" style={{ borderColor: estimateColor }} />
+          측정 누락 구간 추정값
+        </p>}
         {periodLabel && <p className="text-text-secondary dark:text-text-dark-primary/70 mt-2 text-xs leading-5">{periodLabel}</p>}
       </div>
 

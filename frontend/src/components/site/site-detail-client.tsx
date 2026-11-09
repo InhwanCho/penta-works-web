@@ -230,6 +230,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       return {
         t: d ? fmtTime(d) : "-",
         at: d ? fmtDate(d) : "-",
+        timeMs: d?.getTime(),
         ...Object.fromEntries(
           visibleKeys.map((key) => [key, toPointNumber(r[key])]),
         ),
