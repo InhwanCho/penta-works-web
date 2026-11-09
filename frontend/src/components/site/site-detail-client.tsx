@@ -122,6 +122,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const [mode, setMode] = useState<ViewMode>("single");
   const [focused, setFocused] = useState<MetricKey>("hepres");
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [metricLimitReached, setMetricLimitReached] = useState(false);
   const pickerTrigger = useRef<HTMLButtonElement>(null);
   const [preferencesReady, setPreferencesReady] = useState(false);
   useEffect(() => {
@@ -209,11 +210,14 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
     if (selection.includes(key)) {
       const next = selection.filter((item) => item !== key);
       if (!next.length) return;
+      setMetricLimitReached(false);
       setSelected(next);
       if (focused === key) setFocused(next[0]);
     } else if (selection.length < 4) {
       setSelected([...selection, key]);
       setFocused(key);
+    } else {
+      setMetricLimitReached(true);
     }
   };
 
@@ -388,7 +392,10 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
           <button
             ref={pickerTrigger}
             type="button"
-            onClick={() => setPickerOpen((open) => !open)}
+            onClick={() => {
+              setMetricLimitReached(false);
+              setPickerOpen((open) => !open);
+            }}
             aria-expanded={pickerOpen}
             aria-controls="metric-picker"
             className="inline-flex min-h-11 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-bold text-text-major transition-colors hover:bg-slate-50 active:bg-slate-100 aria-expanded:border-slate-300 aria-expanded:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-text-dark-primary dark:hover:bg-slate-800 dark:active:bg-slate-800 dark:aria-expanded:bg-slate-800"
@@ -407,33 +414,6 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
         >
           <div className="min-h-0 overflow-hidden">
             <div className="mt-3 border-t pt-3">
-              <div className="mb-2 flex flex-wrap gap-2">
-                {(
-                  [
-                    ["헬륨", ["hepres", "heleve"]],
-                    ["온도", ["actemp", "gctemp", "cctemp", "ccflow"]],
-                    ["냉각", ["gctemp", "gcflow", "cctemp", "ccflow"]],
-                  ] as [string, MetricKey[]][]
-                ).filter(([, keys]) => keys.some((key) => metrics.some((metric) => metric.key === key))).map(([label, keys]) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className="min-h-11 rounded-lg border px-3 text-sm"
-                    onClick={() => {
-                      const visible = keys.filter((key) => metrics.some((metric) => metric.key === key));
-                      setSelected(visible);
-                      setFocused(visible[0]);
-                    }}
-                  >
-                    {label} 묶음
-                  </button>
-                ))}
-              </div>
-              <p className="text-text-secondary dark:text-text-dark-primary/70 mb-2 text-sm">
-                {selection.length === 4
-                  ? "4개 선택 완료 · 다른 항목을 추가하려면 선택한 항목 하나를 해제하세요."
-                  : "최소 1개, 최대 4개 항목을 선택하세요."}
-              </p>
               <div className="grid grid-cols-1 gap-2 min-[360px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
                 {metrics.map((metric) => {
                   const active = selection.includes(metric.key);
@@ -442,9 +422,7 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                       key={metric.key}
                       type="button"
                       aria-pressed={active}
-                      disabled={
-                        active ? selection.length === 1 : selection.length === 4
-                      }
+                      disabled={active && selection.length === 1}
                       onClick={() => toggleMetric(metric.key)}
                       className={`min-h-11 min-w-0 rounded-lg border px-3 py-2 text-left text-sm break-words disabled:opacity-50 ${active ? "border-brand-primary bg-brand-primary text-white" : "dark:bg-background-dark-secondary"}`}
                     >
@@ -454,9 +432,15 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
                   );
                 })}
               </div>
+              {metricLimitReached && selection.length === 4 && (
+                <p role="status" className="mt-2 text-sm text-amber-800 dark:text-amber-300">
+                  최대 4개까지 선택할 수 있습니다. 다른 항목을 추가하려면 선택한 항목을 하나 해제하세요.
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => {
+                  setMetricLimitReached(false);
                   pickerTrigger.current?.focus({ preventScroll: true });
                   setPickerOpen(false);
                 }}

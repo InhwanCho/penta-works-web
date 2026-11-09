@@ -141,7 +141,19 @@ export default function BaselinesClient({
 
   return (
     <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-      {view === "events" ? <header className="alert-inbox-heading"><h1>알림</h1><p>병원 상태를 확인하고 필요한 알림을 관리하세요.</p></header> : view === "settings" ? <header className="alert-inbox-heading"><Link href="/settings" className="work-back">← 설정</Link><h1>알림 설정</h1></header> : null}
+      {view === "events" ? <header className="alert-inbox-heading flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1>알림</h1>
+          <p>병원 상태를 확인하고 필요한 알림을 관리하세요.</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => navigateView("settings")}
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold whitespace-nowrap hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:bg-background-dark-card dark:hover:bg-slate-800 dark:active:bg-slate-800"
+        >
+          알림 설정
+        </button>
+      </header> : view === "settings" ? <header className="alert-inbox-heading"><Link href="/settings" className="work-back">← 설정</Link><h1>알림 설정</h1></header> : null}
       {view !== "events" && view !== "settings" && <div className="mb-5">
         <button type="button" onClick={() => navigateView("settings")} className="mb-2 inline-flex min-h-12 items-center rounded-lg px-2 text-base font-bold text-sky-800 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/30">← 알림 설정 메뉴</button>
         <div className="flex items-center justify-between gap-2"><h2 className="text-xl font-extrabold">{view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"}</h2><span className="lg:hidden"><HelpButton title={view === "sites" ? "병원 운영시간·표시" : "병원별 알림 기준"} message={view === "sites" ? "병원을 찾은 뒤 원하는 항목을 바꾸세요. 운영시간과 냉각 방식은 모든 담당자에게 적용됩니다." : "병원을 검색하고 변경할 기준값을 누르세요. 변경한 알림 기준은 내 계정에만 적용됩니다."}/></span></div>
