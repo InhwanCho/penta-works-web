@@ -4416,9 +4416,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 @media(hover:hover) { .inspection-source-record:hover { color: var(--work-ink); } }
 .work-due-row > .inspection-due-date { flex-shrink: 0; }
 @media (max-width: 767px) {
- .workspace-frame .work-overview #work-due > summary {
-  grid-template-columns: max-content 44px minmax(0, 1fr);
- }
+ .workspace-frame .work-overview #work-due > summary > small { white-space: nowrap; }
  #work-due .work-due-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
