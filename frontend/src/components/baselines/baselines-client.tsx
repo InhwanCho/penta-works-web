@@ -152,13 +152,6 @@ export default function BaselinesClient({
           <h1>알림</h1>
           <p>병원 상태를 확인하고 필요한 알림을 관리하세요.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigateView("settings")}
-          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold whitespace-nowrap hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:bg-background-dark-card dark:hover:bg-slate-800 dark:active:bg-slate-800"
-        >
-          알림 설정
-        </button>
       </header> : view === "settings" ? <header className="alert-inbox-heading"><Link href="/settings" className="work-back">← 설정</Link><h1>알림 설정</h1></header> : null}
       {view !== "events" && view !== "settings" && <div className="mb-5">
         <button type="button" onClick={() => navigateView("settings")} className="mb-2 inline-flex min-h-12 items-center rounded-lg px-2 text-base font-bold text-sky-800 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/30">← 알림 설정 메뉴</button>
@@ -198,7 +191,7 @@ export default function BaselinesClient({
 
       {canEditCompany && <div className="mt-8"><CompanyThresholdEditor thresholds={companyThresholds} canEdit={canEditCompany} onSave={onSaveCompany} /></div>}
 
-      </> : <AlertEventsPanel onOpenSettings={openEventSettings} availableSites={entries} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />}
+      </> : <AlertEventsPanel onOpenCompanySettings={() => navigateView("settings")} onOpenSettings={openEventSettings} availableSites={entries} onAcknowledge={onAcknowledge} onAcknowledgeMany={onAcknowledgeMany} onRetryDelivery={onRetryDelivery} />}
 
       {selected && <SiteThresholdEditor entry={entries.find(entry => entry.siteid === selected.siteid) ?? selected} initialMetricKey={editorMetric} initialPane={editorPane} onlyMetricKey={selected.thresholds.some(item => item.key === editorMetric) ? editorMetric : undefined} canEdit={canEdit} onClose={() => setSelected(null)} onSave={async (entry) => { const saved = await onSave(entry); setSelected(saved); return saved; }} />}
     </main>
@@ -233,7 +226,8 @@ function CompanyThresholdEditor({ thresholds, canEdit, onSave }: {
   </section>;
 }
 
-function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, onOpenSettings, availableSites }: {
+function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, onOpenSettings, onOpenCompanySettings, availableSites }: {
+  onOpenCompanySettings: () => void;
   onOpenSettings: (event: AlertEventSummary) => void;
   availableSites: Pick<SiteAlertSettings, "siteid" | "name">[];
   onAcknowledge: (eventId: number) => Promise<AlertEventSummary>;
@@ -299,6 +293,15 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
   return (
     <section className="alert-inbox">
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={onOpenCompanySettings}
+          className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold whitespace-nowrap hover:bg-slate-50 active:bg-slate-100 dark:border-slate-700 dark:bg-background-dark-card dark:hover:bg-slate-800 dark:active:bg-slate-800"
+        >
+          알림 설정
+        </button>
+      </div>
       <div className="alert-inbox-tabs" aria-label="알림 보기">
         {(["unacknowledged", "open", "all"] as const).map(value => <button key={value} type="button" aria-pressed={value === (filter === "failed" || filter === "skipped" ? "all" : filter)} onClick={() => { setFilter(value); setSelecting(false); setSelected([]); }}>{value === "unacknowledged" ? "확인 필요" : value === "open" ? "진행 중" : "전체 기록"}</button>)}
       </div>
