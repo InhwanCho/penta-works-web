@@ -7,7 +7,7 @@ export function collectionMissing(row: SiteRow) {
 }
 
 export default function CollectionStatus({ row }: { row: SiteRow }) {
-  if (row.lastAt == null) return <span className="mt-1 block text-[10px] text-slate-500">-</span>;
+  if (row.lastAt == null) return <span className="mt-1 block text-[10px] font-semibold text-slate-500 dark:text-slate-400" title="아직 수집된 측정값이 없습니다">미수집</span>;
   if (row.companyAlertState && !row.companyAlertState.enabled) return <span className="mt-1 block text-[10px] font-bold text-slate-500">알림 꺼짐</span>;
   if (row.companyAlertState?.collectionLevel === "NORMAL") return null;
   if (!row.missedCollectionCount) return null;

@@ -289,7 +289,7 @@ export default function DashboardExcelView({
                           {row.name ?? "-"}
                         </span>
                       </Link>
-                      {operatingHours.data?.[row.siteDb]?.status.enabled && !operatingHours.data[row.siteDb].status.monitoring
+                      {row.lastAt != null && operatingHours.data?.[row.siteDb]?.status.enabled && !operatingHours.data[row.siteDb].status.monitoring
                         ? <span className="mt-1 block text-[9px] font-semibold leading-tight text-slate-500 sm:text-[10px]" title={`병원 공통 운영 시간 · 다음 감시 ${nextMonitoringLabel(operatingHours.data[row.siteDb].status.nextMonitoringAt)}`}>{operatingHours.data[row.siteDb].status.label}<span className="block">{operatingHours.data[row.siteDb].status.nextMonitoringAt?`다음 감시 ${nextMonitoringLabel(operatingHours.data[row.siteDb].status.nextMonitoringAt)}`:'예정 시간 없음'}</span></span>
                         : <CollectionStatus row={row} />}
                       {row.alertStatus !== "NORMAL" && !(operatingHours.data?.[row.siteDb]?.status.enabled && !operatingHours.data[row.siteDb].status.monitoring) && <span className={`mt-1 inline-flex max-w-[74px] items-center rounded-full px-1 py-0.5 text-[9px] font-extrabold sm:max-w-[166px] sm:px-1.5 sm:text-[10px] ${row.alertStatus === "NO_DATA" ? "bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300" : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"}`} title={row.alertIssues.map((issue) => issue.message).join("\n")}>{row.alertStatus === "NO_DATA" ? "수신 중단" : "기준 이탈"}{row.openAlertCount > 0 ? ` ${row.openAlertCount}` : ""}</span>}
