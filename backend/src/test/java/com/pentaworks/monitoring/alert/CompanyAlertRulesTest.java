@@ -69,12 +69,13 @@ class CompanyAlertRulesTest {
         assertEquals("NORMAL",state.collectionLevel());
         assertTrue(state.signals().isEmpty());
     }
-    @Test void fiveRisingReadingsAboveAverageWarnWithoutKakaoAndYieldToCritical() {
-        var history=List.of(sample(0,2.25),sample(10,2.2),sample(20,2.15),sample(30,2.1),sample(40,2.05));
+    @Test void tenRisingReadingsAboveAverageWarnWithoutKakaoAndYieldToCritical() {
+        var history=List.of(sample(0,2.25),sample(10,2.23),sample(20,2.21),sample(30,2.19),sample(40,2.17),
+            sample(50,2.15),sample(60,2.13),sample(70,2.11),sample(80,2.09),sample(90,2.07));
         var state=evaluate(history,10,0L,true,null);
-        assertEquals("NORMAL",evaluate(history.subList(0,4),10,0L,true,null).readings().get("hepres").level());
+        assertEquals("NORMAL",evaluate(history.subList(0,9),10,0L,true,null).readings().get("hepres").level());
         assertEquals("YELLOW",state.readings().get("hepres").level());
-        assertEquals(5,state.readings().get("hepres").consecutive());
+        assertEquals(10,state.readings().get("hepres").consecutive());
         assertTrue(state.signals().stream().noneMatch(CompanyAlertEvaluation.Signal::triggered));
         var critical=new ArrayList<>(history);
         critical.set(0,sample(0,2.7));
@@ -83,7 +84,7 @@ class CompanyAlertRulesTest {
         assertEquals("RED",red.readings().get("hepres").level());
         assertEquals(1,red.signals().stream().filter(CompanyAlertEvaluation.Signal::triggered).count());
         var gap=new ArrayList<>(history);
-        gap.set(4,sample(50,2.05));
+        gap.set(9,sample(100,2.07));
         assertEquals("NORMAL",evaluate(gap,10,0L,true,null).readings().get("hepres").level());
     }
     @Test void replacementUsesFiveKoreanCalendarDaysAndStillShowsCriticalColor() {

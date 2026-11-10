@@ -46,7 +46,7 @@ public final class CompanyAlertEvaluation {
                 pressure ? policy.pressureWarning() : null,critical,high,missing,policy.missingWarning(),policy.missingCritical(),pressure && quiet);
             if (pressure && !reading.level().equals("RED")) {
                 int rising = CompanyAlertRules.risingPressureStreak(history,interval,t.averageValue());
-                if (rising >= 5) reading = new CompanyAlertRules.Reading("YELLOW",rising,"평균 위에서 상승",t.averageValue(),7);
+                if (rising >= 10) reading = new CompanyAlertRules.Reading("YELLOW",rising,"평균 위에서 상승",t.averageValue(),7);
             }
             readings.put(key,reading);
             if (critical != null) {

@@ -105,7 +105,7 @@ export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: s
       warning={<ul className="list-disc space-y-1 pl-5">
         <li><strong>{p.pressureWarning}~{p.pressureCritical} psi</strong> 범위</li>
         <li>7일 평균보다 <strong>{p.tolerancePercent}% 넘게</strong> 높거나 낮음</li>
-        <li>7일 평균을 웃도는 <strong>5건</strong>이 연속으로 매번 상승</li>
+        <li>7일 평균을 웃도는 <strong>10건</strong>이 연속으로 매번 상승</li>
         <li>{p.pressureCritical} psi를 처음 초과</li>
       </ul>}
       kakao={<><strong>{p.pressureCritical} psi 초과</strong>가 <strong>2회 연속</strong></>}
