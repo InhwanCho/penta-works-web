@@ -29,14 +29,14 @@ function AlertCriterion({ title, description, warning, kakao, note, children }: 
   note?: ReactNode;
   children?: ReactNode;
 }) {
-  return <tr className="border-t border-slate-200 align-top dark:border-slate-700">
+  return <tr className="alert-criterion-row border-t border-slate-200 align-top dark:border-slate-700">
     <th scope="row" className="w-[28%] p-2 text-left font-semibold">{title}
       {description && <p className="mt-1 text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">{description}</p>}
       {note && <details className="mt-2 text-xs font-normal leading-5"><summary className="cursor-pointer text-slate-500">참고 사항</summary><div className="mt-1">{note}</div></details>}
       {Children.toArray(children).length > 0 && <div className="mt-2 space-y-2">{children}</div>}
     </th>
-    <td className="p-2 leading-6">{warning || "—"}</td>
-    <td className="p-2 leading-6">{kakao || "발송 없음"}</td>
+    <td className="p-2 leading-6"><span className="alert-criterion-label text-amber-700 dark:text-amber-300">주의 · 화면 표시만</span>{warning || "별도 기준 없음"}</td>
+    <td className="p-2 leading-6"><span className="alert-criterion-label text-red-700 dark:text-red-300">위험 · 카톡 1회</span>{kakao || "발송 없음"}</td>
   </tr>;
 }
 
@@ -92,7 +92,7 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
       {notice && <p role="status" className="mt-2 rounded-lg bg-emerald-50 p-3 font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
     </section>
     <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-background-dark-card">
-    <table className="w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
+    <table className="alert-criteria-table w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
       <caption className="sr-only">회사 공통 알림 기준</caption>
       <thead className="bg-slate-50 text-left dark:bg-slate-800"><tr>
         <th scope="col" className="p-2 font-semibold">측정항목</th>
