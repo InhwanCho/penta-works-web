@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/api";
 import { errorText } from "./workspace-data";
 import WorkspaceDrawer from "./workspace-drawer";
 
-export default function InspectionMemo({ siteId, type }: { siteId: string; type: string }) {
+export default function InspectionMemo({ siteId, type, preview = false }: { siteId: string; type: string; preview?: boolean }) {
   const id = useId();
   const client = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -44,13 +44,13 @@ export default function InspectionMemo({ siteId, type }: { siteId: string; type:
   }
 
   return <>
-    <div className="inspection-memo-trigger">
+    {!preview && <div className="inspection-memo-trigger">
       <button type="button" className="work-secondary" disabled={query.isPending || query.isError} onClick={edit}>메모</button>
-      {query.data?.memo && <button type="button" className="inspection-memo-preview" onClick={edit} title={query.data.memo}>
+      {query.isError && <button type="button" className="work-secondary" onClick={() => void query.refetch()}>메모 다시 불러오기</button>}
+    </div>}
+      {preview && query.data?.memo && <button type="button" className="inspection-memo-preview" onClick={edit} title={query.data.memo}>
         {query.data.memo}
       </button>}
-      {query.isError && <button type="button" className="work-secondary" onClick={() => void query.refetch()}>메모 다시 불러오기</button>}
-    </div>
     {open && <WorkspaceDrawer title="점검 메모" onClose={() => { if (!busy) setOpen(false); }} className="inspection-memo-dialog">
       <div className="inspection-memo-editor">
         <label htmlFor={id}>메모 내용</label>
@@ -58,7 +58,7 @@ export default function InspectionMemo({ siteId, type }: { siteId: string; type:
         <small>회사 구성원과 공유되는 메모입니다.</small>
         {error && <p role="alert" className="work-error">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2">
-          {query.data?.memo && <button type="button" className="action-danger mr-auto" disabled={busy} onClick={() => {
+          {query.data?.memo && <button type="button" className="work-secondary action-danger mr-auto" disabled={busy} onClick={() => {
             if (window.confirm("이 메모를 삭제할까요?")) void save("");
           }}>삭제</button>}
           <button type="button" className="work-secondary" disabled={busy} onClick={() => setOpen(false)}>취소</button>
