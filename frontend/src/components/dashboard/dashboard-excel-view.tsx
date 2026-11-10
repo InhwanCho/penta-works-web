@@ -298,7 +298,15 @@ export default function DashboardExcelView({
                     {columns.map((column) => {
                       const m = metrics.find(metric => metric.key === column.key);
                       if (!m) return <td key={column.key} onClick={() => selectCell(row, column.displayName)} className={`${CELL_BORDER} cursor-cell px-1 py-1.5 text-right whitespace-nowrap tabular-nums lg:px-3 lg:py-2`}>
-                        {column.key === "lastAt" ? <><span className="text-[10px] tracking-tight lg:block lg:text-xs">{fmtYmd(lastAtDate)}</span><span className="lg:hidden"> </span><span className="text-[10px] tracking-tight opacity-70 lg:block lg:text-xs">{fmtHms(lastAtDate)}</span></> : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
+                        {column.key === "lastAt" ? (
+                          lastAtDate ? (
+                            <>
+                              <span className="text-[10px] tracking-tight lg:block lg:text-xs">{fmtYmd(lastAtDate)}</span>
+                              <span className="lg:hidden"> </span>
+                              <span className="text-[10px] tracking-tight opacity-70 lg:block lg:text-xs">{fmtHms(lastAtDate)}</span>
+                            </>
+                          ) : <span className="text-[10px] lg:text-xs">-</span>
+                        ) : fmtNum(column.key === "count1h" ? row.count1h : row.count24h)}
                       </td>;
                       const value = row.metrics?.[m.key] ?? null;
                       const reading = row.companyAlertState?.readings[m.key];
