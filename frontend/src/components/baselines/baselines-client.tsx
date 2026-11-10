@@ -147,7 +147,7 @@ export default function BaselinesClient({
   </main>;
   return (
     <main className="mx-auto w-full max-w-7xl px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-      {view === "events" ? <header className="alert-inbox-heading flex items-start justify-between gap-3">
+      {view === "events" ? <header className="alert-inbox-heading flex flex-wrap items-start justify-start gap-4">
         <div className="min-w-0">
           <h1>알림</h1>
           <p>병원 상태를 확인하고 필요한 알림을 관리하세요.</p>

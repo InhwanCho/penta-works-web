@@ -8,7 +8,8 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-settings-button";
-import AlertSettingsTable, { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
+import { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
+import CompanyAlertSettings from "@/components/baselines/company-alert-settings";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";
 import { dashboardRowStatus, sortDashboardRows } from "@/lib/dashboard-row-order";
@@ -27,7 +28,7 @@ import type { MetricDef } from "@/lib/metrics";
 import type { ReactNode } from "react";
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch, type SiteAlertSettings } from "@/lib/api";
+import { apiFetch } from "@/lib/api";
 
 type StatusFilter = "all" | "issues" | "warning" | "no-data" | "normal" | "configured";
 const STATUS_FILTER_LABEL: Record<StatusFilter, string> = {
@@ -105,7 +106,7 @@ export default function DashboardClient() {
     if (dialog?.open) dialog.close();
     setShowMobileFilters(false);
   }, []);
-  const alertSettings = useQuery({ queryKey: ["alert-thresholds"], queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), enabled: statusFilter === "configured", staleTime: 60_000, refetchInterval: 60_000 });
+
 
   const changeStatusFilter = useCallback((next: StatusFilter) => {
     closeMobileFilters();
@@ -262,10 +263,7 @@ export default function DashboardClient() {
 
         {statusFilter === "configured" ? (
           <section className="space-y-3">
-            <Link href="/baselines" className="hidden min-h-12 py-3 text-base font-bold text-sky-700 lg:inline-block dark:text-sky-300">알림 관리에서 전체 설정 보기 →</Link>
-            {alertSettings.isPending ? <p className="p-4 text-sm"><CircleLoader size="xs" /></p> : alertSettings.isError ? <button type="button" className="min-h-11 p-3 text-sm text-rose-600" onClick={() => alertSettings.refetch()}>설정을 불러오지 못했습니다. 다시 시도</button> : (
-              <AlertSettingsTable entries={sortedRows.map(row => alertSettings.data?.find(site => site.siteid === row.siteDb)).filter((site): site is SiteAlertSettings => Boolean(site))} metrics={dashboardMetrics} onOpen={(site,metricKey,pane)=>setSelectedAlert({siteId:site.siteid,metricKey,pane,onlyMetric:!!metricKey && !metricKey.startsWith("__")})} />
-            )}
+            <CompanyAlertSettings siteIds={sortedRows.map(row => row.siteDb)} />
           </section>
         ) : (
           <DashboardExcelView

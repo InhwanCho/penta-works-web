@@ -47,7 +47,7 @@ function duration(minutes: number) {
   return hours ? `${hours}시간${rest ? ` ${rest}분` : ""}` : `${rest}분`;
 }
 
-export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: string; metricKey?: string }) {
+export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { siteId?: string; metricKey?: string; siteIds?: string[] }) {
   const client = useQueryClient();
   const query = useQuery({queryKey:["company-alert-policy"],queryFn:()=>apiFetch<PolicyView>("/alerts/company-policy")});
   const [draft, setDraft] = useState<PolicyView | null>(null);
@@ -77,7 +77,7 @@ export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: s
   }
   const number = (label: string, key: keyof Omit<Policy,"hospitals"|"coldChillerEnabled">, unit: string, min: number, max: number, step = 1) =>
     <label className="block min-w-0 text-sm font-semibold">{label} ({unit})<input type="number" required min={min} max={max} step={step} disabled={locked} className={field} value={p[key]} onChange={e=>change({[key]:e.target.valueAsNumber})}/></label>;
-  const hospitals = draft.hospitals.filter(h=>(!siteId || h.siteId===siteId) && (!search || h.name.includes(search)));
+  const hospitals = draft.hospitals.filter(h=>(!siteId || h.siteId===siteId) && (!siteIds || siteIds.includes(h.siteId)) && (!search || h.name.includes(search)));
   return <form onSubmit={save} className="space-y-3 text-sm leading-relaxed">
     {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && <p className="rounded-lg bg-slate-100 p-4 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">개발용 화면 · 실제 카톡은 발송되지 않습니다.</p>}
     <section className={card}>
