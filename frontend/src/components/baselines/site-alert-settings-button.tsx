@@ -26,7 +26,7 @@ export function SiteAlertSettingsDialog({ page=false,siteId,onClose,onlyMetricKe
   }, [page, id, open, close]);
   const content = <div className="mx-auto max-w-4xl p-3">
     <div className="mx-auto max-w-4xl"><div className="mb-4 flex items-center justify-between gap-3"><h2 className="text-base font-bold">알림 설정</h2><button autoFocus type="button" onClick={onClose} className="min-h-10 rounded-lg border px-5 font-bold">닫기</button></div>
-    <CompanyAlertSettings siteId={siteId} metricKey={onlyMetricKey ?? initialMetricKey}/><Link href="/baselines?view=settings" className="my-4 inline-flex min-h-10 items-center underline">전체 병원 알림 설정 보기</Link></div>
+    <CompanyAlertSettings siteId={siteId} metricKey={onlyMetricKey ?? initialMetricKey}/><Link href="/baselines?view=settings" className="mt-3 flex min-h-10 w-full items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 active:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">전체 병원 알림 설정 보기</Link></div>
   </div>;
   return page ? content : <CustomModal id={id} onRequestClose={onClose} showCloseButton={false}>
     <div className="max-h-[80dvh] overflow-y-auto overflow-x-hidden">{content}</div>

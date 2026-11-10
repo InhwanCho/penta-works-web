@@ -91,7 +91,7 @@ export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: s
       <Link href="/notification-settings?from=baselines" className="mt-2 inline-flex min-h-10 items-center font-bold text-sky-800 underline dark:text-sky-300">내 카톡 수신 시간·주말 설정 →</Link>
       {notice && <p role="status" className="mt-2 rounded-lg bg-emerald-50 p-3 font-bold text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200">{notice}</p>}
     </section>
-    <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+    <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white dark:border-slate-700 dark:bg-background-dark-card">
     <table className="w-full table-fixed border-collapse text-sm [overflow-wrap:anywhere]">
       <caption className="sr-only">회사 공통 알림 기준</caption>
       <thead className="bg-slate-50 text-left dark:bg-slate-800"><tr>
@@ -167,7 +167,8 @@ export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: s
     <section className={card}>
       <h3 className="text-sm font-extrabold">병원별 알림 켜기·끄기</h3>
       <p className="mt-2">알림을 끄면 회사 전체 사용자의 알림이 중지됩니다. 측정값과 그래프는 계속 볼 수 있습니다.</p>
-      {!siteId && <label className="mt-4 block font-bold">병원 찾기<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="병원 이름 입력" className={field}/></label>}
+      {!siteId && <label className="mt-3 block max-w-sm font-semibold">병원 찾기<input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="병원 이름 입력" className={field}/></label>}
+{siteId ? <>
       <div className="mt-3 grid gap-2">{hospitals.map(h=>{
         const config=p.hospitals[h.siteId]??h.settings;
         const update=(patch:Partial<Hospital>)=>change({hospitals:{...p.hospitals,[h.siteId]:{...config,...patch}}});
@@ -190,6 +191,38 @@ export default function CompanyAlertSettings({ siteId, metricKey }: { siteId?: s
           {h.coldHeadReplacedAt && <p className={`mt-2 ${muted}`}>콜드헤드 교체일 {h.coldHeadReplacedAt} · 헬륨 압력 카톡 중지 기간 {h.quietUntil} 00시까지</p>}
         </div>;
       })}{hospitals.length===0 && <p>해당 병원이 없습니다.</p>}</div>
+</> : <>
+      <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+        <table className="w-full table-fixed text-left text-xs sm:text-sm [overflow-wrap:anywhere]">
+          <caption className="sr-only">병원별 알림 및 수집 지연 기준</caption>
+          <thead className="bg-slate-50 dark:bg-slate-800"><tr>
+            {["병원", "알림", "수집 주기", "주의 지연", "카톡 지연"].map(label => <th key={label} scope="col" className="p-2 font-semibold">{label}</th>)}
+          </tr></thead>
+          <tbody>{hospitals.map(h => {
+            const config = p.hospitals[h.siteId] ?? h.settings;
+            const update = (patch: Partial<Hospital>) => change({hospitals: {...p.hospitals, [h.siteId]: {...config, ...patch}}});
+            return <tr key={h.siteId} className="border-t border-slate-200 align-top dark:border-slate-700">
+              <th scope="row" className="p-2 font-semibold">
+                {h.name}
+                {h.coldHeadReplacedAt && <details className="mt-1 text-xs font-normal text-slate-500 dark:text-slate-400">
+                  <summary className="cursor-pointer">교체 정보</summary>
+                  <p>교체 {h.coldHeadReplacedAt}</p>
+                  <p>압력 카톡 중지 {h.quietUntil} 00시까지</p>
+                </details>}
+              </th>
+              <td className="p-2">{editing ? <label className="flex min-h-10 flex-wrap items-center gap-1">
+                <input type="checkbox" aria-label={h.name + " 알림"} disabled={locked} checked={config.enabled} onChange={e => update({enabled: e.target.checked})} className="h-5 w-5"/>
+                {config.enabled ? "켜짐" : "꺼짐"}
+              </label> : <span className={config.enabled ? "font-semibold text-emerald-700 dark:text-emerald-300" : "text-slate-500"}>{config.enabled ? "켜짐" : "꺼짐"}</span>}</td>
+              <td className="p-2">{editing ? <input aria-label={h.name + " 수집 주기 (분)"} type="number" required min={5} max={1440} step={1} disabled={locked} value={config.intervalMinutes} onChange={e => update({intervalMinutes: e.target.valueAsNumber})} className="min-h-10 w-full min-w-0 rounded border border-slate-300 bg-transparent px-1 dark:border-slate-600"/> : duration(config.intervalMinutes)}</td>
+              <td className="p-2">{config.enabled ? duration(config.intervalMinutes * p.collectionWarning) : "—"}</td>
+              <td className="p-2">{config.enabled ? duration(config.intervalMinutes * p.collectionCritical) : "—"}</td>
+            </tr>;
+          })}</tbody>
+        </table>
+        {hospitals.length === 0 && <p className="p-3">해당 병원이 없습니다.</p>}
+      </div>
+</>}
     </section>
     {error && <p role="alert" className="rounded-lg bg-rose-50 p-4 font-bold text-rose-800">{error}</p>}
     {editing && <div className="sticky bottom-2 z-10 flex flex-wrap gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-lg dark:border-slate-600 dark:bg-slate-900"><button type="submit" disabled={saving} className="min-h-10 flex-1 rounded-lg bg-sky-700 px-4 font-bold text-white disabled:opacity-50">{saving?"저장 중…":"저장하고 회사 전체에 적용"}</button><button type="button" disabled={saving} className="min-h-10 rounded-lg border px-4 font-bold" onClick={()=>{setEditing(false);setError("");}}>취소</button></div>}
