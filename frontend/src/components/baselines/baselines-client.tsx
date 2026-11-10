@@ -272,7 +272,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
   const busy = bulkSaving || acknowledging !== null || retrying !== null;
 
   async function acknowledge(eventId: number) {
-    if (!window.confirm("이 알림을 확인했나요? 확인하면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다.")) return;
+    if (!window.confirm("이 알림을 확인했나요? 내 알림 목록에 확인으로 표시합니다. 문제 해결 여부는 별도로 표시됩니다.")) return;
     setAcknowledging(eventId); setError(null);
     try { await onAcknowledge(eventId); await history.refetch(); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 확인 처리하지 못했습니다."); }
@@ -281,7 +281,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
   async function acknowledgeSelected(ids: number[]) {
     if (ids.length === 0) return;
-    if (!window.confirm(`${ids.length}건을 확인했나요? 확인하면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다.`)) return;
+    if (!window.confirm(`${ids.length}건을 확인했나요? 내 알림 목록에 확인으로 표시합니다. 문제 해결 여부는 별도로 표시됩니다.`)) return;
     setBulkSaving(true); setError(null);
     try { await onAcknowledgeMany(ids); await history.refetch(); setSelected((current) => current.filter((id) => !ids.includes(id))); }
     catch (ackError) { setError(ackError instanceof Error ? ackError.message : "알림을 일괄 확인 처리하지 못했습니다."); }
@@ -302,7 +302,7 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       <div className="alert-inbox-tabs" aria-label="알림 보기">
         {(["unacknowledged", "open", "all"] as const).map(value => <button key={value} type="button" aria-pressed={value === (filter === "failed" || filter === "skipped" ? "all" : filter)} onClick={() => { setFilter(value); setSelecting(false); setSelected([]); }}>{value === "unacknowledged" ? "확인 필요" : value === "open" ? "진행 중" : "전체 기록"}</button>)}
       </div>
-      <p className="alert-inbox-guide">{filter === "unacknowledged" ? "아직 확인하지 않은 알림입니다. 확인하면 같은 알림을 24시간 쉬어갑니다." : filter === "open" ? "확인 여부와 관계없이 아직 정상으로 복구되지 않은 문제입니다." : "확인한 알림과 정상으로 복구된 기록도 함께 볼 수 있습니다."}</p>
+      <p className="alert-inbox-guide">{filter === "unacknowledged" ? "아직 확인하지 않은 알림입니다. 문제가 계속되면 24시간 뒤 확인 필요 목록에 다시 표시될 수 있습니다." : filter === "open" ? "확인 여부와 관계없이 아직 정상으로 복구되지 않은 문제입니다." : "확인한 알림과 정상으로 복구된 기록도 함께 볼 수 있습니다."}</p>
       <details className="alert-inbox-filters">
         <summary>상세 검색{(query || siteId || fromDate || toDate || kind !== "all" || filter === "failed" || filter === "skipped") ? " · 적용 중" : ""}</summary>
         <div className="alert-inbox-filter-fields">
@@ -317,11 +317,11 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       </details>
       {total > 0 && <div className="mb-3 flex min-h-11 flex-wrap items-center gap-2">
         <span className="text-sm font-bold">{total}건</span>
-        <HelpButton title="알림 확인" message="확인했어요를 누르면 나에게 오는 동일 알림을 24시간 중지합니다. 문제가 해결됐다는 뜻은 아닙니다. 종료되거나 확인한 알림은 전체 기록에서 볼 수 있습니다."/>
+        <HelpButton title="알림 확인" message="확인하면 내 확인 필요 목록에서 빠집니다. 문제가 계속되면 24시간 뒤 목록에 다시 표시될 수 있습니다. 회사 공통 카톡 알림은 문제당 한 번 발송됩니다."/>
         <button type="button" aria-pressed={selecting} onClick={() => { setSelecting(!selecting); setSelected([]); }} className="action-cancel ml-auto min-h-11 px-3 text-sm font-semibold text-sky-700 dark:text-sky-300">{selecting ? "선택 취소" : "선택"}</button>
         {selecting && <div className="flex w-full flex-wrap items-center justify-between gap-2 rounded-xl bg-slate-100 px-3 dark:bg-white/5">
           <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-bold"><input type="checkbox" checked={selectableIds.length > 0 && selectableIds.every(id => selected.includes(id))} onChange={event => setSelected(event.target.checked ? selectableIds : [])} className="h-5 w-5 accent-sky-700"/>이 페이지 선택</label>
-          <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{bulkSaving ? <CircleLoader size="xs" inline /> : `${selectedIds.length}건 확인 · 24시간 중지`}</button>
+          <button type="button" disabled={busy || selectedIds.length === 0} onClick={() => acknowledgeSelected(selectedIds)} className="min-h-11 rounded-lg px-3 text-sm font-bold text-sky-700 disabled:opacity-40 dark:text-sky-300">{bulkSaving ? <CircleLoader size="xs" inline /> : `${selectedIds.length}건 확인`}</button>
         </div>}
       </div>}
       {history.isPending && <PageLoader />}
@@ -506,7 +506,7 @@ function AlertEventRow({
             onClick={onAcknowledge}
             className="received-alert-confirm"
           >
-            {acknowledging ? <CircleLoader size="xs" inline /> : "확인 · 24시간 중지"}
+            {acknowledging ? <CircleLoader size="xs" inline /> : "확인"}
           </button>
         )}
         <button
@@ -524,8 +524,8 @@ function AlertEventRow({
           <div className="flex items-center justify-between">
             <strong className="text-sm">이 알림 잠시 중지</strong>
             <HelpButton
-              title="확인과 잠시 중지"
-              message="확인했어요를 누르면 같은 병원·항목·유형의 알림을 24시간 중지합니다. 중지 시간을 바꾸거나 알림 받기를 재개할 수 있습니다. 시간이 지나면 기존 수신 설정에 따라 다시 받습니다."
+              title="알림 잠시 중지"
+              message="같은 병원·항목·유형의 알림을 일정 기간 중지합니다. 중지 시간을 바꾸거나 수신을 재개할 수 있습니다."
             />
           </div>
           {!recovered && <AlertSnooze event={event} />}
