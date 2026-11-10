@@ -26,7 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AuthService {
     private static final int MAX_FAILED_LOGINS = 5;
-    private static final Duration LOCK_DURATION = Duration.ofMinutes(15);
+    private static final Duration LOCK_DURATION = Duration.ofSeconds(30);
     private static final SecureRandom RANDOM = new SecureRandom();
 
     private final JdbcTemplate jdbcTemplate;
@@ -52,7 +52,7 @@ public class AuthService {
         Instant now = Instant.now();
         if (user == null || !"ACTIVE".equals(user.status())) throw invalidCredentials();
         if (user.lockedUntil() != null && user.lockedUntil().isAfter(now)) {
-            throw new UnauthorizedException("로그인 시도가 잠시 제한되었습니다. 15분 후 다시 시도해주세요.");
+            throw new UnauthorizedException("로그인 시도가 잠시 제한되었습니다. " + LOCK_DURATION.toSeconds() + "초 후 다시 시도해주세요.");
         }
         if (!passwordEncoder.matches(password, user.passwordHash())) {
             registerFailure(user.id());
