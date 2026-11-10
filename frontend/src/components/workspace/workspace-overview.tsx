@@ -1,4 +1,5 @@
 "use client";
+import InspectionMemo from "./inspection-memo";
 import OverviewHelp from "./overview-help";
 import DayComposer from "./day-composer";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
@@ -669,7 +670,7 @@ export default function OverviewPage() {
                 const type = d.type === "PM" ? "PM" : d.type.includes("정밀") ? "ACR_FULL" : "ACR_DOC";
                 const override = type === "PM" ? plan?.pmOverride : type === "ACR_FULL" ? plan?.acrFullOverride : plan?.acrDocOverride;
                 return <article key={`${d.siteId}-${type}`} className="inspection-due-row">
-                  <div className="inspection-due-top"><div className="inspection-due-name"><span className="inspection-due-badge">{type === "PM" ? "정기점검(PM)" : d.type}</span><strong>{d.siteName}</strong></div><div className="inspection-due-links"><Link className="work-secondary" href={`/sites/${d.siteId}#inspection-plan`}>병원 보기</Link><Link className="work-primary" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${type === "PM" ? "PM" : "ACR"}&acrKind=${type === "ACR_FULL" ? "full" : "doc"}`}>일지 작성</Link></div></div>
+                  <div className="inspection-due-top"><div className="inspection-due-name"><span className="inspection-due-badge">{type === "PM" ? "정기점검(PM)" : d.type}</span><strong>{d.siteName}</strong></div><div className="inspection-due-links"><InspectionMemo siteId={d.siteId} type={type} /><Link className="work-secondary" href={`/sites/${d.siteId}#inspection-plan`}>병원 보기</Link><Link className="work-primary" href={`/work/new?site=${encodeURIComponent(d.siteId)}&date=${d.date}&type=${type === "PM" ? "PM" : "ACR"}&acrKind=${type === "ACR_FULL" ? "full" : "doc"}`}>일지 작성</Link></div></div>
                   <InspectionSourceRecord siteId={d.siteId} type={d.type} onOpen={setDetailHref} />
                   <InspectionDueDate siteId={d.siteId} type={type} date={d.date} overridden={!!override} automaticDate={d.automaticDate || null} />
                 </article>;

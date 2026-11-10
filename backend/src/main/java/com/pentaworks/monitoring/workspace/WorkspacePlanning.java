@@ -34,6 +34,34 @@ public class WorkspacePlanning {
  public record PlanInput(int pmIntervalMonths,LocalDate pmOverride,LocalDate acrFullOverride,LocalDate acrDocOverride){}
  @PutMapping("/planning/{siteId}") @org.springframework.transaction.annotation.Transactional
  public Map<String,Boolean> plan(@PathVariable String siteId,@RequestBody PlanInput input,Authentication auth){var u=users.require(auth);String sid=SiteService.normalizeSiteId(siteId);users.requireSiteAccess(u,sid);if(!u.isAdmin())throw new ForbiddenException("관리자만 점검 주기를 변경할 수 있습니다.");if(input.pmIntervalMonths()<1||input.pmIntervalMonths()>120)throw new BadRequestException("PM 주기는 1~120개월로 입력해주세요.");db.update("INSERT INTO workspace_hospital_plan(company_id,site_id,pm_interval_months,pm_override,acr_full_override,acr_doc_override) VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE pm_interval_months=VALUES(pm_interval_months),pm_override=VALUES(pm_override),acr_full_override=VALUES(acr_full_override),acr_doc_override=VALUES(acr_doc_override)",u.companyId(),sid,input.pmIntervalMonths(),input.pmOverride(),input.acrFullOverride(),input.acrDocOverride());changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));return Map.of("saved",true);}
+
+ public record InspectionMemo(String memo) {}
+
+ @GetMapping("/planning/{siteId}/memo/{type}")
+ public InspectionMemo inspectionMemo(@PathVariable String siteId, @PathVariable String type, Authentication auth) {
+  var user = users.require(auth);
+  String sid = SiteService.normalizeSiteId(siteId);
+  users.requireSiteAccess(user, sid);
+  validateMemoType(type);
+  var values = db.queryForList("SELECT memo FROM workspace_inspection_memo WHERE company_id=? AND site_id=? AND inspection_type=?", String.class, user.companyId(), sid, type);
+  return new InspectionMemo(values.isEmpty() ? "" : values.get(0));
+ }
+
+ @PutMapping("/planning/{siteId}/memo/{type}")
+ public InspectionMemo saveInspectionMemo(@PathVariable String siteId, @PathVariable String type, @RequestBody InspectionMemo input, Authentication auth) {
+  var user = users.require(auth);
+  String sid = SiteService.normalizeSiteId(siteId);
+  users.requireSiteAccess(user, sid);
+  validateMemoType(type);
+  String memo = input.memo() == null ? "" : input.memo().trim();
+  if (memo.length() > 2000) throw new BadRequestException("메모는 2000자 이내로 입력해주세요.");
+  db.update("INSERT INTO workspace_inspection_memo(company_id,site_id,inspection_type,memo) VALUES(?,?,?,?) ON DUPLICATE KEY UPDATE memo=VALUES(memo)", user.companyId(), sid, type, memo);
+  return new InspectionMemo(memo);
+ }
+
+ private void validateMemoType(String type) {
+  if (!Set.of("PM", "ACR_DOC", "ACR_FULL").contains(type)) throw new BadRequestException("점검 유형을 확인해주세요.");
+ }
  public record PmDateInput(LocalDate date){}
  @PatchMapping("/planning/{siteId}/pm-date") @org.springframework.transaction.annotation.Transactional
  public Map<String,Boolean> pmDate(@PathVariable String siteId,@RequestBody PmDateInput input,Authentication auth){

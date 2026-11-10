@@ -4518,3 +4518,8 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  .alert-criterion-label { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; }
  .alert-criteria-table .alert-criterion-row ul { padding-left: 18px; }
 }
+
+.inspection-due-links:has(.inspection-memo-editor) { flex-wrap: wrap; }
+.inspection-memo-editor { order: 1; flex: 1 0 100%; display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); }
+.inspection-memo-editor textarea { width: 100%; min-width: 0; padding: 8px; border: 1px solid var(--work-line); border-radius: 6px; background: var(--work-paper); color: var(--work-ink); resize: vertical; }
+.inspection-memo-editor small { color: var(--work-muted); }
