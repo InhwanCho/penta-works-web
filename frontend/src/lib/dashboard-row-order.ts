@@ -23,7 +23,8 @@ function compareSite(a: SiteRow, b: SiteRow) {
 /** Use the same bounds as red cells, even before the notification scheduler creates an incident. */
 export function sortDashboardRows(rows: readonly SiteRow[], ctrl: Record<string, CtrlRange>, metrics: readonly MetricDef[]) {
   const ranks = new Map(rows.map(row => [row.siteDb,
-    hasRedDashboardValue(row, ctrl, metrics) ? 0
+    row.lastAt == null ? 6
+      : hasRedDashboardValue(row, ctrl, metrics) ? 0
       : row.alertIssues.some(issue => issue.eventType === "LOW" || issue.eventType === "HIGH") ? 1
       : row.alertStatus === "NO_DATA" ? 2
       : row.alertStatus === "WARNING" ? 3
