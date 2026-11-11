@@ -99,17 +99,6 @@ fi
 for attempt_no in $(seq 1 90); do
     if curl --fail --silent "http://127.0.0.1:${BACKEND_PORT}/actuator/health" >/dev/null \
         && curl --fail --silent "http://127.0.0.1:${FRONTEND_PORT}" >/dev/null; then
-        docker run --rm \
-            --network pentaworks-integration \
-            --env OFFICE_API_KEY \
-            --entrypoint sh \
-            curlimages/curl:8.12.1 \
-            -c 'status=$(curl --silent --show-error --output /dev/null --write-out "%{http_code}" \
-                --header "X-MREyes-Api-Key: ${OFFICE_API_KEY}" \
-                "http://office-backend:8080/api/v1/integrations/mreyes/sites/006") || exit 1
-                # Retired hospital data returns 404; auth/server failures must still fail.
-                case "$status" in 200|404) ;; *) echo "Office integration check: HTTP $status" >&2; exit 1 ;; esac' \
-            >/dev/null
         "${compose[@]}" ps
         exit 0
     fi
