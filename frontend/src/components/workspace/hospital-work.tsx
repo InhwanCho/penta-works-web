@@ -7,9 +7,9 @@ import Link from "@/components/common/app-link";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
+import type { ImportedMaintenance } from "@/hooks/use-imported-hospital-assets-query";
 import type { WorkRecord } from "./workspace-data";
-import { MaintenanceRow } from "@/components/site/office-assets-panel";
+import { MaintenanceRow } from "@/components/site/imported-hospital-assets-panel";
 import { RecordList, ErrorState } from "./workspace-pages";
 export function useHospitalHistory(siteId: string, category: "all" | "general" | "coldhead" = "all") {
   const { session } = useAuth();
@@ -21,7 +21,7 @@ export function useHospitalHistory(siteId: string, category: "all" | "general" |
         items: {
           key: string;
           record?: WorkRecord;
-          maintenance?: OfficeMaintenance;
+          maintenance?: ImportedMaintenance;
         }[];
         total: number;
         failedSites: string[];

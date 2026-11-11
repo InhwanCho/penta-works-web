@@ -1,8 +1,8 @@
-package com.pentaworks.monitoring.office;
+package com.pentaworks.monitoring.importedhistory;
 
 import java.util.List;
 
-public record OfficeAssetsResponse(Site site, List<Equipment> equipment, List<Component> components,
+public record ImportedHospitalAssetsResponse(Site site, List<Equipment> equipment, List<Component> components,
     List<Maintenance> maintenanceHistory, String generatedAt) {
     public record Site(long id, String mreyesSiteId, String name, String region, String address, String notes) {}
     public record Equipment(long id, String equipmentType, String manufacturer, String model, String serialNumber,

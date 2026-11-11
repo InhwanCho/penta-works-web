@@ -8,7 +8,7 @@ import HospitalAssets, {
   useHospitalAssets,
   assetTypes,
 } from "@/components/workspace/hospital-assets";
-import OfficeAssetsPanel from "./office-assets-panel";
+import ImportedHospitalAssetsPanel from "./imported-hospital-assets-panel";
 import { useAuth } from "@/components/provider/auth-provider";
 
 export default function HospitalEquipmentPanel({
@@ -26,7 +26,7 @@ export default function HospitalEquipmentPanel({
       <div className="hospital-card-heading hospital-title-heading flex items-center justify-between gap-3">
         <h2 className="text-lg font-extrabold">장비·부품</h2>
       </div>
-      <OfficeAssetsPanel
+      <ImportedHospitalAssetsPanel
         siteId={siteId}
         returnPath={returnPath}
         embedded

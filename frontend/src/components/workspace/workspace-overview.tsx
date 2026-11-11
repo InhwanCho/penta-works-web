@@ -22,7 +22,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
 import { apiFetch } from "@/lib/api";
-import type { OfficeMaintenance } from "@/hooks/use-office-assets-query";
+import type { ImportedMaintenance } from "@/hooks/use-imported-hospital-assets-query";
 import {
   useWorkspace,
   usePlanning,
@@ -138,7 +138,7 @@ export default function OverviewPage() {
           siteId: string;
           siteName: string;
           date: string;
-          maintenance: OfficeMaintenance;
+          maintenance: ImportedMaintenance;
         }[];
         failedSites: string[];
       }>(`/workspace/legacy-history?from=${range.from}&to=${range.to}`),

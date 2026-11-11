@@ -1,7 +1,7 @@
 "use client";
 import { useRouter, useSearchParams } from "next/navigation";
 import { SiteAlertSettingsDialog } from "./site-alert-settings-button";
-import type { AlertSettingsPane } from "./alert-settings-table";
+import type { AlertSettingsPane } from "./site-alert-settings-button";
 
 export default function AlertSettingsPage({siteId}: {siteId: string}) {
   const router = useRouter(), query = useSearchParams();

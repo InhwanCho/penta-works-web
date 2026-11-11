@@ -5,10 +5,10 @@ import PhotoSkeleton from "@/components/common/photo-skeleton";
 import CircleLoader from "@/components/icons/circle-loader";
 
 import {
-  type OfficeMaintenance,
-  type OfficePhoto,
-  useOfficeAssetsQuery,
-} from "@/hooks/use-office-assets-query";
+  type ImportedMaintenance,
+  type ImportedPhoto,
+  useImportedHospitalAssetsQuery,
+} from "@/hooks/use-imported-hospital-assets-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import { apiFetchBlob } from "@/lib/api";
 import Image from "@/components/common/loading-photo";
@@ -27,7 +27,7 @@ const SERVICE_LABELS: Record<string, string> = {
   ETC: "기타",
 };
 
-export default function OfficeAssetsPanel({
+export default function ImportedHospitalAssetsPanel({
   siteId,
   returnPath,
   embedded = false,
@@ -37,7 +37,7 @@ export default function OfficeAssetsPanel({
   embedded?: boolean;
 }) {
   const { session, isLoading: isAuthLoading } = useAuth();
-  const query = useOfficeAssetsQuery(siteId, Boolean(session));
+  const query = useImportedHospitalAssetsQuery(siteId, Boolean(session));
 
   if (isAuthLoading || (session && query.isLoading)) {
     return (
@@ -75,7 +75,7 @@ export default function OfficeAssetsPanel({
           <div>
             {!embedded && <h2 className="font-extrabold">기존 장비·부품</h2>}
             <p className="text-text-secondary dark:text-text-dark-primary/65 mt-1 text-sm">
-              연결된 인트라넷 사이트가 없거나 현재 정보를 불러올 수 없습니다.
+              이관된 장비·정비이력이 없거나 정보를 불러올 수 없습니다.
             </p>
           </div>
           <button
@@ -223,7 +223,7 @@ export function MaintenanceRow({
   showRelativeDate = false,
 }: {
   showRelativeDate?: boolean;
-  item: OfficeMaintenance;
+  item: ImportedMaintenance;
   siteId: string;
 }) {
   const title =
@@ -310,7 +310,7 @@ function PhotoGrid({
 }: {
   siteId: string;
   maintenanceId: number;
-  photos: OfficePhoto[];
+  photos: ImportedPhoto[];
 }) {
   return (
     <div className="mt-4">
@@ -319,7 +319,7 @@ function PhotoGrid({
       </h3>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {photos.map((photo) => (
-          <OfficePhotoThumbnail
+          <ImportedPhotoThumbnail
             key={photo.id}
             siteId={siteId}
             maintenanceId={maintenanceId}
@@ -332,7 +332,7 @@ function PhotoGrid({
   );
 }
 
-function OfficePhotoThumbnail({
+function ImportedPhotoThumbnail({
   siteId,
   maintenanceId,
   photo: initialPhoto,
@@ -340,8 +340,8 @@ function OfficePhotoThumbnail({
 }: {
   siteId: string;
   maintenanceId: number;
-  photo: OfficePhoto;
-  photos: OfficePhoto[];
+  photo: ImportedPhoto;
+  photos: ImportedPhoto[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const [index, setIndex] = useState(photos.findIndex(item => item.id === initialPhoto.id));
@@ -353,7 +353,7 @@ function OfficePhotoThumbnail({
     let active = true;
     let objectUrl: string | null = null;
     apiFetchBlob(
-      `/sites/${encodeURIComponent(siteId)}/office-assets/maintenance/${maintenanceId}/photos/${photo.id}`,
+      `/sites/${encodeURIComponent(siteId)}/imported-hospital-assets/maintenance/${maintenanceId}/photos/${photo.id}`,
     )
       .then((blob) => {
         if (!active) return;

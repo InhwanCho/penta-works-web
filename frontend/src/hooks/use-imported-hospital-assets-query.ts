@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
-export type OfficeSite = {
+export type ImportedSite = {
   id: number;
   mreyesSiteId: string;
   name: string;
@@ -12,7 +12,7 @@ export type OfficeSite = {
   notes: string | null;
 };
 
-export type OfficeEquipment = {
+export type ImportedEquipment = {
   id: number;
   equipmentType: string;
   manufacturer: string | null;
@@ -24,7 +24,7 @@ export type OfficeEquipment = {
   status: string;
 };
 
-export type OfficeComponent = {
+export type ImportedComponent = {
   id: number;
   equipmentId: number;
   name: string;
@@ -37,7 +37,7 @@ export type OfficeComponent = {
   notes: string | null;
 };
 
-export type OfficeMaintenance = {
+export type ImportedMaintenance = {
   id: number;
   equipmentName: string;
   modelName: string | null;
@@ -57,10 +57,10 @@ export type OfficeMaintenance = {
   status: string;
   completedAt: string | null;
   updatedAt: string | null;
-  photos: OfficePhoto[];
+  photos: ImportedPhoto[];
 };
 
-export type OfficePhoto = {
+export type ImportedPhoto = {
   id: number;
   originalName: string | null;
   mimeType: string;
@@ -68,20 +68,20 @@ export type OfficePhoto = {
   height: number | null;
 };
 
-export type OfficeAssetsResponse = {
-  site: OfficeSite;
-  equipment: OfficeEquipment[];
-  components: OfficeComponent[];
-  maintenanceHistory: OfficeMaintenance[];
+export type ImportedHospitalAssetsResponse = {
+  site: ImportedSite;
+  equipment: ImportedEquipment[];
+  components: ImportedComponent[];
+  maintenanceHistory: ImportedMaintenance[];
   generatedAt: string;
 };
 
-export function useOfficeAssetsQuery(siteId: string, enabled = true) {
+export function useImportedHospitalAssetsQuery(siteId: string, enabled = true) {
   return useQuery({
-    queryKey: ["officeAssets", siteId] as const,
+    queryKey: ["importedHospitalAssets", siteId] as const,
     queryFn: () =>
-      apiFetch<OfficeAssetsResponse>(
-        `/sites/${encodeURIComponent(siteId)}/office-assets`,
+      apiFetch<ImportedHospitalAssetsResponse>(
+        `/sites/${encodeURIComponent(siteId)}/imported-hospital-assets`,
         { cache: "no-store" },
       ),
     staleTime: 60_000,

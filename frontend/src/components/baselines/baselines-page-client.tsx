@@ -1,51 +1,18 @@
 "use client";
 
 import { useAuth } from "@/components/provider/auth-provider";
-import { apiFetch, type AlertEventSummary, type AlertThreshold, type SiteAlertSettings } from "@/lib/api";
+import { apiFetch, type AlertEventSummary, type SiteAlertSettings } from "@/lib/api";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import BaselinesClient from "./baselines-client";
 
 export default function BaselinesPageClient() {
-  const { isAdmin, role } = useAuth();
+  const { role } = useAuth();
   const queryClient = useQueryClient();
   const query = useQuery({
     queryKey: ["alert-thresholds"],
     queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"),
     staleTime: 60_000,
     refetchInterval: 60_000,
-  });
-  const companyThresholds = useQuery({
-    queryKey: ["company-alert-thresholds"],
-    queryFn: () => apiFetch<AlertThreshold[]>("/alerts/company-thresholds"),
-    enabled: isAdmin,
-  });
-  const update = useMutation({
-    mutationFn: (entry: SiteAlertSettings) =>
-      apiFetch<SiteAlertSettings>(`/alerts/thresholds/${encodeURIComponent(entry.siteid)}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          thresholds: entry.thresholds.map(({ key, min, max, active, useAverage, tolerancePercent, missingActive, missingThreshold }) =>
-            ({ key, min, max, active, useAverage, tolerancePercent, missingActive, missingThreshold })),
-          noDataMinutes: entry.noDataMinutes,
-          noDataActive: entry.noDataActive,
-          alertsEnabled: entry.alertsEnabled,
-          triggerAfterMinutes: entry.triggerAfterMinutes,
-          repeatMinutes: entry.repeatMinutes,
-          quietStart: entry.quietStart,
-          quietEnd: entry.quietEnd,
-          suppressWeekends: entry.suppressWeekends,
-          holidayDates: entry.holidayDates,
-          coldChillerActive: entry.coldChillerActive,
-          collectionIntervalMinutes: entry.collectionIntervalMinutes,
-          missingCollectionThreshold: entry.missingCollectionThreshold,
-        }),
-      }),
-    onSuccess: (saved) => {
-      queryClient.setQueryData<SiteAlertSettings[]>(["alert-thresholds"], (current = []) =>
-        current.map((entry) => entry.siteid === saved.siteid ? saved : entry),
-      );
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    },
   });
   const updateVisibility = useMutation({
     mutationFn: ({ siteId, visible }: { siteId: string; visible: boolean }) =>
@@ -71,26 +38,6 @@ export default function BaselinesPageClient() {
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
       queryClient.invalidateQueries({ queryKey: ["alert-events"] });
       queryClient.invalidateQueries({ queryKey: ["alert-snoozes"] });
-    },
-  });
-  const updateCompanyThresholds = useMutation({
-    mutationFn: (thresholds: AlertThreshold[]) => apiFetch<AlertThreshold[]>("/alerts/company-thresholds", {
-      method: "PATCH",
-      body: JSON.stringify(thresholds.map(({ key, min, max, active }) => ({ key, min, max, active }))),
-    }),
-    onSuccess: (saved) => {
-      queryClient.setQueryData(["company-alert-thresholds"], saved);
-      queryClient.invalidateQueries({ queryKey: ["alert-thresholds"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-    },
-  });
-  const restoreCompanyThresholds = useMutation({
-    mutationFn: (siteId: string) => apiFetch<SiteAlertSettings>(
-      `/alerts/thresholds/${encodeURIComponent(siteId)}/restore-company`, { method: "POST" }),
-    onSuccess: (saved) => {
-      queryClient.setQueryData<SiteAlertSettings[]>(["alert-thresholds"], (current = []) =>
-        current.map((entry) => entry.siteid === saved.siteid ? saved : entry));
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
     },
   });
   const acknowledge = useMutation({
@@ -123,10 +70,6 @@ export default function BaselinesPageClient() {
       loadFailed={query.isError}
       canEdit={true}
       canEditCompany={role === "PLATFORM_ADMIN" || role === "SUPER_ADMIN"}
-      companyThresholds={companyThresholds.data ?? []}
-      onSaveCompany={(thresholds) => updateCompanyThresholds.mutateAsync(thresholds)}
-      onRestoreCompany={(siteId) => restoreCompanyThresholds.mutateAsync(siteId)}
-      onSave={(entry) => update.mutateAsync(entry)}
       onToggleVisibility={(siteId, visible) => updateVisibility.mutateAsync({ siteId, visible }).then(() => undefined)}
       onToggleAlerts={(siteId, enabled) => updatePolicy.mutateAsync({ siteId, enabled }).then(() => undefined)}
       onAcknowledge={(eventId) => acknowledge.mutateAsync(eventId)}

@@ -44,6 +44,6 @@ export default function HospitalSettingsPage({siteId}:{siteId:string}){
  {error&&<p role="alert" className="mt-4 text-sm text-red-700">{error}</p>}{saved&&<p role="status" className="mt-4 text-sm text-emerald-700">저장했습니다. 모든 담당자에게 공통 적용됩니다.</p>}
  <button type="submit" disabled={!canEdit||saving} className="action-save mt-5 min-h-12 w-full rounded-lg bg-sky-700 px-4 font-bold text-white disabled:opacity-50">{saving?<CircleLoader size="xs" inline />:'병원 공통 설정 저장'}</button></form>}
  <section className="mt-5 rounded-xl border border-slate-200 bg-white p-4 dark:border-white/15 dark:bg-background-dark-card"><h2 className="mb-3 font-bold">냉각 방식</h2><SiteCoolingControl siteId={siteId} name={name}/>{session?.role!=='PLATFORM_ADMIN'&&<p className="text-sm text-text-secondary">냉각 방식은 플랫폼 관리자가 변경합니다.</p>}</section>
- <Link href={`/alert-settings/${encodeURIComponent(siteId)}?return=/baselines?view=thresholds`} className="mt-4 inline-flex min-h-11 items-center text-sm font-bold text-sky-700 dark:text-sky-300">내 계정의 수치·누락 기준 설정 →</Link>
+ <Link href={`/alert-settings/${encodeURIComponent(siteId)}?return=/baselines?view=thresholds`} className="mt-4 inline-flex min-h-11 items-center text-sm font-bold text-sky-700 dark:text-sky-300">회사 공통 수치·누락 기준 보기 →</Link>
  </main>;
 }

@@ -8,7 +8,7 @@ import { useAuth } from "@/components/provider/auth-provider";
 import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import PullToRefresh from "@/components/common/pull-to-refresh";
 import { SiteAlertSettingsDialog } from "@/components/baselines/site-alert-settings-button";
-import { type AlertSettingsPane } from "@/components/baselines/alert-settings-table";
+import { type AlertSettingsPane } from "@/components/baselines/site-alert-settings-button";
 import CompanyAlertSettings from "@/components/baselines/company-alert-settings";
 import DashboardScrollTo from "@/components/dashboard-scroll-to";
 import DashboardExcelView from "@/components/dashboard/dashboard-excel-view";

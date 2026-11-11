@@ -3,8 +3,8 @@ package com.pentaworks.monitoring.workspace;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.pentaworks.monitoring.auth.CurrentUserService;
 import com.pentaworks.monitoring.common.BadRequestException;
-import com.pentaworks.monitoring.office.OfficeAssetsResponse;
-import com.pentaworks.monitoring.office.OfficeAssetsService;
+import com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsResponse;
+import com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsService;
 import com.pentaworks.monitoring.site.SiteService;
 import java.time.LocalDate;
 import java.util.*;
@@ -20,9 +20,9 @@ import org.springframework.web.bind.annotation.*;
 public class WorkspaceHistoryController {
     private final JdbcTemplate db;
     private final CurrentUserService users;
-    private final OfficeAssetsService office;
+    private final ImportedHospitalAssetsService office;
     private final ObjectMapper mapper;
-    public WorkspaceHistoryController(JdbcTemplate db,CurrentUserService users,OfficeAssetsService office,ObjectMapper mapper) {
+    public WorkspaceHistoryController(JdbcTemplate db,CurrentUserService users,ImportedHospitalAssetsService office,ObjectMapper mapper) {
         this.db=db;this.users=users;this.office=office;this.mapper=mapper;
     }
     // One company-scoped snapshot read plus one source-ID read, rather than a request per hospital.
@@ -32,7 +32,7 @@ public class WorkspaceHistoryController {
         List<Map<String,Object>> result=new ArrayList<>();
         for(var row:db.queryForList("SELECT site_id,response_json FROM workspace_office_snapshot WHERE company_id=?",company)) {
             String site=row.get("site_id").toString();if(!allowed.contains(site))continue;found.add(site);
-            try {append(result,site,mapper.readValue(row.get("response_json").toString(),OfficeAssetsResponse.class),imported,from,to);}
+            try {append(result,site,mapper.readValue(row.get("response_json").toString(),ImportedHospitalAssetsResponse.class),imported,from,to);}
             catch(Exception ex){failures.add(site);}
         }
         for(String site:allowed) if(!found.contains(site)) {
@@ -42,7 +42,7 @@ public class WorkspaceHistoryController {
         }
         return result;
     }
-    private void append(List<Map<String,Object>> result,String site,OfficeAssetsResponse data,Set<String> imported,LocalDate from,LocalDate to) {
+    private void append(List<Map<String,Object>> result,String site,ImportedHospitalAssetsResponse data,Set<String> imported,LocalDate from,LocalDate to) {
         for(var r:data.maintenanceHistory()) {
             if(imported.contains("office:"+site+":maintenance:"+r.id()))continue;
             String date=Objects.toString(r.workDate(),"");

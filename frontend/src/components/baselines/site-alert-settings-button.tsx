@@ -4,7 +4,7 @@ import { useContext, useEffect, useId, useState } from "react";
 import CustomModal from "@/components/common/custom-modal";
 import { ModalContext } from "@/components/provider/modal-provider";
 import Link from "@/components/common/app-link";
-import type { AlertSettingsPane } from "./alert-settings-table";
+export type AlertSettingsPane = "metrics" | "missing" | "schedule";
 import CompanyAlertSettings from "./company-alert-settings";
 
 export default function SiteAlertSettingsButton({ siteId }: { siteId: string }) {

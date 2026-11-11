@@ -80,11 +80,11 @@ class WorkspaceDatabaseTest {
   assertEquals(1,controller.schedules(LocalDate.of(2026,10,22),LocalDate.of(2026,10,22),auth).size());assertTrue(controller.schedules(LocalDate.of(2026,10,21),LocalDate.of(2026,10,21),auth).isEmpty());
  }
  @Test void combinedHistoryPagesDoNotLoseSameDayRecordsAndLegacyCalendarExcludesMigratedItems() throws Exception {
-  var office=mock(com.pentaworks.monitoring.office.OfficeAssetsService.class);
+  var office=mock(com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsService.class);
   var mapper=new com.fasterxml.jackson.databind.ObjectMapper();
   var history=new WorkspaceHistoryController(db,users,office,mapper);
-  var maintenance=new com.pentaworks.monitoring.office.OfficeAssetsResponse.Maintenance(99,"MRI",null,"CALL","이전콜",null,null,null,null,"2026-10-20",null,null,null,null,null,null,"COMPLETED",null,null,List.of());
-  var snapshot=new com.pentaworks.monitoring.office.OfficeAssetsResponse(new com.pentaworks.monitoring.office.OfficeAssetsResponse.Site(1,"001","병원",null,null,null),List.of(),List.of(),List.of(maintenance),"now");
+  var maintenance=new com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsResponse.Maintenance(99,"MRI",null,"CALL","이전콜",null,null,null,null,"2026-10-20",null,null,null,null,null,null,"COMPLETED",null,null,List.of());
+  var snapshot=new com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsResponse(new com.pentaworks.monitoring.importedhistory.ImportedHospitalAssetsResponse.Site(1,"001","병원",null,null,null),List.of(),List.of(),List.of(maintenance),"now");
   db.update("INSERT INTO workspace_office_snapshot VALUES('001',1,?)",mapper.writeValueAsString(snapshot));
   db.update("INSERT INTO workspace_office_snapshot VALUES('002',2,?)",mapper.writeValueAsString(snapshot));
   for(int id=1;id<=25;id++)record(id,"001");

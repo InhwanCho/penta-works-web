@@ -11,7 +11,7 @@ import HospitalWork, { useHospitalHistory } from "@/components/workspace/hospita
 
 import { useHospitalAssets } from "@/components/workspace/hospital-assets";
 import { usePlanning } from "@/components/workspace/workspace-data";
-import { useOfficeAssetsQuery } from "@/hooks/use-office-assets-query";
+import { useImportedHospitalAssetsQuery } from "@/hooks/use-imported-hospital-assets-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
@@ -104,11 +104,11 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const detailSiteId = data?.site.siteDb ?? "";
   const profile = useHospitalProfile(detailSiteId);
   const assets = useHospitalAssets(detailSiteId);
-  const officeAssets = useOfficeAssetsQuery(detailSiteId, !!session);
+  const importedHospitalAssets = useImportedHospitalAssetsQuery(detailSiteId, !!session);
   const planning = usePlanning();
   const history = useHospitalHistory(detailSiteId);
   const alertSettings = useQuery({queryKey:["alert-thresholds"], queryFn:()=>apiFetch<SiteAlertSettings[]>("/alerts/thresholds"), staleTime:60_000, enabled: !!session && !!data && data.monitoringConnected !== false});
-  const detailLoading = !!data && (profile.isPending || assets.isPending || officeAssets.isPending || planning.isPending || history.isPending || (data.monitoringConnected !== false && alertSettings.isPending));
+  const detailLoading = !!data && (profile.isPending || assets.isPending || importedHospitalAssets.isPending || planning.isPending || history.isPending || (data.monitoringConnected !== false && alertSettings.isPending));
   const openedSite = useRef<string | null>(null);
   useLayoutEffect(() => {
     if (isLoading || detailLoading || !data || openedSite.current === slug) return;
