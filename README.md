@@ -24,7 +24,6 @@ MariaDB 데이터는 기존 `homepage_mariadb_data` Docker 볼륨을 그대로 �
 
 GitHub의 `https://ci.pentaworks.net/github-webhook/` 웹훅 한 개가 다음 두 Jenkins Pipeline을 트리거합니다. 각 잡은 자신이 추적하는 브랜치에 새 커밋이 있을 때만 배포합니다.
 
-MReyes→Office 읽기 전용 연동은 Jenkins Secret Text 자격증 `mreyes-office-api-key`를 사용합니다. dev·prod 배포 시 같은 값을 각 환경파일의 `OFFICE_API_KEY`로 저장하고, 해당 키는 브라우저에 전달하지 않습니다.
 MReyes 브라우저는 로그인 JWT로 `GET /api/v1/sites/{siteId}/office-assets`를 호출하고, MReyes 백엔드가 서버 내부에서만 Office API 키를 첨부합니다.
 로그인은 이메일을 ID로 사용합니다. Access Token은 기본 30일, HttpOnly Refresh Token은 기본 365일이며 앱을 다시 열거나 Access Token이 만료될 때 기기의 Refresh Token을 유지하면서 DB·쿠키의 만료 기간을 연장합니다. 응답 유실 후 오래 오프라인이거나 배포로 프로세스가 바뀌어도 같은 기기 토큰으로 복구합니다. 토큰은 DB에 SHA-256 해시만 저장하며 만료·폐기·계정 정지는 계속 검사합니다. JWT_SECRET은 배포 사이에 유지해야 합니다. 비밀번호는 BCrypt(12 rounds)로 저장합니다.
 정비 사진은 Office API 키가 브라우저에 노출되지 않도록 MReyes 백엔드가 중계하며, 사이트 상세 화면에서 기기 폭에 맞춘 반응형 썸네일로 표시합니다.
@@ -92,4 +91,4 @@ Development uses the separate `pentaworks_mreyes_dev` schema and `mreyes_dev` da
 
 Development frontend API URL is `/api/v1` (same-origin proxy), so both `http://192.168.0.210:3000` and `http://100.111.148.7:3000` work. Mail and Kakao senders, monitoring scheduler, cron evaluation and MRTB sync are explicitly disabled in development Compose. Monitoring can display the copied data and settings, but external messages are not sent. Development JWT secret and sessions are separate from production. Existing Office assets integration remains read-only.
 
-The development work editor now includes PM/ACR/repair/Cold Head/Call/general-work sections, radio choices and authenticated photo attachments (20 MiB/file, 40 photos, 200 MiB/record). Monitoring is `/`; 업무 현황 is `/overview`. Existing historical hospital records and photos remain available through the read-only Office integration. See `docs/handovers/2026-10-16-service-workspace-update.md`.
+The development work editor now includes PM/ACR/repair/Cold Head/Call/general-work sections, radio choices and authenticated photo attachments (20 MiB/file, 40 photos, 200 MiB/record). Monitoring is `/`; 업무 현황 is `/overview`. Existing historical hospital records and photos remain available from data retained in the MReyes database. See `docs/handovers/2026-10-16-service-workspace-update.md`.

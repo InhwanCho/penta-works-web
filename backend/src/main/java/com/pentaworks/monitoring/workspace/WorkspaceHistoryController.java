@@ -5,7 +5,6 @@ import com.pentaworks.monitoring.auth.CurrentUserService;
 import com.pentaworks.monitoring.common.BadRequestException;
 import com.pentaworks.monitoring.office.OfficeAssetsResponse;
 import com.pentaworks.monitoring.office.OfficeAssetsService;
-import com.pentaworks.monitoring.office.OfficeIntegrationException;
 import com.pentaworks.monitoring.site.SiteService;
 import java.time.LocalDate;
 import java.util.*;
@@ -39,7 +38,6 @@ public class WorkspaceHistoryController {
         for(String site:allowed) if(!found.contains(site)) {
             try {append(result,site,office.bySite(site,company),imported,from,to);}
             catch(com.pentaworks.monitoring.common.NotFoundException ex){ /* No legacy history for this hospital. */ }
-            catch(OfficeIntegrationException ex){if(ex.status().value()!=404)failures.add(site);}
             catch(Exception ex){failures.add(site);}
         }
         return result;

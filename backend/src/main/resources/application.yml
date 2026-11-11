@@ -70,10 +70,6 @@ app:
     scheduler-enabled: ${MONITOR_SCHEDULER_ENABLED:false}
     interval-ms: ${MONITOR_INTERVAL_MS:60000}
     initial-delay-ms: ${MONITOR_INITIAL_DELAY_MS:60000}
-  office-integration:
-    enabled: ${OFFICE_INTEGRATION_ENABLED:false}
-    base-url: ${OFFICE_BASE_URL:http://office-backend:8080}
-    api-key: ${OFFICE_API_KEY:}
   mrtb-sync:
     enabled: ${MRTB_SYNC_ENABLED:false}
     url: ${MRTB_SYNC_DB_URL:}

@@ -61,9 +61,6 @@ services:
       BARO_SENDER_ID: ${BARO_SENDER_ID:-}
       BARO_SMS_SENDER_NUM: ${BARO_SMS_SENDER_NUM:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
-      OFFICE_INTEGRATION_ENABLED: "true"
-      OFFICE_BASE_URL: ${OFFICE_BASE_URL:-http://office-backend:8080}
-      OFFICE_API_KEY: ${OFFICE_API_KEY:?OFFICE_API_KEY is required}
       TZ: Asia/Seoul
     ports:
       - "${BACKEND_PORT:-8080}:8080"
@@ -78,7 +75,6 @@ services:
       default:
         aliases:
           - mreyes-dev-backend
-      integration:
 
   frontend:
     build:
@@ -100,6 +96,3 @@ volumes:
     name: homepage_mariadb_data
 
 networks:
-  integration:
-    external: true
-    name: pentaworks-integration

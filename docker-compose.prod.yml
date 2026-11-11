@@ -37,9 +37,6 @@ services:
       BARO_SMS_SENDER_NUM: ${BARO_SMS_SENDER_NUM:-}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
       WORKSPACE_ENABLED: ${WORKSPACE_ENABLED:-false}
-      OFFICE_INTEGRATION_ENABLED: "true"
-      OFFICE_BASE_URL: ${OFFICE_BASE_URL:-http://office-backend:8080}
-      OFFICE_API_KEY: ${OFFICE_API_KEY:?OFFICE_API_KEY is required}
       MRTB_SYNC_ENABLED: ${MRTB_SYNC_ENABLED:-false}
       MRTB_SYNC_DB_URL: ${MRTB_SYNC_DB_URL:-jdbc:mariadb://192.168.0.89:3306/mrdb?connectTimeout=5000&socketTimeout=10000}
       MRTB_SYNC_DB_USERNAME: ${MRTB_SYNC_DB_USERNAME:-pos21}
@@ -56,7 +53,6 @@ services:
     networks:
       - app
       - shared_database
-      - integration
     volumes:
       - company_documents:/app/data/company-documents
       - workspace_photos:/app/data/workspace-photos
@@ -81,9 +77,6 @@ networks:
   shared_database:
     external: true
     name: pentaworks_default
-  integration:
-    external: true
-    name: pentaworks-integration
 
 volumes:
   workspace_photos:

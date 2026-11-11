@@ -170,6 +170,6 @@ class AuthServiceTest {
 
     private static AppProperties properties() {
         return new AppProperties(null,
-            new AppProperties.Jwt("test-only-random-secret-with-at-least-32-bytes", 43200, 365, false), null, null);
+            new AppProperties.Jwt("test-only-random-secret-with-at-least-32-bytes", 43200, 365, false), null);
     }
 }

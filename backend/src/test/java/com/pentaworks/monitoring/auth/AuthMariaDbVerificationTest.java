@@ -21,7 +21,7 @@ class AuthMariaDbVerificationTest {
     TransactionTemplate tx;
     AuthService service;
     final AppProperties properties = new AppProperties(null,
-        new AppProperties.Jwt("test-only-random-secret-with-at-least-32-bytes",43200,365,false),null,null);
+        new AppProperties.Jwt("test-only-random-secret-with-at-least-32-bytes",43200,365,false),null);
 
     AuthService newService() {
         JwtTokens tokens=mock(JwtTokens.class);

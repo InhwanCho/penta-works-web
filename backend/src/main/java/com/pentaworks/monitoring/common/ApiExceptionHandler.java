@@ -1,6 +1,5 @@
 package com.pentaworks.monitoring.common;
 
-import com.pentaworks.monitoring.office.OfficeIntegrationException;
 import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -45,11 +44,6 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     ResponseEntity<Map<String, Object>> uploadTooLarge(MaxUploadSizeExceededException error) {
         return response(HttpStatus.BAD_REQUEST, "업로드 크기 제한을 초과했습니다. 화면에 표시된 파일 용량 제한을 확인해주세요.");
-    }
-
-    @ExceptionHandler(OfficeIntegrationException.class)
-    ResponseEntity<Map<String, Object>> officeIntegration(OfficeIntegrationException error) {
-        return response(error.status(), error.getMessage());
     }
 
     @ExceptionHandler(Exception.class)

@@ -91,7 +91,7 @@ class SecurityTest {
 
     @Test void wrongSignatureIsRejected() throws Exception {
         JwtTokens other = new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("different-secret-with-at-least-32-bytes", 5, 365, false), null, null));
+            new AppProperties.Jwt("different-secret-with-at-least-32-bytes", 5, 365, false), null));
         String token = other.issue(1, "alice@example.com", "Alice", "USER", "session").value();
         mvc.perform(get("/api/v1/probe").header("Authorization", "Bearer " + token))
             .andExpect(status().isUnauthorized());
@@ -147,9 +147,9 @@ class SecurityTest {
 
     @Test void weakSecretFailsClosed() {
         assertThrows(IllegalArgumentException.class, () -> new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("replace-with-at-least-32-random-characters", 5, 365, false), null, null)));
+            new AppProperties.Jwt("replace-with-at-least-32-random-characters", 5, 365, false), null)));
         assertThrows(io.jsonwebtoken.security.WeakKeyException.class, () -> new JwtTokens(new AppProperties(null,
-            new AppProperties.Jwt("short", 5, 365, false), null, null)));
+            new AppProperties.Jwt("short", 5, 365, false), null)));
     }
 
     private String issue(String role) {
