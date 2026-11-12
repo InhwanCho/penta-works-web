@@ -42,7 +42,7 @@ function MeasurementFields({ section, details, onChange }: { section: AcrSection
   </label>;
   const nodes: ReactNode[] = [];
   for (let index = 0; index < section.inputs.length; index++) {
-    const [key, label, kind, hint] = section.inputs[index];
+    const [key, label, kind, hint, layout] = section.inputs[index];
     if (kind === "check") {
       nodes.push(<div key={key} className={hint === "full" ? "acr-full-row" : ""}>{check(section.inputs[index])}</div>);
       continue;
@@ -54,15 +54,15 @@ function MeasurementFields({ section, details, onChange }: { section: AcrSection
       <span>{label}</span>
       <input id={`${id}-${key}`} className={`work-input ${kind === "calc" ? "acr-calculated" : ""} ${verdict ? `measurement-${verdict}` : setting ? "measurement-setting" : ""}`} type="text" inputMode="decimal" readOnly={kind === "calc"} value={values[key] || ""}
         aria-invalid={invalid || undefined} aria-describedby={verdict ? `${id}-${key}-result` : undefined}
-        placeholder={kind === "calc" ? "자동 계산" : hint || "측정값 입력"} onChange={event => update(key, event.target.value)} />
+        placeholder={kind === "calc" ? "자동 계산" : (hint === "full" ? "" : hint) || "측정값 입력"} onChange={event => update(key, event.target.value)} />
       {verdict && <small id={`${id}-${key}-result`} className={`measurement-result measurement-result-${verdict}`}>{verdict === "pass" ? "✓ 기준 이내" : verdict === "fail" ? "! 기준 범위 밖" : "! 숫자를 확인하세요"}</small>}
     </label>;
     const next = section.inputs[index + 1];
     const paired = next?.[2] === "check" && next?.[3] === "pair";
-    nodes.push(<div key={key} className={paired ? "acr-measurement-pair" : ""}>{input}{paired && check(next)}</div>);
+    nodes.push(<div key={key} className={[paired && "acr-measurement-pair", (hint === "full" || layout === "full") && "acr-full-row"].filter(Boolean).join(" ")}>{input}{paired && check(next)}</div>);
     if (paired) index++;
   }
-  return <div className={`acr-measurement-grid acr-grid-${section.grid || 2}`}>{nodes}</div>;
+  return <div className={`acr-measurement-grid acr-grid-${section.grid || 2}${["geo", "piu", "psg"].includes(section.k) ? " acr-grid-paired" : ""}`}>{nodes}</div>;
 }
 export default function AcrFields({ details: d, onChange }: { details: WorkDetails; onChange: (details: WorkDetails) => void }) {
   const computed = computedDetails(d);

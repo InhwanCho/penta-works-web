@@ -3091,6 +3091,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .service-verdict.verdict-fail { background: #fce1e1; color: #9b2424; }
 .acr-criteria { border-left: 3px solid var(--work-focus); padding: 9px 12px; background: var(--work-soft); font-size: .8125rem; line-height: 1.7; }
 .acr-measurement-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; min-width: 0; align-items: start; }
+.acr-measurement-grid.acr-grid-paired { grid-template-columns: repeat(2,minmax(0,1fr)); }
 .acr-measurement-grid > div, .acr-measurement { min-width: 0; }
 .acr-measurement { display: grid; gap: 5px; font-size: .8125rem; font-weight: 600; }
 .acr-measurement .work-input { margin: 0; }
