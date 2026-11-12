@@ -294,14 +294,14 @@ export function TimeSeriesLines({
   return (
     <section className="dark:bg-background-dark-card dark:border-background-dark-secondary w-full min-w-0 max-w-full overflow-hidden rounded-lg border bg-white shadow-[0_1px_2px_0_rgb(0_0_0_/_0.03)]">
       <div className="dark:border-background-dark-secondary/60 border-b border-border/60 px-4 py-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 lg:items-center">
+          <div className="flex min-w-0 flex-wrap items-center gap-2 lg:contents">
+            <strong className="text-text-major dark:text-text-dark-primary text-sm font-semibold tracking-tight lg:mr-auto">
               {title}
             </strong>
             {showZoomButton && <button
               type="button"
-              className="min-h-11 rounded-lg border border-border px-3 text-xs font-semibold text-text-secondary transition-colors hover:bg-[var(--surface-hover)] active:bg-[var(--surface-hover)] disabled:opacity-50 dark:text-text-dark-primary"
+              className="min-h-11 rounded-lg border border-border px-3 text-xs font-semibold lg:order-last lg:shrink-0 text-text-secondary transition-colors hover:bg-[var(--surface-hover)] active:bg-[var(--surface-hover)] disabled:opacity-50 dark:text-text-dark-primary"
               disabled={!zoomReady}
               aria-label={`${title} 그래프 ${zoomed ? "축소" : "확대"}`}
               onClick={toggleZoom}
