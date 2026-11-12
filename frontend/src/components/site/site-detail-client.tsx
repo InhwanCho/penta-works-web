@@ -125,10 +125,12 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
   const [metricLimitReached, setMetricLimitReached] = useState(false);
   const pickerTrigger = useRef<HTMLButtonElement>(null);
   const [preferencesReady, setPreferencesReady] = useState(false);
+  const hospitalKey = /^\d{1,3}$/.test(slug) ? slug.padStart(3, "0") : slug;
+  const preferencesKey = `detail-chart-preferences:${hospitalKey}`;
   useEffect(() => {
     try {
       const saved = JSON.parse(
-        localStorage.getItem("detail-chart-preferences") ?? "null",
+        localStorage.getItem(preferencesKey) ?? "null",
       );
       if (saved) {
         const keys = Array.isArray(saved.selected)
@@ -150,18 +152,18 @@ export default function SiteDetailClient({ slug }: { slug: string }) {
       /* 저장소를 사용할 수 없으면 기본 설정을 사용합니다. */
     }
     setPreferencesReady(true);
-  }, []);
+  }, [preferencesKey]);
   useEffect(() => {
     if (!preferencesReady) return;
     try {
       localStorage.setItem(
-        "detail-chart-preferences",
+        preferencesKey,
         JSON.stringify({ selected, focused, mode }),
       );
     } catch {
       /* 저장 실패가 차트 조작을 막지 않도록 합니다. */
     }
-  }, [selected, focused, mode, preferencesReady]);
+  }, [selected, focused, mode, preferencesReady, preferencesKey]);
   const selection = useMemo(() => {
     const available = selected.filter((key) => metrics.some((metric) => metric.key === key));
     return available.length ? available : metrics.slice(0, 2).map((metric) => metric.key);

@@ -7,5 +7,5 @@ export default function SiteDetailPage({
   params: Promise<{ siteid: string }>;
 }) {
   const { siteid } = use(params);
-  return <SiteDetailClient slug={siteid} />;
+  return <SiteDetailClient key={siteid} slug={siteid} />;
 }
