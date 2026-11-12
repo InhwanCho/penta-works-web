@@ -263,7 +263,7 @@ export function acrCalculate(
     if (key.endsWith("wl")) {
       const a = n(prefix + "rtop"),
         b = n(prefix + "rbot");
-      return fixed(a === null || b === null ? null : (a + b) / 2);
+      return fixed(a === null || b === null ? null : (a + b) / 4);
     }
     const a = n(prefix + "top"),
       b = n(prefix + "bot");
@@ -325,7 +325,7 @@ export function acrFieldVerdict(section: string, key: string, values: Record<str
   const between = (low: number, high: number) => value >= low - epsilon && value <= high + epsilon ? "pass" : "fail";
   if (section === "geo") {
     if (key === "sag") return between(146, 150);
-    if (key === "axc" || key === "axd") return between(188, 192);
+    if (["axc", "axv", "axd", "axd2"].includes(key)) return between(188, 192);
   }
   if (section === "sta" && ["t1thk", "t2thk"].includes(key)) return between(4.3, 5.7);
   if (section === "spa" && ["t1s1", "t1s11", "t2s1", "t2s11"].includes(key)) return between(-5, 5);
