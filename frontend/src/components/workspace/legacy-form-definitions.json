@@ -261,35 +261,35 @@
       "t": "3. 절편 두께 정확도 (Slice thickness accuracy)",
       "figs": ["image8", "image9"],
       "method": [
-        "표준 T1/T2 절편 #1의 signal ramp가 잘 보이게 WL·WW 조정.",
+        "표준 T1 #1·표준 T2 #2의 signal ramp가 잘 보이게 WL·WW 조정.",
         "ramp 중간부에 상·하 직사각형 ROI를 각각 그려 평균 신호강도를 측정.",
         "두 ROI 평균의 1/2 을 WL 로, WW 는 0(에 가깝게) set.",
         "그 window에서 상·하 signal ramp의 길이를 측정 → 절편두께 = 0.2 × (상부길이 × 하부길이) ÷ (상부길이 + 하부길이)."
       ],
-      "crit": "합격기준: 표준 T1·T2 절편두께 = 5.0 ± 0.7mm (4.3~5.7)",
+      "crit": "합격기준: 표준 T1 #1·표준 T2 #2 절편두께 = 5.0 ± 0.7mm (4.3~5.7)",
       "compact": true,
       "inputs": [
-        ["t1rtop", "T1 상부 ROI"],
-        ["t1rbot", "T1 하부 ROI"],
-        ["t1wl", "→ T1 WL (평균의 절반)", "calc"],
-        ["img14", "[14] 표준 T1 · 직사각형 2개 그린 영상", "check", "full"],
-        ["t1top", "T1 상부 ramp(mm)"],
-        ["t1bot", "T1 하부 ramp(mm)"],
-        ["t1thk", "→ T1 절편두께(mm)", "calc"],
+        ["t1rtop", "표준 T1 #1 상부 ROI"],
+        ["t1rbot", "표준 T1 #1 하부 ROI"],
+        ["t1wl", "→ 표준 T1 #1 WL (평균의 절반)", "calc"],
+        ["img14", "[14] 표준 T1 #1 · 직사각형 2개 그린 영상", "check", "full"],
+        ["t1top", "표준 T1 #1 상부 ramp(mm)"],
+        ["t1bot", "표준 T1 #1 하부 ramp(mm)"],
+        ["t1thk", "→ 표준 T1 #1 절편두께(mm)", "calc"],
         [
           "img15",
-          "[15] 표준 T1 · 상·하부 ramp 길이 측정 영상",
+          "[15] 표준 T1 #1 · 상·하부 ramp 길이 측정 영상",
           "check",
           "full"
         ],
-        ["t2rtop", "T2 상부 ROI"],
-        ["t2rbot", "T2 하부 ROI"],
-        ["t2wl", "→ T2 WL (평균의 절반)", "calc"],
-        ["img16", "[16] 표준 T2 · 직사각형 2개 그린 영상", "check", "full"],
-        ["t2top", "T2 상부 ramp(mm)"],
-        ["t2bot", "T2 하부 ramp(mm)"],
-        ["t2thk", "→ T2 절편두께(mm)", "calc"],
-        ["img17", "[17] 표준 T2 · 상·하부 ramp 길이 측정 영상", "check", "full"]
+        ["t2rtop", "표준 T2 #2 상부 ROI"],
+        ["t2rbot", "표준 T2 #2 하부 ROI"],
+        ["t2wl", "→ 표준 T2 #2 WL (평균의 절반)", "calc"],
+        ["img16", "[16] 표준 T2 #2 · 직사각형 2개 그린 영상", "check", "full"],
+        ["t2top", "표준 T2 #2 상부 ramp(mm)"],
+        ["t2bot", "표준 T2 #2 하부 ramp(mm)"],
+        ["t2thk", "→ 표준 T2 #2 절편두께(mm)", "calc"],
+        ["img17", "[17] 표준 T2 #2 · 상·하부 ramp 길이 측정 영상", "check", "full"]
       ]
     },
     {
