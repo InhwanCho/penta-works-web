@@ -586,7 +586,7 @@ export default function OverviewPage() {
             {dayRecords.length ? (
               <div className="day-entry-list day-schedule-list">
                 {dayRecords.map((r) => (
-                  <article className="day-schedule-row" key={r.key}>
+                  <article className="day-schedule-row day-record-row" key={r.key}>
                   <DayEntry
                     href={r.href}
                     category={r.type}

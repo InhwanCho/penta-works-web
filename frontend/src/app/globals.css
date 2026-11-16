@@ -4551,3 +4551,12 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 
 .overview-preparation-actions { display: flex; align-items: center; gap: 12px; }
 .overview-preparation-write { white-space: nowrap; min-height: 36px; padding: 4px 10px; }
+
+/* Preparation form uses an opaque paper surface, including its header. */
+html:not(.dark) .work-day-dialog.preparation-composer-dialog,
+html:not(.dark) .work-day-dialog.preparation-composer-dialog > header { background: #fff; }
+/* Record links are navigation, not persistent selections. */
+.work-day-dialog .day-record-row > .day-entry:focus-visible { outline: none !important; }
+.work-day-dialog .day-record-row:focus-within { background: var(--work-paper); }
+.work-day-dialog .day-record-row > .day-entry:is(:active,:focus-visible) { background: transparent; }
+.work-day-dialog .day-record-row > .day-entry:focus-visible strong { text-decoration: underline; }

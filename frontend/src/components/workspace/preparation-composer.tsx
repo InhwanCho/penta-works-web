@@ -18,7 +18,7 @@ export default function PreparationComposer({ sites }: { sites: Hospital[] }) {
   const qc = useQueryClient();
   return <>
     <button ref={trigger} type="button" className="work-secondary overview-preparation-write" onClick={event => { event.preventDefault(); event.stopPropagation(); setError(""); setOpen(true); }}>＋ 작성</button>
-    {open && createPortal(<WorkspaceDrawer title="방문 전 확인사항 작성" onClose={() => { if (!lock.current) setOpen(false); }}>
+    {open && createPortal(<WorkspaceDrawer className="preparation-composer-dialog" title="방문 전 확인사항 작성" onClose={() => { if (!lock.current) setOpen(false); }}>
       <form className="work-form p-4" onSubmit={async event => {
         event.preventDefault();
         if (lock.current) return;
