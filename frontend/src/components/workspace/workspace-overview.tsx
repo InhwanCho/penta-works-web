@@ -1,5 +1,6 @@
 "use client";
 import InspectionMemo from "./inspection-memo";
+import PreparationComposer from "./preparation-composer";
 import OverviewHelp from "./overview-help";
 import DayComposer from "./day-composer";
 import ChevronRightIcon from "@/components/icons/chevron-right-icon";
@@ -727,8 +728,8 @@ export default function OverviewPage() {
         >
           <summary>
             <ChevronRightIcon className="overview-fold-chevron" />
-            <span className="overview-fold-title">방문 전 확인사항</span><OverviewHelp title="방문 전 확인사항 안내" body="업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." />
-            <small>{preparations.filter((p) => !p.done).length}건 남음</small>
+            <span className="overview-fold-title">방문 전 확인사항</span><OverviewHelp title="방문 전 확인사항 안내" body="직접 작성하거나 업무기록에 작성한 방문 전 확인사항을 병원별로 표시합니다. 완료한 항목은 체크해주세요." />
+            <small className="overview-preparation-actions"><PreparationComposer sites={sites.data || []} /><span>{preparations.filter((p) => !p.done).length}건 남음</span></small>
           </summary>
           <div className="overview-fold-body">
             {error && (

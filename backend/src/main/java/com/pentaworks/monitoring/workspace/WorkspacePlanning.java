@@ -98,6 +98,16 @@ public class WorkspacePlanning {
   db.update("INSERT INTO workspace_hospital_plan(company_id,site_id,pm_interval_months,"+column+") VALUES(?,?,2,?) ON DUPLICATE KEY UPDATE "+column+"=VALUES("+column+")",u.companyId(),sid,input.automatic()?null:input.date());
   changes.publishEvent(new com.pentaworks.monitoring.calendar.CalendarChanged(u.companyId()));return Map.of("saved",true);
  }
+ public record PreparationInput(String siteId,String content){}
+ @PostMapping("/preparations")
+ public Map<String,Boolean> createPreparation(@RequestBody PreparationInput input,Authentication auth){
+  var u=users.require(auth);
+  if(input.siteId()==null||input.siteId().isBlank())throw new BadRequestException("병원을 선택해주세요.");
+  if(input.content()==null||input.content().isBlank()||input.content().trim().length()>1000)throw new BadRequestException("확인사항을 1,000자 이내로 입력해주세요.");
+  String sid=SiteService.normalizeSiteId(input.siteId());users.requireSiteAccess(u,sid);
+  db.update("INSERT INTO workspace_preparation(company_id,author_id,site_id,content) VALUES(?,?,?,?)",u.companyId(),u.id(),sid,input.content().trim());
+  return Map.of("saved",true);
+ }
  public record Checked(boolean done){}
  @PatchMapping("/preparations/{id}")
  public Map<String,Boolean> checked(@PathVariable long id,@RequestBody Checked input,Authentication auth){var u=users.require(auth);var rows=db.queryForList("SELECT site_id FROM workspace_preparation WHERE id=? AND company_id=?",id,u.companyId());if(rows.isEmpty())throw new NotFoundException("방문 전 확인사항을 찾을 수 없습니다.");Object sid=rows.get(0).get("site_id");if(sid!=null)users.requireSiteAccess(u,sid.toString());db.update("UPDATE workspace_preparation SET completed_at=CASE WHEN ? THEN COALESCE(completed_at,CURRENT_TIMESTAMP(6)) ELSE NULL END,done=? WHERE id=? AND company_id=?",input.done(),input.done(),id,u.companyId());return Map.of("saved",true);}

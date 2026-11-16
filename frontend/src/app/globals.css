@@ -4548,3 +4548,6 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .inspection-memo-preview:hover { text-decoration: underline; }
 .inspection-memo-dialog .inspection-memo-editor { border: 0; }
 @media (min-width: 768px) { .inspection-memo-dialog.workspace-desktop-dialog { max-width: 560px; } }
+
+.overview-preparation-actions { display: flex; align-items: center; gap: 12px; }
+.overview-preparation-write { white-space: nowrap; min-height: 36px; padding: 4px 10px; }
