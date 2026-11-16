@@ -3284,6 +3284,8 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-content pre { white-space: pre-wrap; padding: 12px; background: var(--work-bg); border-radius: 8px; }
 .meeting-content table { display: block; max-width: 100%; overflow-x: auto; border-collapse: collapse; }
 .meeting-content :is(th,td) { padding: 6px 10px; border: 1px solid var(--work-line); }
+/* Keep the date/label column intact; long descriptions can wrap beside it. */
+.meeting-content tr > :is(th,td):first-child { white-space: nowrap; overflow-wrap: normal; }
 .meeting-updated { padding-top: 12px; border-top: 1px solid var(--work-line); }
 .meeting-form label { display: grid; min-width: 0; gap: 6px; font-size: .875rem; font-weight: 650; }
 .meeting-form textarea { line-height: 1.65; resize: vertical; font-weight: 400; }
