@@ -81,7 +81,7 @@ export default function AccountClient() {
       </Link>
       <section className="dark:bg-background-dark-card overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-white/10">
         <header className="bg-[linear-gradient(120deg,#123b5d,#176083)] px-5 py-6 text-white">
-          <h1 className="text-xl font-bold">내 계정</h1>
+          <h1 className="text-xl font-bold" style={{ color: "#fff" }}>내 계정</h1>
           <p className="mt-1 text-sm text-white/70">계정 정보와 보안 설정</p>
         </header>
         <div className="p-5 sm:p-6">
