@@ -1,5 +1,7 @@
 "use client";
 
+import { closeOnDialogBackdrop } from "@/lib/dialog-backdrop";
+
 import AutoTextarea from "@/components/common/auto-textarea";
 import Select from "@/components/common/select";
 import CircleLoader from "@/components/icons/circle-loader";
@@ -48,7 +50,7 @@ function HospitalFormDialog({siteId,onClose}: {siteId?: string; onClose: () => v
   const options=useQuery({queryKey:["hospital-management-options",session?.id],queryFn:()=>apiFetch<Options>("/workspace/hospitals/options"), staleTime:0});
   const profile=useQuery({queryKey:["hospital-profile",session?.id,siteId],queryFn:()=>apiFetch<Profile>(`/workspace/hospitals/${encodeURIComponent(siteId!)}`),enabled:!!siteId});
   useEffect(()=>{const node=ref.current;const previous=document.body.style.overflow;document.body.style.overflow="hidden";node?.showModal();node?.focus({preventScroll:true});return()=>{node?.close();document.body.style.overflow=previous;};},[]);
-  return <dialog ref={ref} tabIndex={-1} className="hospital-management-dialog" aria-labelledby="hospital-edit-title" data-ptr-ignore onCancel={e=>{e.preventDefault();onClose();}}>
+  return <dialog ref={ref} tabIndex={-1} className="hospital-management-dialog" aria-labelledby="hospital-edit-title" data-ptr-ignore onClick={event => closeOnDialogBackdrop(event, onClose)} onCancel={e=>{e.preventDefault();onClose();}}>
     <header><h2 id="hospital-edit-title">{siteId ? "병원 정보 수정" : "병원 등록"}</h2><button type="button" aria-label="병원 관리 닫기" onClick={onClose}>×</button></header>
     {options.error || (siteId && profile.error) ? <div className="hospital-management-body"><p role="alert" className="work-error">{errorText(options.error || profile.error)}</p><button type="button" onClick={()=>{void options.refetch();if(siteId)void profile.refetch();}}>다시 시도</button></div> : options.isPending || (siteId && profile.isPending) ? <p className="hospital-management-body" role="status"><CircleLoader size="xs" /></p> : options.data && <HospitalForm key={siteId || "new"} profile={profile.data} options={options.data} onClose={onClose} />}
   </dialog>;

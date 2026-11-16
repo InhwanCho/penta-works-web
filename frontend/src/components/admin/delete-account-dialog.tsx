@@ -1,5 +1,7 @@
 "use client";
 
+import { closeOnDialogBackdrop } from "@/lib/dialog-backdrop";
+
 import CircleLoader from "@/components/icons/circle-loader";
 
 
@@ -42,6 +44,7 @@ export default function DeleteAccountDialog({ email, name, onClose, onConfirm }:
   }
 
   return createPortal(<dialog ref={dialog} aria-labelledby="delete-account-title" aria-describedby="delete-account-description"
+    onClick={event => { if (!saving) closeOnDialogBackdrop(event, onClose); }}
     onCancel={event => { event.preventDefault(); if (!saving) onClose(); }}
     className="fixed inset-0 m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 text-text-major shadow-xl backdrop:bg-slate-950/55 dark:border-white/10 dark:bg-background-dark-card dark:text-text-dark-primary">
     <form onSubmit={submit}>

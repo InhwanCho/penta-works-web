@@ -17,6 +17,7 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     queryFn: () => apiFetch<SiteAlertSettings[]>("/alerts/thresholds"),
     staleTime: 60_000,
   });
+  const panelRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   useEffect(() => {
@@ -30,10 +31,17 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
     window.addEventListener("keydown", close);
     return () => window.removeEventListener("keydown", close);
   }, [onClose]);
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      if (event.target instanceof Node && !panelRef.current?.contains(event.target)) closeRef.current();
+    };
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, []);
   const site = settings.data?.find(item => item.siteid === selection.siteId);
   const threshold = site?.thresholds.find(item => item.key === selection.metricKey);
   const format = (value: number | null | undefined) => value == null ? "—" : value.toLocaleString("ko-KR", {maximumFractionDigits: 2});
-  return <div role="dialog" aria-label={`${selection.hospital} ${selection.label} 알림 정보`} className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-3 z-[60] mx-auto max-w-xl rounded-xl bg-slate-900/95 px-4 py-3 text-sm text-white shadow-lg dark:bg-slate-800">
+  return <div ref={panelRef} role="dialog" aria-label={`${selection.hospital} ${selection.label} 알림 정보`} className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-3 z-[60] mx-auto max-w-xl rounded-xl bg-slate-900/95 px-4 py-3 text-sm text-white shadow-lg dark:bg-slate-800">
     <button type="button" aria-label="항목 정보 닫기" onClick={onClose} className="float-right ml-3 min-h-11 min-w-11 rounded-lg text-lg">×</button>
     <p className="font-bold">{selection.hospital} · {selection.label}</p>
     <p className="mt-1">{settings.isPending ? <CircleLoader size="xs" /> : settings.isError ? "알림 기준을 불러오지 못했습니다." : !threshold ? "설정 없음" : `회사 공통 · ${selection.metricKey === "hepres" ? "7일" : "24시간"} 평균 ${format(threshold.averageValue)} ${threshold.unit ?? ""}`}</p>

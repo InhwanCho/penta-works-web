@@ -1,5 +1,7 @@
 "use client";
 
+import { closeOnDialogBackdrop } from "@/lib/dialog-backdrop";
+
 import CircleLoader from "@/components/icons/circle-loader";
 
 import { useEffect, useRef, useState } from "react";
@@ -109,6 +111,7 @@ function EquipmentDialog({
       ref={ref}
       data-ptr-ignore
       aria-labelledby="equipment-dialog-title"
+      onClick={event => closeOnDialogBackdrop(event, onClose)}
       onCancel={(e) => {
         e.preventDefault();
         onClose();

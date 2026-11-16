@@ -3272,6 +3272,7 @@ body:has(.service-about) .policy-links a[aria-current=page] { color: #182b3c; }
 .meeting-card:focus-visible { outline: 2px solid var(--work-focus); outline-offset: 3px; }
 .meeting-empty { padding: 32px 16px; text-align: center; color: var(--work-muted); }
 .work-day-dialog.meeting-detail-drawer { width: min(900px,calc(100% - 32px)); }
+html:not(.dark) .work-day-dialog.meeting-detail-drawer { background: #fff; }
 .meeting-detail, .meeting-form { min-width: 0; padding: 18px 20px; }
 .meeting-detail-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8125rem; color: var(--work-muted); }
 .meeting-content { margin: 20px 0; font-size: .9375rem; line-height: 1.85; overflow-wrap: anywhere; }

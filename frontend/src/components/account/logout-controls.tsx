@@ -1,5 +1,7 @@
 "use client";
 
+import { closeOnDialogBackdrop } from "@/lib/dialog-backdrop";
+
 import CircleLoader from "@/components/icons/circle-loader";
 
 import { useEffect, useRef, useState } from "react";
@@ -98,6 +100,7 @@ export default function LogoutControls({
             ref={ref}
             aria-labelledby="logout-confirm-title"
             aria-describedby="logout-confirm-description"
+            onClick={event => { if (!busy) closeOnDialogBackdrop(event, () => setScope(null)); }}
             onCancel={(e) => {
               e.preventDefault();
               if (!busy) setScope(null);
