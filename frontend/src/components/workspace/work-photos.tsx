@@ -136,10 +136,10 @@ function FullPhoto({ photo }: { photo: PhotoMeta }) {
   }, [photo.id]);
   return (
     <section className="photo-modal-content">
-      {error ? <p role="alert">{error}</p> : url ? (
-        <Image src={url} alt="첨부 사진" width={photo.width} height={photo.height} unoptimized
+      {error ? <p role="alert">{error}</p> : (
+        <Image src={url} pending={!url} large alt="첨부 사진" width={photo.width} height={photo.height} unoptimized
           onClick={event => event.stopPropagation()} />
-      ) : <PhotoSkeleton large />}
+      )}
     </section>
   );
 }

@@ -3913,6 +3913,10 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  outline-color: #94cfff !important;
 }
+/* Keep row focus rings inside the clipped overview panels. */
+.work-overview .overview-fold-body :is(.recent-work-record,.work-due-row):focus-visible {
+ outline-offset: -2px !important;
+}
 /* Selected C1: filled primary actions; editing cancellation stays neutral. */
 :is(.work-primary,.management-primary,.hospital-register,.action-save):not(.action-cancel,.action-danger) {
  background: #2868a8 !important; color: #fff !important; border-color: #2868a8 !important;
