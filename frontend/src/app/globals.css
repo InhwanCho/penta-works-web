@@ -3913,8 +3913,9 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .dark label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  outline-color: #94cfff !important;
 }
-/* Keep row focus rings inside the clipped overview panels. */
-.work-overview .overview-fold-body :is(.recent-work-record,.work-due-row):focus-visible {
+/* Keep focus rings inside tightly spaced rows and calendar cells. */
+.work-overview .overview-fold-body :is(.recent-work-record,.work-due-row):focus-visible,
+.work-calendar .work-calendar-day:focus-visible {
  outline-offset: -2px !important;
 }
 /* Selected C1: filled primary actions; editing cancellation stays neutral. */
