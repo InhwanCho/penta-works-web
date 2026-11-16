@@ -14,9 +14,10 @@ export default function PreparationComposer({ sites }: { sites: Hospital[] }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const lock = useRef(false);
+  const trigger = useRef<HTMLButtonElement>(null);
   const qc = useQueryClient();
   return <>
-    <button type="button" className="work-secondary overview-preparation-write" onClick={event => { event.preventDefault(); event.stopPropagation(); setError(""); setOpen(true); }}>＋ 작성</button>
+    <button ref={trigger} type="button" className="work-secondary overview-preparation-write" onClick={event => { event.preventDefault(); event.stopPropagation(); setError(""); setOpen(true); }}>＋ 작성</button>
     {open && createPortal(<WorkspaceDrawer title="방문 전 확인사항 작성" onClose={() => { if (!lock.current) setOpen(false); }}>
       <form className="work-form p-4" onSubmit={async event => {
         event.preventDefault();
@@ -37,6 +38,6 @@ export default function PreparationComposer({ sites }: { sites: Hospital[] }) {
           <div className="work-form-actions"><button type="button" className="work-secondary" onClick={() => setOpen(false)}>취소</button><button type="submit" className="work-primary">{busy ? "저장 중…" : "저장"}</button></div>
         </fieldset>
       </form>
-    </WorkspaceDrawer>, document.body)}
+    </WorkspaceDrawer>, trigger.current!.closest(".workspace-frame")!)}
   </>;
 }
