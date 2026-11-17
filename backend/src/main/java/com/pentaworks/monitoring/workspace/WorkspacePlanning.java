@@ -100,12 +100,22 @@ public class WorkspacePlanning {
  }
  public record PreparationInput(String siteId,String content){}
  @PostMapping("/preparations")
+ @org.springframework.transaction.annotation.Transactional
  public Map<String,Boolean> createPreparation(@RequestBody PreparationInput input,Authentication auth){
   var u=users.require(auth);
   if(input.siteId()==null||input.siteId().isBlank())throw new BadRequestException("병원을 선택해주세요.");
-  if(input.content()==null||input.content().isBlank()||input.content().trim().length()>1000)throw new BadRequestException("확인사항을 1,000자 이내로 입력해주세요.");
+  var items = input.content() == null ? List.<String>of() : input.content().lines()
+   .map(String::strip)
+   .map(line -> line.replaceFirst("^(?:[-*+]\\s+|•\\s*|-$)", "").strip())
+   .filter(line -> !line.isEmpty())
+   .toList();
+  if(items.isEmpty())throw new BadRequestException("확인사항을 입력해주세요.");
+  if(items.size()>100)throw new BadRequestException("확인사항은 한 번에 100개까지 등록할 수 있습니다.");
+  if(items.stream().anyMatch(item -> item.length()>1000))throw new BadRequestException("각 확인사항을 1,000자 이내로 입력해주세요.");
   String sid=SiteService.normalizeSiteId(input.siteId());users.requireSiteAccess(u,sid);
-  db.update("INSERT INTO workspace_preparation(company_id,author_id,site_id,content) VALUES(?,?,?,?)",u.companyId(),u.id(),sid,input.content().trim());
+  for(String item : items){
+   db.update("INSERT INTO workspace_preparation(company_id,author_id,site_id,content) VALUES(?,?,?,?)",u.companyId(),u.id(),sid,item);
+  }
   return Map.of("saved",true);
  }
  public record Checked(boolean done){}

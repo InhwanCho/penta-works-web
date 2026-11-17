@@ -18,6 +18,14 @@ class PreparationCreationTest {
   verify(users).requireSiteAccess(user,"001");
   verify(db).update("INSERT INTO workspace_preparation(company_id,author_id,site_id,content) VALUES(?,?,?,?)",7L,1L,"001","부품 준비");
  }
+ @Test void registersEachNonblankLineAsAnIndependentItem(){
+  controller.createPreparation(new WorkspacePlanning.PreparationInput("001","- 일일점검표\r\n\r\n• 테이블"),auth);
+  String insert="INSERT INTO workspace_preparation(company_id,author_id,site_id,content) VALUES(?,?,?,?)";
+  var ordered=inOrder(db);
+  ordered.verify(db).update(insert,7L,1L,"001","일일점검표");
+  ordered.verify(db).update(insert,7L,1L,"001","테이블");
+  verifyNoMoreInteractions(db);
+ }
  @Test void rejectsInaccessibleHospital(){
   doThrow(new ForbiddenException("거부")).when(users).requireSiteAccess(user,"002");
   assertThrows(ForbiddenException.class,()->controller.createPreparation(new WorkspacePlanning.PreparationInput("002","준비"),auth));verifyNoInteractions(db);
