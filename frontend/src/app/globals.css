@@ -4569,3 +4569,6 @@ html:not(.dark) .work-day-dialog.preparation-composer-dialog > header { backgrou
 .planning-period-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .875rem; font-weight: 650; }
 .planning-period-heading > .planning-period-none { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; line-height: 20px; cursor: pointer; }
 .planning-period-none input { margin: 0; align-self: center; }
+/* Grid gaps provide the spacing for every inspection control. */
+.work-form .planning-editor-fields > label > .work-input,
+.work-form .planning-editor-fields > .planning-period-field > .work-input { margin-top: 0; }
