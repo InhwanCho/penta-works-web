@@ -185,13 +185,12 @@ export default function DashboardClient() {
       const keys = visibleColumns.map(item => item.key);
       updatePreferences({ ...preferences, columns: event.target.checked ? [...keys, column.key] : keys.filter(key => key !== column.key) });
     }} />{column.displayName}</label>)}</div><button type="button" onClick={() => updatePreferences({ ...preferences, columns: null })} className="work-secondary">전체 열 복원</button></fieldset>}
-    <button type="button" onClick={() => {setStatusFilter("all");}} className="work-secondary">병원 필터 초기화</button>
   </div>;
 
   const statusFilterButtons = (
     <>
-      <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={displayStats.total} tone="slate" />
-      <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={displayStats.warning + displayStats.noData} tone="rose" />
+      <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={displayStats.total} />
+      <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={displayStats.warning + displayStats.noData} />
     </>
   );
 
@@ -199,8 +198,7 @@ export default function DashboardClient() {
     <div className="dashboard-compact-controls lg:hidden" data-ptr-ignore>
       {showMobileFilters && <MobileFilterDialog onClose={closeMobileFilters}>
         <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={closeMobileFilters} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
-        <p className="mt-4 mb-2 text-xs font-bold text-slate-500 dark:text-slate-300">병원 필터 · {STATUS_FILTER_LABEL[statusFilter]}</p>
-        <div className="grid grid-cols-2 gap-2">{statusFilterButtons}</div>
+        <div className="dashboard-status-switch" role="group" aria-label="병원 상태 필터">{statusFilterButtons}</div>
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
         {viewOptions}
       </MobileFilterDialog>}
@@ -246,8 +244,7 @@ export default function DashboardClient() {
           </div>
         </header>
         {showDesktopFilters && <section id="dashboard-desktop-filters" aria-label="모니터링 필터 설정" className="dashboard-expanded-filters dashboard-desktop-filter-panel mb-5 hidden shrink-0 lg:block">
-          <div className="dashboard-filter-panel-heading"><h2>필터 설정</h2><p>표시할 병원과 열을 선택하세요.</p></div>
-          <div className="mb-4 grid grid-cols-2 gap-2" aria-label="병원 상태 필터">{statusFilterButtons}</div>
+          <div className="dashboard-status-switch" role="group" aria-label="병원 상태 필터">{statusFilterButtons}</div>
           {viewOptions}
         </section>}
 
@@ -283,9 +280,10 @@ export default function DashboardClient() {
   );
 }
 
-function StatusFilterButton({ active, onClick, label, value, tone }: { active: boolean; onClick: () => void; label: ReactNode; value: number | string; tone: "slate" | "rose" | "amber" | "emerald" }) {
-  const colors = { slate: "text-slate-600 dark:text-slate-300", rose: "text-rose-600 dark:text-rose-300", amber: "text-amber-600 dark:text-amber-300", emerald: "text-emerald-600 dark:text-emerald-300" };
-  return <button type="button" onClick={onClick} aria-pressed={active} className={`dashboard-status-button cursor-pointer rounded-2xl border bg-white px-3 py-3 text-left transition-colors dark:bg-background-dark-card ${active ? "border-sky-300 bg-sky-50 dark:border-slate-500 dark:bg-slate-800" : "border-slate-200/80 dark:border-white/8"}`}><span className="text-text-secondary block text-xs font-semibold">{label}</span><span className={`mt-0.5 flex min-h-7 items-center ${typeof value === "number" ? "text-xl font-extrabold tabular-nums" : "text-sm font-semibold"} ${colors[tone]}`}>{value}</span></button>;
+function StatusFilterButton({ active, onClick, label, value }: { active: boolean; onClick: () => void; label: string; value: number }) {
+  return <button type="button" onClick={onClick} aria-pressed={active}>
+    {label}<span className="tabular-nums">{value}</span>
+  </button>;
 }
 
 function MobileFilterDialog({ children, onClose }: { children: ReactNode; onClose: () => void }) {

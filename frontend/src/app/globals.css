@@ -3673,7 +3673,11 @@ html.dark {
 .dashboard-desktop-filter-button .dashboard-filter-chevron { transition: transform .15s; }
 .dashboard-desktop-filter-button[aria-expanded="true"] .dashboard-filter-chevron { transform: rotate(180deg); }
 .dashboard-desktop-filter-button[aria-expanded="true"] { border-color: var(--control-active-border) !important; color: var(--control-active-text) !important; }
-.dashboard-desktop-filter-panel { padding: 18px 20px; }
+.dashboard-desktop-filter-panel { padding: 12px 16px; }
+.dashboard-status-switch { display: inline-flex; max-width: 100%; gap: 4px; padding: 3px; border: 1px solid var(--work-line, #dbe3ed); border-radius: 10px; }
+.dashboard-status-switch > button { display: inline-flex; min-height: 38px; align-items: center; justify-content: center; gap: 8px; padding: 0 14px; border-radius: 7px; font-size: 14px; font-weight: 600; color: var(--work-muted, #64748b); cursor: pointer; }
+.dashboard-status-switch > button[aria-pressed="true"] { background: var(--control-active-bg, #eaf3fb); color: var(--control-active-text, #23679b); }
+.dashboard-status-switch > button > span { font-size: 12px; opacity: .75; }
 .dashboard-filter-panel-heading { display: flex; align-items: baseline; gap: 12px; }
 .dashboard-filter-panel-heading h2 { font-size: .9375rem; font-weight: 650; }
 .dashboard-filter-panel-heading p { color: var(--work-muted); font-size: .8125rem; }
