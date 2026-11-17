@@ -4560,3 +4560,11 @@ html:not(.dark) .work-day-dialog.preparation-composer-dialog > header { backgrou
 .work-day-dialog .day-record-row:focus-within { background: var(--work-paper); }
 .work-day-dialog .day-record-row > .day-entry:is(:active,:focus-visible) { background: transparent; }
 .work-day-dialog .day-record-row > .day-entry:focus-visible strong { text-decoration: underline; }
+
+/* Align inspection values and form controls across each grid row. */
+.site-detail-page .planning-summary > div { align-items: center; }
+.planning-editor-fields > label,
+.planning-editor-fields > .planning-period-field { display: grid; grid-template-rows: 28px auto; gap: 8px; min-width: 0; align-content: start; }
+.planning-period-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .875rem; font-weight: 650; }
+.planning-period-none { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.planning-period-none input { margin: 0; }

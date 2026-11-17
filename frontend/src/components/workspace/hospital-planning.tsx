@@ -116,10 +116,13 @@ function PlanEditor({
         disabled={busy}
         className="planning-editor-fields"
       >
-        <label>
-          PM 주기 (개월)
-          <span><input type="checkbox" checked={value.pmIntervalMonths === 0} onChange={event => setValue({ ...value, pmIntervalMonths: event.target.checked ? 0 : 2 })} /> 없음</span>
+        <div className="planning-period-field">
+          <div className="planning-period-heading">
+            <label htmlFor="pm-interval">PM 주기 (개월)</label>
+            <label className="planning-period-none"><input type="checkbox" checked={value.pmIntervalMonths === 0} onChange={event => setValue({ ...value, pmIntervalMonths: event.target.checked ? 0 : 2 })} /> 없음</label>
+          </div>
           <input
+            id="pm-interval"
             disabled={value.pmIntervalMonths === 0}
             type="number"
             min={0}
@@ -131,7 +134,7 @@ function PlanEditor({
               setValue({ ...value, pmIntervalMonths: Number(e.target.value) })
             }
           />
-        </label>
+        </div>
         {(
           [
             ["pmOverride", "PM 지정일"],
