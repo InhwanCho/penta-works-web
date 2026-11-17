@@ -19,7 +19,6 @@ import { useWorkDraft } from "./use-work-draft";
 import { HospitalRegistration } from "./hospital-profile";
 import HospitalPicker from "./hospital-picker";
 import AuthoringHeader from "./authoring-header";
-import AuthoringKind from "./authoring-kind";
 import { ChoiceGroup } from "./choice-group";
 import { useAuth } from "@/components/provider/auth-provider";
 import {
@@ -540,7 +539,9 @@ export function SchedulePage({ onSaved, inline = false, hideHeading = false }: {
         description="방문·점검과 팀의 일정을 함께 확인하세요."
       />
       </>)}
-      {open && !editingSchedule && !inline && <AuthoringKind value="schedule" date={form.date} disabled={saving} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
+      {open && !editingSchedule && !inline && <div className="work-authoring-kind">
+        <a className="work-secondary" href={`/work/create?${new URLSearchParams({ date: form.date })}`} aria-disabled={saving} onClick={event => { if (saving) event.preventDefault(); }}>업무기록 작성</a>
+      </div>}
       {!open && <label className="work-date-picker">
         일정 날짜
         <input

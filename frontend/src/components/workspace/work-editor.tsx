@@ -281,7 +281,7 @@ export default function WorkEditor({ id }: { id?: string }) {
 
       />
       </>}
-      {editing && !id && <AuthoringKind value="work" date={form.workDate} disabled={saving || photoBusy} confirmLeave={draft.confirmLeave} navigate={draft.replace} />}
+      {editing && !id && <AuthoringKind date={form.workDate} disabled={saving || photoBusy} />}
       {editing && draft.pending && (
         <div
           className="work-panel work-draft-notice work-draft-toast"
