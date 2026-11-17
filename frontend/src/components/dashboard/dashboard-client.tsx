@@ -3,7 +3,6 @@
 import CircleLoader from "@/components/icons/circle-loader";
 
 
-import { DeferredUnreadAlertDot } from "@/components/common/unread-alert-dot";
 import { useAuth } from "@/components/provider/auth-provider";
 import { defaultPreferences, readDashboardPreferences, writeDashboardPreferences, type DashboardPreferences } from "@/lib/dashboard-preferences";
 import PullToRefresh from "@/components/common/pull-to-refresh";
@@ -193,10 +192,6 @@ export default function DashboardClient() {
     <>
       <StatusFilterButton active={statusFilter === "all"} onClick={() => changeStatusFilter("all")} label="전체" value={displayStats.total} tone="slate" />
       <StatusFilterButton active={statusFilter === "issues"} onClick={() => changeStatusFilter("issues")} label="이상 병원" value={displayStats.warning + displayStats.noData} tone="rose" />
-      <StatusFilterButton active={statusFilter === "warning"} onClick={() => changeStatusFilter("warning")} label="기준 이탈" value={displayStats.warning} tone="amber" />
-      <StatusFilterButton active={statusFilter === "no-data"} onClick={() => changeStatusFilter("no-data")} label="수신 중단" value={displayStats.noData} tone="rose" />
-      <StatusFilterButton active={statusFilter === "normal"} onClick={() => changeStatusFilter("normal")} label="정상" value={displayStats.normal} tone="emerald" />
-      <StatusFilterButton active={statusFilter === "configured"} onClick={() => changeStatusFilter("configured")} label={<>알림값 <DeferredUnreadAlertDot /></>} value="확인하기" tone="slate" />
     </>
   );
 
@@ -252,14 +247,13 @@ export default function DashboardClient() {
         </header>
         {showDesktopFilters && <section id="dashboard-desktop-filters" aria-label="모니터링 필터 설정" className="dashboard-expanded-filters dashboard-desktop-filter-panel mb-5 hidden shrink-0 lg:block">
           <div className="dashboard-filter-panel-heading"><h2>필터 설정</h2><p>표시할 병원과 열을 선택하세요.</p></div>
+          <div className="mb-4 grid grid-cols-2 gap-2" aria-label="병원 상태 필터">{statusFilterButtons}</div>
           {viewOptions}
         </section>}
 
         {isError && <p role="status" className="dashboard-compact-feedback mb-2 px-1 text-xs font-bold text-amber-700 lg:hidden dark:text-amber-300">연결 실패 · 마지막으로 받은 화면입니다.</p>}
 
-        <section className="dashboard-expanded-status mb-5 hidden shrink-0 grid-cols-6 gap-2 lg:grid" aria-label="상태별 병원 필터">
-          {statusFilterButtons}
-        </section>
+
 
         {statusFilter === "configured" ? (
           <section className="space-y-3">
