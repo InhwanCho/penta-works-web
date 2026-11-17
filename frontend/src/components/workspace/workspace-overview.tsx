@@ -23,6 +23,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { WorkRecord } from "./workspace-data";
 import { apiFetch } from "@/lib/api";
+import { showToast } from "@/lib/toast";
 import type { ImportedMaintenance } from "@/hooks/use-imported-hospital-assets-query";
 import {
   useWorkspace,
@@ -277,6 +278,7 @@ export default function OverviewPage() {
         method: "PATCH",
         body: JSON.stringify({ done }),
       });
+      if (done) showToast("완료했습니다. 24시간 뒤 목록에서 사라집니다.");
       await qc.invalidateQueries({ queryKey: ["workspace-planning"] });
     } catch (e) {
       setError(errorText(e));
