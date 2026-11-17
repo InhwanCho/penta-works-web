@@ -993,6 +993,7 @@ h4,
 }
 .work-radio-group input,
 .work-check input,
+.planning-period-none input,
 .work-preparation input {
   accent-color: #227b9f;
   width: 17px;
@@ -1765,7 +1766,7 @@ h4,
 .work-day-body .work-agenda-row p { margin-top: 5px; line-height: 1.6; }
 .dark .work-calendar-grid.weekdays span:first-child { color: #ff9994; }
 .dark .work-calendar-grid.weekdays span:last-child { color: #9bc2ff; }
-.workspace-frame :is(.work-radio-group,.work-check,.work-preparation) input { accent-color: #1967d2; }
+.workspace-frame :is(.work-radio-group,.work-check,.work-preparation,.planning-period-none) input { accent-color: #1967d2; }
 @media (max-width: 640px) {
   .work-overview { padding: 18px 4px 40px; }
   .work-overview > .work-heading, .work-overview > .work-section, .work-overview > .work-hint { margin-left: 12px; margin-right: 12px; }
@@ -4566,5 +4567,5 @@ html:not(.dark) .work-day-dialog.preparation-composer-dialog > header { backgrou
 .planning-editor-fields > label,
 .planning-editor-fields > .planning-period-field { display: grid; grid-template-rows: 28px auto; gap: 8px; min-width: 0; align-content: start; }
 .planning-period-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: .875rem; font-weight: 650; }
-.planning-period-none { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
-.planning-period-none input { margin: 0; }
+.planning-period-heading > .planning-period-none { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; line-height: 20px; cursor: pointer; }
+.planning-period-none input { margin: 0; align-self: center; }
