@@ -110,6 +110,7 @@ public class GoogleCalendarSync {
     LocalDate latest=date(completed.getOrDefault(site,Map.of()).get(kind));
     if(latest!=null&&(last==null||latest.isAfter(last)))last=latest;
     int months=kind.equals("pm")?(plan.get("pm_interval_months") instanceof Number n?n.intValue():2):kind.equals("acr_full")?36:12;
+    if(months==0)continue;
     LocalDate due=nextDue(last,date(plan.get(kind+"_override")),months);if(due==null)continue;
     String label=kind.equals("pm")?"PM":kind.equals("acr_full")?"ACR 정밀":"ACR 서류";
     String key="due:"+site+":"+kind;

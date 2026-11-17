@@ -216,7 +216,7 @@ export default function OverviewPage() {
         .sort()
         .at(-1) || undefined;
     for (const [type, date] of [
-      ["PM", nextDue(pm, plan?.pmOverride, plan?.pmIntervalMonths || 2)],
+      ["PM", nextDue(pm, plan?.pmOverride, plan?.pmIntervalMonths ?? 2)],
       ["ACR 정밀", nextDue(full, plan?.acrFullOverride, 36)],
       ["ACR 서류", nextDue(doc, plan?.acrDocOverride, 12)],
     ] as [string, string | null][]) {
@@ -229,7 +229,7 @@ export default function OverviewPage() {
           days: daysBetween(date, today),
           lastPmDate: pm,
           lastVisitDate: plan?.lastVisitDate,
-          automaticDate: type === "PM" ? nextDue(pm, null, plan?.pmIntervalMonths || 2) : type === "ACR 정밀" ? nextDue(full, null, 36) : nextDue(doc, null, 12),
+          automaticDate: type === "PM" ? nextDue(pm, null, plan?.pmIntervalMonths ?? 2) : type === "ACR 정밀" ? nextDue(full, null, 36) : nextDue(doc, null, 12),
         });
     }
   }

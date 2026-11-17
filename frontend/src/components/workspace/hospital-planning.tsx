@@ -40,7 +40,7 @@ export default function HospitalPlanning({ siteId }: { siteId: string }) {
           <dl className="planning-summary">
             <div>
               <dt>PM 주기</dt>
-              <dd>{plan?.pmIntervalMonths || 2}개월</dd>
+              <dd>{plan?.pmIntervalMonths === 0 ? "없음" : `${plan?.pmIntervalMonths ?? 2}개월`}</dd>
             </div>
             <div>
               <dt>PM 지정일</dt>
@@ -78,7 +78,7 @@ function PlanEditor({
 }) {
   const qc = useQueryClient();
   const [value, setValue] = useState({
-    pmIntervalMonths: plan?.pmIntervalMonths || 2,
+    pmIntervalMonths: plan?.pmIntervalMonths ?? 2,
     pmOverride: plan?.pmOverride || "",
     acrFullOverride: plan?.acrFullOverride || "",
     acrDocOverride: plan?.acrDocOverride || "",
@@ -118,9 +118,11 @@ function PlanEditor({
       >
         <label>
           PM 주기 (개월)
+          <span><input type="checkbox" checked={value.pmIntervalMonths === 0} onChange={event => setValue({ ...value, pmIntervalMonths: event.target.checked ? 0 : 2 })} /> 없음</span>
           <input
+            disabled={value.pmIntervalMonths === 0}
             type="number"
-            min={1}
+            min={0}
             max={120}
             required
             value={value.pmIntervalMonths}

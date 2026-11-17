@@ -28,6 +28,7 @@ export function nextDue(
   override: string | null | undefined,
   months: number,
 ) {
+  if (months === 0) return undefined;
   return override && (!last || override > last)
     ? override
     : last
