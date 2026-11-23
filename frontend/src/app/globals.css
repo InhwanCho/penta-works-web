@@ -4458,7 +4458,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
  }
 }
 
-.alert-settings-section[open] > summary > .alert-settings-chevron { transform: rotate(225deg); }
+.alert-settings-section[open] > summary > .alert-settings-chevron { transform: rotate(180deg); }
 
 .inspection-due-links:has(.inspection-memo-editor) { flex-wrap: wrap; }
 .inspection-memo-editor { order: 1; flex: 1 0 100%; display: grid; gap: 8px; min-width: 0; padding: 12px; border: 1px solid var(--work-line); border-radius: 10px; background: var(--work-paper); }
