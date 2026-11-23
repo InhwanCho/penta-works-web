@@ -24,7 +24,7 @@ const muted = "text-sm leading-6 text-slate-600 dark:text-slate-300";
 
 function SettingsSection({ title, summary, children, open }: {
   title: string;
-  summary?: string;
+  summary?: ReactNode;
   children: ReactNode;
   open?: boolean;
 }) {
@@ -231,7 +231,12 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
           {hospitals.map(h => {
             const config = p.hospitals[h.siteId] ?? h.settings;
             return (
-              <SettingsSection key={h.siteId} title={h.name} summary={`알림 ${config.enabled ? "켜짐" : "꺼짐"} · ${duration(config.intervalMinutes)} 주기`} open={siteId && !metricKey ? true : undefined}>
+              <SettingsSection
+                key={h.siteId}
+                title={h.name}
+                summary={<>알림 {config.enabled ? "켜짐" : <strong className="font-bold">꺼짐</strong>} · {duration(config.intervalMinutes)} 주기</>}
+                open={siteId && !metricKey ? true : undefined}
+              >
                 {config.enabled && <dl className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/70">
                   <div><dt className="text-xs text-text-secondary">화면 주의</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionWarning)} 지연</dd></div>
                   <div><dt className="text-xs text-text-secondary">카톡 발송</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionCritical)} 지연</dd></div>
