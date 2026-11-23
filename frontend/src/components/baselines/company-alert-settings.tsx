@@ -117,7 +117,7 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
   function sectionEditor(section: string, fields: (policy: Policy) => ReactNode) {
     if (!view?.canEdit) return null;
     if (editor?.section !== section) return (
-      <button type="button" disabled={editor !== null || saving} onClick={() => {
+      <button type="button" disabled={saving} onClick={() => {
         setError("");
         setEditor({section, revision: view.revision, policy: view.policy});
       }} className="min-h-11 rounded-lg border border-slate-200 px-3 font-semibold text-sky-800 disabled:opacity-50 dark:border-slate-600 dark:text-sky-300">
