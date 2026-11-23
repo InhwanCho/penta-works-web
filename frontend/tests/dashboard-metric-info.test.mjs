@@ -5,7 +5,7 @@ import vm from 'node:vm';
 import ts from 'typescript';
 
 function harness() {
-  let now=0, cursor=0, pending=false, closed=0;
+  let now=0, cursor=0, pending=false, failed=false, closed=0, data;
   const hooks=[], effects=[], timers=new Map();
   const source=ts.transpileModule(fs.readFileSync(new URL('../src/components/dashboard/dashboard-metric-info.tsx',import.meta.url),'utf8'),{
     compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}
@@ -20,26 +20,55 @@ function harness() {
     }
   };
   const exports={};
+  const jsx=(type,props)=>({type,props});
   vm.runInNewContext(source,{
     URLSearchParams,
-    exports,require:name=>({react,'react/jsx-runtime':{jsx:()=>null,jsxs:()=>null},
-      '@tanstack/react-query':{useQuery:()=>({isPending:pending,data:[]})},
+    exports,require:name=>({react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},
+      '@tanstack/react-query':{useQuery:()=>({isPending:pending,isError:failed,data})},
       '@/lib/api':{apiFetch(){}},'@/lib/alert-range':{},
       '@/components/common/app-link':{default:()=>null},
       '@/components/icons/circle-loader':{default:()=>null}}[name]),
     window:{addEventListener(){},removeEventListener(){}},
+    document:{addEventListener(){},removeEventListener(){}},
     setTimeout:(callback,delay)=>{const id={};timers.set(id,{callback,at:now+delay});return id;},
     clearTimeout:id=>timers.delete(id)
   });
   const close=()=>closed++;
   return {
-    render(selection,options={}) {pending=options.pending??false;cursor=0;exports.default({selection,onClose:options.onClose??close,onEdit(){}});effects.splice(0).forEach(effect=>effect());},
+    render(selection,options={}) {
+      pending=options.pending??false;
+      failed=options.failed??false;
+      data=options.data;
+      cursor=0;
+      const tree=exports.default({selection,onClose:options.onClose??close,onEdit(){}});
+      effects.splice(0).forEach(effect=>effect());
+      return tree;
+    },
     advance(ms){now+=ms;for(const [id,timer] of [...timers])if(timer.at<=now){timers.delete(id);timer.callback();}},
     get closed(){return closed;},
     unmount(){hooks.forEach(hook=>hook?.cleanup?.());},get timerCount(){return timers.size;}
   };
 }
 const choice=key=>({siteId:'001',hospital:'신당서울',metricKey:key,label:key});
+
+test('card reserves the action area and shows the details link only after loading settles',()=>{
+  const h=harness(),selection=choice('hepres');
+  const pending=JSON.stringify(h.render(selection,{pending:true}));
+  assert.match(pending,/알림 정보를 불러오는 중/);
+  assert.match(pending,/min-h-11/);
+  assert.doesNotMatch(pending,/measurement-chart|자세히/);
+  const ready=JSON.stringify(h.render(selection,{data:[{
+    siteid:selection.siteId,
+    alertsEnabled:true,
+    thresholds:[{key:selection.metricKey,active:true,averageApplied:true}]
+  }]}));
+  assert.doesNotMatch(ready,/알림 정보를 불러오는 중/);
+  assert.match(ready,/measurement-chart/);
+  assert.match(ready,/알림 기준 보기/);
+  const failed=JSON.stringify(h.render(selection,{failed:true}));
+  assert.match(failed,/불러오지 못했습니다/);
+  assert.match(failed,/measurement-chart/);
+});
 
 test('loaded card closes at three seconds despite ordinary rerenders',()=>{
  const h=harness(),selection=choice('achumi');h.render(selection);h.advance(2000);h.render(selection);h.advance(999);assert.equal(h.closed,0);h.advance(1);assert.equal(h.closed,1);

@@ -18,9 +18,8 @@ import { apiFetch } from "@/lib/api";
 import { useAuth } from "@/components/provider/auth-provider";
 import type { AlertEventSummary, SiteAlertSettings } from "@/lib/api";
 import { formatMetricMeasurement, METRICS } from "@/lib/metrics";
-import Link from "@/components/common/app-link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 
 function metricName(key: string, label?: string | null) {
@@ -70,7 +69,6 @@ export default function BaselinesClient({
   }
   const hours=useOperatingHours();
   const router=useRouter();
-  const {session:actor}=useAuth();
   const [busySite, setBusySite] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -113,7 +111,6 @@ export default function BaselinesClient({
             알림 설정
           </button>
         </div>
-        <p>병원 상태를 확인하고 필요한 알림을 관리하세요.</p>
       </header> : null}
       {view === "sites" && <div className="mb-5">
         <button type="button" onClick={() => navigateView("settings")} className="mb-2 inline-flex min-h-12 items-center rounded-lg px-2 text-base font-bold text-sky-800 hover:bg-sky-50 dark:text-sky-200 dark:hover:bg-sky-950/30">← 알림 설정 메뉴</button>
@@ -214,7 +211,6 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
       <div className="alert-inbox-tabs" aria-label="알림 보기">
         {(["unacknowledged", "open", "all"] as const).map(value => <button key={value} type="button" aria-pressed={value === filter} onClick={() => { setFilter(value); setSelecting(false); setSelected([]); }}>{value === "unacknowledged" ? "확인 필요" : value === "open" ? "진행 중" : "전체 기록"}</button>)}
       </div>
-      <p className="alert-inbox-guide">{filter === "unacknowledged" ? "아직 확인하지 않은 알림입니다. 문제가 계속되면 24시간 뒤 확인 필요 목록에 다시 표시될 수 있습니다." : filter === "open" ? "확인 여부와 관계없이 아직 정상으로 복구되지 않은 문제입니다." : "확인한 알림과 정상으로 복구된 기록도 함께 볼 수 있습니다."}</p>
       <details className="alert-inbox-filters">
         <summary>상세 검색{(query || siteId || fromDate || toDate || kind !== "all") ? " · 적용 중" : ""}</summary>
         <div className="alert-inbox-filter-fields">
@@ -247,8 +243,8 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
                 : "알림 기록이 없어요."}
         </p>
       )}
-      <div className={filter === "all" ? "received-alert-history" : "alert-inbox-list"}>
-        {filtered.map((event) => <AlertEventRow key={event.id} compact={filter === "all"} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} disabled={busy} acknowledging={acknowledging === event.id} retrying={retrying === event.id} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}
+      <div className="alert-inbox-list">
+        {filtered.map((event) => <AlertEventRow key={event.id} selecting={selecting} event={event} selected={selected.includes(event.id)} onSelect={(checked) => setSelected((current) => checked ? Array.from(new Set([...current, event.id])) : current.filter((id) => id !== event.id))} disabled={busy} acknowledging={acknowledging === event.id} retrying={retrying === event.id} onAcknowledge={() => acknowledge(event.id)} onRetry={() => retry(event.id)} onOpenSettings={() => onOpenSettings(event)} settingsAvailable={availableSites.some(site => site.siteid === event.siteId)} />)}
       </div>
       {(total > 20 || currentPage > 1) && <Pagination page={currentPage} total={total} onPageChange={setPage} disabled={history.isFetching} label="알림 이력 페이지" />}
     </section>
@@ -257,7 +253,6 @@ function AlertEventsPanel({ onAcknowledge, onAcknowledgeMany, onRetryDelivery, o
 
 function AlertEventRow({
   event,
-  compact = false,
   selecting,
   selected,
   onSelect,
@@ -270,7 +265,6 @@ function AlertEventRow({
   settingsAvailable,
 }: {
   event: AlertEventSummary;
-  compact?: boolean;
   selecting: boolean;
   selected: boolean;
   onSelect: (checked: boolean) => void;
@@ -350,30 +344,37 @@ function AlertEventRow({
   const isMetricMissing = event.eventType === "METRIC_MISSING";
   const isColdChiller = event.metricKey === "__cold_chiller__";
   const simpleMetricName = metricName(event.metricKey, metric?.label).replace(/\s*\([^)]*\)/g, "");
-  const issue = isNoData
-    ? "장비 데이터가 들어오지 않아요"
+  const issue = event.eventType === "RECOVERY"
+    ? `${simpleMetricName} 정상 복구`
+    : isNoData
+    ? "데이터 수집 중단"
     : isColdChiller
-      ? "냉각장치 정지가 의심돼요"
+      ? "냉각장치 정지 의심"
       : isMetricMissing
-        ? `${simpleMetricName} 값이 들어오지 않아요`
-        : `${simpleMetricName} · 기준보다 ${event.eventType === "LOW" ? "낮아요" : "높아요"}`;
+        ? `${simpleMetricName} 측정 누락`
+        : `${simpleMetricName} ${event.eventType === "LOW" ? "기준 미만" : "기준 초과"}`;
   const value = isNoData
     ? event.measuredValue == null
       ? "수집 기록 없음"
-      : `${formatValue(event.measuredValue, "분")}째 중단`
+      : `${formatValue(event.measuredValue)}분 경과`
     : isMetricMissing
-      ? `${formatValue(event.measuredValue, "회")} 연속 누락`
+      ? event.measuredValue == null ? "횟수 미기록" : `${formatValue(event.measuredValue)}회 연속`
       : formatMetricMeasurement(event.measuredValue, metric?.unit);
-  const reference = isNoData
-    ? `${formatValue(event.max, "분")}부터 알림`
+  const reference = (isNoData || isMetricMissing) && event.max == null
+    ? null
+    : isNoData
+    ? `${formatValue(event.max)}분부터 알림`
     : isMetricMissing
-      ? `${formatValue(event.max, "회")}부터 알림`
+      ? `${formatValue(event.max)}회부터 알림`
       : isColdChiller
         ? "IN·OUT 온도 차이 0.1°C 이하"
-        : `설정 범위 ${formatValue(event.min, metric?.unit)} ~ ${formatValue(event.max, metric?.unit)}`;
+        : event.min == null && event.max == null ? null
+          : event.min == null ? `상한 ${formatValue(event.max, metric?.unit)}`
+            : event.max == null ? `하한 ${formatValue(event.min, metric?.unit)}`
+              : `기준 ${formatValue(event.min, metric?.unit)} ~ ${formatValue(event.max, metric?.unit)}`;
   return (
     <article
-      className={`received-alert ${recovered ? "is-recovered" : "is-active"} ${compact ? "is-compact" : ""} ${showDelivery ? "is-expanded" : ""}`}
+      className={`received-alert ${recovered ? "is-recovered" : ""}`}
     >
       <div className="received-alert-top">
         {selecting && (
@@ -391,62 +392,66 @@ function AlertEventRow({
           {recovered ? "복구됨" : "진행 중"}
         </span>
       </div>
-      <p className="received-alert-issue">{issue}</p>
-      <div className="received-alert-reading">
+      <p className="received-alert-issue">
+        <span>{issue}</span>
         <strong>{value}</strong>
-        <span>{reference}</span>
-      </div>
-      <div className="received-alert-time">
-        <time dateTime={event.occurredAt}>
-          {new Date(event.occurredAt).toLocaleString("ko-KR", {
-            timeZone: "Asia/Seoul",
-            month: "numeric",
-            day: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}{" "}
-          발생
-        </time>
-        {event.acknowledgedAt && <span>✓ 확인한 알림</span>}
-      </div>
-      <div className="received-alert-actions">
-        {!event.acknowledgedAt && !recovered && (!compact || showDelivery) && (
+      </p>
+      <div className="received-alert-footer">
+        <div className="received-alert-time">
+          <time dateTime={event.occurredAt}>
+            {new Date(event.occurredAt).toLocaleString("ko-KR", {
+              timeZone: "Asia/Seoul",
+              month: "numeric",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </time>
+          {event.acknowledgedAt && <span>확인 완료</span>}
+        </div>
+        <div className="received-alert-actions">
+          {!event.acknowledgedAt && !recovered && (
+            <button
+              type="button"
+              disabled={disabled}
+              onClick={onAcknowledge}
+              className="received-alert-confirm"
+            >
+              {acknowledging ? <CircleLoader size="xs" inline /> : "확인"}
+            </button>
+          )}
           <button
             type="button"
-            disabled={disabled}
-            onClick={onAcknowledge}
-            className="received-alert-confirm"
+            aria-expanded={showDelivery}
+            onClick={() => setShowDelivery(!showDelivery)}
+            className="received-alert-more"
           >
-            {acknowledging ? <CircleLoader size="xs" inline /> : "확인"}
+            {showDelivery ? "접기" : "상세"}
           </button>
-        )}
-        <button
-          type="button"
-          aria-expanded={showDelivery}
-          onClick={() => setShowDelivery(!showDelivery)}
-          className="received-alert-more"
-        >
-          {showDelivery ? "닫기" : "상세"}
-        </button>
+        </div>
       </div>
       {showDelivery && (
         <div className="received-alert-manage">
-          <div className="received-alert-facts"><span>발송 <strong>{deliveryLabel(event.deliveryStatus)}</strong></span>{event.recoveredAt && <span>복구 <strong>{new Date(event.recoveredAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>}</div>
-          <div className="flex items-center justify-between">
-            <strong className="text-sm">이 알림 잠시 중지</strong>
-            <HelpButton
-              title="알림 잠시 중지"
-              message="같은 병원·항목·유형의 알림을 일정 기간 중지합니다. 중지 시간을 바꾸거나 수신을 재개할 수 있습니다."
-            />
-          </div>
-          {!recovered && <AlertSnooze event={event} />}
+          <div className="received-alert-facts">{reference && <span>{reference}</span>}<span>발송 <strong>{deliveryLabel(event.deliveryStatus)}</strong></span>{event.recoveredAt && <span>복구 <strong>{new Date(event.recoveredAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</strong></span>}</div>
+          {!recovered && (
+            <>
+              <div className="flex items-center justify-between">
+                <strong className="text-sm">이 알림 잠시 중지</strong>
+                <HelpButton
+                  title="알림 잠시 중지"
+                  message="같은 병원·항목·유형의 알림을 일정 기간 중지합니다. 중지 시간을 바꾸거나 수신을 재개할 수 있습니다."
+                />
+              </div>
+              <AlertSnooze event={event} />
+            </>
+          )}
           <button
             type="button"
             disabled={!settingsAvailable}
             onClick={onOpenSettings}
             className="mt-3 min-h-10 rounded-lg border border-slate-300 px-3 text-sm font-bold text-sky-800 disabled:opacity-40 dark:border-slate-600 dark:text-sky-200"
           >
-            이 알림 기준 바꾸기
+            알림 기준 보기
           </button>
           {isAdmin &&
             !recovered &&
