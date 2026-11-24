@@ -918,6 +918,14 @@ h4,
 .workspace-frame a:hover {
   color: var(--work-focus);
 }
+.workspace-frame .dashboard-metric-details:is(:hover, :focus-visible) {
+  background: #475569;
+  border-color: #cbd5e1;
+  color: #fff;
+}
+.workspace-frame .dashboard-metric-details:active {
+  background: #334155;
+}
 .workspace-frame .work-primary:hover {
   color: #fff;
   background: #115776;

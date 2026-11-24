@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "@/components/common/app-link";
-import CircleLoader from "@/components/icons/circle-loader";
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { apiFetch, type SiteAlertSettings } from "@/lib/api";
@@ -43,36 +42,29 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
       <p className="font-bold">{selection.hospital} · {selection.label}</p>
       <button type="button" aria-label="항목 정보 닫기" onClick={onClose} className="min-h-11 min-w-11 rounded-lg text-lg">×</button>
     </div>
-    <div className="mt-1 min-h-24 sm:min-h-20">
+    <div className="mt-1">
       {settings.isPending ? (
-        <div className="flex items-center gap-2 text-slate-300">
-          <CircleLoader size="xs" inline />
-          <span aria-hidden="true">알림 정보를 불러오는 중</span>
+        <div role="status" className="flex min-h-38 items-center justify-center gap-3 rounded-lg border border-sky-300/40 bg-sky-300/10 px-3 font-semibold text-sky-50 sm:min-h-34">
+          <span aria-hidden="true" className="size-6 shrink-0 rounded-full border-2 border-sky-300/35 border-t-sky-100 motion-safe:animate-spin" />
+          알림 정보를 불러오는 중
         </div>
       ) : (
         <>
-          <p>{settings.isError ? "알림 기준을 불러오지 못했습니다." : !threshold ? "설정 없음" : `회사 공통 · ${selection.metricKey === "hepres" ? "7일" : "24시간"} 평균 ${format(threshold.averageValue)} ${threshold.unit ?? ""}`}</p>
-          {threshold && <p className="mt-1 text-sm text-slate-300">{!site?.alertsEnabled ? "이 병원은 회사 전체 알림이 꺼져 있습니다." : `평균에서 ±${threshold.tolerancePercent}% 벗어나면 노란색 주의 표시`}</p>}
-          {threshold && !threshold.averageApplied && <p className="mt-2 text-sm text-amber-200">평균을 계산할 측정값이 부족합니다. 고정 수치 기준과 누락 횟수는 계속 확인합니다.</p>}
+          <div className="min-h-24 sm:min-h-20">
+            <p>{settings.isError ? "알림 기준을 불러오지 못했습니다." : !threshold ? "설정 없음" : `회사 공통 · ${selection.metricKey === "hepres" ? "7일" : "24시간"} 평균 ${format(threshold.averageValue)} ${threshold.unit ?? ""}`}</p>
+            {threshold && <p className="mt-1 text-sm text-slate-300">{!site?.alertsEnabled ? "이 병원은 회사 전체 알림이 꺼져 있습니다." : `평균에서 ±${threshold.tolerancePercent}% 벗어나면 노란색 주의 표시`}</p>}
+            {threshold && !threshold.averageApplied && <p className="mt-2 text-sm text-amber-200">평균을 계산할 측정값이 부족합니다. 고정 수치 기준과 누락 횟수는 계속 확인합니다.</p>}
+          </div>
+          <div className="mt-3 flex min-h-11 flex-wrap gap-2">
+            {threshold && <button type="button" onClick={onEdit} className="min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-sky-900">알림 기준 보기</button>}
+            <Link
+              href={`/sites/${encodeURIComponent(selection.siteId)}?${new URLSearchParams({ metric: selection.metricKey })}#measurement-chart`}
+              scroll={false}
+              onNavigate={onClose}
+              className="dashboard-metric-details inline-flex min-h-11 items-center rounded-lg border border-slate-400 bg-slate-800 px-4 text-sm font-bold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-200"
+            >자세히</Link>
+          </div>
         </>
-      )}
-    </div>
-    <div className="mt-3 min-h-11">
-      {settings.isPending ? (
-        <div aria-hidden="true" className="flex gap-2 motion-safe:animate-pulse">
-          <span className="h-11 w-32 rounded-lg bg-white/15" />
-          <span className="h-11 w-20 rounded-lg bg-white/10" />
-        </div>
-      ) : (
-        <div className="flex flex-wrap gap-2">
-          {threshold && <button type="button" onClick={onEdit} className="min-h-11 rounded-lg bg-white px-4 text-sm font-bold text-sky-900">알림 기준 보기</button>}
-          <Link
-            href={`/sites/${encodeURIComponent(selection.siteId)}?${new URLSearchParams({ metric: selection.metricKey })}#measurement-chart`}
-            scroll={false}
-            onNavigate={onClose}
-            className="inline-flex min-h-11 items-center rounded-lg border border-white/40 px-4 text-sm font-bold text-white"
-          >자세히</Link>
-        </div>
       )}
     </div>
   </div>;

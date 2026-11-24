@@ -25,9 +25,8 @@ function harness() {
     URLSearchParams,
     exports,require:name=>({react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},
       '@tanstack/react-query':{useQuery:()=>({isPending:pending,isError:failed,data})},
-      '@/lib/api':{apiFetch(){}},'@/lib/alert-range':{},
-      '@/components/common/app-link':{default:()=>null},
-      '@/components/icons/circle-loader':{default:()=>null}}[name]),
+      '@/lib/api':{apiFetch(){}},
+      '@/components/common/app-link':{default:()=>null}}[name]),
     window:{addEventListener(){},removeEventListener(){}},
     document:{addEventListener(){},removeEventListener(){}},
     setTimeout:(callback,delay)=>{const id={};timers.set(id,{callback,at:now+delay});return id;},
@@ -54,8 +53,8 @@ const choice=key=>({siteId:'001',hospital:'신당서울',metricKey:key,label:key
 test('card reserves the action area and shows the details link only after loading settles',()=>{
   const h=harness(),selection=choice('hepres');
   const pending=JSON.stringify(h.render(selection,{pending:true}));
+  assert.match(pending,/"role":"status"/);
   assert.match(pending,/알림 정보를 불러오는 중/);
-  assert.match(pending,/min-h-11/);
   assert.doesNotMatch(pending,/measurement-chart|자세히/);
   const ready=JSON.stringify(h.render(selection,{data:[{
     siteid:selection.siteId,
