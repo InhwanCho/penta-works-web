@@ -9,7 +9,7 @@ function harness(){
  class Element {constructor(inside=false){this.inside=inside;}closest(){return this.inside?{}:null;}}
  const exports={};
  vm.runInNewContext(ts.transpileModule(fs.readFileSync(new URL('../src/components/common/context-help.tsx',import.meta.url),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText,{
- exports,require:n=>({react,'react/jsx-runtime':{jsx:()=>null,jsxs:()=>null},'react-dom':{createPortal:()=>null},'next/navigation':{usePathname:()=>path}}[n]),document:{body:{}},Element,
+ exports,require:n=>({react,'react/jsx-runtime':{jsx:()=>null,jsxs:()=>null},'react-dom':{createPortal:()=>null},'@/components/icons/x-icon':{default:()=>null},'next/navigation':{usePathname:()=>path}}[n]),document:{body:{}},Element,
  window:{addEventListener:(n,fn)=>listeners.set(n,fn),removeEventListener:n=>listeners.delete(n)},
  setTimeout:(fn,delay)=>{timers.set(++id,{fn,at:now+delay});return id;},clearTimeout:i=>timers.delete(i)
  });

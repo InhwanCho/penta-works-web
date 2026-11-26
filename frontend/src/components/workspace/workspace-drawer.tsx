@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import { useEffect, useLayoutEffect, useId, useRef, useState, type ReactNode, type PointerEvent } from "react";
 
 import { isWorkspaceOverlay, openWorkspaceOverlay } from "./overlay-navigation";
@@ -158,7 +159,7 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
     <header {...dragHandlers}>
       {onBack && <button type="button" className="drawer-back" onClick={onBack} aria-label="이전 상세로">← 뒤로</button>}
       <h2 id={titleId}>{title}</h2>
-      <button type="button" className="day-close" onClick={onClose} aria-label={`${title} 닫기`}>×</button>
+      <button type="button" className="x-icon-button day-close" onClick={onClose} aria-label={`${title} 닫기`}><XIcon className="size-5" /></button>
     </header>
     <div ref={contentRef} className={mobile ? "workspace-drawer-content" : `workspace-dialog-content${className ? "" : " work-day-body"}`} onClickCapture={event => {
       if (suppressClick.current) { suppressClick.current = false; event.preventDefault(); event.stopPropagation(); return; }

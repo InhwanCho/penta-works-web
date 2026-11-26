@@ -1,4 +1,5 @@
 "use client";
+import XIcon from "@/components/icons/x-icon";
 import ChevronDownIcon from "@/components/icons/chevron-down-icon";
 import { useEffect, useId, useRef, useState } from "react";
 import type { Hospital } from "./workspace-data";
@@ -71,7 +72,7 @@ export default function HospitalPicker({
         onClose={() => setOpen(false)}
         onClick={(e) => { if(e.target !== e.currentTarget) return; const b=e.currentTarget.getBoundingClientRect(); if(e.clientX<b.left || e.clientX>b.right || e.clientY<b.top || e.clientY>b.bottom) close(); }}>
         {open && <>
-          <div className="work-section picker-heading"><h2>병원 선택</h2><button type="button" aria-label="병원 선택 닫기" onClick={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}>×</button></div>
+          <div className="work-section picker-heading"><h2>병원 선택</h2><button type="button" className="x-icon-button" aria-label="병원 선택 닫기" onClick={(e) => { e.preventDefault(); e.stopPropagation(); close(); }}><XIcon className="size-6" /></button></div>
           <input
             ref={input}
             className="work-input"

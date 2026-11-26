@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import CircleLoader from "@/components/icons/circle-loader";
 
 
@@ -133,9 +134,9 @@ export default function SiteSearchModal() {
               type="button"
               onClick={() => closeSearchModal()}
               aria-label="닫기"
-              className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute right-2 inline-flex h-11 min-w-11 items-center justify-center rounded-lg border border-border px-2 text-xs font-semibold sm:right-3 sm:h-7 sm:min-w-0 sm:rounded sm:px-1.5 sm:text-[11px] dark:border-background-dark-secondary"
+              className="text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary x-icon-button absolute right-2 h-11 min-w-11 rounded-lg border border-border px-2 text-xs font-semibold sm:right-3 sm:h-7 sm:min-w-0 sm:rounded sm:px-1.5 sm:text-[11px] dark:border-background-dark-secondary"
             >
-              <span aria-hidden="true" className="text-xl">×</span>
+              <XIcon className="size-5" />
             </button>
           </div>
         </form>

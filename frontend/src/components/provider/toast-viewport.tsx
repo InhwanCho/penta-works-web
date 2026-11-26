@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import { TOAST_EVENT, type ToastMessage } from "@/lib/toast";
 import { useEffect, useRef, useState } from "react";
 
@@ -30,6 +31,6 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
     return () => clearTimeout(timer);
   }, [toast.tone]);
   return <div role={toast.tone === "error" ? "alert" : "status"} aria-atomic="true" className={`pointer-events-auto flex items-start gap-3 rounded-xl border px-4 py-3 text-sm font-bold shadow-lg ${toast.tone === "error" ? "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-800 dark:bg-rose-950 dark:text-rose-100" : "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-100"}`}>
-    <span aria-hidden="true">{toast.tone === "error" ? "!" : "✓"}</span><p className="min-w-0 flex-1 break-words">{toast.message}</p><button type="button" onClick={onDismiss} aria-label="알림 닫기" className="-m-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-lg">×</button>
+    <span aria-hidden="true">{toast.tone === "error" ? "!" : "✓"}</span><p className="min-w-0 flex-1 break-words">{toast.message}</p><button type="button" onClick={onDismiss} aria-label="알림 닫기" className="x-icon-button -m-2 h-9 w-9 shrink-0 rounded-lg"><XIcon className="size-5" /></button>
   </div>;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import CircleLoader from "@/components/icons/circle-loader";
 
 
@@ -197,7 +198,7 @@ export default function DashboardClient() {
   const mobileControls = (
     <div className="dashboard-compact-controls lg:hidden" data-ptr-ignore>
       {showMobileFilters && <MobileFilterDialog onClose={closeMobileFilters}>
-        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={closeMobileFilters} className="min-h-10 min-w-10 rounded-lg text-xl">×</button></div></div>
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-extrabold">필터</h2><div className="flex gap-2"><button type="button" autoFocus aria-label="필터 패널 닫기" onClick={closeMobileFilters} className="x-icon-button min-h-10 min-w-10 rounded-lg text-xl"><XIcon className="size-5" /></button></div></div>
         <div className="dashboard-status-switch" role="group" aria-label="병원 상태 필터">{statusFilterButtons}</div>
         <Link href="/baselines?view=events" className="mt-3 block min-h-11 rounded-xl border px-3 py-3 text-sm font-bold text-sky-700 dark:text-sky-300">알림 관리 · 이력·설정·패턴 →</Link>
         {viewOptions}

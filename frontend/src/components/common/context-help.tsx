@@ -1,4 +1,5 @@
 "use client";
+import XIcon from "@/components/icons/x-icon";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
@@ -76,10 +77,10 @@ export function ContextHelpHost() {
         <button
           type="button"
           onClick={() => setHelp(null)}
-          className="min-h-11 shrink-0 rounded-lg px-3 text-base font-bold hover:bg-white/10"
+          className="x-icon-button min-h-11 shrink-0 rounded-lg px-3 text-base font-bold hover:bg-white/10"
           aria-label="도움말 닫기"
         >
-          ×
+          <XIcon className="size-5" />
         </button>
       </div>
       <p className="mt-1 text-base leading-7 font-normal break-words">

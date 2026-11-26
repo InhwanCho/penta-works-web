@@ -1284,10 +1284,15 @@ h4,
   font-size: 0.75rem;
   color: var(--work-muted);
 }
+.x-icon-button {
+  display: inline-grid;
+  place-items: center;
+}
+.x-icon-button > svg { display: block; }
 .work-photo .work-photo-remove {
   position: absolute; top: 5px; right: 5px;
   width: 32px; height: 32px; border-radius: 50%;
-  background: #fff; color: #b42318; font-size: 22px; cursor: pointer;
+  background: #fff; color: #b42318; cursor: pointer;
 }
 .photo-modal {
   position: fixed; inset: 0; margin: 0;
@@ -1298,7 +1303,7 @@ h4,
 .photo-modal::backdrop { background: rgb(10 20 30 / .78); backdrop-filter: blur(3px); }
 .photo-modal-content { display: flex; align-items: center; justify-content: center; width: 100%; }
 .photo-modal-content img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 128px); object-fit: contain; border-radius: 6px; }
-.photo-modal-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 44px; border-radius: 50%; background: rgb(255 255 255 / .15); color: #fff; font-size: 30px; cursor: pointer; }
+.photo-modal-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 44px; border-radius: 50%; background: rgb(255 255 255 / .15); color: #fff; cursor: pointer; }
 @media (min-width: 768px) { .photo-modal { padding-inline: 64px; } }
 .work-stats {
   display: grid;
@@ -4115,6 +4120,7 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .work-schedule-link > summary::after { color: var(--work-muted); }
 @media (max-width:1023px) {
  .work-day-dialog :is(button,a.work-primary,a.work-secondary,a.hospital-register,a.day-section-action) { height: 40px; min-height: 40px; box-sizing: border-box; }
+ .work-day-dialog .work-photo .work-photo-remove { width: 40px; }
  .work-day-dialog .detail-bottom-actions > :is(button.action-danger,a[href*="edit="]) { height: 40px; min-height: 40px; }
 }
 

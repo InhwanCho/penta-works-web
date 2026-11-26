@@ -79,7 +79,7 @@ export default function CustomModal({
       >
         {showCloseButton && (
           <button
-            className={`text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute top-2.5 right-2.5 inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors ${closeBtnLocation ?? ""}`}
+            className={`text-text-secondary hover:bg-background-tertiary dark:text-text-dark-primary/60 dark:hover:bg-background-dark-secondary absolute top-2.5 right-2.5 x-icon-button h-8 w-8 rounded-md transition-colors ${closeBtnLocation ?? ""}`}
             onClick={() => (onCloseByX ? onCloseByX() : handleClose())}
             aria-label="닫기"
           >

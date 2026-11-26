@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import Link from "@/components/common/app-link";
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -40,7 +41,7 @@ export default function DashboardMetricInfo({ selection, onClose, onEdit }: { se
   return <div ref={panelRef} role="dialog" aria-label={`${selection.hospital} ${selection.label} 알림 정보`} className="fixed right-3 bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] left-3 z-[60] mx-auto max-w-xl rounded-xl bg-slate-900/95 px-4 py-3 text-sm text-white shadow-lg dark:bg-slate-800">
     <div className="flex items-center justify-between gap-3">
       <p className="font-bold">{selection.hospital} · {selection.label}</p>
-      <button type="button" aria-label="항목 정보 닫기" onClick={onClose} className="min-h-11 min-w-11 rounded-lg text-lg">×</button>
+      <button type="button" aria-label="항목 정보 닫기" onClick={onClose} className="x-icon-button min-h-11 min-w-11 rounded-lg text-lg"><XIcon className="size-5" /></button>
     </div>
     <div className="mt-1">
       {settings.isPending ? (

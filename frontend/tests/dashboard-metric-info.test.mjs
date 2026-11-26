@@ -26,7 +26,7 @@ function harness() {
     exports,require:name=>({react,'react/jsx-runtime':{jsx,jsxs:jsx,Fragment:'fragment'},
       '@tanstack/react-query':{useQuery:()=>({isPending:pending,isError:failed,data})},
       '@/lib/api':{apiFetch(){}},
-      '@/components/common/app-link':{default:()=>null}}[name]),
+      '@/components/common/app-link':{default:()=>null},'@/components/icons/x-icon':{default:()=>null}}[name]),
     window:{addEventListener(){},removeEventListener(){}},
     document:{addEventListener(){},removeEventListener(){}},
     setTimeout:(callback,delay)=>{const id={};timers.set(id,{callback,at:now+delay});return id;},

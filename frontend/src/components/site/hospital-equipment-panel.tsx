@@ -1,5 +1,6 @@
 "use client";
 
+import XIcon from "@/components/icons/x-icon";
 import { closeOnDialogBackdrop } from "@/lib/dialog-backdrop";
 
 import CircleLoader from "@/components/icons/circle-loader";
@@ -130,9 +131,9 @@ function EquipmentDialog({
           aria-label="장비·부품 관리 닫기"
           type="button"
           onClick={onClose}
-          className="min-h-11 rounded-lg px-3 font-bold"
+          className="x-icon-button min-h-11 rounded-lg px-3 font-bold"
         >
-          ×
+          <XIcon className="size-5" />
         </button>
       </header>
       <HospitalAssets siteId={siteId} />
