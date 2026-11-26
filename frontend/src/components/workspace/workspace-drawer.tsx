@@ -149,7 +149,12 @@ export default function WorkspaceDrawer({ title, onClose, onBack, onOpenDetail, 
   };
   return <dialog ref={ref} className={`work-day-dialog ${mobile ? "workspace-drawer" : "workspace-desktop-dialog"} ${className}`} aria-labelledby={titleId} tabIndex={-1} data-ptr-ignore
     style={{ transform: offset ? `translateY(${offset}px)` : undefined }}
-    onCancel={event => { event.preventDefault(); onClose(); }}
+    onCancel={event => {
+      if (event.target !== event.currentTarget) return;
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    }}
     onClick={event => {
       if (event.target !== event.currentTarget) return;
       const bounds = event.currentTarget.getBoundingClientRect();

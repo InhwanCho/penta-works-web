@@ -25,11 +25,19 @@ export default function PhotoModal({ children, onClose, onPrevious, onNext }: { 
   }, []);
   return createPortal(<dialog ref={ref} className="photo-modal" aria-label="사진 확대"
     onKeyDown={event => {
+      if (event.key === "Escape") event.stopPropagation();
       if (event.key === "ArrowLeft" && onPrevious) { event.preventDefault(); event.stopPropagation(); onPrevious(); }
       if (event.key === "ArrowRight" && onNext) { event.preventDefault(); event.stopPropagation(); onNext(); }
     }}
-    onCancel={event => { event.preventDefault(); closeRef.current(); }}
-    onClick={() => closeRef.current()}>
+    onCancel={event => {
+      event.preventDefault();
+      event.stopPropagation();
+      closeRef.current();
+    }}
+    onClick={event => {
+      event.stopPropagation();
+      if (event.target === event.currentTarget) closeRef.current();
+    }}>
     <button type="button" className="x-icon-button photo-modal-close" aria-label="사진 닫기" onClick={event => { event.stopPropagation(); closeRef.current(); }}><XIcon className="size-7" /></button>
     {onPrevious && <button type="button" className="photo-modal-nav photo-modal-prev" aria-label="이전 사진" onClick={event => { event.stopPropagation(); onPrevious(); }}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg></button>}
     {children}

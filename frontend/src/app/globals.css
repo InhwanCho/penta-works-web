@@ -1323,6 +1323,7 @@ h4,
 }
 .photo-modal[open] { display: flex; align-items: center; justify-content: center; }
 .photo-modal::backdrop { background: rgb(10 20 30 / .78); backdrop-filter: blur(3px); }
+body:has(.photo-modal[open]) .x-icon-button:not(.photo-modal-close) { visibility: hidden; }
 .photo-modal-content { display: flex; align-items: center; justify-content: center; width: 100%; }
 .photo-modal-content img { display: block; width: auto; height: auto; max-width: 100%; max-height: calc(100dvh - 128px); object-fit: contain; border-radius: 6px; }
 .photo-modal-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 16px; width: 44px; height: 44px; border-radius: 50%; background: rgb(255 255 255 / .15); color: #fff; cursor: pointer; }
@@ -4298,10 +4299,18 @@ label:has(input:is([type="checkbox"],[type="radio"]):focus-visible) {
 .photo-modal-nav:hover { background: #29445bea; }
 
 .photo-skeleton { position: relative; display: grid; place-items: center; width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 8px; color: #9aabba; background: #e7edf3; }
-.photo-skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg,transparent,#ffffff70,transparent); animation: photo-shimmer 1.4s ease-in-out infinite; }
+.photo-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent 20%, rgb(255 255 255 / .8) 50%, transparent 80%);
+  transform: translateX(-100%);
+  animation: photo-shimmer 1.6s ease-in-out infinite;
+}
 .photo-skeleton svg { width: 32px; height: 32px; opacity: .65; }
 .dark .photo-skeleton { background: #293b4a; color: #8195a7; }
-.dark .photo-skeleton::after { background: linear-gradient(90deg,transparent,#ffffff12,transparent); }
+.dark .photo-skeleton::after { background: linear-gradient(90deg, transparent 20%, rgb(255 255 255 / .22) 50%, transparent 80%); }
 .work-photo > .photo-skeleton { height: 145px; aspect-ratio: auto; }
 .photo-skeleton-large { width: min(900px,calc(100vw - 48px)); height: min(650px,calc(100dvh - 128px)); aspect-ratio: auto; }
 .photo-skeleton-large svg { width: 60px; height: 60px; }

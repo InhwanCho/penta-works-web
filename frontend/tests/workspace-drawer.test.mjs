@@ -102,7 +102,9 @@ test('backdrop and Escape close while clicks inside the drawer do not', () => {
   const click = (x, y) => props.onClick({ target: drawer.dialog, currentTarget: drawer.dialog, clientX: x, clientY: y });
   click(20, 400); assert.equal(drawer.count(), 0);
   click(20, 200); assert.equal(drawer.count(), 1);
-  props.onCancel({ preventDefault() {} }); assert.equal(drawer.count(), 2);
+  props.onCancel({ target: {}, currentTarget: drawer.dialog }); assert.equal(drawer.count(), 1);
+  props.onCancel({ target: drawer.dialog, currentTarget: drawer.dialog, preventDefault() {}, stopPropagation() {} });
+  assert.equal(drawer.count(), 2);
   drawer.cleanup();
 });
 test('workspace links open stacked overlays while site details reuse the drawer and modified clicks navigate', () => {
