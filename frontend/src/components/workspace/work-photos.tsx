@@ -111,7 +111,7 @@ function Photo({
         error ? <span role="alert">{error}</span> : <PhotoSkeleton />
       )}
       {expanded && <PhotoModal onClose={() => setExpanded(false)} onPrevious={photos.length > 1 ? () => setIndex(i => (i - 1 + photos.length) % photos.length) : undefined} onNext={photos.length > 1 ? () => setIndex(i => (i + 1) % photos.length) : undefined}><FullPhoto key={photos[index]?.id} photo={photos[index] || photo} /></PhotoModal>}
-      {onRemove && <button className="x-icon-button work-photo-remove" type="button" aria-label="사진 제거" onClick={onRemove}><XIcon className="size-6" /></button>}
+      {onRemove && <button className="x-icon-button work-photo-remove" type="button" aria-label="사진 제거" onClick={onRemove}><XIcon className="size-5" /></button>}
     </div>
   );
 }

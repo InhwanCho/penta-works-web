@@ -1292,7 +1292,29 @@ h4,
 .work-photo .work-photo-remove {
   position: absolute; top: 5px; right: 5px;
   width: 32px; height: 32px; border-radius: 50%;
-  background: #fff; color: #b42318; cursor: pointer;
+  color: #334155;
+  cursor: pointer;
+}
+.work-photo-remove::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 26px;
+  height: 26px;
+  margin: auto;
+  border-radius: 50%;
+  background: rgb(248 250 252 / .76);
+  box-shadow: 0 1px 3px rgb(15 23 42 / .2);
+  transition: background-color .15s ease;
+}
+.work-photo-remove > svg { position: relative; }
+@media (hover: hover) {
+  .work-photo .work-photo-remove:hover { color: #9f2420; }
+  .work-photo-remove:hover::before { background: rgb(248 250 252 / .96); }
+}
+.work-photo .work-photo-remove:is(:focus-visible, :active) { color: #9f2420; }
+.work-photo-remove:is(:focus-visible, :active)::before {
+  background: rgb(248 250 252 / .96);
 }
 .photo-modal {
   position: fixed; inset: 0; margin: 0;
