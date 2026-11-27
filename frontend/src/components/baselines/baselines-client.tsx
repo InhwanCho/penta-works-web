@@ -1,6 +1,7 @@
 "use client";
 
-import CompanyAlertSettings from "./company-alert-settings";
+import CompanyAlertSettings, { NotificationSettingsLink } from "./company-alert-settings";
+import { ArrowBackIconMini } from "@/components/icons/arrow-back-icon";
 import Select from "@/components/common/select";
 import Pagination from "@/components/common/pagination";
 import PageLoader from "@/components/common/page-loader";
@@ -94,8 +95,15 @@ export default function BaselinesClient({
   }
 
   if (["settings", "thresholds"].includes(view)) return <main className="mx-auto w-full max-w-4xl px-3 py-4 sm:px-6">
-    <button type="button" onClick={()=>navigateView("events")} className="mb-3 min-h-12 font-bold">← 알림 목록</button>
-    <h1 className="mb-4 text-2xl font-extrabold">알림 설정</h1>
+    <header className="mb-4">
+      <button type="button" onClick={() => navigateView("events")} className="alert-settings-back work-back">
+        <span aria-hidden="true"><ArrowBackIconMini /></span> 알림 목록
+      </button>
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-x-4">
+        <h1 className="alert-settings-page-title">알림 설정</h1>
+        <NotificationSettingsLink />
+      </div>
+    </header>
     <CompanyAlertSettings />
   </main>;
   return (

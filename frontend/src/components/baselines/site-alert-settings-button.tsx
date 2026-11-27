@@ -29,6 +29,6 @@ export function SiteAlertSettingsDialog({ page=false,siteId,onClose,onlyMetricKe
     <CompanyAlertSettings siteId={siteId} metricKey={onlyMetricKey ?? initialMetricKey}/><Link href="/baselines?view=settings" className="mt-3 flex min-h-10 w-full items-center justify-center rounded-lg border border-slate-300 bg-slate-50 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-100 active:bg-slate-200 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700">전체 병원 알림 설정 보기</Link></div>
   </div>;
   return page ? content : <CustomModal id={id} onRequestClose={onClose} showCloseButton={false}>
-    <div className="max-h-[80dvh] overflow-y-auto overflow-x-hidden">{content}</div>
+    <div className="alert-policy-modal-content max-h-[80dvh] overflow-y-auto overflow-x-hidden">{content}</div>
   </CustomModal>;
 }

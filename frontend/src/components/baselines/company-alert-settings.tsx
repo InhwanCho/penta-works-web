@@ -6,6 +6,7 @@ import Link from "@/components/common/app-link";
 import { apiFetch, ApiError } from "@/lib/api";
 import CircleLoader from "@/components/icons/circle-loader";
 import ChevronDownIcon from "@/components/icons/chevron-down-icon";
+import ChevronRightIcon from "@/components/icons/chevron-right-icon";
 
 type Hospital = { enabled: boolean; intervalMinutes: number };
 type Policy = {
@@ -18,9 +19,22 @@ type PolicyView = {
   hospitals: {siteId: string; name: string; settings: Hospital; coldHeadReplacedAt: string | null; quietUntil: string | null}[];
 };
 const field = "mt-2 min-h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm font-bold dark:border-slate-600 dark:bg-slate-900 disabled:opacity-70";
-const card = "rounded-xl border border-slate-200 bg-white p-3 sm:p-4 dark:border-slate-700 dark:bg-background-dark-card";
+const card = "work-panel p-3 sm:p-4";
 
-const muted = "text-sm leading-6 text-slate-600 dark:text-slate-300";
+const muted = "text-sm leading-6 text-(--work-muted)";
+
+export function NotificationSettingsLink() {
+  return (
+    <Link href="/notification-settings?from=baselines" className="alert-notification-link work-secondary">
+      <svg aria-hidden="true" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="9" />
+        <path d="M12 7v5l3 2" />
+      </svg>
+      <span>내 카톡 수신 시간 설정</span>
+      <ChevronRightIcon />
+    </Link>
+  );
+}
 
 function SettingsSection({ title, summary, children, open }: {
   title: string;
@@ -30,14 +44,14 @@ function SettingsSection({ title, summary, children, open }: {
 }) {
   return (
     <details open={open} className="alert-settings-section">
-      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2.5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-600 sm:px-4 [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-sky-600 sm:px-4 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
-          <span className="block font-semibold">{title}</span>
-          {summary && <span className="block text-xs text-text-secondary">{summary}</span>}
+          <span className="block break-words text-[.9375rem] leading-snug font-bold">{title}</span>
+          {summary && <span className="mt-1 block text-[.8125rem] leading-relaxed text-(--work-muted) tabular-nums">{summary}</span>}
         </span>
-        <ChevronDownIcon className="alert-settings-chevron size-5 shrink-0 text-text-secondary" />
+        <ChevronDownIcon className="alert-settings-chevron size-5 shrink-0" />
       </summary>
-      <div className="space-y-3 px-3 pb-4 sm:px-4">{children}</div>
+      <div className="alert-settings-section-content space-y-3 px-3 py-3.5 sm:px-4">{children}</div>
     </details>
   );
 }
@@ -54,18 +68,18 @@ function AlertCriterion({ title, summary, description, warning, kakao, note, edi
   return (
     <SettingsSection title={title} summary={summary}>
       {description && <p className={muted}>{description}</p>}
-      <dl className="grid gap-2 rounded-lg bg-slate-50 p-3 sm:grid-cols-2 dark:bg-slate-800/70">
+      <dl className="alert-criterion-facts">
         {warning && <div>
-          <dt className="text-xs font-semibold text-amber-800 dark:text-amber-300">화면 주의</dt>
-          <dd className="mt-1">{warning}</dd>
+          <dt className="text-amber-800 dark:text-amber-300">화면 주의</dt>
+          <dd>{warning}</dd>
         </div>}
         <div>
-          <dt className="text-xs font-semibold text-rose-800 dark:text-rose-300">카톡 기준</dt>
-          <dd className="mt-1">{kakao || "발송 없음"}</dd>
+          <dt className="text-rose-800 dark:text-rose-300">카톡 기준</dt>
+          <dd>{kakao || "발송 없음"}</dd>
         </div>
       </dl>
       {editor}
-      {note && <div className="text-xs leading-5 text-text-secondary">{note}</div>}
+      {note && <div className="text-[.8125rem] leading-relaxed text-(--work-muted)">{note}</div>}
     </SettingsSection>
   );
 }
@@ -120,19 +134,19 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
       <button type="button" disabled={saving} onClick={() => {
         setError("");
         setEditor({section, revision: view.revision, policy: view.policy});
-      }} className="min-h-11 rounded-lg border border-slate-200 px-3 font-semibold text-sky-800 disabled:opacity-50 dark:border-slate-600 dark:text-sky-300">
+      }} className="work-secondary inline-flex disabled:opacity-50">
         설정 변경
       </button>
     );
     return (
-      <form onSubmit={save} className="space-y-3 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+      <form onSubmit={save} className="alert-policy-editor space-y-3">
         <fieldset disabled={saving} className="grid min-w-0 items-end gap-3 sm:grid-cols-2">
           {fields(editor.policy)}
         </fieldset>
         {error && <p role="alert" className="text-sm font-semibold text-rose-800 dark:text-rose-300">{error}</p>}
         <div className="flex flex-wrap justify-end gap-2">
-          <button type="button" disabled={saving} onClick={() => setEditor(null)} className="min-h-11 rounded-lg border border-slate-200 px-4 font-semibold disabled:opacity-50 dark:border-slate-600">취소</button>
-          <button type="submit" disabled={saving} className="min-h-11 rounded-lg bg-sky-700 px-4 font-semibold text-white disabled:opacity-50">{saving ? "저장 중…" : "저장"}</button>
+          <button type="button" disabled={saving} onClick={() => setEditor(null)} className="action-cancel disabled:opacity-50">취소</button>
+          <button type="submit" disabled={saving} className="action-save disabled:opacity-50">{saving ? "저장 중…" : "저장"}</button>
         </div>
       </form>
     );
@@ -143,14 +157,18 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
 
   const hospitals = view.hospitals.filter(h => (!siteId || h.siteId === siteId) &&
     (!siteIds || siteIds.includes(h.siteId)) && (!search || h.name.includes(search) || editor?.section === `hospital:${h.siteId}`));
+  const selectedHospital = siteId ? view.hospitals.find(hospital => hospital.siteId === siteId)?.name : undefined;
   return <div className="space-y-3 text-sm leading-relaxed">
     {process.env.NEXT_PUBLIC_DEPLOY_ENV === "development" && <p className="rounded-lg bg-slate-100 p-4 font-bold text-slate-700 dark:bg-slate-800 dark:text-slate-200">개발용 화면 · 실제 카톡은 발송되지 않습니다.</p>}
-    <section className={card}>
-      <h2 className="font-extrabold">{metricKey ? "선택 항목 알림 기준" : "우리 회사 알림 기준"}</h2>
-      <p className="mt-0.5 text-xs text-text-secondary">회사 공통 · 관리자만 변경</p>
-      <Link href="/notification-settings?from=baselines" className="mt-1 inline-flex min-h-11 items-center font-semibold text-sky-800 dark:text-sky-300">내 카톡 수신 시간 설정 →</Link>
+    <section className={`${card} flex flex-wrap items-center justify-between gap-3`}>
+      <div className="min-w-0">
+        <h2 className="text-base font-bold">{metricKey ? "선택 항목 알림 기준" : "우리 회사 알림 기준"}</h2>
+        {selectedHospital && <p className="mt-1 font-semibold [overflow-wrap:anywhere]">{selectedHospital}</p>}
+        <p className="mt-0.5 text-[.8125rem] text-(--work-muted)">회사 공통 · 관리자만 변경</p>
+      </div>
+      {(siteId || siteIds) && <NotificationSettingsLink />}
     </section>
-    <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-slate-700 dark:border-slate-700 dark:bg-background-dark-card">
+    <div className="work-panel divide-y divide-(--work-line)">
     {(!metricKey || metricKey === "hepres") && <AlertCriterion
       title="헬륨 압력"
       summary={`카톡 · ${p.pressureCritical} psi 초과 2회`}
@@ -222,12 +240,12 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
       </>)}
     />}
     </div>
-    <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-background-dark-card">
+    <div className="work-panel">
       <SettingsSection title="병원별 알림 설정" summary={siteId ? undefined : "알림 사용 · 수집 주기"} open={siteId && !metricKey ? true : undefined}>
         {!siteId && <label className="block max-w-sm font-semibold">병원 찾기
           <input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="병원 이름 입력" className={field}/>
         </label>}
-        <div className="divide-y divide-slate-200 rounded-lg border border-slate-200 dark:divide-slate-700 dark:border-slate-700">
+        <div className="work-panel divide-y divide-(--work-line)">
           {hospitals.map(h => {
             const config = p.hospitals[h.siteId] ?? h.settings;
             return (
@@ -237,9 +255,9 @@ export default function CompanyAlertSettings({ siteId, metricKey, siteIds }: { s
                 summary={<>알림 {config.enabled ? "켜짐" : <strong className="font-bold">꺼짐</strong>} · {duration(config.intervalMinutes)} 주기</>}
                 open={siteId && !metricKey ? true : undefined}
               >
-                {config.enabled && <dl className="grid grid-cols-2 gap-2 rounded-lg bg-slate-50 p-3 dark:bg-slate-800/70">
-                  <div><dt className="text-xs text-text-secondary">화면 주의</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionWarning)} 지연</dd></div>
-                  <div><dt className="text-xs text-text-secondary">카톡 발송</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionCritical)} 지연</dd></div>
+                {config.enabled && <dl className="alert-criterion-facts">
+                  <div><dt className="text-amber-800 dark:text-amber-300">화면 주의</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionWarning)} 지연</dd></div>
+                  <div><dt className="text-rose-800 dark:text-rose-300">카톡 발송</dt><dd className="font-semibold">{duration(config.intervalMinutes * p.collectionCritical)} 지연</dd></div>
                 </dl>}
                 {sectionEditor(`hospital:${h.siteId}`, policy => {
                   const value = policy.hospitals[h.siteId] ?? config;
